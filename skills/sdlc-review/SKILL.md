@@ -326,6 +326,7 @@ stage: review            # 通过则下一步 → done(Verify);未过则停在 r
 status: in-progress | gated | blocked
 updated: <stamp>
 validate-modes: [...]    # 沿用本次解析
+sdlc-gate: <见下>        # ★ G1–G6 全过(verdict=PASS)→ 写 `PASS reviewed-head=<git rev-parse HEAD 完整 sha>`;否则写 `BLOCK`。本地 pre-push hook 凭此行决定放不放行 push;改了代码必须重跑本 skill 刷新这行的 sha。
 
 ## Gates passed
 - [x] spec approved
@@ -366,7 +367,7 @@ validate-modes: [...]    # 沿用本次解析
 review 门控 PASS 后做轻量 Verify 把整个特性收口(不重复 validate 的执行,只做最终确认):
 1. **复核 validate 证据**:`.sdlc/validate/` 下报告存在且结论为通过(correctness 覆盖率达门、e2e 旅程 PASS、eval 分达阈)。缺失或不通过 → 回 sdlc-validate。
 2. **plan-completion 收口**:Step 2 的 plan 项全部 DONE/CHANGED,或剩余 NOT-DONE 已显式落 P1 待办。
-3. 满足 → `stage=done, status=in-progress→done`,输出收尾摘要;不满足 → 停在 review 并指出缺口。
+3. 满足 → `stage=done, status=in-progress→done`,**并向 STATE 写入 `sdlc-gate: PASS reviewed-head=$(git rev-parse HEAD)`**(给本地 pre-push hook 放行用),输出收尾摘要;不满足 → 停在 review、写 `sdlc-gate: BLOCK`、指出缺口。
 
 ---
 

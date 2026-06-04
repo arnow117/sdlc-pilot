@@ -198,6 +198,14 @@ grep -rIl -E 'auth|login|payment|billing|secret|credential' . --include='*.py' -
    - `## Known risks`(Phase A concerns focus:大文件热点、无测试覆盖的危险面、N+1 等)。
 3. 清理临时笔记(`.sdlc/onboard-notes/` 若用过)。
 4. text_mode 把 surface-map 草案给用户确认(§0.1),用户改完再定稿。
+5. **脚手架自检 — 询问装 push 前 SDLC 检查**:检测 `<target-repo>/.git/hooks/pre-push` 是否已是 sdlc 的检查(`grep -q sdlc-gate <repo>/.git/hooks/pre-push 2>/dev/null`)。没有就用 text_mode 问:
+   ```
+   要装一个 push 前的 SDLC 检查吗?(纯 shell,不跑 AI、不需要密钥;
+   只在 push 前核对 validate+review 已通过,没过就拦下,用 --no-verify 可绕过)
+     1) 装(推荐)
+     2) 跳过
+   ```
+   选「装」→ 把 `references/templates/hooks/pre-push` 拷到 `<target-repo>/.git/hooks/pre-push` 并 `chmod +x`;**目标是 git 仓时才装**(非 git 仓跳过,提示"这是配置型目录,push 检查不适用")。装完一句话说明:它只认 STATE 里的 `sdlc-gate: PASS` 行,该行由 `sdlc-review` 通过时写。
 
 ---
 
@@ -205,9 +213,11 @@ grep -rIl -E 'auth|login|payment|billing|secret|credential' . --include='*.py' -
 
 | 文件 | 动作 | 说明 |
 |---|---|---|
-| `<repo>/.sdlc/PROFILE.md` | **写(唯一交付物)** | 据 `references/templates/PROFILE.md` 模板填实测结果 |
+| `<repo>/.sdlc/PROFILE.md` | **写(主交付物)** | 据 `references/templates/PROFILE.md` 模板填实测结果 |
 | `references/templates/PROFILE.md` | 读(skill 内) | PROFILE 模板,复制后填写 |
+| `references/templates/hooks/pre-push` | 读(skill 内) | push 前 SDLC 检查模板,Phase D 用户同意后拷贝 |
 | `references/role-routing.md` | 读(skill 内) | §2 规则表 + §3/§4 取值字典,给 surface 推荐默认角色/模式 |
+| `<repo>/.git/hooks/pre-push` | **写(仅用户同意 + git 仓)** | Phase D 脚手架自检装的纯 shell 检查;装完即与 skill 解耦 |
 | `<repo>/.sdlc/onboard-notes/<focus>.md` | 临时写/读(可选) | 仅并行采证用的中转笔记,Phase D 聚合后删除 |
 | `<repo>/.sdlc/STATE.md` | **不碰** | STATE 是 feature 级,由 driver 单写;onboard 只管项目级 PROFILE |
 
@@ -225,7 +235,8 @@ PROFILE.md 视为合格、可交回 driver,需**全部**通过:
 - [ ] 每个 surface 的角色/模式落在 role-routing 字典内。
 - [ ] `## Entry points` 至少给出一个可执行的启动/入口线索。
 - [ ] surface-map 草案已经 text_mode 给用户确认。
-- [ ] **只读纪律守住**:onboard 期间未修改任何源码,唯一写动作是 PROFILE(+临时笔记)。
+- [ ] **只读纪律守住**:onboard 期间**未修改任何源码**;写动作仅限 PROFILE(+临时笔记)+ 用户明确同意后装的 `pre-push` hook(在 `.git/hooks/`,非源码)。
+- [ ] (若为 git 仓)已询问是否装 push 前 SDLC 检查(Phase D 步 5);用户选了才装。
 
 任一未过 → 停在门口(不前进),text_mode 列出缺项让用户补全或确认。
 
