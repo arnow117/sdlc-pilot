@@ -135,4 +135,25 @@
 | validate/e2e | Playwright MCP + design-review fix loop |
 | validate/eval-bench | ai-evals.md + gsd-eval-review |
 | review | gstack review |
-| roles | gstack review/specialists/*.md |
+| roles | gstack review/specialists/*.md + agency-agents（见 §6） |
+
+---
+
+## 6. 补充源：agency-agents（`workspace/agency-agents/`，2026-06-04 clone）
+
+`github.com/msitarzewski/agency-agents` —— 按部门组织的 ~200 个 agent。**形态是"agent 人格"(vibe/emoji/memory)**,
+蒸馏时**取 mission/concerns,丢人格 fluff;蒸馏进我们的卡,不 vendor**。相关 ~25 个,尤其**补我们三个缺口角色**。
+
+| 我们的目标 | agency-agents 候选(⭐=补缺口) |
+|---|---|
+| **big-data 角色**(原 🔴 无源) | ⭐ `engineering/engineering-data-engineer`(Medallion/data contract/lineage/CDC/分区)+ `engineering-database-optimizer` + `engineering-ai-data-remediation-engineer` + `specialized/data-consolidation-agent` → **缺口消除** |
+| **design 角色**(原仅视觉) | ⭐ `design/design-ux-architect`(CSS 系统/IA/交互)+ `design-ux-researcher` + `design-ui-designer` + `design-persona-walkthrough` |
+| **client-dev 角色**(原移动薄) | ⭐ `engineering/engineering-mobile-app-builder`(Swift/Compose/RN/Flutter/offline-first)+ `engineering-frontend-developer` + `engineering-wechat-mini-program-developer` |
+| **server-dev 角色** | `engineering-backend-architect` `software-architect` `security-engineer` `sre` `devops-automator` `database-optimizer` |
+| **qa 角色** | `testing-api-tester` `testing-performance-benchmarker` `testing-accessibility-auditor` `testing-reality-checker` `testing-test-results-analyzer` `testing-evidence-collector` |
+| **(skill) onboard** | ⭐ `engineering-codebase-onboarding-engineer`(直接同名) |
+| **(skill) review** | `engineering-code-reviewer` `senior-developer` `minimal-change-engineer` |
+| **(模式) e2e 旅程** | `design-persona-walkthrough`(persona 走查=用户旅程)`testing-api-tester` |
+| **(模式) eval-bench** | `engineering-ai-engineer` `engineering-prompt-engineer` `testing-performance-benchmarker` |
+
+> 净效果:**big-data 从"从零"变"有强源";design/client-dev 缺口补齐。** 不读全部 ~200,只榨相关 ~25。

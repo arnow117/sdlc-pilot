@@ -1,7 +1,7 @@
 # sdlc-pilot — Design Spec
 
 > Date: 2026-06-03
-> Status: Design (awaiting user review → writing-plans)
+> Status: Design APPROVED → build (scope locked 2026-06-04, see §14). Source map: `docs/distillation-source-map.md`
 > Location: `workspace/20260603-sdlc-pilot/` (future standalone GitHub repo)
 
 ## 1. Problem
@@ -338,28 +338,41 @@ only in the skill-invocation context. Four rules enforce it:
 | v1 (build now) | Later (via distillation loop) |
 |----------------|-------------------------------|
 | `sdlc` driver + STATE/PROFILE contracts | full榨干 of gsd's 73 skills |
-| `sdlc-onboard` (brownfield entry → PROFILE.md + surface map) | full榨干 of gsd's 73 skills |
-| 6 process skills: onboard/spec/plan/build/validate/review skeleton | deep big-data eval mode |
-| 3 validate-mode playbooks: correctness / e2e (Web+OpenAPI+**App**) / eval-bench | complex gates / CI wiring |
-| 3 missing role cards: client-dev, server-dev, big-data | |
-| qa + design cards distilled from existing same-name skills | |
-| `role-routing.md` v1 + `distillation-loop.md` | |
+| `sdlc-onboard` (brownfield entry → PROFILE.md + surface map) | deep big-data eval mode |
+| 6 process skills: onboard/spec/plan/build/validate/review skeleton | complex gates / CI wiring |
+| 3 validate-mode playbooks: correctness / e2e (Web+OpenAPI; **App** sequenced last) / eval-bench | App-tooling deep integration once chosen |
+| 5 role cards: qa, design, client-dev, server-dev, big-data (**big-data = stub**, seeded from agency-agents data-engineer) | big-data full lens |
+| `role-routing.md` v1 (Python + TS globs) + `distillation-loop.md` | more language globs |
 | README + dogfooding symlinks + `.agents/skills` sync | |
+
+**v1 language scope: Python + Web (TS).** Test exec abstraction targets pytest/coverage +
+vitest/playwright/tsc first. **First dogfood target: happycompany** (`corp/dingguo-happycompany/`).
 
 ## 12. Housekeeping
 
-- The (empty) `planner-breakdown-sdlc` skill is **absorbed/replaced** by `sdlc-plan` → one
-  fewer scattered skill.
+- `planner-breakdown-sdlc` is **NOT empty** (correction: 6.4KB, has L1-L4 complexity tiering).
+  It is **absorbed** by `sdlc-plan`, contributing its L1-L4 tiering — not deleted as a stub.
 - This whole family is a cohesive `sdlc-*` namespace sharing one `references/` and one
   STATE/PROFILE contract — it counts as *one* thing (1 driver + 6 process skills), not a
   pile of scattered skills.
 
 ## 13. Open questions / future
 
-- Exact glob set in `role-routing.md` will need tuning against the user's real repos
-  (terminal-bench Python, web simulators, corp tools).
-- **App E2E tooling unverified** — Web (Playwright MCP) and OpenAPI are confirmed available;
-  the mobile-automation tool (Appium / Maestro / device-farm) must be chosen and verified
-  during planning before the App modality is built (per "先验证再记录").
+- **App E2E tooling** — Web (Playwright MCP) and OpenAPI confirmed; mobile-automation tool
+  (Appium / Maestro / device-farm) is a **build-time research spike** (App modality sequenced
+  last). Default lean: Maestro for simplicity, verify before committing (per "先验证再记录").
+- `role-routing.md` globs tuned to happycompany + Python/TS first; more repos later.
 - Whether to add a `scripts/validate-state.mjs` linter (like workflow-creator's validator).
 - Eventual GitHub publish: license, README polish, install instructions.
+
+## 14. Resolutions (2026-06-04)
+
+| Item | Resolution |
+|------|-----------|
+| **Reinventing gsd?** | **No** — confirmed by the source map: every target's "build-what" is dominated by (a) stripping runtime deps and (b) our 3 differentiators (routing/surface-map, portability, ownership). We distill gsd's methodology, not its runtime. |
+| **First dogfood target** | **happycompany** (`corp/dingguo-happycompany/`) |
+| **v1 language scope** | **Python + Web (TS)** |
+| **big-data role** | **stub card** in v1 (now seeded from agency-agents `data-engineer`, so a rich stub at low cost) |
+| **Supplementary role source** | **agency-agents** (`workspace/agency-agents/`) — fills big-data / design-UX / client-mobile gaps. See source map §6. |
+| **Portability patterns to reuse everywhere** | gsd `text_mode` (AskUserQuestion → numbered text) + gsd-map `Task-or-sequential` degradation. |
+| **Build orchestration** | Fan-out authoring grounded in the source map, in dependency waves (foundation → role cards + validate modes → process skills → integration/verify). |
