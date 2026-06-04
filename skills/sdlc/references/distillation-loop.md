@@ -98,13 +98,13 @@ roles/<r>.md   ┌───┴───┐
               是       否
               │         │
               ▼         ▼
-        validate-mode  stage playbook
-        (correctness/  stages/<n>-*.md
-         e2e/eval-bench)
+        validate-mode  stage 逻辑
+        (correctness/  内联进 sdlc-<stage>/SKILL.md
+         e2e/eval-bench)  (v1 无独立 stages/ 目录)
 ```
 
 - **角色卡**（`roles/`）：某职能视角"在意什么"。无动作 → 检查清单 / 关注点。
-- **stage playbook**（`stages/`）：某一步"我们怎么做"。有多步动作 → 进度、闸门、状态机。
+- **stage 逻辑**（v1 **内联**在对应 `skills/sdlc-<stage>/SKILL.md`，无独立 `stages/` 目录）：某一步"我们怎么做"。有多步动作 → 进度、闸门、状态机。`stages/` 为未来拆分预留点。
 - **validate-mode playbook**（`validate-modes/`）：某种验证手法。属于 correctness / e2e / eval-bench 三者之一 → 跑法 + 证据 + 阈值。
 - **role-routing.md**：如果蒸出的是"什么改动该上什么角色/模式"的映射（新语言 glob、新模态），追加进路由表。
 
@@ -145,7 +145,7 @@ updated: <stamp>
 | 蒸馏出的东西 | 落点 | 不该去哪 |
 |---|---|---|
 | 职能视角 / 检查清单 | `references/roles/<role>.md` | ❌ 新建顶层 skill |
-| 流程步骤 / 阶段闸 | `references/stages/<n>-<name>.md` | ❌ 散落 md |
+| 流程步骤 / 阶段闸 | v1 内联进 `skills/sdlc-<stage>/SKILL.md`（`stages/` 为未来拆分预留，v1 暂空） | ❌ 散落 md |
 | 验证手法 / 阈值 / 证据 schema | `references/validate-modes/{correctness,e2e,eval-bench}.md` | ❌ 新建 validate skill（验证永远是 mode，不是 skill） |
 | 改动代码 → 角色/模式 的映射 | `references/role-routing.md` | — |
 | 项目级架构事实（surface map） | 目标 repo 的 `.sdlc/PROFILE.md`（由 onboard 维护，不进 references） | ❌ references/ |
