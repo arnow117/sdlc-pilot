@@ -65,13 +65,13 @@
 ## 2. 路由规则表（v1：Python + TS + App）
 
 > 从上到下匹配，**一个 diff 可命中多行，结果取并集**。glob 用 POSIX/gitignore 语义。
-> `validate 模式` 列里的 `e2e(Web/OpenAPI/App)` 指 `e2e` 模式的对应子模态。
+> `validate 模式` 列里的 `e2e:Web/OpenAPI/App` 指 `e2e` 模式的对应子模态。
 
 | # | 改动路径 glob | 加载角色卡 | 跑 validate 模式 | 说明 |
 |---|---|---|---|---|
-| R1 | `**/*.tsx` · `**/*.jsx` · `**/*.vue` · `**/*.svelte` · `**/*.css` · `**/*.scss` · `**/components/**` · `**/pages/**` · `**/app/**`（web 前端） | client-dev + design | correctness + **e2e(Web)** | 前端可见面，必走 Web 旅程 + 视觉评审 |
-| R2 | `**/*.swift` · `**/*.kt` · `**/*.java`(android) · `**/mobile/**` · `**/ios/**` · `**/android/**` · `**/*.dart` | client-dev + design | correctness + **e2e(App)** | 原生/跨端移动；App 模态 v1 排最后（工具选型未定，见 spec §13）。无工具时降级为人工旅程检查清单并记 PARTIAL |
-| R3 | `**/api/**` · `**/handlers/**` · `**/routes/**` · `**/*.server.*` · `**/endpoints/**` · `**/controllers/**`（服务端接口） | server-dev | correctness + **e2e(OpenAPI)** | API/handler；OpenAPI 端点用例（正向生成 + network_requests 抓真实端点） |
+| R1 | `**/*.tsx` · `**/*.jsx` · `**/*.vue` · `**/*.svelte` · `**/*.css` · `**/*.scss` · `**/components/**` · `**/pages/**` · `**/app/**`（web 前端） | client-dev + design | correctness + **e2e:Web** | 前端可见面，必走 Web 旅程 + 视觉评审 |
+| R2 | `**/*.swift` · `**/*.kt` · `**/*.java`(android) · `**/mobile/**` · `**/ios/**` · `**/android/**` · `**/*.dart` | client-dev + design | correctness + **e2e:App** | 原生/跨端移动；App 模态 v1 排最后（工具选型未定，见 spec §13）。无工具时降级为人工旅程检查清单并记 PARTIAL |
+| R3 | `**/api/**` · `**/handlers/**` · `**/routes/**` · `**/*.server.*` · `**/endpoints/**` · `**/controllers/**`（服务端接口） | server-dev | correctness + **e2e:OpenAPI** | API/handler；OpenAPI 端点用例（正向生成 + network_requests 抓真实端点） |
 | R4 | `**/models/**` · `**/strategy/**` · `**/*.prompt*` · `**/prompts/**` · `**/ai/**` · `**/evals/**` · `**/llm/**` · `**/agents/**` | server-dev (+ qa) | correctness + **eval-bench** | **AI/模型/策略/prompt/评估** → 触发 eval-bench（按 spec 阶段定的 rubric/数据集/阈值跑质量分） |
 | R5 | `**/*.sql` · `**/pipelines/**` · `**/etl/**` · `**/dbt/**` · `**/warehouse/**` · `**/*_spark*.py` · `**/*_pandas*.py` · `**/migrations/**` | big-data | correctness（+ **eval-bench** 当涉及数据质量/回填正确性） | 数据管道/数仓/迁移；big-data v1 为 stub 卡（种自 agency-agents data-engineer） |
 | R6 | `**/*.test.*` · `**/*.spec.*` · `**/test/**` · `**/tests/**` · `**/e2e/**` · `**/__tests__/**` · `**/conftest.py` | qa | correctness + **e2e** | 测试/规格本身变更 → QA 视角，并跑相关 e2e |
@@ -106,13 +106,15 @@
 
 子模态选择：`e2e` 的 Web/OpenAPI/App 由命中行决定（R1→Web, R3→OpenAPI, R2→App, R6→沿用被测面对应子模态）。
 
+> **规范 token 形式（单一事实源）**：子模态一律写**冒号形式** `e2e:Web` / `e2e:OpenAPI` / `e2e:App`，与本节字典、PROFILE 模板 surface-map 一致。**禁止**括号形式 `e2e(Web)`——字面匹配字典时 `e2e(Web)` 不等于 `e2e:Web`，严格执行器（如 Codex）会判为字典外野值。所有 STATE/spec/build/plan 快照都用冒号形式。
+
 ---
 
 ## 5. 已覆盖需求自检（对照任务清单）
 
-- [x] 前端 tsx/vue/css/components → client-dev + design + e2e(Web) — R1
-- [x] 移动 swift/kt/mobile/ios/android → client-dev + design + e2e(App) — R2
-- [x] API/handlers → server-dev + e2e(OpenAPI) — R3
+- [x] 前端 tsx/vue/css/components → client-dev + design + e2e:Web — R1
+- [x] 移动 swift/kt/mobile/ios/android → client-dev + design + e2e:App — R2
+- [x] API/handlers → server-dev + e2e:OpenAPI — R3
 - [x] AI/models/strategy/prompt/evals → server-dev + qa + eval-bench — R4
 - [x] sql/pipelines → big-data — R5
 - [x] test/spec → qa + e2e — R6

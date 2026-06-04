@@ -25,6 +25,8 @@ description: >
 
 ## 0. 可移植前置（每次入口先做）
 
+> **共享 references 的位置（单一约定）**：本文引用的 `references/role-routing.md` 等共享数据**物理上只在 sdlc 驱动器 skill 目录下**（`sdlc/references/`），不在本 skill 自己的目录里。解析时指向 `sdlc/references/...`（相对 skills 根）或经 dogfooding 软链接定位，**不要**当作相对本 skill 目录的路径。
+
 本 skill 必须在 Claude 和 Codex 下都能跑。两条降级范式贯穿全程：
 
 ### 0.1 交互降级 — text_mode（默认开）
@@ -215,7 +217,7 @@ Spec 已写入并（如适用）提交到 `<path>`。请你过一眼，
 > Status: draft | approved
 > Target surface(s): <web-frontend / api / ai-strategy / ...>  # 来自 §1.0 路由解析
 > Active roles (anticipated): <server-dev, qa, ...>
-> Validate modes (anticipated): <correctness, e2e(Web), eval-bench, ...>
+> Validate modes (anticipated): <correctness, e2e:Web, eval-bench, ...>
 
 ## 1. 问题 / 目标
 为什么做？要达成什么用户/业务结果？
@@ -305,7 +307,7 @@ spec 获批后，把交接写回 `<target-repo>/.sdlc/STATE.md`（schema 见 dri
 stage: spec
 status: in-progress            # 或 gated（未过复核时）
 updated: <caller 传入时间戳>
-validate-modes: [correctness, e2e(Web), eval-bench]   # §1.0 预解析的快照（非权威，build 会重算）
+validate-modes: [correctness, e2e:Web, eval-bench]   # §1.0 预解析的快照（非权威，build 会重算）
 
 ## Gates passed
 - [x] spec：spec.md 已获批（含 AI 工作的 eval 标准，若适用）

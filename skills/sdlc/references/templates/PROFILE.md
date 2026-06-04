@@ -30,7 +30,9 @@
 -->
 
 tech-stack: [<填写，例如：next.js, fastapi, postgres>]
-test-commands: { unit: "<例如 pytest>", coverage: "<例如 pytest --cov>", e2e: "<例如 playwright test>", typecheck: "<例如 tsc --noEmit>", build: "<例如 pnpm build>" }
+test-commands: { unit: "<例如 pytest>", coverage: "<例如 pytest --cov=<pkg> --cov-fail-under=80>", e2e: "<例如 playwright test>", typecheck: "<例如 tsc --noEmit>", build: "<例如 pnpm build>" }
+<!-- 某槽位无对应套件/工具时，显式写 "none — <原因>"，不要留空；coverage 用具体包名替换 <pkg>、阈值替换默认 80/分支 70。 -->
+
 
 ## Tech stack
 
@@ -52,9 +54,12 @@ test-commands: { unit: "<例如 pytest>", coverage: "<例如 pytest --cov>", e2e
   每个模块/面：globs（匹配的文件路径）→ 默认角色卡 → 默认 validate 模式。
   进入 build/validate/review 时，git diff 的路径对照本表 + role-routing 规则，
   动态解析出本轮活跃角色与验证模式（结果快照进 STATE.md，不在此持久化）。
-  取值字典：
-    roles = client-dev | server-dev | design | qa | big-data | security
+  取值字典（单一事实源 = role-routing.md §3/§4，下面与之对齐）：
+    roles = client-dev | server-dev | design | qa | big-data
+            （security 不是独立角色卡、不写进 surface 的 roles[]；敏感面由
+             server-dev/qa 卡的 security 子节 + sdlc-review 安全 10 域承载——见 role-routing §3）
     modes = correctness | e2e:Web | e2e:OpenAPI | e2e:App | eval-bench
+            （e2e 子模态一律用冒号形式 e2e:Web，与 role-routing §4 字典一致）
   下面为示例行，按实际仓库结构增删改。
 -->
 

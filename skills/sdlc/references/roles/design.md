@@ -1,6 +1,6 @@
 ---
 role: design
-triggers: [web/**, components/**, "**/*.tsx", "**/*.vue", "**/*.css", "**/*.scss", "**/*.swift", "**/*.kt, mobile/**", ios/**, android/**, "**/*.html", design-system.md, DESIGN.md]
+triggers: ["web/**", "components/**", "**/*.tsx", "**/*.vue", "**/*.css", "**/*.scss", "**/*.swift", "**/*.kt", "**/*.dart", "mobile/**", "ios/**", "android/**", "**/*.html", "design-system.md", "DESIGN.md"]
 distilled-from: [gstack/review/design-checklist, web/design-quality(user-rules), design-ux-architect, design-ux-researcher, design-persona-walkthrough]
 ---
 
@@ -93,7 +93,7 @@ distilled-from: [gstack/review/design-checklist, web/design-quality(user-rules),
 ### 何时触发
 - diff 命中前端 glob（`web/** components/** *.tsx *.vue *.css *.html` 或移动端 `*.swift *.kt ios/** android/**`）。
 - 或显式 `/sdlc validate --mode=e2e`（视觉子项随 e2e 一起跑）。
-- 若 `gstack-diff-scope` 判 `SCOPE_FRONTEND=false`：**静默跳过**，不出任何输出。
+- 若 `git diff --name-only` 命中的路径**没有任何一条**匹配前端/UI glob（按 role-routing R1/R2 的 web/移动 glob，或 PROFILE.surface-map 的前端面）：**静默跳过**，不出任何输出。（可移植：不依赖任何 gstack 二进制，只用 diff + role-routing glob。）
 
 ### 步骤流程
 1. **校准**：若仓库根有 `DESIGN.md`/`design-system.md`，先读，作为所有判定基准；否则用通用原则。
@@ -115,7 +115,7 @@ distilled-from: [gstack/review/design-checklist, web/design-quality(user-rules),
 - 截图证据存 `.sdlc/validate/` 下，三联（before/target/after）命名可追。
 
 ### 门控（gate）
-- **静默跳过门**：`SCOPE_FRONTEND=false` → 整个设计审查跳过，零输出。
+- **静默跳过门**：`git diff` 无任何路径匹配前端/UI glob（role-routing R1/R2 或 PROFILE 前端面）→ 整个设计审查跳过，零输出。（可移植，不依赖 gstack。）
 - **a11y 硬门**：`outline:none` 无替代焦点环、对比 < AA、键盘走不通 → **FAIL**（属可访问性回归，非风格建议，必须修后才放行）。
 - **AI-slop 软门**：命中 AI-slop 五件套任意项 → WARN + NEEDS INPUT，需人确认或修复（除非 DESIGN.md 明确祝福）。
 - **降级门（可移植）**：无 Playwright MCP → 只跑 A 腿（静态 `[diff]`），B 腿 `[render]` 项标 "UNVERIFIED — 需浏览器环境"，诚实声明不能测的范围，不假装跑过。

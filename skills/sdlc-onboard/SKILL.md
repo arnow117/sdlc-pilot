@@ -25,6 +25,8 @@ description: >
 
 ## 0. 可移植前置(入口先做)
 
+> **共享 references 的位置(单一约定)**:本文出现的 `references/role-routing.md`、`references/roles/<role>.md`、`references/validate-modes/<mode>.md`、`references/templates/*.md` **物理上只存在于 sdlc 驱动器 skill 目录下**(`sdlc/references/`)。它们不在各流程 skill 自己的目录里。解析路径时一律指向 `sdlc/references/...`(相对 skills 根),或经 dogfooding 软链接定位——**不要**当作相对本 skill 目录的路径去 `cat`/Read,那样会找不到。
+
 本 skill 在 Claude 和 Codex 下都要能跑。两条降级范式(来自 driver §0):
 
 ### 0.1 交互降级 — text_mode
@@ -54,7 +56,7 @@ description: >
 
 | 条件 | 检查 |
 |---|---|
-| repo 非空(有真实代码) | `git -C <repo> ls-files \| grep -vE '^\.(git\|sdlc)/' \| head -1` 有输出 |
+| repo 非空(有真实代码) | `find <repo> -type f -not -path '*/.git/*' -not -path '*/.sdlc/*' \| head -1` 有输出。**不要只靠 `git ls-files`**——目标可能是未跟踪子目录(在父仓里显示为 `??`、无嵌套 `.git`)或刚克隆未 init 的目录,`git ls-files` 会返回空、把真实项目误判为空仓。可先 `git -C <repo> rev-parse --is-inside-work-tree` 探测,再 fallback 到 `find`。 |
 | 尚无 PROFILE.md,**或**用户要求刷新 | `ls <repo>/.sdlc/PROFILE.md` 不存在;或漂移触发(见 §6) |
 
 两种入口模式:
@@ -96,7 +98,8 @@ ls package.json pnpm-workspace.yaml pyproject.toml requirements*.txt go.mod Carg
 [ -f package.json ] && grep -E '"(dependencies|scripts)"' -A20 package.json
 [ -f pyproject.toml ] && sed -n '1,60p' pyproject.toml
 # 框架信号(v1 重点:Python + Web/TS)
-grep -rIl -E 'fastapi|flask|django|next|react|vue|svelte|express' . --include=*.py --include=*.ts --include=*.tsx --include=*.json 2>/dev/null | head
+# 注意:--include 的 glob 必须单引号,否则 zsh 会 nomatch 报 "no matches found" 在 grep 跑之前就中止。
+grep -rIl -E 'fastapi|flask|django|next|react|vue|svelte|express' . --include='*.py' --include='*.ts' --include='*.tsx' --include='*.json' 2>/dev/null | head
 # 外部集成(DB/队列/第三方)
 grep -rIoE 'postgres|mysql|sqlite|redis|kafka|mongodb|s3|openai|anthropic' . 2>/dev/null | sort -u | head
 ```
@@ -104,9 +107,11 @@ grep -rIoE 'postgres|mysql|sqlite|redis|kafka|mongodb|s3|openai|anthropic' . 2>/
 **focus = arch(结构 + 入口)**
 ```bash
 # 顶层结构(只看 code-bearing 目录,排除 noise)
-git ls-files | grep -vE '/(node_modules|dist|build|\.next|__pycache__|vendor)/' | awk -F/ '{print $1"/"$2}' | sort -u | head -40
+# 未跟踪/未 init 的目标 git ls-files 会返回空 → fallback 到 find。
+{ git ls-files 2>/dev/null | grep . || find . -type f -not -path '*/.git/*'; } \
+  | grep -vE '/(node_modules|dist|build|\.next|__pycache__|vendor)/' | sed 's|^\./||' | awk -F/ '{print $1"/"$2}' | sort -u | head -40
 # 入口候选:启动文件/路由/CLI/导出
-grep -rIl -E 'if __name__|app = (FastAPI|Flask)|createServer|app\.listen|uvicorn|def main\(' . --include=*.py --include=*.ts --include=*.js 2>/dev/null | head
+grep -rIl -E 'if __name__|app = (FastAPI|Flask)|createServer|app\.listen|uvicorn|def main\(' . --include='*.py' --include='*.ts' --include='*.js' 2>/dev/null | head
 ls Procfile docker-compose.yml Dockerfile Makefile justfile 2>/dev/null
 ```
 
@@ -125,12 +130,13 @@ grep -rIoE 'cov-fail-under|coverageThreshold|--cov-fail-under=[0-9]+' . 2>/dev/n
 
 **focus = concerns(已知风险 + 坑)**
 ```bash
-# 大文件(>800 行)= 改动热点风险
-git ls-files | grep -E '\.(py|ts|tsx|js|go|rs)$' | xargs wc -l 2>/dev/null | sort -rn | awk '$1>800{print "  - "$2" ("$1")"}' | head
+# 大文件(>800 行)= 改动热点风险(未跟踪目标 fallback 到 find)
+{ git ls-files 2>/dev/null | grep . || find . -type f -not -path '*/.git/*' | sed 's|^\./||'; } \
+  | grep -E '\.(py|ts|tsx|js|go|rs)$' | xargs wc -l 2>/dev/null | sort -rn | awk '$1>800{print "  - "$2" ("$1")"}' | head
 # 调试残留 / TODO / FIXME 密度
-grep -rIcE 'TODO|FIXME|HACK|XXX' . --include=*.py --include=*.ts 2>/dev/null | awk -F: '$2>0' | head
+grep -rIcE 'TODO|FIXME|HACK|XXX' . --include='*.py' --include='*.ts' 2>/dev/null | awk -F: '$2>0' | head
 # 敏感面(路由表 B2 要用):auth/支付/密钥/原始 SQL
-grep -rIl -E 'auth|login|payment|billing|secret|credential' . --include=*.py --include=*.ts 2>/dev/null | head
+grep -rIl -E 'auth|login|payment|billing|secret|credential' . --include='*.py' --include='*.ts' 2>/dev/null | head
 ```
 
 > 采证只读不写;输出落进临时笔记(并行)或内存(串行)。**不在此阶段下评分/做改造**(那是 arch-doctor 的事,我们只借它的 bash 采证)。
@@ -211,7 +217,7 @@ grep -rIl -E 'auth|login|payment|billing|secret|credential' . --include=*.py --i
 PROFILE.md 视为合格、可交回 driver,需**全部**通过:
 
 - [ ] `<repo>/.sdlc/PROFILE.md` 存在,无残留 `<填写...>` 占位 / 注释块。
-- [ ] `tech-stack` + `test-commands` 已据实填写(test-commands 至少有 `unit`;有可见面则有 `e2e`,有 TS 则有 `typecheck`)。
+- [ ] `tech-stack` + `test-commands` 已据实填写。规则:**有套件就必须抓到对应命令**;**没有套件不是阻断,但必须显式标 `none`**(如 `unit: "none — 项目无测试套件"`),并在 `## Known risks` 记一条覆盖率缺口。绝不留空白。brownfield 真实项目常零测试,这恰恰是最需要建 baseline 的,不能卡在门口。(有可见面且存在 e2e 工具则填 `e2e`,有 TS 则填 `typecheck`。)
 - [ ] `## Surface map` 通过 Phase C §5 三条自检(覆盖全、取值合法、无歧义)。
 - [ ] 每个 surface 的角色/模式落在 role-routing 字典内。
 - [ ] `## Entry points` 至少给出一个可执行的启动/入口线索。

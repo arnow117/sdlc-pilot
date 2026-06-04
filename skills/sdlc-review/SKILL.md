@@ -26,6 +26,8 @@ description: >
 
 ## 0. 可移植前置(每次入口先做)
 
+> **共享 references 的位置(单一约定)**:本文引用的 `references/role-routing.md`、`references/roles/<role>.md` 等共享数据**物理上只在 sdlc 驱动器 skill 目录下**(`sdlc/references/`),不在本 skill 自己的目录里。解析时指向 `sdlc/references/...`(相对 skills 根)或经 dogfooding 软链接定位,**不要**当作相对本 skill 目录的路径去 Read。
+
 ### 0.1 交互降级 — text_mode
 凡需向用户提问(确认 scope-drift 处置、批准 fix、确认接受风险),**优先用纯文本编号列表**:
 

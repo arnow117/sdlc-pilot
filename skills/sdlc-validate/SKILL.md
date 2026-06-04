@@ -33,6 +33,8 @@ description: >
 
 ## 0. 可移植前置(每次入口先做)
 
+> **共享 references 的位置(单一约定)**:本文引用的 `references/role-routing.md`、`references/validate-modes/<mode>.md` 等共享数据**物理上只在 sdlc 驱动器 skill 目录下**(`sdlc/references/`),不在本 skill 自己的目录里。解析时指向 `sdlc/references/...`(相对 skills 根)或经 dogfooding 软链接定位,**不要**当作相对本 skill 目录的路径去 Read。
+
 本 skill 必须在 Claude 和 Codex 下都能跑。两条降级范式贯穿全程:
 
 ### 0.1 交互降级 — text_mode
@@ -102,7 +104,7 @@ modes := resolve( changed-files × PROFILE.surface-map × role-routing 规则 )
 
 - 先查 `<repo>/.sdlc/PROFILE.md` 的 surface-map(项目特化,优先级高):命中 surface → 取其默认 validate 模式。
 - 未被 PROFILE 覆盖的路径 → 套 `role-routing.md` 的通用 glob 表(R1~R6 + 兜底)。
-- 取并集,得到本轮 **active modes**(子集 ⊆ {correctness, e2e(Web/OpenAPI/App), eval-bench})。
+- 取并集,得到本轮 **active modes**(子集 ⊆ {correctness, e2e:Web/OpenAPI/App, eval-bench})。
 
 基线规则(始终成立,来自 role-routing):
 - **correctness 永远在 active modes 里**(任意 diff 都跑)。
@@ -123,7 +125,7 @@ modes := resolve( changed-files × PROFILE.surface-map × role-routing 规则 )
 ⚠ 这些改动不在 PROFILE.surface-map 内,模式解析可能不全:
   - mobile/ios/App.swift
   1) 现在重跑 sdlc-onboard 相关部分刷新 surface-map(推荐)
-  2) 本次按通用 routing 规则继续(已据 R2 判定需 e2e(App))
+  2) 本次按通用 routing 规则继续(已据 R2 判定需 e2e:App)
 回复编号。
 ```
 

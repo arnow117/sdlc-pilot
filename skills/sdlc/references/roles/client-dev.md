@@ -165,5 +165,5 @@ distilled-from:
 | **sdlc-validate** | 触发 **correctness**（组件/widget 单测 + 覆盖率）；前端面改动触发 **e2e（Web/App）模式**；用本卡判断 e2e 旅程该覆盖哪些状态/断点 |
 | **sdlc-review** | 命中即并行加载本卡 → 输出 `review/client-dev.md`：按"常见翻车"表逐条核，标 severity+confidence |
 
-> 路由对照（见 `role-routing.md`）：`*.tsx/*.vue/*.css/components/**` → client-dev + design + e2e(Web)；
-> `*.swift/*.kt/*.dart/ios/**/android/**/mobile/**` → client-dev + design + e2e(App)。
+> 路由对照（见 `role-routing.md`）：`*.tsx/*.vue/*.css/components/**` → client-dev + design + e2e:Web；
+> `*.swift/*.kt/*.dart/ios/**/android/**/mobile/**` → client-dev + design + e2e:App。

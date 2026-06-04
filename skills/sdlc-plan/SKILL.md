@@ -75,6 +75,8 @@ grep -qi 'spec approved\|spec.*已获批\|status.*approved' "$SDLC/STATE.md" 2>/
 
 ## 1. 可移植前置（每次入口一次性）
 
+> **共享 references 的位置（单一约定）**：本文引用的 `references/role-routing.md` 等共享数据**物理上只在 sdlc 驱动器 skill 目录下**（`sdlc/references/`），不在本 skill 自己的目录里。解析时指向 `sdlc/references/...`（相对 skills 根）或经 dogfooding 软链接定位，**不要**当作相对本 skill 目录的路径。
+
 与 driver 同源的两条降级范式（spec §10 兼容性铁律 rule 3）：
 
 ### 1.1 交互降级 — text_mode
@@ -121,7 +123,7 @@ git -C <target-repo> status --porcelain
 
 **用途（规划期，不是 review 期）**：
 - 给每个阶段定"可观察成功标准"时，**优先用将来真会跑的验证手段表述**
-  （前端面 → 用 e2e(Web) 旅程能断言的行为；AI 面 → 用 eval-bench rubric 能打分的指标）。
+  （前端面 → 用 e2e:Web 旅程能断言的行为；AI 面 → 用 eval-bench rubric 能打分的指标）。
 - 把解析出的 `active roles` + `validate-modes` + `changed-files` **快照进 STATE**（§8），
   作交接/审计用，**不当权威源**（真正的 role review 在 sdlc-review 时按那一刻的 diff 重算）。
 
@@ -355,7 +357,7 @@ EVAL-CRIT  | E-01   | 答案准确率 ≥0.85(若有AI工作) | T5       | COVER
 - artifacts(必存文件): <具体路径>
 - key_links(关键接线): <UI→路由 / workflow→触发 / config→默认值+消费者>
 
-**可观察成功标准**: <用将来会跑的验证手段表述：e2e(Web) 旅程 / OpenAPI 端点断言 / eval-bench 指标≥阈值 / 覆盖率≥X%>
+**可观察成功标准**: <用将来会跑的验证手段表述：e2e:Web 旅程 / OpenAPI 端点断言 / eval-bench 指标≥阈值 / 覆盖率≥X%>
 
 ### Task P1-T1: <动作名>
 - **requirements**: R-01            # 反向追溯，必填非空
