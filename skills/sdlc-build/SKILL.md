@@ -53,11 +53,13 @@ description: >
 
 ```
 进入 wave N(plan 已保证 wave 内无文件冲突):
-  ├─ 有 Task/并行能力 且 本 wave ≥2 个独立任务
-  │     → fan-out:一任务一 agent,各自跑完整 TDD(§3)、各写各自文件、各写各自 review/笔记
+  ├─ 有 Task/并行能力 且 本 wave ≥2 个独立**阶段(phase)**
+  │     → fan-out:**一阶段一 agent**,各自跑完该阶段的所有任务(每任务完整 TDD)、各写各自文件、各写各自笔记
   │        orchestrator(build 主流程)收集结果 → 合并 → **单写 STATE**
-  └─ 无并行能力(Codex/Gemini 等) 或 本 wave 仅剩 1 任务
-        → 串行 inline 逐任务(= gsd-execute-phase --interactive 形态:无 subagent、单 session)
+  └─ 无并行能力(Codex/Gemini 等) 或 本 wave 仅 1 个阶段
+        → 串行 inline 逐阶段→逐任务(= gsd-execute-phase --interactive 形态:无 subagent、单 session)
+
+> 粒度:**并行单元 = 阶段(phase)**(plan 在 phase 上标 wave/depends_on)。一个阶段内的多个任务通常有 TDD 依赖(测试→实现),**阶段内仍串行**;并行发生在**同 wave 的不同阶段之间**。
   ↓
   wave 屏障:本 wave 全部 green + 出口门过,才进 wave N+1(后波依赖前波产物)
 ```
@@ -130,7 +132,7 @@ git -C <repo> status --porcelain           # 含 untracked
 
 ## 3. 主循环:逐任务 TDD(red → green → refactor)
 
-按 `plan.md` 的 **wave 顺序**推进(执行模型见 §0.2:同 wave 多任务有并行能力则 fan-out,否则串行 inline;后波依赖前波)。**无论并行还是串行,每个任务都跑完整 TDD 五拍状态机,任务内永远单写手串行。**
+按 `plan.md` 的 **wave 顺序**推进(执行模型见 §0.2:同 wave 多**阶段**有并行能力则一阶段一 agent fan-out,否则串行 inline;后波依赖前波)。**无论并行还是串行,每个任务都跑完整 TDD 五拍状态机,任务内永远单写手串行。**
 
 ### 3.0 统一状态机(TDD ⊕ 调试子循环)
 
