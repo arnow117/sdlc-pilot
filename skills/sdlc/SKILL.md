@@ -89,12 +89,15 @@ ls -la <target-repo>/.sdlc/ 2>/dev/null
    └─ 有 PROFILE.md                                        → 在 STATE.stage 处续接特性循环
 ```
 
-判定"repo 是否为空"(忽略 `.git`、`.sdlc`、纯配置):
+判定"repo 是否为空"(忽略 `.git`、`.sdlc`):
 
 ```bash
-git -C <target-repo> ls-files | grep -vE '^\.(git|sdlc)/' | head -1
+# 不要只靠 git ls-files——目标可能是未跟踪子目录(在父仓里显示为 ??、无嵌套 .git)
+# 或刚克隆未 init,git ls-files 会返回空、把真实项目误判为空仓。
+{ git -C <target-repo> ls-files 2>/dev/null | grep -vE '^\.(git|sdlc)/' \
+  || find <target-repo> -type f -not -path '*/.git/*' -not -path '*/.sdlc/*'; } | head -1
 ```
-有输出 = 非空。
+有输出 = 非空。(与 sdlc-onboard 入口门同一套 find-fallback,保持一致。)
 
 ### 分叉决策(text_mode 确认)
 读完状态后,**先说清你判定的入口,再让用户确认/改向**:
