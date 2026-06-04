@@ -243,6 +243,7 @@ blast-radius(最坏情况波及多少系统/人)、boring-by-default(创新 toke
 - **accept**:用户/规则明确接受(记入 finding)。
 
 **处置铁律**:
+- **修每条 finding 前守 `references/receiving-feedback.md` 纪律**:先核实该 finding **真成立、对本仓正确**(看着对≠真的对),再 auto-fix;**一次一项、各自验证、验无回归**;意见错了就技术反驳(标误报),别盲目照单全收;别顺手加没要求的(YAGNI grep)。治"被指出就乱改"。
 - review 阶段**只改代码,不 commit / 不 push / 不建 PR**(那是 ship 的事)。
 - **不改测试去迁就实现**;发现实现 bug → 标 finding 升级,不在 review 里默默改实现逻辑(除非是上面的机械 auto-fix)。
 - 跨评审去重:本分支上一轮被用户 `skipped` 且相关文件未再变的 finding → 抑制(只抑制 skipped,绝不抑制 fixed)。
