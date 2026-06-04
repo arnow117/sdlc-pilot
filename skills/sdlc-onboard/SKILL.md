@@ -148,7 +148,8 @@ grep -rIl -E 'auth|login|payment|billing|secret|credential' . --include='*.py' -
 1. **读 P0**:README + CLAUDE.md/AGENTS.md → 项目一句话定位(只取代码/文档里能查证的事实)。
 2. **定类型**(按最显著信号归类,混合则取权重最高):
    - 工程/基础设施(database/engine/framework/library/SDK/server)
-   - Agentic/AI(agent/LLM/prompt/RAG/eval)→ 提示:这类项目 surface-map 大概率含 `ai-strategy` 面 + eval-bench 模式。
+   - Agentic/AI **代码**(agent/LLM/prompt/RAG/eval 的可执行实现)→ 提示:大概率含 `ai-strategy` 面 + eval-bench 模式。
+   - **配置/agent 定义型**(源主要是 agents/workflows/processes/roles/employees/skill 的**声明式** JSON/YAML/SKILL.md,真实代码很少;如 happycompany——一家 AI agent 运营的公司,42 个 JSON 定义 + 3 个 Python 文件)→ 提示:走 R7,默认 `server-dev` + `correctness`,验证靠 **schema/契约一致性校验**,**不跑 eval-bench**(它不是 AI 模型代码);内嵌真实代码(*.py/*.ts)按其类型**单独归面**(如 med_crm CLI → server-dev)。
    - 通用/其他(CLI/工具/脚手架)
 3. **定入口**(agency onboarding-engineer Step 2):找出"系统怎么启动"的最小文件集——启动文件、路由表、CLI 命令、配置入口、迁移命令。
 4. **提测试命令抽象**:从 Phase A 的 scripts/pyproject 线索归纳出 `{ unit, coverage, e2e, typecheck, build }`(语言无关命令,validate/correctness 据此发现并运行套件)。v1 对照 pytest/coverage + vitest/playwright/tsc。
@@ -177,6 +178,8 @@ grep -rIl -E 'auth|login|payment|billing|secret|credential' . --include='*.py' -
 | 服务端接口(api/handlers/routes/controllers) | api | `services/api/**`, `**/handlers/**` | server-dev | correctness, e2e:OpenAPI |
 | AI/模型/策略/prompt/evals | ai-strategy | `models/**`, `strategy/**`, `prompts/**`, `evals/**` | server-dev, qa | correctness, eval-bench |
 | 数据管道/数仓/迁移(sql/pipelines/etl) | data | `pipelines/**`, `**/*.sql`, `migrations/**` | big-data | correctness |
+| 配置/agent 定义(agents/workflows/roles/employees/skill 声明式定义) | agent-config | `agents/**.json`, `workflows/**.json`, `processes/**.json`, `roles.json`, `people.json`, `employees/**.yaml`, `**/SKILL.md` | server-dev(+security 当含权限/授权矩阵如 roles.json) | correctness |
+| 内嵌真实代码(配置型工程里少量 .py/.ts) | (按其类型归面,如) embedded-cli | `**/med_crm/**.py` 等 | server-dev | correctness |
 
 5. **surface-map 自检**(三条硬约束,违反则回 Phase A 补采证):
    - [ ] 每个被跟踪的 code-bearing 顶层目录,要么落进某个面,要么明确归为"未归类"(不能静默丢)。

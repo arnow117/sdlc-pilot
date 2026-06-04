@@ -72,9 +72,10 @@
 | R1 | `**/*.tsx` · `**/*.jsx` · `**/*.vue` · `**/*.svelte` · `**/*.css` · `**/*.scss` · `**/components/**` · `**/pages/**` · `**/app/**`（web 前端） | client-dev + design | correctness + **e2e:Web** | 前端可见面，必走 Web 旅程 + 视觉评审 |
 | R2 | `**/*.swift` · `**/*.kt` · `**/*.java`(android) · `**/mobile/**` · `**/ios/**` · `**/android/**` · `**/*.dart` | client-dev + design | correctness + **e2e:App** | 原生/跨端移动；App 模态 v1 排最后（工具选型未定，见 spec §13）。无工具时降级为人工旅程检查清单并记 PARTIAL |
 | R3 | `**/api/**` · `**/handlers/**` · `**/routes/**` · `**/*.server.*` · `**/endpoints/**` · `**/controllers/**`（服务端接口） | server-dev | correctness + **e2e:OpenAPI** | API/handler；OpenAPI 端点用例（正向生成 + network_requests 抓真实端点） |
-| R4 | `**/models/**` · `**/strategy/**` · `**/*.prompt*` · `**/prompts/**` · `**/ai/**` · `**/evals/**` · `**/llm/**` · `**/agents/**` | server-dev (+ qa) | correctness + **eval-bench** | **AI/模型/策略/prompt/评估** → 触发 eval-bench（按 spec 阶段定的 rubric/数据集/阈值跑质量分） |
+| R4 | `**/models/**` · `**/strategy/**` · `**/*.prompt*` · `**/prompts/**` · `**/ai/**` · `**/evals/**` · `**/llm/**` · `**/agents/**/*.py` · `**/agents/**/*.ts` | server-dev (+ qa) | correctness + **eval-bench** | **AI/模型/策略/prompt/评估的代码** → 触发 eval-bench（按 spec 阶段定的 rubric/数据集/阈值跑质量分）。注：声明式 agent/workflow/skill **定义**（JSON/YAML/SKILL.md）走 R7，不在此 |
 | R5 | `**/*.sql` · `**/pipelines/**` · `**/etl/**` · `**/dbt/**` · `**/warehouse/**` · `**/*_spark*.py` · `**/*_pandas*.py` · `**/migrations/**` | big-data | correctness（+ **eval-bench** 当涉及数据质量/回填正确性） | 数据管道/数仓/迁移；big-data v1 为 stub 卡（种自 agency-agents data-engineer） |
 | R6 | `**/*.test.*` · `**/*.spec.*` · `**/test/**` · `**/tests/**` · `**/e2e/**` · `**/__tests__/**` · `**/conftest.py` | qa | correctness + **e2e** | 测试/规格本身变更 → QA 视角，并跑相关 e2e |
+| **R7** | `**/agents/**.json` · `**/workflows/**.json` · `**/processes/**.json` · `**/employees/**.{yaml,yml}` · `roles.json` · `people.json` · `app.json` · `installed.json` · `**/SKILL.md` · `**/*.skill.*` · `**/CLAUDE.md`（**配置/agent 定义型工程**：源即声明式配置） | server-dev（+ **security** 当含权限/授权矩阵，如 `roles.json`/`people.json`） | correctness | **配置定义型工程**（如 happycompany：agent/流程/组织/skill 的声明式定义 + 少量真实代码）。验证靠 **schema/契约一致性校验**，不跑 eval-bench（它不是 AI 模型代码）。内嵌真实代码（如 `*.py` CLI）仍按 R3/R4 各自路由 |
 | **兜底 B1** | 任意 diff（每次都加） | **qa（baseline）** | **correctness** | 永远至少跑正确性 + QA 基线视角 |
 | **兜底 B2** | 触及敏感面：`**/auth/**` · `**/*login*` · `**/*payment*` · `**/*billing*` · `**/secrets/**` · `**/*credential*` · 含原始 SQL 拼接 · 文件系统/外部输入处理 | **+ security 视角**（由 server-dev/qa 卡的 security 子节承载，v1 不单列 security 角色卡） | correctness | 安全敏感面叠加 security 检查清单（见 sdlc-review 安全 10 域） |
 
@@ -118,6 +119,7 @@
 - [x] AI/models/strategy/prompt/evals → server-dev + qa + eval-bench — R4
 - [x] sql/pipelines → big-data — R5
 - [x] test/spec → qa + e2e — R6
+- [x] 配置/agent 定义型工程（agents/workflows/roles/skill 定义）→ server-dev(+security) + correctness — R7
 - [x] 兜底 → qa + correctness（+ security 当敏感面）— B1/B2
 
 ---
