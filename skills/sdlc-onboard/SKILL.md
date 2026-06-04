@@ -165,7 +165,7 @@ grep -rIl -E 'auth|login|payment|billing|secret|credential' . --include='*.py' -
 1. 从 Phase A 的顶层结构 + Phase B 的入口,切出**有意义的模块/面**(一个面 = 一类会一起改、共享角色/验证策略的代码区)。
 2. 给每个面写 **globs**(用 POSIX/gitignore 语义,匹配该面的文件路径)。
 3. 用 `references/role-routing.md` 的 §2 规则 + §3/§4 取值字典,给每个面**推荐默认角色 + 默认 validate 模式**:
-   - 角色取值字典:`client-dev | server-dev | design | qa | big-data`(security 在 v1 不单列,敏感面由 server-dev/qa 卡的 security 子节承载)。
+   - 角色取值字典:`client-dev | server-dev | design | qa | big-data | architect`(architect 不绑单一 surface,改动跨 ≥2 面/全链路时由 R8 加载;security 在 v1 不单列,敏感面由 server-dev/qa 卡的 security 子节承载)。
    - 模式取值字典:`correctness | e2e:Web | e2e:OpenAPI | e2e:App | eval-bench`。
 4. **项目特化优先于通用规则**:这张表写进 PROFILE 后,路由时**覆盖** role-routing 通用兜底(spec §6.1)。所以这里要尽量贴合本仓真实结构,而不是照抄模板示例。
 
