@@ -1,3 +1,4 @@
 .sdlc/
 .DS_Store
 node_modules/
+.superpowers/
