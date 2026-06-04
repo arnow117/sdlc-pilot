@@ -388,4 +388,4 @@ vitest/playwright/tsc first. **First dogfood target: happycompany** (`corp/dingg
 | **设计契约前置** | spec §2.6b(对称 eval §5): UI 工作产出 `DESIGN.md`; 闭合 design 卡引用却无人产出的洞(审计缺口 #2) |
 | **architect 角色** | `roles/architect.md` + routing R8(跨 ≥2 面/全链路触发): 全链路数据结构对齐/跨边界契约/单一事实源/blast-radius。角色 5→6 |
 
-> 审计缺口收口: #1(受评接收纪律, receiving-code-review)**待评估**; #2(设计契约)**已补**; #3(范围塑造)**部分补**(divergence 覆盖"做大", 残留"显式 expand/hold/reduce 决策"待评估)。
+> 审计缺口收口: #1(受评接收纪律, receiving-code-review)**待评估**; #2(设计契约)**已补**(spec §2.6b); #3(范围塑造)**已补**(divergence §2.4 做大 + scope-shaping §2.4b 显式 10星/挑战前提/EXPAND-HOLD-REDUCE-SELECTIVE + scope-guard 防蔓延, 三者凑齐)。
