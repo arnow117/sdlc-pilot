@@ -43,13 +43,31 @@ description: >
 
 有 AskUserQuestion 时可用,但**回退路径必须是上面这种编号文本**。STOP 点就是 STOP:停下等用户,不要自作主张续跑。
 
-### 0.2 并行降级 — Task-or-sequential
-build 的主循环**本质串行**(任务间常有依赖,且不得两个写手同改一处)。即便有 Task 能力:
+### 0.2 执行模型 — wave 并行 / 串行 inline(Task-or-sequential)
 
-- **不要**并行分派多个实现子任务到同一片代码(冲突)。
-- 可并行的只有**只读**工作(如多文件证据采集);写代码一律**串行 inline** 执行同一份 playbook。
+**先分清两个层次**:
+- **任务内**(一个任务的 TDD):**永远串行**,一个写手——red→green 是连贯推理,且不得两个写手同改一处。
+- **任务间**:**可并行**,且"哪些能并行"已由 `plan.md` 的 **wave/depends_on** 算好。关键保证:plan 的硬规则「**同 wave 不碰同一文件**」(§plan 4.3)使得**同一 wave 内并行写代码是构造上安全的**。
 
-这等价于 `gsd-execute-phase --interactive` 的串行 inline 降级形态:无 subagent,单 session,逐任务推进。
+**逐 wave 执行,每个 wave 二选一(探测决定)**:
+
+```
+进入 wave N(plan 已保证 wave 内无文件冲突):
+  ├─ 有 Task/并行能力 且 本 wave ≥2 个独立任务
+  │     → fan-out:一任务一 agent,各自跑完整 TDD(§3)、各写各自文件、各写各自 review/笔记
+  │        orchestrator(build 主流程)收集结果 → 合并 → **单写 STATE**
+  └─ 无并行能力(Codex/Gemini 等) 或 本 wave 仅剩 1 任务
+        → 串行 inline 逐任务(= gsd-execute-phase --interactive 形态:无 subagent、单 session)
+  ↓
+  wave 屏障:本 wave 全部 green + 出口门过,才进 wave N+1(后波依赖前波产物)
+```
+
+**三条安全铁律(并行也守住)**:
+1. **同 wave 不碰同一文件** —— plan 的 wave 规则保证(并行的前提);若发现冲突 = plan 有 bug,回 plan 修波次。
+2. **任务内严格串行单写手** —— 每个 agent 内部 TDD 照旧,绝不在一片代码上并发两个写手。
+3. **STATE 单写者** —— 只有 orchestrator 写 STATE;并行任务只写各自产物/笔记(`review/<role>.md`、任务笔记)。
+
+> 这是把 `gsd-execute-phase` 的**完整 wave 模型**吸收进来(上档 fan-out + 下档 --interactive 串行),不再只取串行那一半。只读工作(多文件取证)任何时候都可并行。
 
 ---
 
@@ -112,7 +130,7 @@ git -C <repo> status --porcelain           # 含 untracked
 
 ## 3. 主循环:逐任务 TDD(red → green → refactor)
 
-按 `plan.md` 的任务顺序(尊重 `depends_on` / `wave`),**一次一个任务**。每个任务跑完整 TDD 五拍状态机。
+按 `plan.md` 的 **wave 顺序**推进(执行模型见 §0.2:同 wave 多任务有并行能力则 fan-out,否则串行 inline;后波依赖前波)。**无论并行还是串行,每个任务都跑完整 TDD 五拍状态机,任务内永远单写手串行。**
 
 ### 3.0 统一状态机(TDD ⊕ 调试子循环)
 
