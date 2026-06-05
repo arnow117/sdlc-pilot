@@ -165,7 +165,7 @@ grep -rIl -E 'auth|login|payment|billing|secret|credential' . --include='*.py' -
 1. 从 Phase A 的顶层结构 + Phase B 的入口,切出**有意义的模块/面**(一个面 = 一类会一起改、共享角色/验证策略的代码区)。
 2. 给每个面写 **globs**(用 POSIX/gitignore 语义,匹配该面的文件路径)。
 3. 用 `references/role-routing.md` 的 §2 规则 + §3/§4 取值字典,给每个面**推荐默认角色 + 默认 validate 模式**:
-   - 角色取值字典:`client-dev | server-dev | design | qa | big-data | architect`(architect 不绑单一 surface,改动跨 ≥2 面/全链路时由 R8 加载;security 在 v1 不单列,敏感面由 server-dev/qa 卡的 security 子节承载)。
+   - 角色取值字典:`client-dev | server-dev | design | qa | big-data | architect | ai-readiness`(architect 跨 ≥2 面由 R8 加载;ai-readiness 由 R9/体检加载;security 在 v1 不单列,敏感面由 server-dev/qa 卡的 security 子节承载)。
    - 模式取值字典:`correctness | e2e:Web | e2e:OpenAPI | e2e:App | eval-bench`。
 4. **项目特化优先于通用规则**:这张表写进 PROFILE 后,路由时**覆盖** role-routing 通用兜底(spec §6.1)。所以这里要尽量贴合本仓真实结构,而不是照抄模板示例。
 
@@ -196,6 +196,7 @@ grep -rIl -E 'auth|login|payment|billing|secret|credential' . --include='*.py' -
    - `## Conventions`(Phase A conventions focus,蒸馏自 startup-claude-md-init 的"禁止事项" + gsd-map conventions)。
    - `## Entry points`(Phase B 入口集,让全新上下文 agent 知道"从哪开始读/跑")。
    - `## Known risks`(Phase A concerns focus:大文件热点、无测试覆盖的危险面、N+1 等)。
+   - `## AI-readiness 体检`(★只读评分,加载 `references/roles/ai-readiness.md` 的 10 维):对照 CLAUDE.md 级联 / scoped 命令 / 噪声 / 类型 / 测试 / LSP 就绪等,给一个**健康分 + 缺口清单**。**只评估、不整改**(守只读纪律);整改是后续 feature 的事。接手陈旧项目时,这是"它对 AI 友不友好、值不值得先改造"的判断依据。
 3. 清理临时笔记(`.sdlc/onboard-notes/` 若用过)。
 4. text_mode 把 surface-map 草案给用户确认(§0.1),用户改完再定稿。
 5. **脚手架自检 — 询问装两个硬门 hook**(纯 shell,不跑 AI、无密钥;由 **git 执行,模型绕不过**,唯一逃逸 = 人 `--no-verify`)。检测 `<repo>/.git/hooks/{pre-commit,pre-push}` 是否已是 sdlc 的。缺则 text_mode 问:

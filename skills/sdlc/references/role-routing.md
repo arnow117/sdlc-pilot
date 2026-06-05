@@ -78,6 +78,7 @@
 | R6 | `**/*.test.*` · `**/*.spec.*` · `**/test/**` · `**/tests/**` · `**/e2e/**` · `**/__tests__/**` · `**/conftest.py` | qa | correctness + **e2e** | 测试/规格本身变更 → QA 视角，并跑相关 e2e |
 | **R7** | `**/agents/**.json` · `**/workflows/**.json` · `**/processes/**.json` · `**/employees/**.{yaml,yml}` · `roles.json` · `people.json` · `app.json` · `installed.json` · `**/SKILL.md` · `**/*.skill.*` · `**/CLAUDE.md`（**配置/agent 定义型工程**：源即声明式配置） | server-dev（+ **security** 当含权限/授权矩阵，如 `roles.json`/`people.json`） | correctness | **配置定义型工程**（如 agentic-config-demo：agent/流程/组织/skill 的声明式定义 + 少量真实代码）。验证靠 **schema/契约一致性校验**，不跑 eval-bench（它不是 AI 模型代码）。内嵌真实代码（如 `*.py` CLI）仍按 R3/R4 各自路由 |
 | **R8（跨链路）** | **元规则,非单一 glob**：本轮 diff 命中 **≥2 个不同 surface 类别**（前端 R1/R2 · 服务端 R3 · 数据 R5 · AI R4 · 配置 R7 中任意两类），**或** 跑 full-chain e2e | **+ architect** | （沿用各面已选模式） | 改动**跨越多个面 = 全链路/纵切** → 加载 architect 看接缝：全链路数据结构对齐、跨边界契约一致、单一事实源、blast-radius（与单面角色互补,不替代） |
+| **R9** | `CLAUDE.md` · `AGENTS.md` · `.claude/**` · `justfile` · `Makefile` · `tsconfig.json` · `.github/**`（AI-上下文 / 构建工具配置） | **+ ai-readiness** | correctness | 动了"代码库对 agent 的友好度"相关文件 → 加载 ai-readiness 视角(别把级联 CLAUDE.md/scoped 命令改坏)。注:onboard 体检与"遗留改造 feature"也加载本卡(非 diff 驱动) |
 | **兜底 B1** | 任意 diff（每次都加） | **qa（baseline）** | **correctness** | 永远至少跑正确性 + QA 基线视角 |
 | **兜底 B2** | 触及敏感面：`**/auth/**` · `**/*login*` · `**/*payment*` · `**/*billing*` · `**/secrets/**` · `**/*credential*` · 含原始 SQL 拼接 · 文件系统/外部输入处理 | **+ security 视角**（由 server-dev/qa 卡的 security 子节承载，v1 不单列 security 角色卡） | correctness | 安全敏感面叠加 security 检查清单（见 sdlc-review 安全 10 域） |
 
@@ -95,6 +96,7 @@
 | `design` | `roles/design.md` | 视觉/排版/交互态/a11y + UX-flow |
 | `big-data` | `roles/big-data.md` | 管道/数仓/lineage/幂等/分区（v1 stub） |
 | `architect` | `roles/architect.md` | **全链路**数据结构对齐 / 跨边界契约一致 / 单一事实源 / blast-radius（改动跨 ≥2 面时由 R8 加载） |
+| `ai-readiness` | `roles/ai-readiness.md` | **面向 AI 的友好度/可维护性**:CLAUDE.md 级联 / scoped 命令 / 噪声 / 类型 / 测试 / LSP 就绪（onboard 只读体检 + 改造 feature + 改 AI-上下文/构建配置文件时加载，见 R9） |
 
 > `security` 在 v1 **不是独立角色卡**：敏感面命中时，由 `server-dev`/`qa` 卡内的 security 子节 + `sdlc-review` 的安全 10 域承载。后续蒸馏循环可升格为独立卡。
 
@@ -124,6 +126,7 @@
 - [x] test/spec → qa + e2e — R6
 - [x] 配置/agent 定义型工程（agents/workflows/roles/skill 定义）→ server-dev(+security) + correctness — R7
 - [x] **跨 ≥2 面 / 全链路 → + architect**（全链路数据结构对齐 / 跨边界契约 / blast-radius）— R8
+- [x] **AI-上下文/构建配置(CLAUDE.md/.claude/justfile…) → + ai-readiness** — R9（onboard 体检/改造 feature 也加载）
 - [x] 兜底 → qa + correctness（+ security 当敏感面）— B1/B2
 
 ---

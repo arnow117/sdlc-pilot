@@ -98,6 +98,14 @@ sh <sdlc 技能目录>/scripts/sdlc-guard    # 确定性检测:STATE.branch/work
 
 ---
 
+### 1.2 work-type 流程画像 + `/sdlc next`
+
+- **读 `STATE.work-type`**(feature / remediation / hotfix)并**透传给将进入的流程 skill**——它是"整条流走多重"的中央旋钮(定义见 STATE 模板)。各阶段读它自适应:remediation/hotfix 走轻(L1 / Skip-TDD / 跳无关契约),但**硬门(覆盖率 / 安全 open=0 / review / push gate)一律不短**。
+- 新流程开始时若 STATE 无 work-type:默认 `feature`;若用户意图是"改造遗留/整 AI-readiness"→ 由 `sdlc-spec`/`sdlc-onboard` 定为 `remediation`;紧急修 → `hotfix`。
+- **`/sdlc next`** = driver 的"直接推进"姿势:跑 §1.1 边界自检 → 读 `STATE.Next action` → 直接路由到下一步,不重复寒暄。(只是 driver 的一种调用,不是新 skill。)
+
+---
+
 ## 2. 分叉：决定入口阶段
 
 ```

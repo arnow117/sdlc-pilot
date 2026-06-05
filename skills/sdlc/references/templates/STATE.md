@@ -23,6 +23,7 @@
 
 stage: onboard | spec | plan | build | validate | review | done
 status: in-progress | gated | blocked
+work-type: feature | remediation | hotfix     # 流程画像(中央旋钮):各阶段读它自适应走多重。见下方说明
 branch: <写 STATE 时记 `git rev-parse --abbrev-ref HEAD`>     # 并发边界戳:scripts/sdlc-guard 据此防串台
 worktree: <写 STATE 时记 `git rev-parse --show-toplevel`>     # 同上(worktree 隔离)
 updated: <时间戳，由调用方传入，例如 2026-06-04T15:30>
@@ -39,7 +40,14 @@ sdlc-gate: <未设置>   # sdlc-review 全过(verdict=PASS)时写 `PASS reviewed
   - updated：调用方传入的时间戳，skill 不自造时间。
   - validate-modes：本轮 diff 解析出的验证模式子集。可能值见 validate-modes/ 目录：
       correctness（总是跑）/ e2e（用户可见面变更）/ eval-bench（AI/模型/策略变更）。
+  - work-type（流程画像 / 中央旋钮）：由 spec/onboard 在流程开始时定；各阶段入口读它来自适应"走多重"。
+      · feature（默认）：完整 spec→plan→build→validate→review，按 L1-L4 + 各门控正常自适应。
+      · remediation（遗留改造 / AI-readiness 整改）：spec 一段话、eval/design 契约通常 N/A、plan 默认 L1、
+        build 文档/配置改动走 Skip-TDD；**走轻,但 review/verify 门不短**(改的是全仓结构,更该审)。
+      · hotfix（紧急修)：直奔 build 调试子循环 + 最小验证;**仍过 review 与 push 门**,事后补 spec/plan 记录。
+    原则:work-type 只**偏置默认granularity**,不取消任何硬门(覆盖率/安全 open=0/review)。
 -->
+
 
 ## Gates passed
 
@@ -66,7 +74,8 @@ sdlc-gate: <未设置>   # sdlc-review 全过(verdict=PASS)时写 `PASS reviewed
   上一次 git diff 解析出的活跃角色卡（见 role-routing.md）。
   仅快照，不是事实源；下次进入 build/validate/review 时重算。
   取值字典：qa, client-dev, server-dev, design, big-data, architect（改动跨 ≥2 面/全链路时，
-  看接缝:全链路数据结构对齐/跨边界契约/blast-radius）；security（敏感面触及时，
+  看接缝:全链路数据结构对齐/跨边界契约/blast-radius）, ai-readiness（动 AI-上下文/构建配置，
+  或 onboard 体检/遗留改造时:面向 AI 友好度/可维护性）；security（敏感面触及时，
   为视角叠加标签，无独立 roles/security.md，由 server-dev/qa 卡的 security 子节承载）。
 -->
 
