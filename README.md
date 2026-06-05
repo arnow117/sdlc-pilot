@@ -88,36 +88,43 @@ driver 在入口分支:
 
 ## 安装
 
-**方式一:作为 Claude Code 插件(推荐,一行)**
+> 这套技能是一个 **Claude Code 插件**(`.claude-plugin/plugin.json` 声明 `skills: "./skills/"`),
+> driver + 7 流程技能 + 角色卡/validate 模式/语言包(都在 `skills/sdlc/references/` 下)随插件**一并发现**,无需逐个登记。
+
+**方式一:作为插件安装(推荐,跟着 GitHub 仓走)**
 
 ```
 /plugin marketplace add arnow117/sdlc-pilot
 /plugin install sdlc-pilot
 ```
 
-跟着 GitHub 仓走,`skills/` 自动发现。**Codex**:仓库根有 `AGENTS.md`(维护契约);技能发现维护 `.agents/skills/sdlc*` 软链。
+升级:`/plugin marketplace update sdlc-pilot` 后重新 `/plugin install`。私有仓需本机 git 已能访问该仓。
 
-**方式二:开发期软链(边改边用,指向同一份源)**
+**方式二:全新克隆 + 软链(要改源 / 离线 / Codex 用)**
 
-技能在本 workspace 的 `skills/` 下开发。把每个技能**软链**进 `~/.claude/skills/`:
+适用于"把仓库当全新 repo clone 到自己电脑"的场景。**遍历 `skills/*/` 软链,不枚举技能名**——这样永远不会漏掉新增技能(如本次差点漏的 `sdlc-ship`):
 
 ```bash
-SDLC_SRC="/Users/arnow117/hansen_agent_team/workspace/20260603-sdlc-pilot/skills"
-for s in sdlc sdlc-onboard sdlc-spec sdlc-plan sdlc-build sdlc-validate sdlc-review; do
-  ln -sfn "$SDLC_SRC/$s" "$HOME/.claude/skills/$s"
-done
+git clone git@github.com:arnow117/sdlc-pilot.git
+cd sdlc-pilot
+SDLC_SRC="$PWD/skills"
+
+# 软链进全局技能目录(Claude Code 全局可用)
+mkdir -p "$HOME/.claude/skills"
+for d in "$SDLC_SRC"/*/; do ln -sfn "$d" "$HOME/.claude/skills/$(basename "$d")"; done
+
+bash scripts/validate-skills    # 自检:结构一致、引用无悬空
 ```
 
-为让 **Codex** 也能仓库内发现这些技能,维护 `.agents/skills/sdlc*` 软链(per soul.md 0.2.1):
+**Codex / 在某个目标项目里仓内发现**:在目标项目根维护 `.agents/skills/sdlc*` 软链(同理遍历):
 
 ```bash
 mkdir -p .agents/skills
-for s in sdlc sdlc-onboard sdlc-spec sdlc-plan sdlc-build sdlc-validate sdlc-review; do
-  ln -sfn "$SDLC_SRC/$s" ".agents/skills/$s"
-done
+for d in "$SDLC_SRC"/*/; do ln -sfn "$d" ".agents/skills/$(basename "$d")"; done
 ```
 
-> 软链而非拷贝,保证"边开发边用"始终指向同一份源。成熟后,`sdlc-pilot/` 子树可 `git init` 推成独立 repo;届时安装方式改为 clone + 软链/拷进 `~/.claude/skills/`。
+> 软链 vs 拷贝:软链"边改边用"始终指向同一份源;要固定快照就改成 `cp -R`。
+> 强门禁脚本 `scripts/sdlc-guard` 在仓库根,插件安装时随仓一并到位;`sdlc-onboard` 会在目标项目装 hook 时把它拷到该项目的 `.sdlc/bin/`。
 
 ## 测试与 dogfooding
 
