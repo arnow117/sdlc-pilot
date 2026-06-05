@@ -72,17 +72,11 @@ description: >
 
 ### Step 0 — 定位 base 分支 + 取 diff(平台无关)
 
-```bash
-# base 分支检测(优先 PR 目标,退化到默认分支,再退化 main/master)
-git remote get-url origin 2>/dev/null
-gh pr view --json baseRefName -q .baseRefName 2>/dev/null \
-  || git symbolic-ref refs/remotes/origin/HEAD 2>/dev/null | sed 's|refs/remotes/origin/||' \
-  || echo main
-# 取改动文件清单(未 commit 用前者;已 commit 到 feature 分支用后者)
-git diff --name-only HEAD
-git diff --name-only <base>...HEAD
-```
-打印检测到的 base。后续所有 `git diff` 用它替换 `<base>`。
+确定**审查范围 = 本次改动相对 base 的 diff**:
+- **base 分支**:优先取 PR 的目标分支;无 PR 则退化到仓库默认分支(再退化 `main`/`master`)。
+- **改动文件清单**:还没 commit 时用工作区相对 `HEAD` 的 diff;已 commit 到 feature 分支时用相对 base 的 diff(`<base>...HEAD`)。
+
+> 用 `git`(配合 `gh` 取 PR 信息)即可,具体命令你定;关键是范围算准——审查只看本次改动,不要把历史也卷进来。
 
 ### Step 1 — 角色 + 模式解析(本流程 skill 的入口动作)
 

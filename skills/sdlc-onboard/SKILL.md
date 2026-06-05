@@ -53,10 +53,10 @@ description: >
 
 进入本 skill 应满足(由 driver 判定,独立调用时自检):
 
-| 条件 | 检查 |
+| 条件 | 要确认的事 |
 |---|---|
-| repo 非空(有真实代码) | `find <repo> -type f -not -path '*/.git/*' -not -path '*/.sdlc/*' \| head -1` 有输出。**不要只靠 `git ls-files`**——目标可能是未跟踪子目录(在父仓里显示为 `??`、无嵌套 `.git`)或刚克隆未 init 的目录,`git ls-files` 会返回空、把真实项目误判为空仓。可先 `git -C <repo> rev-parse --is-inside-work-tree` 探测,再 fallback 到 `find`。 |
-| 尚无 PROFILE.md,**或**用户要求刷新 | `ls <repo>/.sdlc/PROFILE.md` 不存在;或漂移触发(见 §6) |
+| repo 非空(有真实代码) | 目录里有源码文件。**别只靠 `git ls-files` 判空**——目标可能是未跟踪子目录(父仓里显示 `??`、无嵌套 `.git`)或刚克隆未 init 的目录,只看跟踪文件会把真实项目误判为空仓;空时 fallback 到直接列文件。 |
+| 尚无 PROFILE.md,**或**用户要求刷新 | `<repo>/.sdlc/PROFILE.md` 不存在;或架构漂移触发(见 §6) |
 
 两种入口模式:
 - **新建**(no PROFILE)→ 走完整 Phase A→D。
@@ -82,63 +82,25 @@ repo: 非空(检测到 <N> 个被跟踪文件)
 Phase A 采证(纯 bash) → Phase B 类型+入口识别 → Phase C 自建 surface-map → Phase D 聚合写 PROFILE.md
 ```
 
-### Phase A — 纯 bash 采证(Codex 友好,移植性反超 node 工具)
+### Phase A — 采证(先把证据收齐,再下判断)
 
-蒸馏自 `arch-aifriendly-doctor` 的 Phase 0 一键采证脚本(取其 bash 形态,丢 10 维评分本身)。
-目标:**先把证据收齐,再下判断**——不靠印象,靠 `grep/find/wc/git` 的输出。
+蒸馏自 `arch-aifriendly-doctor` 的 Phase 0(借"先采证后判断"的纪律,丢 10 维评分)。
+**目标**:在归类型、建 surface-map 之前,先收齐客观证据——靠仓库里查得到的事实,不靠印象。
+**怎么采你定**(grep/find/wc/git 这类只读工具,Claude/Codex 都有);本 skill 只约束**采什么**和**避哪些坑**。
 
-按 4 个正交 focus 采证(gsd-map-codebase 的 4-focus 骨架):
+按 4 个正交视角采证(gsd-map-codebase 的 4-focus 骨架),每个视角要回答的问题:
 
-**focus = stack(技术栈 + 集成)**
-```bash
-cd <repo>
-# 语言/包管理器/依赖清单
-ls package.json pnpm-workspace.yaml pyproject.toml requirements*.txt go.mod Cargo.toml composer.json 2>/dev/null
-[ -f package.json ] && grep -E '"(dependencies|scripts)"' -A20 package.json
-[ -f pyproject.toml ] && sed -n '1,60p' pyproject.toml
-# 框架信号(v1 重点:Python + Web/TS)
-# 注意:--include 的 glob 必须单引号,否则 zsh 会 nomatch 报 "no matches found" 在 grep 跑之前就中止。
-grep -rIl -E 'fastapi|flask|django|next|react|vue|svelte|express' . --include='*.py' --include='*.ts' --include='*.tsx' --include='*.json' 2>/dev/null | head
-# 外部集成(DB/队列/第三方)
-grep -rIoE 'postgres|mysql|sqlite|redis|kafka|mongodb|s3|openai|anthropic' . 2>/dev/null | sort -u | head
-```
+| 视角 | 要查证的问题 |
+|---|---|
+| **stack** | 有哪些语言/包管理器/依赖清单?用了什么框架?接了哪些外部系统(DB/队列/AI API)? |
+| **arch** | 顶层结构长什么样?系统从哪启动(入口/路由/CLI/容器编排)? |
+| **conventions** | 有无 CLAUDE.md/AGENTS.md/README?测试怎么组织、用什么命令跑?有无覆盖率门控? |
+| **concerns** | 改动热点在哪(超大文件)?敏感面(auth/支付/密钥/原始 SQL)在哪?调试残留/TODO 多不多? |
 
-**focus = arch(结构 + 入口)**
-```bash
-# 顶层结构(只看 code-bearing 目录,排除 noise)
-# 未跟踪/未 init 的目标 git ls-files 会返回空 → fallback 到 find。
-{ git ls-files 2>/dev/null | grep . || find . -type f -not -path '*/.git/*'; } \
-  | grep -vE '/(node_modules|dist|build|\.next|__pycache__|vendor)/' | sed 's|^\./||' | awk -F/ '{print $1"/"$2}' | sort -u | head -40
-# 入口候选:启动文件/路由/CLI/导出
-grep -rIl -E 'if __name__|app = (FastAPI|Flask)|createServer|app\.listen|uvicorn|def main\(' . --include='*.py' --include='*.ts' --include='*.js' 2>/dev/null | head
-ls Procfile docker-compose.yml Dockerfile Makefile justfile 2>/dev/null
-```
-
-**focus = conventions(约定 + 风格)**
-```bash
-# 现有 AI 上下文 / 文档(P0,优先读)
-ls CLAUDE.md AGENTS.md README.md 2>/dev/null
-find . -name CLAUDE.md -not -path '*/node_modules/*' 2>/dev/null
-# 测试约定 + 测试命令线索
-find . \( -name '*.test.*' -o -name '*_test.*' -o -name 'test_*.py' -o -name 'conftest.py' \) -not -path '*/node_modules/*' 2>/dev/null | head
-grep -rE '"test"|"build"|"lint"|"typecheck"' package.json 2>/dev/null
-grep -rE '\[tool\.(pytest|coverage)\]' pyproject.toml setup.cfg 2>/dev/null
-# 覆盖率门控线索(correctness 模式要用)
-grep -rIoE 'cov-fail-under|coverageThreshold|--cov-fail-under=[0-9]+' . 2>/dev/null | head
-```
-
-**focus = concerns(已知风险 + 坑)**
-```bash
-# 大文件(>800 行)= 改动热点风险(未跟踪目标 fallback 到 find)
-{ git ls-files 2>/dev/null | grep . || find . -type f -not -path '*/.git/*' | sed 's|^\./||'; } \
-  | grep -E '\.(py|ts|tsx|js|go|rs)$' | xargs wc -l 2>/dev/null | sort -rn | awk '$1>800{print "  - "$2" ("$1")"}' | head
-# 调试残留 / TODO / FIXME 密度
-grep -rIcE 'TODO|FIXME|HACK|XXX' . --include='*.py' --include='*.ts' 2>/dev/null | awk -F: '$2>0' | head
-# 敏感面(路由表 B2 要用):auth/支付/密钥/原始 SQL
-grep -rIl -E 'auth|login|payment|billing|secret|credential' . --include='*.py' --include='*.ts' 2>/dev/null | head
-```
-
-> 采证只读不写;输出落进临时笔记(并行)或内存(串行)。**不在此阶段下评分/做改造**(那是 arch-doctor 的事,我们只借它的 bash 采证)。
+**采证原则(避坑,作为原则而非某条命令的写法)**:
+- **排噪声再统计**:`node_modules` / 构建产物(`dist` `build` `out` `.next`)/ agent 运行时产物(`.session*` `memory/` `archive/` `.backups/`)不是源码;统计"大文件""顶层结构"时先把它们剔掉,否则会把产物当源码、把汇总行当文件。
+- **别只扫根目录**:monorepo / 子目录前端(如 `web/package.json`)只看仓库根会误判"无栈";依赖清单要连嵌套一起找。
+- **只读不写**:采证阶段不碰源码、不下评分、不提改进(评分是 Phase D 的 AI-readiness 体检,改造是后续 feature)。输出落临时笔记(并行)或内存(串行)。
 
 ### Phase B — 类型识别 + 入口定位
 

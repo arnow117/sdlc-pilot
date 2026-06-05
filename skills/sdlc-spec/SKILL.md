@@ -53,17 +53,13 @@ description: >
 
 进入本 skill 前应满足（由 driver 保证；独立调用时自检）：
 
-| 条件 | 检查 |
+| 条件 | 要确认的事 |
 |---|---|
-| 有 `<target-repo>/.sdlc/PROFILE.md`，或确认是 greenfield | `ls .sdlc/PROFILE.md`；brownfield 缺 PROFILE 应先 `sdlc-onboard` |
+| 有 `<target-repo>/.sdlc/PROFILE.md`，或确认是 greenfield | 有 PROFILE 即可;brownfield 缺 PROFILE 应先 `sdlc-onboard` |
 | `STATE.stage` 为 `spec`，或这是一个全新特性的开始 | 读 `.sdlc/STATE.md`；无 STATE = 新特性，本 skill 会初始化一份 |
 | 有一个待澄清的"点子 / 需求 / 变更意图" | 来自用户原话 |
 
-入口动作：
-
-```bash
-ls -la <target-repo>/.sdlc/ 2>/dev/null      # 看有无 PROFILE / STATE / 既有 spec
-```
+入口动作:先看一眼 `<target-repo>/.sdlc/` 里有没有 PROFILE / STATE / 既有 spec,再:
 
 - 读 `PROFILE.md` → 拿到技术栈、约定、surface-map（哪些模块/glob/默认角色/模式），作为 Explore 的地图。
 - 读 `STATE.md`（若有）→ 看 `Decisions log` 里是否已有相关决策，**不要重复问已决的事**。

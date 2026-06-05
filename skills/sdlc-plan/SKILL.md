@@ -36,14 +36,9 @@ spec(已批准)  →  阶段 phase(含 depends_on + wave 波次)  →  任务 ta
 进入本 skill 前确认：
 
 1. `<target-repo>/.sdlc/spec.md` **存在**。
-2. spec **已获批**（`sdlc-spec` 的出口门控已过；STATE 里 `spec approved` 已勾选）。
+2. spec **已获批**（`sdlc-spec` 的出口门控已过；STATE 里 spec 状态为 approved）。
 
-```bash
-SDLC="<target-repo>/.sdlc"
-test -f "$SDLC/spec.md" && echo "spec found" || echo "NO SPEC — 先跑 sdlc-spec"
-grep -qi 'spec approved\|spec.*已获批\|status.*approved' "$SDLC/STATE.md" 2>/dev/null \
-  && echo "approved" || echo "未确认获批"
-```
+> 这是硬前置:没有获批的 spec 就拆 plan,等于在没对齐的设计上排兵布阵。两条都满足才往下走。
 
 - **无 spec.md** → 停。text_mode 提示用户先走 `sdlc-spec`：
 

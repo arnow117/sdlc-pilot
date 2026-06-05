@@ -75,12 +75,12 @@ description: >
 
 ## 1. 入口条件(进来前必须成立)
 
-| 条件 | 检查 | 不满足时 |
+| 条件 | 要确认的事 | 不满足时 |
 |---|---|---|
-| 有已批准的 `plan.md` | `ls <repo>/.sdlc/plan.md` | 回 `sdlc-plan`(无计划不实现) |
-| 在 git 仓库且非 main/master 直写 | `git -C <repo> branch --show-current` | 提示先切特性分支(text_mode 确认) |
+| 有已批准的 `plan.md` | `<repo>/.sdlc/plan.md` 存在 | 回 `sdlc-plan`(无计划不实现) |
+| 在 git 仓库且非 main/master 直写 | 当前在特性分支,不是直写主干 | 提示先切特性分支(text_mode 确认) |
 | 已 resolve 出 active 角色 + validate 模式 | 读 `STATE.md` 的 `## Active roles`;若空则现做(§2) | 现场 resolve |
-| spec 已批准(SDD 前置) | `STATE.md` gate `[x] spec approved` | 回 `sdlc-spec` |
+| spec 已批准(SDD 前置) | `STATE.md` 中 spec 状态为 approved | 回 `sdlc-spec` |
 
 > 入口铁律:**改动代码→角色+模式解析先做**(§2),再开始第一个任务。这样实现时就带着对的视角(client-dev/server-dev/...)
 > 和对的"完成后要跑什么验证"的预期。

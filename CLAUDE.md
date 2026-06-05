@@ -10,6 +10,7 @@
 1. **不新增顶层 skill**(除非是 SDLC 主线缺的真·生命周期阶段,如新增 ship 那样的重大决策)。家族 = `sdlc` driver + **7 流程 skill**(onboard / spec / plan / build / validate / review / ship)。新增能力优先走:职能视角→`references/roles/<r>.md`;验证手法→`references/validate-modes/<m>.md`;语言→`references/languages/<lang>.md`;部署目标→`references/deploy-targets/<type>.md`;流程纪律→`references/*.md`。**真要加流程阶段**=改 stage 枚举(driver + STATE 模板)+ driver 路由表 + 计数,慎重。
 2. **可移植**:不硬依赖 Workflow / AskUserQuestion / subagent。交互用 text_mode(纯文本编号),并行用 Task-or-sequential 降级。必须在 Codex 下也能跑。
 3. **纯文件 + 单写者**:知识/状态都是文件;`STATE.md` 单写者,并行产物各写各的。
+4. **skill 约束"做什么/为什么/避哪些坑",不规定"怎么执行命令"**。流程 skill 是约束与原则,不是命令手册——别写死带一堆 flag/转义/shell 怪癖的 `find`/`grep`/`awk` 一行流(模型自己会写,写死只会脆、只会在某个 shell 崩)。把"坑"写成**原则**(如"统计大文件先排掉构建产物""别只扫根目录"),让模型自己选实现。例外:① `git diff --name-only` 这类**稳定且是契约输入**的单命令可留;② `references/languages/<lang>.md`、`deploy-targets/<type>.md` 这类**参考卡**——它们的职责就是记录某语言/目标的具体 lint/test/build 命令,命令本身即交付物,保留。判据:这条命令是"流程怎么走"还是"某环境的具体工具调用"?前者→原则化,后者→留在参考卡。
 
 ## 怎么迭代(常见改动 → 要同步哪些地方)
 

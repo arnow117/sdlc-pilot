@@ -2,6 +2,16 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.2.1] — 2026-06-05
+
+流程 skill 去"命令手册化":skill 是**约束 + 原则**,不是 bash cookbook。
+
+### Changed
+- **onboard Phase A 重写**:~70 行脆弱 bash(`find`/`grep`/`awk` 一行流,带 zsh-glob/wc-total/嵌套清单/噪声等坑)→ ~20 行「采什么(4 视角表)+ 避坑原则」。之前 dogfood 找出的"缺陷"多是规定命令自身的 bug,原则化后消失。
+- **去 cookbook**:onboard/driver 空仓判定、plan spec-获批检查、review base 分支探测链、各入口 `ls -la`/`ls` 检查 → 全改为原则/要确认的事。
+- **保留**:`git diff --name-only` 三连(稳定且是路由契约输入)、`scripts/sdlc-guard` 调用(确定性强门禁)、`references/languages/*`·`deploy-targets/*`(参考卡,具体命令即交付物)。
+- **CLAUDE.md 加铁律 #4**:skill 约束"做什么/为什么/避哪些坑",不规定"怎么执行命令";附"流程 vs 环境工具调用"判据,防蒸馏退回命令手册。
+
 ## [0.2.0] — 2026-06-05
 
 build 后的能力扩张(角色 7、流程 skill 7、+ 语言包 / 部署)。
