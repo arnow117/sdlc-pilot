@@ -1,14 +1,13 @@
 ---
 name: sdlc-onboard
 description: >
-  SDLC 主线的 brownfield 入口流程 skill。把一个【已有项目】测绘成机器可路由的项目记忆——
-  产出 <target-repo>/.sdlc/PROFILE.md(含技术栈/约定/入口/已知风险 + ★surface-map：模块→glob→
-  默认角色→validate 模式)。surface-map 是改动代码路由(driver §3)的可追踪输入,sdlc-pilot 独有、需自建。
-  四阶段管道:纯 bash 采证 → 类型与入口识别 → 自建 surface-map → 写聚合 PROFILE.md + 出口门控。
+  SDLC 主线的 brownfield 入口流程 skill。把一个【已有项目】测绘成机器可路由的项目记忆——产出
+  <target-repo>/.sdlc/PROFILE.md(技术栈/约定/入口/已知风险 + ★surface-map:模块→glob→默认角色→validate 模式;
+  + AI-readiness 体检 + Deploy 探测)。surface-map 是改动代码路由的可追踪输入。
   触发于:用户说 "onboard 这个项目"、"给这个仓库建 PROFILE"、"扫一下这个 codebase"、"分析已有项目准备走 SDLC"、
   "map this repo"、"建立项目记忆"、"sdlc-onboard";driver 判定为 brownfield(无 PROFILE 且 repo 非空)时也路由到此。
-  也可被独立调用,为现有项目首次建立 SDLC 记忆。
-  本 skill 是流程 skill(被 sdlc driver 路由),不分叉、不写 spec、不拆任务——只测绘并写 PROFILE.md。
+  也可独立调用为现有项目首次建立 SDLC 记忆。
+  本 skill 只测绘并写 PROFILE.md(只读源码),不分叉/不写 spec/不拆任务。四阶段管道(采证→类型→surface-map→聚合)见正文。
 ---
 
 # sdlc-onboard — brownfield 入口：测绘已有项目 → PROFILE.md

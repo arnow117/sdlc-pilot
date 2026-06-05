@@ -1,13 +1,11 @@
 ---
 name: sdlc-spec
 description: >
-  SDLC 主线的 Explore + Spec 阶段（规格驱动 SDD）。把模糊点子收敛成获批的、可实现的规格，
-  并在涉及 AI/模型/策略工作时【前置定义 eval 标准】（rubric / 数据集 / 阈值）供后续 sdlc-validate 执行。
-  核心纪律：批准前不写任何代码（HARD-GATE）、一次只问一个问题、分节获批、给 2-3 个方案带取舍、
-  spec 自检 + 双 gate（自检通过 + 用户复核）。产出落 <target-repo>/.sdlc/spec.md。
+  SDLC 主线的 Explore + Spec 阶段(规格驱动 SDD):把模糊点子收敛成获批的、可实现的规格(产出 .sdlc/spec.md)。
+  核心纪律 **批准前不写任何代码(HARD-GATE)**;涉及 AI 工作时前置 eval 标准,涉及 UI 时前置设计契约(DESIGN.md)。
   触发于:用户说 "写 spec"、"做需求设计"、"这个功能怎么设计"、"开始 spec 阶段"、"sdlc spec"、
-  "把这个点子定下来"、"我要做一个新功能（要走完整流程）"；也由 sdlc driver 在 stage=spec 时路由进来。
-  本 skill 自己不写实现代码、不拆任务（那是 sdlc-plan）、不跑测试。它只产出获批的 spec.md（含 eval 契约）。
+  "把这个点子定下来"、"我要做一个新功能(要走完整流程)";也由 sdlc driver 在 stage=spec 时路由进来。
+  本 skill 只产出获批的 spec.md,不写实现代码、不拆任务(sdlc-plan)、不跑测试。一次一问/分节获批/双 gate 等纪律细节见正文。
 ---
 
 # sdlc-spec — Explore + Spec（规格驱动 / SDD）

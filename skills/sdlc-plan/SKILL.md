@@ -1,17 +1,13 @@
 ---
 name: sdlc-plan
 description: >
-  SDLC 主线的「规划」流程 skill：把【已批准的 spec.md】拆成一份可直接执行的 plan.md——
-  两级贯通：spec → 阶段(phase，含 depends_on/wave 波次依赖) → 任务(task，含三必填字段
-  read_first / acceptance_criteria / action)。蒸馏自 gsd-new-project 五准则(派生 phase /
-  1需求↔1phase / 可观察成功标准 / 100% 覆盖 / traceability)、gsd-plan-phase 的 Anti-Shallow
-  三字段 + depends_on/wave + must_haves 目标倒推 + Source Audit/Coverage Gate、
-  superpowers writing-plans 的 TDD 五步粒度 + No-Placeholder 红线 + 自查三扫、
-  planner-breakdown-sdlc 的 L1-L4 复杂度分级→粒度自适应。
-  触发于：用户说 "/sdlc plan"、"拆任务"、"做计划"、"规划阶段"、"plan this"、"把 spec 拆成任务"、
-  "spec 批了下一步怎么做"，或 driver 在 STATE.stage=plan 处续接时路由进来。
-  入口前提：spec.md 已存在且已获批(questioning/讨论已在 sdlc-spec 完成，本 skill 不再做需求讨论)。
-  本 skill 只产出 plan.md + 写回 STATE，不写代码、不跑测试、不做 review。
+  SDLC 主线的「规划」流程 skill:把【已批准的 spec.md】拆成可直接执行的 plan.md——两级贯通:
+  spec → 阶段(phase,含 depends_on/wave 波次依赖) → 任务(task,含三必填字段 read_first/acceptance_criteria/action);
+  按 L1-L4 复杂度自适应粒度。
+  触发于:用户说 "/sdlc plan"、"拆任务"、"做计划"、"规划阶段"、"plan this"、"把 spec 拆成任务"、
+  "spec 批了下一步怎么做",或 driver 在 STATE.stage=plan 处路由进来。
+  入口前提:spec.md 已存在且已获批(讨论已在 sdlc-spec 完成,本 skill 不再做需求讨论)。
+  本 skill 只产出 plan.md + 写回 STATE,不写代码/不跑测试/不评审。五准则、目标倒推、双向追溯门、蒸馏来源等见正文。
 ---
 
 # sdlc-plan — 把已批准的 spec 拆成可执行的 plan.md

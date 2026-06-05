@@ -1,15 +1,13 @@
 ---
 name: sdlc
 description: >
-  SDLC 主线驱动器 / 路由器 / 跨会话交接中枢。读取 <target-repo>/.sdlc/ 的项目记忆(PROFILE.md)与
-  特性状态(STATE.md),按是否 brownfield 分叉(无 PROFILE 且 repo 非空→onboard;repo 空→spec;
-  有 PROFILE→在 STATE.stage 续接),用 resolve(diff × surface-map × routing) 动态决定加载哪些角色卡、
-  跑哪些 validate 模式,路由到对应的 sdlc-* 流程 skill,并把进度写回 STATE 供下次会话或 sub-agent 接续。
+  SDLC 主线驱动器 / 路由器 / 跨会话交接中枢。读 <target-repo>/.sdlc/(PROFILE 项目记忆 + STATE 特性状态),
+  分叉决定入口阶段,按改动代码路由到对应 sdlc-* 流程 skill,并把进度写回 STATE 供下次会话/sub-agent 接续。
   触发于:用户说 "/sdlc"、"开始一个特性"、"走 SDLC 流程"、"继续上次的开发"、"resume sdlc"、
-  "我要做一个新功能/改一个 bug 想走完整流程"、"接着开发"、"上次做到哪了"、"on this repo run sdlc"。
+  "我要做一个新功能/改一个 bug 想走完整流程"、"接着开发"、"上次做到哪了"、"on this repo run sdlc";
   也在用户要对一个项目首次启动结构化研发流程时主动建议。
-  本 skill 是编排层(导演):自己不写 spec、不拆任务、不写测试、不跑验证、不做 review——
-  它只分叉、解析路由、装载上下文、交接。具体工作交给 sdlc-onboard/spec/plan/build/validate/review。
+  本 skill 是编排层(导演):只分叉/解析路由/装载上下文/交接,不写 spec、不拆任务、不写测试、不验证、不评审、不部署
+  (那些交给 sdlc-onboard/spec/plan/build/validate/review/ship)。分叉、resolve 路由、漂移检测等机制见正文。
 ---
 
 # sdlc — 主线驱动器(driver / router / handoff)
