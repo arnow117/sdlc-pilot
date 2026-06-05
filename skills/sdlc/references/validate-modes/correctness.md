@@ -41,7 +41,7 @@ self-built:
 
 ### Step 0 — 发现测试基建（runtime → framework）
 
-跑探测，确定语言、框架、跑测命令。v1 只认 Python + Web(TS)，但探测保持通用。
+跑探测，确定语言、框架、跑测命令。**确定语言后,test / coverage 门 / lint 的确切命令优先从 `references/languages/<lang>.md` 取**（python/typescript/go/rust/kotlin/swift/java-spring 各包都有实测过的"接入 sdlc"命令段;见 role-routing §7）。已覆盖语言不用现猜命令;未覆盖语言再回退到下面的通用探测。
 
 ```bash
 # runtime 探测

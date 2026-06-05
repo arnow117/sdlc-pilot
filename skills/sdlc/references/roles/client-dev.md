@@ -31,6 +31,8 @@ distilled-from:
 
 # client-dev —— 客户端开发视角（Web + 原生移动）
 
+> **语言细节(陷阱/测试/lint/LSP)不在本卡** —— 按改动扩展名加载 `references/languages/<lang>.md`(前端/移动常见 typescript / kotlin / swift,见 role-routing §7)。本卡只管客户端通用视角(bundle/re-render/offline-first/触控/无障碍)。
+
 > 这是一张**职能视角知识卡**（不是流程）。被 `sdlc-build` / `sdlc-validate` / `sdlc-review`
 > 在 git diff 命中上面 `triggers` 的 glob 时按需加载。它回答的是
 > "**站在客户端开发的专业立场上，这次改动我该盯什么**"。

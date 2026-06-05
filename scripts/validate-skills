@@ -47,6 +47,16 @@ for f in "$ROOT"/*/SKILL.md; do
 done
 [ $fail -eq 0 ] && ok "可移植自检通过"
 
+echo "== 6. 语言包:文件 ↔ role-routing §7 登记 =="
+if [ -d "$REF/languages" ]; then
+  for lf in "$REF"/languages/*.md; do
+    l="$(basename "$lf" .md)"
+    grep -q "languages/$l" "$REF/role-routing.md" || err "语言包 '$l' 未在 role-routing §7 登记"
+    head -6 "$lf" | grep -qE '^lang:' || err "$lf 缺 lang: frontmatter"
+  done
+  ok "语言包检查完成($(ls "$REF"/languages/*.md 2>/dev/null | wc -l | tr -d ' ') 个)"
+fi
+
 echo
 if [ $fail -eq 0 ]; then echo "RESULT: PASS ✅"; exit 0
 else echo "RESULT: $fail 项不一致 ❌(修完再 commit)"; exit 1; fi

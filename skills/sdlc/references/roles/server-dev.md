@@ -22,6 +22,7 @@ distilled-from:
 # 角色卡：server-dev（服务端开发视角）
 
 > 这是一张**知识卡**，不是流程。它只回答"从服务端工程的专业视角看，这次改动应该关注什么"。
+> **语言细节(陷阱/测试/lint/LSP 命令)不在本卡** —— 按改动文件扩展名加载 `references/languages/<lang>.md`(后端常见 python/go/rust/java-spring,见 role-routing §7)。本卡只管服务端通用视角(API 契约 / 性能 N+1·index / security / 事务边界)。
 > 流程（跑测试、扫安全、写报告）由 `sdlc-build` / `sdlc-validate` / `sdlc-review` 这些 skill 执行，
 > 它们在路由命中本卡时把这里的关注点/清单当作透镜加载。
 

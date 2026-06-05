@@ -133,7 +133,25 @@
 
 ## 6. 扩展点（蒸馏循环维护）
 
-- 加语言/框架：在 §2 增行或扩 glob（如 Go `**/*.go`、Rust `**/*.rs`），并在角色卡补对应 pitfall 表。
+- 加语言/框架：写一份 `references/languages/<lang>.md` 语言包（见 §7），不再往角色卡塞大段 pitfall。
 - 加角色/模式：先扩 §3 / §4 取值字典，再在 §2 引用，避免路由产出"野值"。
 - 项目特化：优先写进该 repo 的 `PROFILE.md` surface-map（覆盖本表），不污染通用规则。
 - App 模态工具定型后（Maestro/Appium，见 spec §13），更新 §2 R2 的降级说明与 `e2e.md` App 子模态。
+
+---
+
+## 7. 语言包（`references/languages/<lang>.md`）
+
+语言相关知识(陷阱 / 测试·覆盖率命令 / lint / LSP / 框架)**不塞进角色卡**,各自一份语言包,**按改动文件扩展名加载**。角色卡(server-dev/client-dev)、validate/correctness、build TDD、ai-readiness(LSP 维度)都从这里取该语言的确切命令。
+
+| 扩展名 | 语言包 | 默认 role |
+|---|---|---|
+| `**/*.py` | `languages/python.md`(+ Django) | server-dev |
+| `**/*.ts` `**/*.tsx` `**/*.js` `**/*.jsx` | `languages/typescript.md` | server-dev(后端)/ client-dev(前端·E2E) |
+| `**/*.go` | `languages/go.md` | server-dev |
+| `**/*.rs` | `languages/rust.md` | server-dev(服务)/ client-dev(CLI/桌面/库) |
+| `**/*.kt` `android/**` | `languages/kotlin.md` | client-dev(主)/ server-dev(Ktor/KMP) |
+| `**/*.swift` `ios/**` | `languages/swift.md` | client-dev |
+| `**/*.java` | `languages/java-spring.md`(+ Spring Boot) | server-dev |
+
+> 加载逻辑:resolve 出 active roles 后,**按本轮改动文件的扩展名**加载对应语言包,叠加到角色视角 + validate 命令。一个特性多语言 → 加载多份。归属与 §2/§3 的 surface 路由正交(surface 决定"谁看",语言包决定"用哪套命令/陷阱")。

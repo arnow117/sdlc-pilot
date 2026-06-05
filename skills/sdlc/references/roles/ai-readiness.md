@@ -19,7 +19,7 @@ distilled-from: [arch-aifriendly-doctor, startup-claude-md-init]
 5. **噪声控制**——`dist/node_modules/__pycache__/生成物` 是否被排除出 agent 上下文?噪声越多 agent 越容易被带偏。
 6. **类型系统**——有类型注解/类型检查?agent 能否静态理解数据形状(而非全靠运行时猜)。
 7. **测试就绪**——有可跑的测试套件?agent 改完能自验,是 AI 可维护性的地基。
-8. **LSP 就绪**——符号可跳转/可索引(有 LSP 配置/语言服务器)?决定 agent 能否精确定位而非全文搜。
+8. **LSP 就绪**——符号可跳转/可索引(有 LSP 配置/语言服务器)?决定 agent 能否精确定位而非全文搜。各语言的 language server 见 `references/languages/<lang>.md`(pyright/tsserver/gopls/rust-analyzer/sourcekit-lsp/kotlin-language-server/jdtls)。
 9. **文档与约定显式**——README/约定是否让 agent 不用猜就知道"怎么跑/怎么改/禁什么"。
 10. **禁止事项 / 工具防护**——有没有显式 prohibitions(别碰什么)+ agent 工具参数防御(危险操作有护栏)。
 
