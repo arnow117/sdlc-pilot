@@ -387,5 +387,8 @@ vitest/playwright/tsc first. **First dogfood target: agentic-config-demo** (`age
 | **build wave 并行执行** | 吸收 gsd-execute-phase 完整 wave 模型: 同 wave 多阶段 Task-or-sequential fan-out(一阶段一 agent), 安全靠 plan §4.3 同 wave 无文件冲突 |
 | **设计契约前置** | spec §2.6b(对称 eval §5): UI 工作产出 `DESIGN.md`; 闭合 design 卡引用却无人产出的洞(审计缺口 #2) |
 | **architect 角色** | `roles/architect.md` + routing R8(跨 ≥2 面/全链路触发): 全链路数据结构对齐/跨边界契约/单一事实源/blast-radius。角色 5→6 |
+| **ai-readiness 角色 + arch-doctor 吸纳决定** | 两轴拆解 arch-aifriendly-doctor:**知识**(10 维 + 23 模式)→ `roles/ai-readiness.md`(角色卡);**扫描**→ onboard Phase A(已);**评估**→ onboard Phase D 只读体检写 PROFILE;**整改**→ remediation feature(work-type)走标准 loop。**不另起 `sdlc-remediate` skill**(整改是 feature,不是技能;接手层=onboard 读 + 改造走流程)。角色 6→7 |
+| **并发边界硬门** | `scripts/sdlc-guard` + `pre-commit` hook(git 执行、模型绕不过)+ STATE branch/worktree 戳 + driver §1.1。多特性并行引导用 worktree;重型 per-feature 引擎故意缓做 |
+| **work-type 流程画像** | STATE `work-type`(feature/remediation/hotfix)中央旋钮:偏置 granularity、不取消硬门。driver §1.2 + `/sdlc next` |
 
 > 审计缺口收口(全清): #1(受评接收纪律)**已补**(`references/receiving-feedback.md` + build/review fix 点引用); #2(设计契约)**已补**(spec §2.6b); #3(范围塑造)**已补**(divergence §2.4 做大 + scope-shaping §2.4b 显式 10星/挑战前提/EXPAND-HOLD-REDUCE-SELECTIVE + scope-guard 防蔓延, 三者凑齐)。

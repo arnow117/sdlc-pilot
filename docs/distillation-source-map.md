@@ -128,6 +128,9 @@
 | sdlc 目标 | 第一 canonical 源 |
 |---|---|
 | onboard | gsd-map-codebase（+ arch-aifriendly-doctor 补 bash/scoped 命令） |
+| ai-readiness 角色卡 | arch-aifriendly-doctor 的 10 维 + 23 模式知识（+ startup-claude-md-init） |
+
+> **arch-aifriendly-doctor 完整拆解（两轴吸纳,2026-06-05）**:扫描→onboard Phase A;10 维+23 模式知识→`roles/ai-readiness.md`;P13/P23 机制→role-routing;评估→onboard 只读体检;整改→remediation feature(work-type)。**结论:不另起 skill**——整改是 feature 走标准 loop,接手层 = onboard(读) + 改造(流程)。
 | spec | superpowers:brainstorming（+ hp-feature-dev 文档矩阵） |
 | plan | gsd-new-project 五准则 + gsd-plan-phase 三字段/wave |
 | build | superpowers:test-driven-development + systematic-debugging |
