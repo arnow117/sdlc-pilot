@@ -30,7 +30,10 @@ distilled-from: [ai-evals.md, gsd-eval-review, benchmark, benchmark-models, tb-r
 - **先验证评估装置没坏，再信分数。**（蒸馏自 tb 的 oracle/nop 自检门）跑真模型前先确认
   "已知好的样本应得高分、已知坏的样本应得低分"。装置坏了，所有分数都是垃圾。
 - **回归用 baseline-diff 双阈值。** 不是看绝对分高低，是看"相对上一版"涨跌，用 WARNING/
-  REGRESSION 两道阈值卡。
+  REGRESSION 两道阈值卡。**→ 这一关就是"AI 回归测试"**(ai-regression-testing 的内核已含于此):
+  每次改 AI/模型/策略,在本模式对参考集跑分并和 baseline diff,**让以前好的输出变差 = REGRESSION = 阻断**。
+  所以 sdlc-pilot **不另起 ai-regression skill** —— AI 回归 = eval-bench 的 baseline-diff 这一关。
+  (额外保险:若担心非 AI 改动也可能让 AI 漂移,可在 spec 把 eval-bench 标为该特性的常驻验证。)
 - **有效性甄别。**（蒸馏自 tb-run-analyzer）一次 eval 跑挂了，要分清是"模型答得差"（valid，
   算进分数）还是"环境/provider/超时/限流挂了"（invalid，剔除、重试，不算进分数）。
 - **guardrail vs flywheel 二分。** 出错会不会对业务是灾难性的？是 → guardrail（线上实时拦截/

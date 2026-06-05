@@ -32,6 +32,15 @@ sdlc-pilot 的知识（角色卡 / stage playbook / validate-mode playbook）不
 
 > 不触发的情况：纯一次性脚本、与 SDLC 流程无关的领域知识（那应去 `kb-manage` 的通用知识库）、未经验证就想记的"猜测"（对齐"先验证再记录"）。
 
+### 1.1 来源②：从自己跑过的 loop 复盘提炼（retro,蒸馏自 `session-miner` + `retro` + `orchestrator-flow-reflect`）
+
+除了"分析外部新 skill",还应**从本系统自己的运行中学习**:
+
+- **触发**:`STATE.stage=done`(一个 feature 走完整 loop 收口)后,或 build 调试 3-strike 后 → 可选跑一段轻量 retro。
+- **★硬门(必须)**:**只有这个 session 真正跑过 sdlc loop 才提炼** —— 即 `STATE` 存在且 `stage` 至少到过 build/validate/review(完成或接近完成一个 feature)。半截/中断/没走流程的 session **不提炼**(否则是噪声 learning,污染卡片)。这等于"带 sdlc 上下文的 session-miner",而非泛挖任意会话。
+- **提炼什么**:这次哪个 pattern 反复出现 / 哪里绊住了 / 哪类问题我们的卡没覆盖 / 哪个修复套路值得固化。
+- **去向**:追加进对应角色卡的"常见翻车"/检查清单、或 validate-mode、或路由规则,标 `distilled-from: session:<topic>-<date>`(见 §123 溯源)。仍走 §2 的两轴定位 + §4 防孤儿。
+
 ---
 
 ## 2. 蒸馏流程（5 步，借 sop-extractor 的管道形）
