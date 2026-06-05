@@ -26,6 +26,6 @@
 superpowers · gstack(+ review/specialists)· GSD(+ ai-evals.md)· agency-agents(MIT)· adhd(MIT)· 用户自有 skill(hp-* / explorer-* / startup-* / tb-* / web-api-reverse-engineering)· Playwright MCP。详见 `README.md` 溯源表 + `docs/distillation-source-map.md`。
 
 ### 已知 / 待办
-- 仅 dogfood 过 onboard(测 happycompany);完整 feature 主线端到端试跑待做。
+- 仅 dogfood 过 onboard(测 agentic-config-demo);完整 feature 主线端到端试跑待做。
 - App E2E 工具(Maestro)选型待实测;big-data 角色为 stub。
 - 见设计 spec §13。

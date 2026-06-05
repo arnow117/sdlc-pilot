@@ -346,7 +346,7 @@ only in the skill-invocation context. Four rules enforce it:
 | README + dogfooding symlinks + `.agents/skills` sync | |
 
 **v1 language scope: Python + Web (TS).** Test exec abstraction targets pytest/coverage +
-vitest/playwright/tsc first. **First dogfood target: happycompany** (`corp/dingguo-happycompany/`).
+vitest/playwright/tsc first. **First dogfood target: agentic-config-demo** (`agentic-config-demo/`).
 
 ## 12. Housekeeping
 
@@ -361,7 +361,7 @@ vitest/playwright/tsc first. **First dogfood target: happycompany** (`corp/dingg
 - **App E2E tooling** — Web (Playwright MCP) and OpenAPI confirmed; mobile-automation tool
   (Appium / Maestro / device-farm) is a **build-time research spike** (App modality sequenced
   last). Default lean: Maestro for simplicity, verify before committing (per "先验证再记录").
-- `role-routing.md` globs tuned to happycompany + Python/TS first; more repos later.
+- `role-routing.md` globs tuned to agentic-config-demo + Python/TS first; more repos later.
 - Whether to add a `scripts/validate-state.mjs` linter (like workflow-creator's validator).
 - Eventual GitHub publish: license, README polish, install instructions.
 
@@ -370,7 +370,7 @@ vitest/playwright/tsc first. **First dogfood target: happycompany** (`corp/dingg
 | Item | Resolution |
 |------|-----------|
 | **Reinventing gsd?** | **No** — confirmed by the source map: every target's "build-what" is dominated by (a) stripping runtime deps and (b) our 3 differentiators (routing/surface-map, portability, ownership). We distill gsd's methodology, not its runtime. |
-| **First dogfood target** | **happycompany** (`corp/dingguo-happycompany/`) |
+| **First dogfood target** | **agentic-config-demo** (`agentic-config-demo/`) |
 | **v1 language scope** | **Python + Web (TS)** |
 | **big-data role** | **stub card** in v1 (now seeded from agency-agents `data-engineer`, so a rich stub at low cost) |
 | **Supplementary role source** | **agency-agents** (`workspace/agency-agents/`) — fills big-data / design-UX / client-mobile gaps. See source map §6. |
@@ -382,7 +382,7 @@ vitest/playwright/tsc first. **First dogfood target: happycompany** (`corp/dingg
 | 演进 | 内容 |
 |------|------|
 | **push 前 SDLC 检查** | 本地 `pre-push` hook(纯 shell, 无 secret), 读 STATE 的 `sdlc-gate: PASS reviewed-head=<sha>`; onboard 脚手架自检主动询问安装。CI 路线降级为团队场景可选(secret 不进容器) |
-| **R7 配置/agent 定义型工程** | onboard + routing 识别 happycompany 这类"源即声明式配置"项目(agents/workflows/roles JSON)→ server-dev+correctness, 非 eval |
+| **R7 配置/agent 定义型工程** | onboard + routing 识别 agentic-config-demo 这类"源即声明式配置"项目(agents/workflows/roles JSON)→ server-dev+correctness, 非 eval |
 | **发散 ideation pass** | 蒸馏 adhd → `references/divergence-frames.md`; spec §2.4 选方案前的可选门控发散(开放+高风险+开放措辞); 补审计缺口 #3 的"做大"方向 |
 | **build wave 并行执行** | 吸收 gsd-execute-phase 完整 wave 模型: 同 wave 多阶段 Task-or-sequential fan-out(一阶段一 agent), 安全靠 plan §4.3 同 wave 无文件冲突 |
 | **设计契约前置** | spec §2.6b(对称 eval §5): UI 工作产出 `DESIGN.md`; 闭合 design 卡引用却无人产出的洞(审计缺口 #2) |

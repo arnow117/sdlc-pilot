@@ -14,7 +14,7 @@
    - 交互 → gsd `text_mode`（AskUserQuestion 退化为**纯文本编号列表**）。
    - 并行 → gsd-map `Task-or-sequential` 降级（探测有无并行能力，没有就**串行**）。
 3. **蒸馏方法论**：实读源地图点名的 canonical 源 skill，取方法/检查清单；**丢弃** runtime preamble、`gsd-tools.cjs`、`.planning/` 目录依赖、agent 人格（vibe/emoji/memory）。
-4. **v1 语言范围 = Python + Web (TS)**；首个 dogfood = happycompany（`corp/dingguo-happycompany/`）。
+4. **v1 语言范围 = Python + Web (TS)**；首个 dogfood = agentic-config-demo（`agentic-config-demo/`）。
 5. 每个文件**中文为主、结构清晰、可直接执行**。
 6. **反膨胀边界**：家族恒定为 **1 driver + 6 process skill**。验证流程（E2E / eval-bench）= validate 的**模式（数据 playbook）**，永不升级为顶层 skill。视角（role）= **知识卡（数据）**，不是 skill。
 
@@ -136,7 +136,7 @@
 - D1 README + dogfooding symlink 步骤 + `.agents/skills/sdlc*` Codex 发现 sync
 
 ### Wave 5 — dogfood 验证（依赖全部建成）
-- 在 happycompany（`corp/dingguo-happycompany/`）跑一遍主线：`/sdlc` → onboard 产出 PROFILE.md → 一个小 feature 走 spec→plan→build→validate→review→verify。
+- 在 agentic-config-demo（`agentic-config-demo/`）跑一遍主线：`/sdlc` → onboard 产出 PROFILE.md → 一个小 feature 走 spec→plan→build→validate→review→verify。
 - 校验: 跨 session handoff（STATE.md resume）、改动代码路由（前端改动加载 client+design + 排 Web E2E）、Codex 串行降级。
 - 把 dogfood 中发现的缺漏经 X2 distillation-loop 回填到对应 stage/role/mode。
 
@@ -156,7 +156,7 @@
 ### SPIKE-B — eval-bench 执行层落地（源地图 #2/#3：eval 前置 + 数字化门控，多源全无）
 - **问题**: "对 dataset 按 rubric 跑出实际质量分"的执行层需缝合 `ai-evals` rubric × LLM judge × verdict，并打通 spec→validate 契约接口（validate 读 rubric/数据集/阈值的位置约定）。
 - **产物**: 验证后写入 M3 `eval-bench.md` 执行层 + P3 `spec.md` 的 eval criteria 段 + P6 `eval-report.md`，三者契约对齐。
-- **排期**: 与 Wave 1（M3 起草）耦合；先用 happycompany 一个最小 AI 工作样例（10-20 样本起，ai-evals 准则）跑通端到端，再固化契约。
+- **排期**: 与 Wave 1（M3 起草）耦合；先用 agentic-config-demo 一个最小 AI 工作样例（10-20 样本起，ai-evals 准则）跑通端到端，再固化契约。
 - **占位文件**: `docs/spikes/SPIKE-B-eval-bench-execution.md`（最小样例 + 契约定稿）。
 
 ---
@@ -166,11 +166,11 @@
 - [ ] 7 个 SKILL.md 全部为薄编排层，无 runtime preamble / gsd-tools / .planning 依赖。
 - [ ] 5 角色卡符合 §7 格式，big-data 为 stub 但已 seed agency `data-engineer`。
 - [ ] 3 validate 模式为 references 数据，非顶层 skill；correctness 含数字化覆盖率门控。
-- [ ] role-routing.md 覆盖 Python + TS globs，可解析 happycompany 的 surface。
+- [ ] role-routing.md 覆盖 Python + TS globs，可解析 agentic-config-demo 的 surface。
 - [ ] 所有交互点用 text_mode；所有并行点有 Task-or-sequential 降级。
 - [ ] STATE/PROFILE/spec/plan/报告均有统一 schema 模板。
 - [ ] README 含 dogfooding symlink + Codex `.agents/skills` 发现步骤。
-- [ ] happycompany dogfood 跑通一条主线（Wave 5）。
+- [ ] agentic-config-demo dogfood 跑通一条主线（Wave 5）。
 - [ ] SPIKE-A / SPIKE-B 结论落地或明确标 pending。
 
 ---

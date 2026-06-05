@@ -134,7 +134,7 @@ v1 语言范围 = **Python + Web(TS)**。如何迭代本项目见仓库根 **`CL
 
 | 场景 | 怎么走 |
 |---|---|
-| **首次进一个已有项目** | `/sdlc` → 无 PROFILE → 自动 `onboard` → 产出 `.sdlc/PROFILE.md` + surface map(happycompany 这类"配置型工程"也认得,R7) |
+| **首次进一个已有项目** | `/sdlc` → 无 PROFILE → 自动 `onboard` → 产出 `.sdlc/PROFILE.md` + surface map(agentic-config-demo 这类"配置型工程"也认得,R7) |
 | **每做一个 feature** | `/sdlc` → **spec**(批准前不写码;UI 工作产 `DESIGN.md`;AI 工作前置 eval 标准;开放/高风险决策可选发散 + 范围塑造)→ **plan**(拆阶段/波次/任务)→ **build**(先测后码,同 wave 多阶段可并行)→ **validate**(按改动选 correctness/e2e/eval-bench)→ **review**(多角色 + 安全门 + 收口,写 `sdlc-gate`) |
 | **角色/验证自动选** | 改前端→client-dev+design+e2e:Web;改 API→server-dev+e2e:OpenAPI;改 AI/策略→eval-bench;**跨 ≥2 面→ +architect**;改配置/agent 定义→server-dev+correctness |
 | **跨会话续接** | `/clear` 或隔天 → `/sdlc` 读 `.sdlc/STATE.md`,从上次 stage 接着走,不用复述 |

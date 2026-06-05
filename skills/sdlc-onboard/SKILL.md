@@ -149,7 +149,7 @@ grep -rIl -E 'auth|login|payment|billing|secret|credential' . --include='*.py' -
 2. **定类型**(按最显著信号归类,混合则取权重最高):
    - 工程/基础设施(database/engine/framework/library/SDK/server)
    - Agentic/AI **代码**(agent/LLM/prompt/RAG/eval 的可执行实现)→ 提示:大概率含 `ai-strategy` 面 + eval-bench 模式。
-   - **配置/agent 定义型**(源主要是 agents/workflows/processes/roles/employees/skill 的**声明式** JSON/YAML/SKILL.md,真实代码很少;如 happycompany——一家 AI agent 运营的公司,42 个 JSON 定义 + 3 个 Python 文件)→ 提示:走 R7,默认 `server-dev` + `correctness`,验证靠 **schema/契约一致性校验**,**不跑 eval-bench**(它不是 AI 模型代码);内嵌真实代码(*.py/*.ts)按其类型**单独归面**(如 med_crm CLI → server-dev)。
+   - **配置/agent 定义型**(源主要是 agents/workflows/processes/roles/employees/skill 的**声明式** JSON/YAML/SKILL.md,真实代码很少;如 agentic-config-demo——一家 AI agent 运营的公司,42 个 JSON 定义 + 3 个 Python 文件)→ 提示:走 R7,默认 `server-dev` + `correctness`,验证靠 **schema/契约一致性校验**,**不跑 eval-bench**(它不是 AI 模型代码);内嵌真实代码(*.py/*.ts)按其类型**单独归面**(如 med_crm CLI → server-dev)。
    - 通用/其他(CLI/工具/脚手架)
 3. **定入口**(agency onboarding-engineer Step 2):找出"系统怎么启动"的最小文件集——启动文件、路由表、CLI 命令、配置入口、迁移命令。
 4. **提测试命令抽象**:从 Phase A 的 scripts/pyproject 线索归纳出 `{ unit, coverage, e2e, typecheck, build }`(语言无关命令,validate/correctness 据此发现并运行套件)。v1 对照 pytest/coverage + vitest/playwright/tsc。

@@ -35,7 +35,7 @@ distilled-from:
 > 在 git diff 命中上面 `triggers` 的 glob 时按需加载。它回答的是
 > "**站在客户端开发的专业立场上，这次改动我该盯什么**"。
 >
-> v1 语言范围 = **Python + Web(TS)**；移动是**切片**（首批 dogfood happycompany 以 Web 为主），
+> v1 语言范围 = **Python + Web(TS)**；移动是**切片**（首批 dogfood agentic-config-demo 以 Web 为主），
 > 但卡片把原生/跨端的要点一并备好，供命中 `ios/** android/** *.swift *.kt *.dart` 时使用。
 > 卡内把 Web 段和"移动切片"段分开标注，路由命中谁就重点看谁。
 

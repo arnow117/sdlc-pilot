@@ -118,7 +118,7 @@ ls -d tests/ test/ __tests__/ spec/ e2e/ 2>/dev/null
 - **新增/改动代码**的行覆盖 < 阈值 → **FAIL**，回 Step 3 补测试。
 - 用 `--cov-fail-under` / `coverage.thresholds` 让工具自己以 **非零 exit code** 把关，别靠肉眼读百分比。
 - 阈值是"门"不是"分"：达标即过，不刷高分；纯样式/配置/迁移文件可在 config 里排除出分母。
-- 阈值缺失时：默认 行 80% / 分支 70%；happycompany dogfood 用此默认。
+- 阈值缺失时：默认 行 80% / 分支 70%；agentic-config-demo dogfood 用此默认。
 
 ### Step 6 — 三态判定 + 回归保护
 
