@@ -99,3 +99,17 @@ test-commands: { unit: "<例如 pytest>", coverage: "<例如 pytest --cov=<pkg> 
 
 - <填写，例如：orders 模块有 N+1 查询，改动时注意>
 - <填写，例如：无 e2e 覆盖的支付回调，改动需手动验证>
+
+## Deploy
+
+<!--
+  部署事实（onboard 只读探测；供 sdlc-ship 用）。只记类型 + 配置位置，不抄密钥。
+  source: 扫 vercel.json/Dockerfile/.github/workflows/部署脚本 + 目标工程 CLAUDE.md 部署段。
+-->
+
+- target-type: <static-site | container | vps | 未知>   # 决定加载哪个 deploy-targets/<type> 适配器
+- config 位置: <例如 vercel.json / Dockerfile + k8s/ / deploy.sh>   # 项目特定值(项目名/集群/主机)在这些文件,ship 运行时抽
+- 环境: <dev/staging/canary/full 各对应什么；如 staging=preview, full=prod>
+- 密钥来源: <例如 env / secret-manager；只记来源,不记值>
+- <未检测到部署配置 → 写 "none — 尚未配置部署">
+

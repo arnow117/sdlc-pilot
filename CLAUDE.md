@@ -7,7 +7,7 @@
 一套自洽、可移植、纯文件的 SDLC 技能族。结构、用法、溯源见 `README.md`。核心:**Roles=职能视角(知识卡) / Skills=流程阶段**;验证类(e2e/eval)是 `sdlc-validate` 的**模式**不是独立 skill。
 
 ## 三条不可破的铁律(改任何东西都要守)
-1. **不新增顶层 skill**。家族恒为 `sdlc` driver + 6 流程 skill。新增能力:职能视角→`references/roles/<r>.md`;验证手法→`references/validate-modes/<m>.md`;流程纪律→`references/*.md`。
+1. **不新增顶层 skill**(除非是 SDLC 主线缺的真·生命周期阶段,如新增 ship 那样的重大决策)。家族 = `sdlc` driver + **7 流程 skill**(onboard / spec / plan / build / validate / review / ship)。新增能力优先走:职能视角→`references/roles/<r>.md`;验证手法→`references/validate-modes/<m>.md`;语言→`references/languages/<lang>.md`;部署目标→`references/deploy-targets/<type>.md`;流程纪律→`references/*.md`。**真要加流程阶段**=改 stage 枚举(driver + STATE 模板)+ driver 路由表 + 计数,慎重。
 2. **可移植**:不硬依赖 Workflow / AskUserQuestion / subagent。交互用 text_mode(纯文本编号),并行用 Task-or-sequential 降级。必须在 Codex 下也能跑。
 3. **纯文件 + 单写者**:知识/状态都是文件;`STATE.md` 单写者,并行产物各写各的。
 

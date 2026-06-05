@@ -219,13 +219,14 @@ resolve 的结果(active roles + validate-modes + changed-files)**写进 `STATE.
 | build | `sdlc-build` | **先 resolve(§3)**,装载 active 角色卡(`references/roles/<role>.md`),传 `plan.md` |
 | validate | `sdlc-validate` | **先 resolve**,传 resolve 出的 `validate-modes`,各模式 playbook 在 `references/validate-modes/` |
 | review | `sdlc-review` | **先 resolve**,装载 active 角色卡;并行能力按 §0.2 探测,每角色写 `review/<role>.md` |
+| ship | `sdlc-ship` | review PASS(`sdlc-gate`)后;环境晋级发布(dev→staging→canary→full),读 `PROFILE.Deploy` + `deploy-targets/<type>` |
 
 主线形状(供参考,具体由各 skill 执行):
 
 ```
 [brownfield] Onboard ─┐
                       ├→ Spec(SDD) → Plan → Build{red→green} →
-[greenfield] ─────────┘   Validate{correctness | e2e | eval-bench} → Review → Verify
+[greenfield] ─────────┘   Validate{correctness | e2e | eval-bench} → Review → Verify → Ship{dev→staging→canary→full}
 ```
 
 **装载角色卡 = 把 `references/roles/<role>.md` 的内容作为该流程 skill 的视角输入**(纯文件,任何 caller
@@ -246,7 +247,7 @@ resolve 的结果(active roles + validate-modes + changed-files)**写进 `STATE.
 
 ```markdown
 # SDLC State: <feature/topic>
-stage: onboard | spec | plan | build | validate | review | done
+stage: onboard | spec | plan | build | validate | review | ship | done
 status: in-progress | gated | blocked
 updated: <由 caller 传入的时间戳>
 validate-modes: [correctness, e2e, eval-bench]   # 本次 resolve 出的(§3.4)

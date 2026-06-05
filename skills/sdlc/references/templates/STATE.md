@@ -21,7 +21,7 @@
 
 # SDLC State: <feature/topic 一句话标题>
 
-stage: onboard | spec | plan | build | validate | review | done
+stage: onboard | spec | plan | build | validate | review | ship | done
 status: in-progress | gated | blocked
 work-type: feature | remediation | hotfix     # 流程画像(中央旋钮):各阶段读它自适应走多重。见下方说明
 branch: <写 STATE 时记 `git rev-parse --abbrev-ref HEAD`>     # 并发边界戳:scripts/sdlc-guard 据此防串台

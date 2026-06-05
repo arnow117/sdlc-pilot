@@ -197,6 +197,7 @@ grep -rIl -E 'auth|login|payment|billing|secret|credential' . --include='*.py' -
    - `## Entry points`(Phase B 入口集,让全新上下文 agent 知道"从哪开始读/跑")。
    - `## Known risks`(Phase A concerns focus:大文件热点、无测试覆盖的危险面、N+1 等)。
    - `## AI-readiness 体检`(★只读评分,加载 `references/roles/ai-readiness.md` 的 10 维):对照 CLAUDE.md 级联 / scoped 命令 / 噪声 / 类型 / 测试 / LSP 就绪等,给一个**健康分 + 缺口清单**。**只评估、不整改**(守只读纪律);整改是后续 feature 的事。接手陈旧项目时,这是"它对 AI 友不友好、值不值得先改造"的判断依据。
+   - `## Deploy`(只读探测,供 `sdlc-ship` 用):扫 `vercel.json` / `netlify.toml` / `Dockerfile` + k8s manifests / `.github/workflows/*deploy*` / 部署脚本(`deploy.sh` 等)/ 目标工程 `CLAUDE.md` 的部署段 → 判**部署目标类型**(static-site / container / vps / 未知)+ 记关键**配置位置**(项目名/集群/主机在哪个文件)。**只记位置与类型,不抄密钥、不臆造**;探不到就写"未检测到部署配置"。
 3. 清理临时笔记(`.sdlc/onboard-notes/` 若用过)。
 4. text_mode 把 surface-map 草案给用户确认(§0.1),用户改完再定稿。
 5. **脚手架自检 — 询问装两个硬门 hook**(纯 shell,不跑 AI、无密钥;由 **git 执行,模型绕不过**,唯一逃逸 = 人 `--no-verify`)。检测 `<repo>/.git/hooks/{pre-commit,pre-push}` 是否已是 sdlc 的。缺则 text_mode 问:
