@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# sdlc-pilot 结构 lint —— 可重复回归测试(纯 shell,无依赖)。
+# 检查:① 每个 SKILL.md 有合法 frontmatter;② 角色名↔文件↔字典一致;
+#       ③ validate 模式名↔文件↔字典一致;④ 关键共享文件存在。
+# 用法:bash scripts/validate-skills   (commit 前必跑;退出码 0=通过)
+set -u
+cd "$(dirname "$0")/.." || exit 2
+ROOT="skills"; REF="$ROOT/sdlc/references"
+fail=0
+err(){ echo "  ✗ $1"; fail=$((fail+1)); }
+ok(){ echo "  ✓ $1"; }
+
+echo "== 1. 关键共享文件/目录 =="
+for p in "$REF/role-routing.md" "$REF/distillation-loop.md" "$REF/roles" "$REF/validate-modes" "$REF/templates/STATE.md" "$REF/templates/PROFILE.md"; do
+  [ -e "$p" ] && ok "$p" || err "缺失:$p"
+done
+
+echo "== 2. 每个 SKILL.md frontmatter(name + description) =="
+for f in "$ROOT"/*/SKILL.md; do
+  head -15 "$f" | grep -qE '^name:' || err "$f 缺 name:"
+  head -15 "$f" | grep -qE '^description:' || err "$f 缺 description:"
+done
+[ $fail -eq 0 ] && ok "全部 SKILL.md frontmatter 合法"
+
+echo "== 3. 角色卡:文件 ↔ role-routing 字典 ↔ STATE 模板 =="
+for rf in "$REF"/roles/*.md; do
+  r="$(basename "$rf" .md)"
+  grep -q "$r" "$REF/role-routing.md" || err "角色 '$r' 未在 role-routing.md 出现(字典/规则漏登记)"
+  grep -q "$r" "$REF/templates/STATE.md" || err "角色 '$r' 未在 STATE 模板取值字典"
+done
+ok "角色卡交叉引用检查完成($(ls "$REF"/roles/*.md | wc -l | tr -d ' ') 个)"
+
+echo "== 4. validate 模式:文件 ↔ role-routing ↔ sdlc-validate =="
+for mf in "$REF"/validate-modes/*.md; do
+  m="$(basename "$mf" .md)"
+  grep -q "$m" "$REF/role-routing.md" || err "模式 '$m' 未在 role-routing.md"
+  grep -q "$m" "$ROOT/sdlc-validate/SKILL.md" || err "模式 '$m' 未被 sdlc-validate 引用"
+done
+ok "validate 模式交叉引用检查完成($(ls "$REF"/validate-modes/*.md | wc -l | tr -d ' ') 个)"
+
+echo "== 5. 可移植自检:流程 skill 不得硬依赖 Claude 专属工具 =="
+for f in "$ROOT"/*/SKILL.md; do
+  # 允许出现在"降级/不依赖"语境;这里只粗查是否完全没提降级却硬用 AskUserQuestion
+  if grep -q "AskUserQuestion" "$f" && ! grep -q "text_mode" "$f"; then
+    err "$f 提到 AskUserQuestion 但无 text_mode 降级(违反可移植铁律)"
+  fi
+done
+[ $fail -eq 0 ] && ok "可移植自检通过"
+
+echo
+if [ $fail -eq 0 ]; then echo "RESULT: PASS ✅"; exit 0
+else echo "RESULT: $fail 项不一致 ❌(修完再 commit)"; exit 1; fi

@@ -1,0 +1,13 @@
+{
+  "name": "sdlc-pilot",
+  "version": "0.1.0",
+  "description": "自洽/可移植/时用时新的 SDLC 技能族:driver + 6 流程 skill(onboard/spec/plan/build/validate/review)+ 6 角色卡 + validate 三模式。改动代码驱动路由,跨会话状态持久化。蒸馏自 superpowers/gstack/GSD/agency-agents。",
+  "author": {
+    "name": "arnow117"
+  },
+  "homepage": "https://github.com/arnow117/sdlc-pilot",
+  "repository": "https://github.com/arnow117/sdlc-pilot",
+  "license": "MIT",
+  "keywords": ["sdlc", "skills", "tdd", "sdd", "code-review", "e2e", "eval", "workflow", "portable", "codex"],
+  "skills": "./skills/"
+}

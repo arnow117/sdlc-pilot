@@ -86,9 +86,20 @@ driver 在入口分支:
 └── review/        # 每个角色一份 findings(并行安全)
 ```
 
-## 安装与试用(开发期 dogfooding)
+## 安装
 
-技能在本 workspace 的 `skills/` 下开发。要在当前项目里边开发边用,把每个技能**软链**进 `~/.claude/skills/`:
+**方式一:作为 Claude Code 插件(推荐,一行)**
+
+```
+/plugin marketplace add arnow117/sdlc-pilot
+/plugin install sdlc-pilot
+```
+
+跟着 GitHub 仓走,`skills/` 自动发现。**Codex**:仓库根有 `AGENTS.md`(维护契约);技能发现维护 `.agents/skills/sdlc*` 软链。
+
+**方式二:开发期软链(边改边用,指向同一份源)**
+
+技能在本 workspace 的 `skills/` 下开发。把每个技能**软链**进 `~/.claude/skills/`:
 
 ```bash
 SDLC_SRC="/Users/arnow117/hansen_agent_team/workspace/20260603-sdlc-pilot/skills"
@@ -108,10 +119,14 @@ done
 
 > 软链而非拷贝,保证"边开发边用"始终指向同一份源。成熟后,`sdlc-pilot/` 子树可 `git init` 推成独立 repo;届时安装方式改为 clone + 软链/拷进 `~/.claude/skills/`。
 
-## Dogfooding
+## 测试与 dogfooding
 
-v1 语言范围 = **Python + Web(TS)**。首个 dogfood 目标 = **happycompany**(`corp/dingguo-happycompany/`):
-对其先跑 `sdlc-onboard` 生成 `PROFILE.md` + surface map,再跑一条完整 feature 主线,用真实使用反过来打磨角色卡、路由规则与 validate 模式。
+skill 是 markdown playbook,**没法单测**,两层测试:
+
+- **结构 lint(可重复回归,commit 前必跑)**:`bash scripts/validate-skills` —— 角色/模式名↔文件↔字典一致、frontmatter、可移植自检。
+- **行为 dogfood**:把流程 skill 真跑在一个项目上,对照判据查产出(如 onboard 产的 surface-map 是否过 Phase C 三条自检)。**真实/内部项目的产物不入库**(`docs/dogfood/` 已 gitignore,本地跑);产出样例见 [`examples/onboard-output-sample.md`](examples/onboard-output-sample.md)。
+
+v1 语言范围 = **Python + Web(TS)**。如何迭代本项目见仓库根 **`CLAUDE.md`**(agent 自动读的维护契约)。
 
 ## 怎么用(日常工作流)
 
