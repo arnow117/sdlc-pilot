@@ -49,7 +49,7 @@ distilled-from: [plan-eng-review, gstack/review/specialists/api-contract, gstack
 
 ## 介入哪些阶段
 
-- **spec(§2.5 设计)**:审本特性的端到端数据流与跨边界契约,数据结构在设计阶段就对齐(别等实现完才发现两头对不上)。
+- **spec(§2.5 设计)**:审本特性的端到端数据流与跨边界契约,数据结构在设计阶段就对齐(别等实现完才发现两头对不上)。**架构/数据模型/契约决策定稿前,走一轮对抗性自我证伪**(spec §2.5,蒸馏 `doubt-driven-development`):主动找这个设计会在哪塌、有没有反例/更简方案。
 - **build**:实现时守模块边界、守单一事实源;改字段时提醒全链路同步。
 - **validate(e2e 全链路)**:全链路 e2e 时,architect 是"数据端到端是否对齐"的视角;数据迁移正确性归它 + big-data。
 - **review**:跨边界一致性 + breaking change + blast-radius 审查(与 server-dev 的 API 契约互补:server-dev 看单个 API,architect 看整条链)。
