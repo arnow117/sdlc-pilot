@@ -198,14 +198,14 @@ grep -rIl -E 'auth|login|payment|billing|secret|credential' . --include='*.py' -
    - `## Known risks`(Phase A concerns focus:大文件热点、无测试覆盖的危险面、N+1 等)。
 3. 清理临时笔记(`.sdlc/onboard-notes/` 若用过)。
 4. text_mode 把 surface-map 草案给用户确认(§0.1),用户改完再定稿。
-5. **脚手架自检 — 询问装 push 前 SDLC 检查**:检测 `<target-repo>/.git/hooks/pre-push` 是否已是 sdlc 的检查(`grep -q sdlc-gate <repo>/.git/hooks/pre-push 2>/dev/null`)。没有就用 text_mode 问:
+5. **脚手架自检 — 询问装两个硬门 hook**(纯 shell,不跑 AI、无密钥;由 **git 执行,模型绕不过**,唯一逃逸 = 人 `--no-verify`)。检测 `<repo>/.git/hooks/{pre-commit,pre-push}` 是否已是 sdlc 的。缺则 text_mode 问:
    ```
-   要装一个 push 前的 SDLC 检查吗?(纯 shell,不跑 AI、不需要密钥;
-   只在 push 前核对 validate+review 已通过,没过就拦下,用 --no-verify 可绕过)
-     1) 装(推荐)
-     2) 跳过
+   要装这两个硬门吗?(git 自动跑,模型绕不过)
+     · pre-commit:并发/边界守卫 —— commit 前查 STATE 与当前 branch/worktree 是否串台(防同分支并行/串台)
+     · pre-push:SDLC 检查 —— push 前核对 validate+review 已过(读 sdlc-gate 行)
+     1) 都装(推荐)  2) 只装 pre-commit  3) 只装 pre-push  4) 跳过
    ```
-   选「装」→ 把 `references/templates/hooks/pre-push` 拷到 `<target-repo>/.git/hooks/pre-push` 并 `chmod +x`;**目标是 git 仓时才装**(非 git 仓跳过,提示"这是配置型目录,push 检查不适用")。装完一句话说明:它只认 STATE 里的 `sdlc-gate: PASS` 行,该行由 `sdlc-review` 通过时写。
+   选装 → 把 `references/templates/hooks/pre-commit` / `pre-push` 拷到 `<repo>/.git/hooks/` 并 `chmod +x`;**仅 git 仓装**(非 git 仓跳过)。pre-commit 调 `scripts/sdlc-guard`(确定性边界检测),为让它能找到,把 `sdlc-guard` 拷/软链到 `<repo>/.sdlc/bin/sdlc-guard`(hook 优先找这里)。装完一句话说明各自管什么。
 
 ---
 

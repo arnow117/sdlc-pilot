@@ -23,6 +23,8 @@
 
 stage: onboard | spec | plan | build | validate | review | done
 status: in-progress | gated | blocked
+branch: <写 STATE 时记 `git rev-parse --abbrev-ref HEAD`>     # 并发边界戳:scripts/sdlc-guard 据此防串台
+worktree: <写 STATE 时记 `git rev-parse --show-toplevel`>     # 同上(worktree 隔离)
 updated: <时间戳，由调用方传入，例如 2026-06-04T15:30>
 validate-modes: [correctness, e2e, eval-bench]   # 本次运行从 diff 动态解析（见 spec §6.1）；未进入 validate 前可留 []
 sdlc-gate: <未设置>   # sdlc-review 全过(verdict=PASS)时写 `PASS reviewed-head=<HEAD的sha>`，否则写 `BLOCK`。本地 pre-push hook(若装)只认这一行来决定放不放行 push。

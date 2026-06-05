@@ -78,6 +78,24 @@ ls -la <target-repo>/.sdlc/ 2>/dev/null
 > 解析 PROFILE 的 surface-map 是后续 resolve() 的关键输入。schema 见设计 spec §4 / §6.1,
 > 由 `sdlc-onboard` 写出。本 driver 只读、不写 PROFILE。
 
+### 1.1 并发/边界自检(读完 STATE 立刻做)
+
+读到 STATE 后,**先跑边界守卫再往下走**,防"串台 / 同分支并行第二个特性"把状态搞乱:
+
+```bash
+sh <sdlc 技能目录>/scripts/sdlc-guard    # 确定性检测:STATE.branch/worktree vs 当前
+```
+
+- **退出非 0(串台)** → 按它的提示停下:切回原分支续接,或为新工作**开 worktree / 新分支**(各自独立 `.sdlc`)。**不要**在串台状态下继续推进。
+- **退出 0 但本次意图是"开新特性",而 STATE 仍有进行中特性** → text_mode 警告:
+  ```
+  ⚠ 当前分支已有进行中特性 '<F1>'(stage=<x>)。同分支并行第二个特性会文件冲突 + STATE 互覆盖。
+    1) 为新特性开 worktree(推荐)  2) 切新分支  3) 先完成/暂存 F1
+  ```
+
+> **软硬两层**:本步是**软层**(driver 入口主动跑,Codex/无 hook 也有保护);**硬层** = `.git/hooks/pre-commit` 调同一个 `scripts/sdlc-guard`,**由 git 执行、模型绕不过**(onboard 脚手架自检会问装)。两层共用一份检测逻辑,单一事实源。
+> 写 STATE 时记 `branch:` / `worktree:` 戳(STATE 模板已含),守卫据此比对。
+
 ---
 
 ## 2. 分叉：决定入口阶段
