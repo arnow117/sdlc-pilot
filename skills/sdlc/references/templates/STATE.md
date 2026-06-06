@@ -75,7 +75,8 @@ sdlc-gate: <未设置>   # sdlc-review 全过(verdict=PASS)时写 `PASS reviewed
   仅快照，不是事实源；下次进入 build/validate/review 时重算。
   取值字典：qa, client-dev, server-dev, design, big-data, architect（改动跨 ≥2 面/全链路时，
   看接缝:全链路数据结构对齐/跨边界契约/blast-radius）, ai-readiness（动 AI-上下文/构建配置，
-  或 onboard 体检/遗留改造时:面向 AI 友好度/可维护性）；security（敏感面触及时，
+  或 onboard 体检/遗留改造时:面向 AI 友好度/可维护性）, skill-maintainer（改技能体系自身时，
+  R10:防臃肿/additive/防孤儿/溯源/可移植/semver/自我修改安全）；security（敏感面触及时，
   为视角叠加标签，无独立 roles/security.md，由 server-dev/qa 卡的 security 子节承载）。
 -->
 

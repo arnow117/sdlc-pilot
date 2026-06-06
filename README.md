@@ -150,6 +150,18 @@ v1 语言范围 = **Python + Web(TS)**。如何迭代本项目见仓库根 **`CL
 
 > 一句话:**`/sdlc` 是总机,改动驱动路由,状态跟着仓库走。** 你只管推进,它负责"在对的阶段带对的视角做对的验证"。
 
+## 时用时新:升级与回流(`/sdlc evolve`)
+
+用着用着发现这套技能该改进?用 **`/sdlc evolve`** 把改进**安全地落回源并发回 GitHub**——这套工具用自己的方式改进自己(用 vN 改出 vN+1)。
+
+- **触发**:"把这个蒸馏进 sdlc"、"沉淀到 sdlc"、"evolve the skills"、"自更新"。
+- **小改 vs 大改**:evolve 只做 **append 类小改**(往已有角色卡/模式/语言包加一条);若是结构性大改(新建卡、动路由/契约),它会让你改为对 sdlc-pilot 仓跑完整 `/sdlc`。
+- **安全闭环**(改自己是有风险的,所以四层兜底):临时分支 → `validate-skills` lint → additive-only 守卫 → **你过目 diff** → 才落 main;任一不过即回滚,坏改动进不了 main/GitHub。
+- **回流**:
+  - **owner**(你,对仓有写权):过目确认后合 main + 直推。
+  - **其他用户**(装的是别人发布的版本):evolve 探到无 upstream 写权 → push 到你自己的 fork + `gh pr create` 起草 PR 回上游。**所以任何人都能时用时新**——自己留着用,或 PR 贡献回来。
+- 机制见 [`skills/sdlc/references/evolve-loop.md`](skills/sdlc/references/evolve-loop.md) + 角色卡 `roles/skill-maintainer.md`;设计依据见 [`docs/specs/2026-06-06-sdlc-evolve-design.md`](docs/specs/2026-06-06-sdlc-evolve-design.md)。
+
 ## 蒸馏溯源(谁吸纳了谁的哪部分)
 
 > 我们蒸馏的是**方法论**(流程 / 检查清单 / 判据),**不是搬代码**——丢弃运行时 preamble、agent 人格、`gsd-tools.cjs`/`.planning` 等工具依赖。下表是"吸纳了源的哪一部分"。

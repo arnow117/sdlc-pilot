@@ -1,7 +1,7 @@
 # 设计:sdlc-evolve —— 时用时新的自更新回流能力
 
 > Date: 2026-06-06
-> Status: draft
+> Status: approved
 > 形态结论:**不新增顶层 skill**。用「角色卡 + playbook + 驱动入口」表达(两轴模型)。
 > 上游设计:`docs/specs/2026-06-03-sdlc-pilot-design.md`(主设计);复用 `references/distillation-loop.md`(蒸馏方法论)。
 

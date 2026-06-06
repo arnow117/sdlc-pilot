@@ -2,6 +2,23 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.3.0] — 2026-06-06
+
+时用时新自更新能力 `/sdlc evolve`(两轴表达,不新增顶层 skill)。
+
+### Added
+- **`skill-maintainer` 角色卡**(`roles/skill-maintainer.md`):唯一作用于工具自身的维护者视角——防臃肿 / additive 合并 / 防孤儿 / 溯源 / 可移植 / semver / **自我修改安全**。由 role-routing **R10**(改 `skills/**`·`*SKILL.md`·`references/**`·`.claude-plugin/**`)加载。角色 7→8。
+- **`evolve-loop.md` playbook**(`references/`,与 distillation-loop 并列的数据):6 步管道(捕获→探源→落位→发布闸→回流→回报)+ **自我修改四层安全闭环**(临时分支 + lint + additive-only 守卫 + 人工检查点 + 原子可逆)+ GitHub 回流(owner 直推 main / 第三方 fork+PR;无 gh 降级手动 PR)。复用 distillation-loop 做落位,不重写方法论。
+- **driver `/sdlc evolve` 子命令**(meta,非 stage、不进 STATE 枚举):加载 evolve-loop + skill-maintainer 透镜;触发语"蒸馏进 sdlc / 沉淀到 sdlc / evolve the skills / 自更新"。
+- **小改/大改机器可判 guard**:evolve 物理上只做 append-to-existing;碰契约/新建文件即 escalate 走完整 `/sdlc`。
+
+### 蒸馏新增源
+kb-manage · sop-extractor · skill-creator(writing guide)· session:sdlc-evolve-design。
+
+### 说明
+- 设计依据 `docs/specs/2026-06-06-sdlc-evolve-design.md`。
+- 铁律 #1 **不动**:meta 能力用"角色卡 + playbook + 驱动入口"表达,family 仍 driver + 7 流程 skill。CLAUDE.md "怎么迭代" 表加 meta 行。
+
 ## [0.2.2] — 2026-06-06
 
 打包自包含修复:强门禁脚本归位到技能目录,三种安装方式路径一致。
