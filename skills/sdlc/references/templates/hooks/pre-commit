@@ -1,6 +1,6 @@
 #!/bin/sh
 # sdlc-pilot pre-commit —— 并发/边界硬门禁。
-# 作用:commit 前由 git 自动跑 scripts/sdlc-guard,检测 STATE 与当前 branch/worktree 是否串台。
+# 作用:commit 前由 git 自动跑 sdlc-guard(skills/sdlc/scripts/),检测 STATE 与当前 branch/worktree 是否串台。
 #       **由 git 执行,不是模型执行** → 模型绕不过;唯一逃逸 = 人显式 `git commit --no-verify`。
 # 安装:由 sdlc-onboard 脚手架自检询问后拷到 .git/hooks/pre-commit 并 chmod +x;
 #       或手动:cp 本文件 .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
@@ -11,7 +11,7 @@ guard=""
 for c in \
   "$repo_root/.sdlc/bin/sdlc-guard" \
   "$HOME/.claude/skills/sdlc/scripts/sdlc-guard" \
-  "$HOME/.claude/plugins/cache"/*/sdlc-pilot/*/scripts/sdlc-guard ; do
+  "$HOME/.claude/plugins/cache"/*/sdlc-pilot/*/skills/sdlc/scripts/sdlc-guard ; do
   [ -f "$c" ] && { guard="$c"; break; }
 done
 

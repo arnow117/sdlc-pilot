@@ -2,6 +2,15 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.2.2] — 2026-06-06
+
+打包自包含修复:强门禁脚本归位到技能目录,三种安装方式路径一致。
+
+### Changed
+- **`sdlc-guard` 迁入 `skills/sdlc/scripts/`**(原在仓库根 `scripts/`)。运行时依赖随 sdlc 技能自包含 → 插件 / 软链 / Codex 三种装法路径都一致;之前软链装法直连路径会落空、只靠 onboard 拷贝兜底。`validate-skills`(开发期 lint)留在仓库根。
+- 同步更新引用:driver §1.1、onboard Phase D、pre-commit hook(plugin-cache 查找路径)、README、设计 spec。
+- **lint 加 §7**:校验 `sdlc-guard` 存在/可执行 + hook 查找路径未漂移,防此类位置不一致再次发生。
+
 ## [0.2.1] — 2026-06-05
 
 流程 skill 去"命令手册化":skill 是**约束 + 原则**,不是 bash cookbook。

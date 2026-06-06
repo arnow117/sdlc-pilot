@@ -24,7 +24,7 @@
 stage: onboard | spec | plan | build | validate | review | ship | done
 status: in-progress | gated | blocked
 work-type: feature | remediation | hotfix     # 流程画像(中央旋钮):各阶段读它自适应走多重。见下方说明
-branch: <写 STATE 时记 `git rev-parse --abbrev-ref HEAD`>     # 并发边界戳:scripts/sdlc-guard 据此防串台
+branch: <写 STATE 时记 `git rev-parse --abbrev-ref HEAD`>     # 并发边界戳:sdlc-guard 据此防串台
 worktree: <写 STATE 时记 `git rev-parse --show-toplevel`>     # 同上(worktree 隔离)
 updated: <时间戳，由调用方传入，例如 2026-06-04T15:30>
 validate-modes: [correctness, e2e, eval-bench]   # 本次运行从 diff 动态解析（见 spec §6.1）；未进入 validate 前可留 []

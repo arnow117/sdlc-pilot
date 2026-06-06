@@ -124,7 +124,7 @@ for d in "$SDLC_SRC"/*/; do ln -sfn "$d" ".agents/skills/$(basename "$d")"; done
 ```
 
 > 软链 vs 拷贝:软链"边改边用"始终指向同一份源;要固定快照就改成 `cp -R`。
-> 强门禁脚本 `scripts/sdlc-guard` 在仓库根,插件安装时随仓一并到位;`sdlc-onboard` 会在目标项目装 hook 时把它拷到该项目的 `.sdlc/bin/`。
+> 强门禁脚本 `skills/sdlc/scripts/sdlc-guard` 随 sdlc 技能自包含(插件/软链/Codex 三种装法路径都一致);`sdlc-onboard` 会在目标项目装 hook 时把它拷到该项目的 `.sdlc/bin/` 兜底。
 
 ## 测试与 dogfooding
 

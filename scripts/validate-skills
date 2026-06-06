@@ -57,6 +57,17 @@ if [ -d "$REF/languages" ]; then
   ok "语言包检查完成($(ls "$REF"/languages/*.md 2>/dev/null | wc -l | tr -d ' ') 个)"
 fi
 
+echo "== 7. 强门禁脚本 sdlc-guard 随技能自包含且可执行 =="
+GUARD="$ROOT/sdlc/scripts/sdlc-guard"
+if [ -f "$GUARD" ]; then
+  [ -x "$GUARD" ] && ok "$GUARD(存在且可执行)" || err "$GUARD 不可执行(chmod +x)"
+  # hook 模板的查找路径必须指向 skills/sdlc/scripts(三种安装方式一致)
+  grep -q "skills/sdlc/scripts/sdlc-guard" "$REF/templates/hooks/pre-commit" \
+    || err "pre-commit hook 未按 skills/sdlc/scripts/ 查找 sdlc-guard(路径漂移)"
+else
+  err "缺失:$GUARD(强门禁脚本应随 sdlc 技能自包含)"
+fi
+
 echo
 if [ $fail -eq 0 ]; then echo "RESULT: PASS ✅"; exit 0
 else echo "RESULT: $fail 项不一致 ❌(修完再 commit)"; exit 1; fi

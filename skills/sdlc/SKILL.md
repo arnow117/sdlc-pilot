@@ -77,7 +77,7 @@ description: >
 读到 STATE 后,**先跑边界守卫再往下走**,防"串台 / 同分支并行第二个特性"把状态搞乱:
 
 ```bash
-sh <sdlc 技能目录>/scripts/sdlc-guard    # 确定性检测:STATE.branch/worktree vs 当前
+sh <sdlc 技能目录>/scripts/sdlc-guard    # 脚本随 sdlc 技能自包含;确定性检测 STATE.branch/worktree vs 当前
 ```
 
 - **退出非 0(串台)** → 按它的提示停下:切回原分支续接,或为新工作**开 worktree / 新分支**(各自独立 `.sdlc`)。**不要**在串台状态下继续推进。

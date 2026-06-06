@@ -168,7 +168,7 @@ Phase A 采证(纯 bash) → Phase B 类型+入口识别 → Phase C 自建 surf
      · pre-push:SDLC 检查 —— push 前核对 validate+review 已过(读 sdlc-gate 行)
      1) 都装(推荐)  2) 只装 pre-commit  3) 只装 pre-push  4) 跳过
    ```
-   选装 → 把 `references/templates/hooks/pre-commit` / `pre-push` 拷到 `<repo>/.git/hooks/` 并 `chmod +x`;**仅 git 仓装**(非 git 仓跳过)。pre-commit 调 `scripts/sdlc-guard`(确定性边界检测),为让它能找到,把 `sdlc-guard` 拷/软链到 `<repo>/.sdlc/bin/sdlc-guard`(hook 优先找这里)。装完一句话说明各自管什么。
+   选装 → 把 `references/templates/hooks/pre-commit` / `pre-push` 拷到 `<repo>/.git/hooks/` 并 `chmod +x`;**仅 git 仓装**(非 git 仓跳过)。pre-commit 调 `sdlc-guard`(确定性边界检测,脚本在 `skills/sdlc/scripts/sdlc-guard`,随技能自包含),为让 hook 在任何安装方式下都能找到,把它拷/软链到 `<repo>/.sdlc/bin/sdlc-guard`(hook 优先找这里)。装完一句话说明各自管什么。
 
 ---
 
