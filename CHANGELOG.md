@@ -2,6 +2,12 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.3.2] — 2026-06-06
+
+### Changed
+- **skill-maintainer 卡补一条安装教训**(经 `/sdlc evolve` dogfood 蒸入):软链装完要验 `readlink ~/.{claude,codex}/skills/sdlc` 落点是可写 git 仓 + 有 plugin.json,否则 evolve 探源静默失败;技能在新会话才注册,当前会话 dogfood 需把 playbook 当数据手动跑。distilled-from: `session:evolve-dogfood-2026-06-06`。
+- 首次实跑验证 `/sdlc evolve` 全闭环(探源→临时分支→lint→additive 守卫→人工检查点→owner 直推 main)。
+
 ## [0.3.1] — 2026-06-06
 
 ### Fixed

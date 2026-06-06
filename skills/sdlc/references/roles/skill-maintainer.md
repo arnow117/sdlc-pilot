@@ -1,7 +1,8 @@
 ---
 role: skill-maintainer
 triggers: ["skills/**", "**/SKILL.md", ".claude-plugin/**", "skills/sdlc/references/**"]   # 编辑技能体系自身时由 role-routing 加载(见 role-routing §2 R10)
-distilled-from: [kb-manage, sop-extractor, skill-creator, distillation-loop, session:sdlc-evolve-design-2026-06-06]
+distilled-from: [kb-manage, sop-extractor, skill-creator, distillation-loop, session:sdlc-evolve-design-2026-06-06, session:evolve-dogfood-2026-06-06]
+updated: 2026-06-06
 ---
 
 # skill-maintainer — 技能体系维护者视角角色卡
@@ -55,6 +56,7 @@ distilled-from: [kb-manage, sop-extractor, skill-creator, distillation-loop, ses
 | 蒸馏时把运行时依赖一起搬进来 | 在 Codex 下跑不了 | 降级为纯文件+git;不可移植的 pattern 不蒸 |
 | 自我修改直接改 main 工作区、不过闸 | 把工具改坏、影响以后每次运行 | 临时分支 + lint + additive 守卫 + 人工检查点 + 回滚 |
 | 改了不升版本/不写 CHANGELOG | 无法追溯、无法回滚到已知好版本 | 每次改动 semver + 一条 CHANGELOG |
+| 软链装完就以为能用,没验 `readlink` 落点 | evolve 探源拿到的不是可写 git 仓 / 无 plugin.json → 回流静默失败 | 装完验 `readlink ~/.{claude,codex}/skills/sdlc` 指向真实可写 git 仓(含 `.claude-plugin/plugin.json`);技能在**新会话**才注册,当前会话要 dogfood 就把 playbook 当数据手动执行 |
 
 ## 介入哪些阶段
 
