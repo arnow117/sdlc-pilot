@@ -2,6 +2,12 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.3.1] — 2026-06-06
+
+### Fixed
+- **evolve 探源支持 Codex**:`evolve-loop.md` §5 探源同时认 `~/.claude/skills/sdlc` 与 `~/.codex/skills/sdlc`(原只查前者,纯 Codex 用户探不到可写源)。
+- **README**:安装节补 Codex 全局技能目录 `~/.codex/skills/` 的软链装法(等价 `~/.claude/skills/`),两引擎共用一份可写源。
+
 ## [0.3.0] — 2026-06-06
 
 时用时新自更新能力 `/sdlc evolve`(两轴表达,不新增顶层 skill)。

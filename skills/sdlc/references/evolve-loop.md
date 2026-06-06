@@ -110,10 +110,11 @@ owner(对 upstream 有写权):
 ## 5. 探源细节(②)
 
 ```
-1) readlink -f ~/.claude/skills/sdlc 2>/dev/null
+1) readlink -f ~/.claude/skills/sdlc  或  ~/.codex/skills/sdlc  2>/dev/null
+     → 两个都试(Claude Code 装在前者、Codex 装在后者;owner 常两者都软链到同一源)。
      → 指向一个真实 git 仓(含 .claude-plugin/plugin.json)= 软链安装的源,用它。
 2) 否则读记录过的 source-path(如用户 ~/.sdlc-pilot-source 或 git config 里的约定项)。
-3) 否则定位到只读插件缓存(~/.claude/plugins/cache/.../sdlc-pilot)= 不可写:
+3) 否则定位到只读缓存(~/.claude/plugins/cache/.../sdlc-pilot)= 不可写:
      停,text_mode:
        "没找到可写的 sdlc-pilot 源 clone。先:
           owner →  git clone git@github.com:<you>/sdlc-pilot.git ~/code/sdlc-pilot
