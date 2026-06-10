@@ -303,6 +303,8 @@ EVAL-CRIT  | E-01   | 答案准确率 ≥0.85(若有AI工作) | T5       | COVER
 
 **三扫 + Source Audit 全 COVERED + Coverage Gate 全指回 → 才算 plan 完成，可写出 plan.md。**
 
+**可选 · 网页划词批注复核**：plan 阶段多、任务多、聊天逐条对太累时，可把 plan.md 渲染成「划词加批注」的本地网页让用户标注，再统一改回——见 `references/web-review/playbook.md`。它只升级"意见怎么喂回来"的机制，不改"最终 plan 确认"的纪律。默认走 text_mode 聊天确认；用户说"网页审/划词批注"才用。
+
 ---
 
 ## 7. 读写哪些 .sdlc/ 文件

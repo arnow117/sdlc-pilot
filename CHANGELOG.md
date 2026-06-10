@@ -2,6 +2,11 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.4.0] — 2026-06-10
+
+### Added
+- **web-review 可选复核 gate 机制**(`skills/sdlc/references/web-review/`):把 spec/plan 渲染成「划词加批注」的本地网页让用户标注,零依赖 localhost 服务器回收 `feedback.json`,agent 再统一改回源文档。含 `playbook.md`(原则) + `build.py`(md→可批注页) + `annotate.js`/`annotate.css`(通用批注层) + `server.py`(回收服务器)。`sdlc-spec` §2.9 与 `sdlc-plan` §6.3 的用户复核 gate 各挂一句**可选**引用——文档长/逐条批太累时用,默认仍走 text_mode 聊天批,不改"批准前不前进"纪律。distilled-from: `session:spec-web-review-2026-06-10`。
+
 ## [0.3.2] — 2026-06-06
 
 ### Changed
