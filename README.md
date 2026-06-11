@@ -46,7 +46,8 @@ sdlc-pilot/                          # 未来独立 GitHub repo 的根
 │   │       ├── divergence-frames.md #    可选发散 ideation pass(蒸馏 adhd)
 │   │       ├── receiving-feedback.md #   接收意见并修复的纪律(防过度修复)
 │   │       ├── templates/           #    PROFILE / STATE / 报告 schema + hooks/pre-push
-│   │       └── distillation-loop.md #    新技能如何被折叠进来(时用时新)
+│   │       ├── distillation-loop.md #    新技能如何被折叠进来(时用时新)
+│   │       └── web-review/          #    可选复核 gate:md→划词批注网页(build/annotate/server)+ §6 Live(curl /wait 实时双向,跨引擎)
 │   │       # 注:各阶段 playbook 内联在对应 sdlc-*/SKILL.md;stages/ 为未来拆分预留
 │   ├── sdlc-onboard/SKILL.md        # ⓪ brownfield 入口:扫描仓库 → PROFILE.md + surface map
 │   ├── sdlc-spec/SKILL.md           # ③ Explore + Spec(SDD;为 AI 工作前置 eval 标准)
@@ -208,6 +209,7 @@ v1 语言范围 = **Python + Web(TS)**。如何迭代本项目见仓库根 **`CL
 | `receiving-feedback.md` | receiving-code-review(先核实再改 / 一次一项 / 技术反驳 / YAGNI / 禁表演式同意) |
 | `role-routing.md` | arch-doctor 的 P13/P23 机制原型;**R1-R8 表本身 = 净新建** |
 | `templates/hooks/pre-push` | **自建**(纯 shell,读 STATE 的 sdlc-gate;OneRedOak CI 思路本地化) |
+| `web-review/` | **自建**:spec/plan 可选复核 gate——md→划词批注页 + localhost 回收 feedback;§6 Live mode = `curl /wait` 长轮询实时双向回流(跨引擎,不依赖 harness 特性) |
 
 ## 出处与致谢
 
