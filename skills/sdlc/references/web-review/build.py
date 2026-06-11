@@ -154,6 +154,14 @@ th{{background:#efece4;font-weight:650}} tr:last-child td{{border-bottom:0}}
 {body}
 </div>
 <script src="annotate.js"></script>
+<script>
+/* live mode: 轮询 /rev,值变即 reload(agent rebuild 后页面自动更新)。无 /rev 静默降级手动刷新。 */
+(function(){{var last=null;setInterval(function(){{
+  fetch('/rev',{{cache:'no-store'}}).then(function(r){{return r.ok?r.text():null;}}).then(function(t){{
+    if(t==null)return;if(last===null){{last=t;return;}}if(t!==last)location.reload();
+  }}).catch(function(){{}});
+}},2000);}})();
+</script>
 </body></html>'''
 
 

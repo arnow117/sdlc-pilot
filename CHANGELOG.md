@@ -2,6 +2,11 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.5.0] — 2026-06-11
+
+### Added
+- **web-review Live Mode（实时双向复核，可选升级）**：把"用户提交后回对话手动 signal"升级为 agent 前台阻塞 `curl /wait` 的 HTTP 长轮询——提交瞬间自动回流批注，改完页面自动刷新，形成 `present→await→revise` 的 human-on-the-loop gate 循环。机制只用"前台阻塞 shell"通用原语，**跨引擎（CC/Codex）都实时，不依赖任何 harness 特性**。落地：`server.py` 换 `ThreadingHTTPServer` + 加 `/wait` 长轮询端点（`threading.Event`/slot，`/feedback` 语义不变 + 仍写 `feedback.json` 兜底）；`build.py` 模板注入 `/rev` 自动刷新 poller；`playbook.md` 新增 §6 Live mode（写原则）；`test_live.py` 长轮询回归测试（释放/不死锁/超时204/submit-before-wait）；`sdlc-spec`§2.9 与 `sdlc-plan`§6.3 各加一句指向 §6。**硬约束**：必须 `ThreadingHTTPServer`，否则挂起的 `/wait` 堵死 `POST` → 死锁。distilled-from: `session:web-review-live-2026-06-11`。
+
 ## [0.4.0] — 2026-06-10
 
 ### Added

@@ -1,6 +1,6 @@
 # web-review —— 划词批注式文档复核(可选 gate 机制)
 
-> distilled-from: session:spec-web-review-2026-06-10
+> distilled-from: session:spec-web-review-2026-06-10, session:web-review-live-2026-06-11
 >
 > 这份 playbook 是 **数据,不是 skill**(与 `evolve-loop.md` / `divergence-frames.md` 并列)。
 > 任何引擎(Claude + Read/Edit/Bash,或 Codex)都能照着跑;批注层/服务器是同目录的 **工具资产**(命令即交付物,保留)。
@@ -66,3 +66,22 @@ web-review 把任意 markdown 渲染成**可在浏览器划词加批注**的页:
   ]
 }
 ```
+
+## 6. Live mode —— 实时双向(可选升级,跨引擎)
+
+> 在 §3 文件式回收之上的**可选实时化**:把"用户提交后回对话手动说一声"换成 agent **前台阻塞 `curl /wait`**,提交瞬间自动拿回批注。机制只用"前台阻塞 shell + HTTP 长轮询"这个**通用原语**——CC / Codex 等任意有 shell 的引擎都实时,**不依赖任何 harness 特性**。默认 §3 文件式仍可用;long-poll 是它的实时形态,不改 gate 语义。
+
+### 6.1 原理
+`server.py`(已支持)把 `GET /wait` **挂起不回**(`threading.Event.wait`,零 CPU),直到 `POST /feedback` 唤醒、把批注 JSON 回给那条挂起的请求。agent 前台跑一次阻塞 `curl /wait`:用户提交瞬间返回 `{verdict,annotations[]}`;无人提交则约 540s 回 204,agent **再 curl 一次(re-arm)**。`feedback.json` 仍写盘,作 durable 记录与 file 兜底。
+
+### 6.2 循环纪律(present → await → revise)
+1. `build.py` 渲染 → 起 `server.py`(常驻,`ThreadingHTTPServer`,绑 `127.0.0.1`)→ 开页。
+2. **await**:agent 前台阻塞等用户提交(原则:用引擎的"前台阻塞 shell 调用"等 `/wait` 返回;超时则 re-arm)。
+3. **apply**:`verdict=changes` → 按 §3.6 的 `section`+`quote` 精确定位逐条改源,匹配不到不臆改、回报澄清;`approve` 且无阻断 → 回判对应 stage 的 gate、停服。
+4. **re-present**:改完触发页面自动刷新(写新 `rev` 戳,`build.py` 注入的 poller 轮询 `/rev`,值变即 reload)→ 回到 2。
+
+### 6.3 单渠道纪律
+await 期间 agent 正前台阻塞,物理上发不出别的交互。若需结构化追问(如"全改还是只改某几条"),只在 `/wait` 返回后的 **revise seam** 进行(有 AskUserQuestion 用它;无则 text_mode 编号问)。铁律一条:**同一时刻只允许一个活跃渠道**——浏览器 round ⟂ 终端 revise,不重叠。
+
+### 6.4 兜底降级(可移植)
+无 `curl` / 无浏览器 → 退回 §3 文件式(读 `feedback.json`,提交后手动 signal);再不行回 text_mode 聊天批。`/wait` 必须配 `ThreadingHTTPServer`(挂起请求否则堵死 `POST` → 死锁),这是 `server.py` 的硬约束;回归测试见同目录 `test_live.py`(`python3 test_live.py`:释放/不死锁/超时204/submit-before-wait)。
