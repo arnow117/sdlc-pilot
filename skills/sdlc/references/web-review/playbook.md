@@ -39,9 +39,10 @@ web-review 把任意 markdown 渲染成**可在浏览器划词加批注**的页:
 4. **起服开页**:在 outdir 起 `server.py`(后台常驻,绑 `127.0.0.1`),浏览器开 `http://127.0.0.1:<port>/`。起服前先清占用端口。
 5. **告诉用户怎么标**:选中文字→「💬 添加评论」→写评论→保存;右侧面板可删可定位;选「通过/要改」→「提交反馈给 agent」;提交后回对话说一声。
 6. **回收 + 统一改**:读 `<outdir>/feedback.json`——
-   - 结构:`{ verdict:"approve"|"changes", count, annotations:[{section, quote, comment}] }`。
+   - 结构:`{ verdict:"approve"|"changes", count, annotations:[{id, section, quote, comment}] }`。
    - 对每条 annotation:按 `section` 缩小范围、在源 md 里定位 `quote`,按 `comment` 意图改;**一次性 consolidated pass** 改完再向用户汇总改了哪些。匹配不到的 quote → 回报该条请用户澄清,**不臆改**。
-   - 必要时重跑 build 让用户再看一轮。
+   - **逐条回复(UI 闭环)**:改完把每条处理结果写成 `<outdir>/replies.json` = `{ "<批注id>": "回复文本", ... }`(id 取 feedback.json 每条的 `id`)。页面每 3s 轮询 `/replies.json`,在对应批注下显示「↩ agent」回复块,用户能看到每条意见被怎么处理。**与重跑 build 同一轮做**。
+   - 必要时重跑 build 让用户再看一轮(批注 + 回复随 localStorage / replies.json 自动恢复)。
 7. **回判 gate**:`verdict=approve` 且无阻断批注 → 该 stage 的 gate 通过(spec → `Status: approved` 并写回 STATE;plan → 定稿)。`changes` → 改完重跑该 stage 的自检,再回 gate。
 8. **收尾**:停服务器;tmp 产物可留可清。
 

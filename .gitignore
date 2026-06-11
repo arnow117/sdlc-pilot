@@ -7,4 +7,5 @@ docs/dogfood/
 # web-review 运行时产物（server.py 在其目录跑测试/审阅时生成，非源码）
 skills/sdlc/references/web-review/feedback.json
 skills/sdlc/references/web-review/feedback-history.jsonl
+skills/sdlc/references/web-review/replies.json
 skills/sdlc/references/web-review/rev

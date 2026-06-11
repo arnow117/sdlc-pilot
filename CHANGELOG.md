@@ -2,6 +2,16 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.6.0] — 2026-06-11
+
+### Added
+- **web-review 逐条回复(agent → 用户 UI 闭环)**：agent 处理完批注后写 `replies.json`（`{批注id: 回复文本}`）到审阅 outdir，`annotate.js` 每 3s 轮询 `/replies.json`，在每条批注下渲染「↩ agent」回复块——用户在浏览器即可看到每条意见被怎么处理，形成「批注 → 修改 → 回复」的可视闭环。`playbook.md` §3.6 写入机制（与重跑 build 同一轮做）；`.gitignore` 忽略运行时 `replies.json`。
+
+### Changed
+- **web-review 提交成功文案**：从「已提交！回到对话里说一声，我来读取并统一修改。」（Live mode 下已过时）改为「已提交！agent 正在读取并统一修改，改完会在每条批注下回复。」，与 Live mode 自动回流 + 逐条回复一致。
+
+distilled-from: `session:web-review-dogfood-2026-06-11`。
+
 ## [0.5.1] — 2026-06-11
 
 ### Fixed

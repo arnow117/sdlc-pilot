@@ -49,6 +49,10 @@ mark.annot-hl:hover, mark.annot-hl.active{ background:#ffe45e; }
 .an-item .quote{ font-size:12px; color:#8b909c; margin:3px 0; }
 .an-item .quote b{ background:var(--an-hl); color:#16181d; font-weight:400; }
 .an-item .cm{ font-size:13.5px; color:#16181d; }
+.an-item .reply{ margin-top:7px; padding:7px 9px; background:#eef0ff; border-left:3px solid var(--an-accent);
+  border-radius:0 7px 7px 0; font-size:12.5px; color:#2b2e8c; white-space:pre-wrap; }
+.an-item .reply .who{ display:block; font:700 10px monospace; color:var(--an-accent);
+  margin-bottom:2px; text-transform:uppercase; letter-spacing:.03em; }
 .an-item .del{ float:right; color:#cf3b3b; font-size:12px; }
 
 /* 提交栏 */

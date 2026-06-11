@@ -134,7 +134,8 @@
       var it = mk('div', 'an-item'); it.dataset.aid = a.id;
       it.innerHTML = '<span class="del" title="删除">✕</span><div class="sec">' + esc(a.section) + '</div>' +
         '<div class="quote">「<b>' + esc(a.quote.slice(0, 60)) + (a.quote.length > 60 ? '…' : '') + '</b>」</div>' +
-        '<div class="cm">' + esc(a.comment) + '</div>';
+        '<div class="cm">' + esc(a.comment) + '</div>' +
+        (a.reply ? '<div class="reply"><span class="who">↩ agent</span>' + esc(a.reply) + '</div>' : '');
       it.addEventListener('click', function (e) {
         if (e.target.classList.contains('del')) { removeAnnot(a.id); return; }
         var m = document.querySelector('mark.annot-hl[data-aid="' + a.id + '"]');
@@ -162,7 +163,7 @@
     msgEl.textContent = '提交中…'; msgEl.style.color = '#4a4f5a';
     fetch('/feedback', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload, null, 2) })
       .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
-      .then(function () { msgEl.textContent = '✅ 已提交！回到对话里说一声，我来读取并统一修改。'; msgEl.style.color = '#0c8f5a'; })
+      .then(function () { msgEl.textContent = '✅ 已提交！agent 正在读取并统一修改，改完会在每条批注下回复。'; msgEl.style.color = '#0c8f5a'; })
       .catch(function (e) { msgEl.textContent = '✗ 提交失败(' + e.message + ')。确认服务器在跑。'; msgEl.style.color = '#cf3b3b'; });
   });
 
@@ -203,4 +204,19 @@
     annotations.forEach(function (a) { rehighlightQuote(a.quote, a.id); });
     renderList();
   })();
+
+  // ---- agent replies(agent 处理批注后写 replies.json:{批注id: 回复文本};在每条批注下显示)----
+  var lastRepliesRaw = null;
+  function pollReplies() {
+    fetch('/replies.json', { cache: 'no-store' }).then(function (r) { return r.ok ? r.text() : null; })
+      .then(function (t) {
+        if (t == null || t === lastRepliesRaw) return;
+        lastRepliesRaw = t;
+        var map; try { map = JSON.parse(t); } catch (_) { return; }
+        if (!map || typeof map !== 'object') return;
+        annotations.forEach(function (a) { if (map[a.id] != null) a.reply = map[a.id]; });
+        renderList();
+      }).catch(function () {});
+  }
+  setInterval(pollReplies, 3000); pollReplies();
 })();
