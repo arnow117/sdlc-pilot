@@ -52,6 +52,17 @@ description: >
 
 任何时候**不得**让两个写手同时写 `STATE.md`(单写者原则,见 §5)。
 
+### 0.3 新鲜度自检 — best-effort,非阻塞
+每次入口顺手探一下 sdlc-pilot **工具源**是否落后于 upstream(防你正用着旧版工具却不自知)。纯文件 + git,可移植;**探测失败一律静默跳过,绝不阻断本次 `/sdlc`**:
+
+- 定位可写源(同 evolve §5 探源:`readlink -f ~/.claude/skills/sdlc` 或 `~/.codex/skills/sdlc` → 真实 git 仓)。非软链安装 / 只读缓存 / 无 remote → 跳过,不提。
+- 源仓 `git fetch`(浅探,失败即罢)后比对本地与上游(如 `git -C <源> rev-list --count HEAD..@{u}`)。落后 → text_mode **一行提示,不打断**:
+  ```
+  ℹ sdlc-pilot 工具源落后 upstream N 个提交;`git -C <源> pull` 可更新(本次仍用当前版本)。
+  ```
+- 一致 / 领先 / fetch 失败(离线、无 upstream、非 owner)→ 静默。**绝不**自动 pull、绝不因此停下本次流程(用 vN 改不出 vN+1 的当场生效,新版下趟才加载)。
+- 与 §1.1 边界守卫正交:守卫管"特性串台",本节管"工具版本新鲜度"。
+
 ---
 
 ## 1. 读状态：定位并解析 .sdlc/

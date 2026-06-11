@@ -37,7 +37,7 @@ web-review 把任意 markdown 渲染成**可在浏览器划词加批注**的页:
 2. **生成到 tmp**:产物落临时目录(约定 `${TMPDIR:-/tmp}/sdlc-web-review-<slug>/`),**不污染目标仓**。
 3. **构建**:跑 `build.py <源.md> <outdir> --title "<标题>"`(它会渲染 + 注入批注层 + 把 `server.py` 复制进 outdir)。手工可视化页则改名 index.html、注入两行、把 `server.py` 拷进去。
 4. **起服开页**:在 outdir 起 `server.py`(后台常驻,绑 `127.0.0.1`),浏览器开 `http://127.0.0.1:<port>/`。起服前先清占用端口。
-5. **告诉用户怎么标**:选中文字→「💬 添加评论」→写评论→保存;右侧面板可删可定位;选「通过/要改」→「提交反馈给 agent」;提交后回对话说一声。
+5. **告诉用户怎么标**:选中文字→「💬 添加评论」→写评论→保存;右侧面板可删可定位;选「通过/要改」→「提交反馈给 agent」。**提交即自动回收**——Live mode(§6)下 agent 前台 `/wait` 当场拿到,文件式下 agent 读 `feedback.json`;改完会在**每条批注下回复**(replies.json 回灌页面)。用户**不必回对话手动转述或贴回**意见。
 6. **回收 + 统一改**:读 `<outdir>/feedback.json`——
    - 结构:`{ verdict:"approve"|"changes", count, annotations:[{id, section, quote, comment}] }`。
    - 对每条 annotation:按 `section` 缩小范围、在源 md 里定位 `quote`,按 `comment` 意图改;**一次性 consolidated pass** 改完再向用户汇总改了哪些。匹配不到的 quote → 回报该条请用户澄清,**不臆改**。

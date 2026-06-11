@@ -2,6 +2,19 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.7.0] — 2026-06-11
+
+### Added
+- **driver 新鲜度自检（§0.3，best-effort 非阻塞）**：`/sdlc` 每次入口顺手探测 sdlc-pilot **工具源**是否落后 upstream（探源同 evolve §5 → `git fetch` + `rev-list --count HEAD..@{u}`）；落后则 text_mode **一行提示**「源落后 N 提交，`git -C <源> pull` 可更新（本次仍用当前版本）」，**绝不**自动 pull、绝不打断本次流程；探测失败（离线 / 无 upstream / 只读缓存 / 非软链安装）一律静默跳过。与 §1.1 边界守卫正交：守卫管「特性串台」，本节管「工具版本新鲜度」。
+
+### Changed
+- **spec/plan 复核 gate 主动提醒网页审**：web-review 此前只埋在 gate 描述之后的「可选」段，用户复核那一刻看不到这条路、得自己知道。现 `sdlc-spec`§2.9 复核提示框内嵌一行「spec 长/多节多表逐条批太累？说『网页审』，我渲染成可划词批注的本地网页」并加「主动提醒」指令；`sdlc-plan`§6.3 呈现定稿 plan 请确认时同样主动提一句。简单文档可省、默认聊天批更快。
+
+### Fixed
+- **web-review playbook 过时文案**：`playbook.md`§3「告诉用户怎么标」结尾的「提交后回对话说一声」是 auto-collect + 逐条回复 UI 闭环（0.5.0/0.6.0）之前的旧指引；改为「提交即自动回收（Live mode 下 agent 前台 `/wait` 当场拿到，文件式下读 `feedback.json`），改完会在每条批注下回复，用户不必回对话手动转述或贴回」。
+
+distilled-from: `session:sdlc-evolve-web-review-freshness-2026-06-11`。
+
 ## [0.6.0] — 2026-06-11
 
 ### Added
