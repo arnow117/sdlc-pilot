@@ -177,7 +177,17 @@ def main():
         TEMPLATE.format(title=html.escape(title), body=body))
     for f in ('annotate.css', 'annotate.js', 'server.py'):
         shutil.copy(os.path.join(ASSETS, f), os.path.join(a.outdir, f))
-    print('built:', os.path.join(a.outdir, 'index.html'))
+    # rev 文件:每次 build 单调递增。注入页面的 poller 轮询 /rev,值变即 reload。
+    # 缺它则 /rev 一直 404 → poller 拿不到值 → 自动刷新永不触发(历史 bug)。
+    rev_path = os.path.join(a.outdir, 'rev')
+    prev = 0
+    if os.path.exists(rev_path):
+        try:
+            prev = int(open(rev_path, encoding='utf-8').read().strip() or '0')
+        except ValueError:
+            prev = 0
+    open(rev_path, 'w', encoding='utf-8').write(str(prev + 1))
+    print('built:', os.path.join(a.outdir, 'index.html'), '(rev=%d)' % (prev + 1))
     print('next: cd %s && python3 server.py 8777  → open http://127.0.0.1:8777/' % a.outdir)
 
 

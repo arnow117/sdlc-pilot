@@ -2,6 +2,17 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.5.1] — 2026-06-11
+
+### Fixed
+- **web-review 自动刷新失效**：0.5.0 的 Live mode 注入了轮询 `/rev` 的 poller，但 `build.py` 从不写 `rev` 文件 → `/rev` 恒 404 → poller 永不触发 reload，用户只能手动刷新。修复：`build.py` 每次 build 写一个单调递增的 `rev` 文件，rebuild 后页面真正自动刷新。
+
+### Added
+- **web-review 批注历史保留**：批注此前只在 JS 内存里，一旦 reload（恰好自动刷新会触发）即全部丢失。现 `annotate.js` 把批注持久化到 `localStorage`（按页面路径+标题分键），reload/自动刷新后自动恢复列表并尽力重标高亮（跨节点长引用找不到则保留列表项）；`server.py` 每次 `/feedback` 追加一行到 `feedback-history.jsonl`，多轮提交可回溯（`feedback.json` 仍存最新一次）。
+- **web-review 可见折叠按钮**：批注面板折叠此前只藏在「双击标题」里、不可发现。`annotate.js`/`annotate.css` 在面板标题加一个可见折叠按钮（‹），点击收起到侧边把手，双击标题仍可收起。
+
+distilled-from: `session:web-review-dogfood-2026-06-11`（腾讯 MMP spec 划词复核实测）。
+
 ## [0.5.0] — 2026-06-11
 
 ### Added

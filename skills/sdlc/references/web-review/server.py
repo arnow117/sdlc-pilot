@@ -7,7 +7,7 @@ GET  /wait[?t=N]  → 长轮询:挂起请求,直到 POST /feedback 唤醒(回批
 POST /feedback    → 写 feedback.json(durable 兜底) + 唤醒挂起的 /wait
 用法: python3 server.py [port]
 """
-import http.server, os, sys, threading
+import http.server, os, sys, threading, json
 from urllib.parse import urlparse, parse_qs
 
 DIR = os.path.dirname(os.path.abspath(__file__))
@@ -54,7 +54,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             n = int(self.headers.get('Content-Length', 0))
             body = self.rfile.read(n)
             with open(os.path.join(DIR, 'feedback.json'), 'wb') as f:
-                f.write(body)                    # 仍写盘 = durable / file 兜底
+                f.write(body)                    # 仍写盘 = durable / file 兜底(最新一次)
+            # 历史保留:每次提交追加一行到 feedback-history.jsonl(不覆盖,多轮可回溯)
+            try:
+                rec = json.loads(body.decode('utf-8'))
+                with open(os.path.join(DIR, 'feedback-history.jsonl'), 'a', encoding='utf-8') as hf:
+                    hf.write(json.dumps(rec, ensure_ascii=False) + '\n')
+            except (ValueError, OSError):
+                pass
             with _lock:
                 _slot['data'] = body
                 _event.set()                     # 唤醒挂起的 /wait

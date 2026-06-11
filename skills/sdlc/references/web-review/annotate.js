@@ -7,6 +7,11 @@
   var annotations = []; // {id, section, quote, comment}
   var seq = 0;
   var pendingRange = null;
+  // 持久化 key:按页面路径 + 文档标题区分,reload / 自动刷新后不丢批注
+  var STORE_KEY = 'an:' + (location.pathname || '/') + ':' + DOC_ID;
+  function persist() {
+    try { localStorage.setItem(STORE_KEY, JSON.stringify({ seq: seq, annotations: annotations })); } catch (_) {}
+  }
 
   var mk = function (t, c) { var e = document.createElement(t); if (c) e.className = c; return e; };
   var esc = function (s) { var d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
@@ -18,7 +23,7 @@
     '<div class="row"><button class="cancel" type="button">取消</button><button class="save" type="button">保存批注</button></div>';
   var panel = mk('div'); panel.id = 'an-panel';
   panel.innerHTML =
-    '<h4>批注 <span class="cnt">0</span></h4>' +
+    '<h4><span class="t">批注 <span class="cnt">0</span></span><button class="an-collapse" type="button" title="收起到侧边">‹</button></h4>' +
     '<div id="an-list"><div class="empty">在正文里选中任意文字，点“添加评论”。</div></div>' +
     '<div id="an-foot">' +
       '<div class="verdict">' +
@@ -92,6 +97,7 @@
     var section = sectionOf(pendingRange.startContainer);
     highlight(pendingRange, id);
     annotations.push({ id: id, section: section, quote: quote, comment: comment });
+    persist();
     renderList();
     closePop();
   }
@@ -144,6 +150,7 @@
     document.querySelectorAll('mark.annot-hl[data-aid="' + id + '"]').forEach(function (m) {
       var p = m.parentNode; while (m.firstChild) p.insertBefore(m.firstChild, m); p.removeChild(m); p.normalize();
     });
+    persist();
     renderList();
   }
 
@@ -159,11 +166,41 @@
       .catch(function (e) { msgEl.textContent = '✗ 提交失败(' + e.message + ')。确认服务器在跑。'; msgEl.style.color = '#cf3b3b'; });
   });
 
-  // ---- collapse ----
-  panel.querySelector('h4').addEventListener('click', function (e) {
-    if (e.target.closest('.cnt')) return;
-  });
-  toggle.addEventListener('click', function () { panel.classList.remove('collapsed'); toggle.style.display = 'none'; });
-  // double-click panel header to collapse
-  panel.querySelector('h4').addEventListener('dblclick', function () { panel.classList.add('collapsed'); toggle.style.display = 'block'; });
+  // ---- collapse / expand(可见按钮,不再藏在双击里)----
+  function collapse() { panel.classList.add('collapsed'); toggle.style.display = 'block'; }
+  function expand() { panel.classList.remove('collapsed'); toggle.style.display = 'none'; }
+  panel.querySelector('.an-collapse').addEventListener('click', collapse);
+  toggle.addEventListener('click', expand);
+  panel.querySelector('h4 .t').addEventListener('dblclick', collapse); // 双击标题也可收起
+
+  // ---- restore persisted annotations(survive reload / 自动刷新)----
+  function rehighlightQuote(quote, id) {
+    if (!quote) return;
+    var q = quote.trim();
+    var root = document.querySelector('.doc') || document.body;
+    var w = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    while (w.nextNode()) {
+      var node = w.currentNode;
+      if (inUI(node)) continue;
+      var idx = node.nodeValue.indexOf(q);
+      if (idx === -1) continue;          // 跨节点的长引用找不到 → 跳过高亮,列表项仍保留
+      try {
+        var r = document.createRange();
+        r.setStart(node, idx); r.setEnd(node, idx + q.length);
+        var m = mk('mark', 'annot-hl'); m.dataset.aid = id;
+        r.surroundContents(m); bindMark(m);
+      } catch (_) {}
+      return;                            // 只标第一处
+    }
+  }
+  (function restore() {
+    var raw; try { raw = localStorage.getItem(STORE_KEY); } catch (_) { return; }
+    if (!raw) return;
+    var data; try { data = JSON.parse(raw); } catch (_) { return; }
+    if (!data || !data.annotations || !data.annotations.length) return;
+    annotations = data.annotations;
+    seq = data.seq || annotations.length;
+    annotations.forEach(function (a) { rehighlightQuote(a.quote, a.id); });
+    renderList();
+  })();
 })();

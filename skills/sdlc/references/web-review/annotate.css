@@ -35,8 +35,12 @@ mark.annot-hl:hover, mark.annot-hl.active{ background:#ffe45e; }
 #an-panel.collapsed{ transform:translateX(calc(100% + 24px)); }
 #an-panel h4{ margin:0; padding:14px 16px; font-size:14px; border-bottom:1px solid #e4e0d6;
   display:flex; justify-content:space-between; align-items:center; }
+#an-panel h4 .t{ display:flex; align-items:center; gap:8px; }
 #an-panel h4 .cnt{ font:600 12px var(--an-mono,monospace); background:var(--an-accent); color:#fff;
   border-radius:999px; padding:2px 9px; }
+#an-panel h4 .an-collapse{ border:0; background:#f0eee8; color:#4a4f5a; width:26px; height:26px;
+  border-radius:7px; font-size:18px; line-height:1; cursor:pointer; padding:0; }
+#an-panel h4 .an-collapse:hover{ background:var(--an-accent); color:#fff; }
 #an-list{ overflow:auto; padding:8px; flex:1; }
 #an-list .empty{ color:#8b909c; font-size:13px; text-align:center; padding:24px 8px; }
 .an-item{ border:1px solid #e4e0d6; border-radius:9px; padding:9px 10px; margin-bottom:8px; cursor:pointer; }
