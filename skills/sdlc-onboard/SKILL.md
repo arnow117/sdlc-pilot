@@ -158,6 +158,7 @@ Phase A 采证(纯 bash) → Phase B 类型+入口识别 → Phase C 自建 surf
    - `## Entry points`(Phase B 入口集,让全新上下文 agent 知道"从哪开始读/跑")。
    - `## Known risks`(Phase A concerns focus:大文件热点、无测试覆盖的危险面、N+1 等)。
    - `## AI-readiness 体检`(★只读评分,加载 `references/roles/ai-readiness.md` 的 10 维):对照 CLAUDE.md 级联 / scoped 命令 / 噪声 / 类型 / 测试 / LSP 就绪等,给一个**健康分 + 缺口清单**。**只评估、不整改**(守只读纪律);整改是后续 feature 的事。接手陈旧项目时,这是"它对 AI 友不友好、值不值得先改造"的判断依据。
+     - **低分软推荐(保证 AI 友好的入口,不阻断 onboard)**:健康分 **< 阈值(默认 7/10)** → 写完 PROFILE 后用 text_mode **软推荐**起一个 remediation feature 补缺口(典型:CLAUDE.md 级联 / scoped 命令 / 类型 baseline / 测试 baseline / AGENTS.md 软链)。整改走标准 `spec→…→review`(L1 + 文档/配置改动走 Skip-TDD,review/verify 门不短)。**只推荐、不强制**——是否整改由用户决定;onboard 本身不因低分阻断。
    - `## Deploy`(只读探测,供 `sdlc-ship` 用):扫 `vercel.json` / `netlify.toml` / `Dockerfile` + k8s manifests / `.github/workflows/*deploy*` / 部署脚本(`deploy.sh` 等)/ 目标工程 `CLAUDE.md` 的部署段 → 判**部署目标类型**(static-site / container / vps / 未知)+ 记关键**配置位置**(项目名/集群/主机在哪个文件)。**只记位置与类型,不抄密钥、不臆造**;探不到就写"未检测到部署配置"。
 3. 清理临时笔记(`.sdlc/onboard-notes/` 若用过)。
 4. text_mode 把 surface-map 草案给用户确认(§0.1),用户改完再定稿。

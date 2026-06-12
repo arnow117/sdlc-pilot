@@ -2,6 +2,13 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.8.0] — 2026-06-12
+
+### Added
+- **driver §2.1 PROFILE 缺失提醒**:greenfield 一路 spec→build 不产生 PROFILE,项目会长出大量代码却无工程持久记忆。driver 每次入口探"有源码但无 `.sdlc/PROFILE.md`" → text_mode **软提醒**补 onboard(不阻断);建议 greenfield 首个 feature build 后补。补 #3。
+- **sdlc-onboard AI-readiness 低分软推荐**:体检健康分 **< 阈值(默认 7/10)** → 写完 PROFILE 后软推荐起一个 remediation feature 补缺口(CLAUDE.md 级联 / scoped 命令 / 类型·测试 baseline / AGENTS.md 软链),整改走 L1+Skip-TDD。**只推荐不强制**,onboard 不因低分阻断。补 #4("保证 AI 友好"的软入口)。
+- 两条均为 SKILL.md 行为追加,守三铁律(不新增顶层 skill、不动 stage 枚举、可移植 text_mode)。distilled-from: `session:traffic-domain-2026-06-12`。
+
 ## [0.7.1] — 2026-06-12
 
 ### Added
