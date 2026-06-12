@@ -12,7 +12,7 @@ distilled-from: [arch-aifriendly-doctor, startup-claude-md-init]
 
 ## 关注点(10 维 AI-友好度,从"扫描可判"到"需通读"递进)
 
-1. **CLAUDE.md 质量 + 级联**(P1)——根级有 CLAUDE.md?是否级联到 domain/module(agent 走到哪目录自动加载哪层上下文)?还是一个巨石根文件。
+1. **CLAUDE.md 质量 + 级联**(P1)——根级有 CLAUDE.md?是否级联到 domain/module(agent 走到哪目录自动加载哪层上下文)?还是一个巨石根文件。**判断该在哪几层建**:用 PROFILE 的 surface-map 当输入——每个有「局部 + 代码看不出 + 违反代价高」规则的面,就是一层 `src/<surface>/CLAUDE.md` 候选;规则大多全局、面又小,则单根足够。
 2. **该进 CLAUDE.md 的才进**(P3)——三条件全满足才写进:project-specific + 代码里看不出 + 违反代价高。避免把代码能自证的东西塞进去。
 3. **scoped 命令**(P23)——每个模块/包有自己的 `test/build/lint` 命令?还是只有一个全局命令、改一处要跑全部。
 4. **domain-aware check**(P13)——能否 `git diff` 判改动域 → 只跑该域的检查?(这正是我们 surface-map 路由的同源思想)
@@ -37,7 +37,8 @@ distilled-from: [arch-aifriendly-doctor, startup-claude-md-init]
 
 ## 好的样子
 
-- 根 + domain 级联 CLAUDE.md,agent 进任一目录都拿到恰好够用的上下文,不多不少。
+- 根 + domain 级联 CLAUDE.md,agent 进任一目录都拿到恰好够用的上下文,不多不少。级联层级由 surface-map 推导(面有独特局部规则才单独建一层,否则单根足够)。
+- `AGENTS.md` 软链到 `CLAUDE.md`(`ln -s CLAUDE.md AGENTS.md`,git 按 mode 120000 存)——Codex 读 AGENTS.md、Claude 读 CLAUDE.md,**同一份内容、单一事实源、免漂移**;胜过写一个"见 CLAUDE.md"的指针文件(指针要多跳一次)。
 - 每个模块自带 scoped 命令;改一处只验一处。
 - 类型 + 测试 + LSP 就绪,agent 改完能静态理解 + 自验 + 精确跳转。
 - 噪声被排除;约定/禁止显式;新 agent 上手零猜测。

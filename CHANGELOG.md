@@ -2,6 +2,12 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.7.1] — 2026-06-12
+
+### Added
+- **ai-readiness 卡:CLAUDE.md 级联判断 + AGENTS.md 软链约定**(append-only)。维度 1 补「用 PROFILE.surface-map 当输入决定该在哪几层建 CLAUDE.md——每个有『局部+代码看不出+代价高』规则的面 = 一层 `src/<surface>/CLAUDE.md` 候选,面小且规则全局则单根足够」;「好的样子」补 `AGENTS.md` 软链到 `CLAUDE.md`(`ln -s`,git mode 120000)= Codex/Claude 单一事实源免漂移,胜过指针文件。distilled-from: `session:traffic-domain-onboard-2026-06-12`。
+- 仍待办(结构性,需对 sdlc-pilot 跑完整 /sdlc):driver greenfield 无 PROFILE 时强推 onboard;AI-friendly 保证门(体检阈值 gate)。
+
 ## [0.7.0] — 2026-06-11
 
 ### Added
