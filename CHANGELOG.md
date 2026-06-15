@@ -7,7 +7,8 @@
 ### Added
 - **★新增 `sdlc-backlog` 流程 skill（pre-spec 项目级 stage，子系统 A）**：把"散点式涌现的需求 / 待重写老系统的功能点"测绘成一棵**递归需求树**（`<target-repo>/.sdlc/requirements/` 的 `domain→subdomain→leaf`，复用 kb-manage 结构）。五操作：**Seed**(老系统→骨架) / **Ingest**(散点需求归类成叶) / **Coverage**(按 domain 迁移 burndown) / **Ready-queue**(派生解依赖的就绪叶 → A/B 契约) / **Lint**(断依赖/重复 old_system_ref/缺字段/孤儿)。叶 schema 10 字段含双视图(`old_system_ref`/`new_domain_path`,解 rewrite≠1:1)、`cross_link`(跨域多父)、`risk_level`(供调度器分诊)。
 - **`scripts/backlog.py`**（纯标准库，无第三方依赖）：承载 readyqueue/coverage/lint 的机械派生，附 `scripts/test_backlog.py`（stdlib unittest，5 用例全过）。
-- **家族契约同步**（加流程阶段的完整 4 处 + 计数）：STATE 模板 stage 枚举加 `backlog`（项目级，与 onboard 同类，解耦于单特性 STATE）；driver §2 新增正交 backlog 分叉（不改原三主分叉）+ §4 路由表加行；role-routing §5 R10 breadcrumb（编辑 backlog skill 由 R10 覆盖，需求树**数据**是运行时产物不进路由）；onboard Phase A 顺带探测已有 backlog；plugin/marketplace/CLAUDE/README/skill-maintainer 的"流程 skill 计数" 7→8。
+- **家族契约同步**（加流程阶段的完整 4 处 + 计数）：STATE 模板 stage 枚举加 `backlog`（项目级，与 onboard 同类，解耦于单特性 STATE）；driver §2 新增正交 backlog 分叉（不改原三主分叉）+ §4 路由表加行 + §5 内嵌 schema 枚举同步；role-routing §5 R10 breadcrumb（编辑 backlog skill 由 R10 覆盖，需求树**数据**是运行时产物不进路由）；onboard Phase A 顺带探测已有 backlog；plugin/marketplace/CLAUDE/README/skill-maintainer 的"流程 skill 计数" 7→8。
+- **README 技能枚举补全**：§概念表 / 文件树 / 「流程 skill」蒸馏来源表 / 使用场景表 均补上 `sdlc-backlog`，并**回填**此前遗漏的 `sdlc-ship` 行（README 自 ship 加入后未同步）。
 
 ### Notes
 - backlog 是继 ship 之后第二个"真·生命周期阶段"例外（新增顶层 skill），守 CLAUDE.md 铁律 #1 的 carve-out；机制进 sdlc-pilot、需求树**数据**留目标项目（类比 kb-manage）。
