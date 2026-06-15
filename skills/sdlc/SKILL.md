@@ -8,8 +8,8 @@ description: >
   也在用户要对一个项目首次启动结构化研发流程时主动建议。
   另含 meta 子命令 **`/sdlc evolve`**(改进 sdlc-pilot 工具自身并发回 GitHub):触发于 "把这个蒸馏进 sdlc"、
   "沉淀到 sdlc"、"evolve the skills"、"自更新这套技能"、"distill 这个"——加载 evolve-loop playbook(见 §1.2)。
-  本 skill 是编排层(导演):只分叉/解析路由/装载上下文/交接,不写 spec、不拆任务、不写测试、不验证、不评审、不部署
-  (那些交给 sdlc-onboard/spec/plan/build/validate/review/ship)。分叉、resolve 路由、漂移检测等机制见正文。
+  本 skill 是编排层(导演):只分叉/解析路由/装载上下文/交接,不建需求树、不写 spec、不拆任务、不写测试、不验证、不评审、不部署
+  (那些交给 sdlc-onboard/backlog/spec/plan/build/validate/review/ship)。分叉、resolve 路由、漂移检测等机制见正文。
 ---
 
 # sdlc — 主线驱动器(driver / router / handoff)
