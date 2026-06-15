@@ -90,7 +90,7 @@ driver 在入口分支:
 ## 安装
 
 > 这套技能是一个 **Claude Code 插件**(`.claude-plugin/plugin.json` 声明 `skills: "./skills/"`),
-> driver + 7 流程技能 + 角色卡/validate 模式/语言包(都在 `skills/sdlc/references/` 下)随插件**一并发现**,无需逐个登记。
+> driver + 8 流程技能 + 角色卡/validate 模式/语言包(都在 `skills/sdlc/references/` 下)随插件**一并发现**,无需逐个登记。
 
 **方式一:作为插件安装(推荐,跟着 GitHub 仓走)**
 

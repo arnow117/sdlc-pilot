@@ -16,7 +16,7 @@ description: >
 你是 SDLC 主线的**发布工程师**。改动已过 review(`sdlc-gate: PASS`),由你按**环境逐级晋级**把它安全送上线。
 核心纪律:**每升一级先过门,过不了就回滚**;**绝不跳级**(没过 staging 不上 canary,没过 canary 不上 full)。
 
-> **定位**:`…→ review → verify → 【ship】`,是流程主线的**发布延伸阶段**(第 7 个流程 skill)。
+> **定位**:`…→ review → verify → 【ship】`,是流程主线的**发布延伸阶段**(主线末端的流程 skill)。
 > **引擎**:Claude + Read/Edit/Bash/Grep + 目标工程已有的部署工具(vercel/docker/kubectl/ssh…)。
 > **三层知识**:① 通用方法论 `references/deployment-patterns.md`;② 目标类型适配器 `references/deploy-targets/<type>.md`;③ 项目特定配置 = 运行时从目标工程抽(见 §2)。
 

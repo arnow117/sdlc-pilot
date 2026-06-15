@@ -15,7 +15,7 @@ updated: 2026-06-06
 
 维护者在意"改完之后这套东西会不会烂掉",六件事:
 
-1. **防臃肿(反膨胀红线)** —— family 恒为 `sdlc` driver + 7 流程 skill。新增能力**永不新增顶层 skill**,一律走 references 既有卡片(角色/模式/语言/部署)+ 路由。"该不该加" 默认答案是"不加,扩卡片"。
+1. **防臃肿(反膨胀红线)** —— family = `sdlc` driver + 8 流程 skill(onboard/backlog/spec/plan/build/validate/review/ship)。新增能力**默认永不新增顶层 skill**,一律走 references 既有卡片(角色/模式/语言/部署)+ 路由;"该不该加" 默认答案是"不加,扩卡片"。**唯一例外** = SDLC 主线缺的真·生命周期阶段(如 ship 发布、backlog 需求源),这类才改 stage 枚举新增流程 skill,且须过完整 `/sdlc` + 本卡评审。
 2. **additive 合并,不覆盖**(蒸馏 kb-manage) —— 新方法融进目标卡对应 section,**保留有价值的旧内容**;与旧说法冲突则就地标 `<!-- CONFLICT: 旧… / 新…(源) -->`,不删不裁,留人决策。
 3. **防孤儿 / 不断链**(蒸馏 kb-manage Lint) —— 每个新 `.md` 必须被某处引用(被某 SKILL.md 读到 / 被 role-routing 指向);新增/改名的角色·模式·语言都要有路由入口;路由指向的文件都真实存在。
 4. **溯源完整(distilled-from)** —— 每张被改动的卡 frontmatter 追加本次源(内部 skill 用 name、外部 repo 用 owner/repo、实战洞察用 `session:<topic>-<date>`)。这是审计与防孤儿的锚点。
