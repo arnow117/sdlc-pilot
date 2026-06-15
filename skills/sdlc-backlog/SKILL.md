@@ -1,0 +1,180 @@
+---
+name: sdlc-backlog
+description: >
+  SDLC 主线的 pre-spec 阶段:把"一堆散点需求 / 一个待重写的老系统"测绘成一棵可路由的
+  需求树(产出 <target-repo>/.sdlc/requirements/ 递归 domain→subdomain→leaf)。管的是 spec
+  之前的【需求集合】:Seed(老系统→骨架)、Ingest(散点需求归类成叶)、Coverage(迁移 burndown)、
+  Ready-queue(派生解依赖的就绪叶 → 喂给未来的 sdlc-loop)、Lint(断依赖/重复/孤儿/缺字段)。
+  触发于:用户说 "建需求树"、"管理需求 backlog"、"散点需求记一下/归档"、"Ingest 这条需求"、
+  "老系统重写要把功能点都列出来"、"迁移覆盖到哪了"、"选下一条需求做"、"sdlc-backlog";
+  driver 在检测到 <target-repo>/.sdlc/requirements/ 存在且无进行中特性时也路由到此。
+  本 skill 只管需求集合:不收敛单条需求(那是 sdlc-spec)、不拆任务(sdlc-plan)、不写实现、
+  不调度 loop(那是子系统 B / 未来)。它产出 ready-queue 契约,供调度器消费。
+---
+
+# sdlc-backlog — pre-spec 阶段:需求树 / backlog
+
+把"业务侧散点式冒出来的需求"和"一个待重写老系统的全部功能点",收进一棵**递归需求树**,
+让需求**不丢、可归类、覆盖度可观测**,并派生出一个**就绪队列(ready-queue)**供调度器(子系统 B)消费。
+
+> **它在生命周期里的位置**:`backlog` 是**项目级 stage**(与 `onboard` 同类——产项目级长寿 artifact,
+> 不属单特性生命周期)。从需求树选中一片叶后,**另起**一条单特性 STATE,stage 从 `spec` 起跑
+> spec→plan→build→validate→review→ship。backlog 与单特性 STATE **解耦**(互不覆盖)。
+>
+> **边界**:本 skill 管"需求集合"。收敛单条需求 = `sdlc-spec`;拆任务 = `sdlc-plan`;调度循环 = 子系统 B。
+> 知识与状态全在纯文件,引擎 = Claude + Read/Edit/Bash/Grep。
+
+---
+
+## 0. 可移植前置(每次入口先做)
+
+本 skill 必须在 Claude 和 Codex 下都能跑。两条降级范式:
+
+### 0.1 交互降级 — text_mode(默认开)
+凡需向用户提问(确认 Seed 骨架草案、Ingest 归类二义、选主分类),**默认用纯文本编号列表**,
+不硬依赖 AskUserQuestion:
+
+```
+这条需求像是跨了两个 subdomain,你定个主分类:
+  1) order/checkout — 它主要影响结算页
+  2) promo/coupon  — 它主要属于优惠券域
+回复编号即可(我会把另一个写进 cross_link)。
+```
+有 AskUserQuestion 时可用,但回退路径必须是上面这种编号文本。
+
+### 0.2 并行降级 — Task-or-sequential
+批量 Ingest(一次喂进很多散点需求)时:有 Task/并行能力 → 可一需求一 agent 起草归类,各写各自叶文件;
+无并行能力(Codex 等)→ 串行逐条 Ingest。**任何时候不得让两个写手同写同一叶文件 / 同一 `_index.md`**(单写者)。
+
+---
+
+## 1. 数据模型(事实源 = 叶 frontmatter)
+
+### 1.1 树存储(文件系统递归镜像)
+
+数据落在**目标项目**(非本 skill 仓):
+
+```
+<target-repo>/.sdlc/requirements/
+├── _index.md                 # 派生产物:覆盖 burndown + ready-queue 快照(由 Coverage/Ready-queue 重生成,可随时重建)
+├── <domain>/
+│   ├── _domain.md            # domain 元信息(old-system 模块映射 + new_domain 对应)
+│   └── <subdomain>/
+│       ├── _subdomain.md     # subdomain 元信息
+│       └── <leaf-id>.md      # 一条具体需求(叶)
+```
+
+- **递归**:subdomain 下可再嵌 subdomain(`domain→subdomain→…→leaf`),与 kb-manage 的 domain/subdomain/entity 同构。
+- **每叶独立文件** → 单写者友好、git-diffable、并行 Ingest 不互锁。
+- **`_index.md` 是派生产物**,不是事实源;事实源永远是各叶文件的 frontmatter。`_index.md` 可由 `scripts/backlog.py` 随时重建。
+
+### 1.2 叶 schema(`<leaf-id>.md` frontmatter,10 必填字段)
+
+```markdown
+---
+id: <domain>.<subdomain>.<slug>          # 全局唯一,与文件路径一致
+title: <一句话需求>
+domain_path: <domain>/<subdomain>        # 主分类(唯一)
+cross_link: []                           # 次分类:跨 subdomain 时挂多父(解二义)
+old_system_ref: <老系统模块/页面/接口/故事编号>   # 双视图之一(迁移对齐)
+new_domain_path: <新系统归属,可与 domain_path 不同>  # 双视图之二(rewrite≠1:1)
+status: captured                         # captured → spec'd → planned → built → validated → shipped
+priority: P2                             # P0 | P1 | P2 | P3
+depends_on: []                           # 其它 leaf id,构成依赖 DAG
+risk_level: medium                       # low | medium | high(供子系统 B 的成本/gate 分诊)
+updated: <date>
+---
+
+## 需求描述
+（散点需求原文 + 澄清后的意图）
+
+## 验收线索
+（怎么算这片叶 done 的初步线索;正式验收在 sdlc-spec 阶段细化）
+
+## 老系统行为参照
+（old_system_ref 指向的实际行为,供 rewrite 对齐）
+```
+
+**双视图(解 R1:rewrite ≠ 1:1 移植)**:`old_system_ref`(老系统怎么做)与 `new_domain_path`(新系统归到哪)
+同时记,覆盖图既能按老系统盘点"迁完没",又能按新架构组织。
+
+**多父(解 R2:散点需求跨 subdomain 二义)**:`domain_path` 唯一(主分类),其余归属写 `cross_link[]`;
+Lint 会查"同 old_system_ref 出现在多叶"的重复。
+
+### 1.3 ready-queue 契约(A 产出 / 调度器消费)—— 对外稳定面
+
+```
+Ready-queue(由 `scripts/backlog.py readyqueue` 派生,写入 _index.md ready 段):
+[
+  { leaf_id, title, priority, deps_resolved: true, old_system_ref, risk_level, status },
+  ...
+]   # 仅含 depends_on 全部 shipped(或为空)的叶;按 priority 升序键(P0<P1<P2<P3)排序
+```
+
+子系统 B(sdlc-loop)只依赖这个结构,不依赖树的内部存储细节 → A/B 解耦,可独立演进。
+B 跑完一叶后**回写该叶 status**(captured→…→shipped);回写是 B 的职责,本 skill 提供叶文件作回写目标。
+
+---
+
+## 2. 操作: Seed(老系统 → 骨架)
+
+**何时**:启动一个老系统 rewrite,要先把"有哪些域/模块"立成骨架,再往里填散点需求。
+
+**输入**:老系统结构(用户描述,或 agent 读老系统代码/文档/菜单整理)。
+
+**行为**(只建骨架,不造叶):
+1. 与用户对齐 domain 划分(text_mode 给草案让其增删改)。
+2. 在 `<root>/<domain>/<subdomain>/` 建目录;写 `_domain.md` / `_subdomain.md`,各记:
+   - `old_system_module`:对应老系统的哪个模块/菜单/服务;
+   - `new_domain`:新系统里预期归到哪(可与目录名不同,落 R1 双视图骨架);
+   - 一句范围说明。
+3. **不自动造叶**——空 subdomain 即"待覆盖清单"(后续靠 Ingest 填;Coverage 会把空 subdomain 高亮成"未迁功能")。
+
+**纪律**:Seed 只立结构、不臆造需求。拿不准某模块归哪个 domain → text_mode 问,不硬塞。
+
+**产出**:`<root>/<domain>/<subdomain>/` 骨架 + `_domain.md`/`_subdomain.md`。
+
+---
+
+## 3. 操作: Ingest(散点需求 → 叶)
+
+**何时**:业务侧冒出一条需求 / 从 session 线索 / 从老系统某行为,要把它**归一条进树**。
+
+**输入**:一条散点需求原文(+ 可选老系统行为参照)。
+
+**行为**:
+1. **归类**到 `domain→subdomain`:
+   - 命中已有 subdomain → 在其下建叶;
+   - 未命中 → text_mode 提示"新建 subdomain / 还是挂到最近的 cross_link";
+   - **跨多个 subdomain(二义)** → text_mode 让用户选**主分类**(写 `domain_path`),其余写 `cross_link[]`。
+2. **建叶文件** `<domain>/<subdomain>/<leaf-id>.md`,`id` 与路径一致;填全 §1.2 的 10 字段:
+   - `status` 默认 `captured`;`priority`/`risk_level` 询问或默认 `P2`/`medium`;`depends_on` 留空待补;
+   - `old_system_ref` 尽量填(rewrite 场景这是迁移锚点);`updated` 用 caller 传入日期(不自造时钟)。
+3. 需求原文写进叶的 `## 需求描述`,老系统行为写进 `## 老系统行为参照`。
+4. 批量 Ingest 见 §0.2(可并行,各写各叶)。
+
+**纪律**:一条需求归一片叶(主分类唯一);拿不准就问,别一条需求拆成多叶造成重复(Lint 会抓重复)。
+
+**产出**:一个/多个带全字段 frontmatter 的合法叶文件。
+
+---
+
+## 4. 派生操作(Ready-queue / Coverage / Lint)
+
+> 这三个是**机械、确定性**的派生,由 `scripts/backlog.py` 承载(见该脚本)。本节在 P2 阶段补全调用细节。
+
+---
+
+## 5. 出口 / 交接
+
+- backlog 操作不推进单特性 stage;它维护项目级需求树。
+- 选中一片 ready 叶进入开发 → 由 driver 另起单特性 STATE(stage=spec),把该叶的 `id` / 需求描述 / `old_system_ref` 作为 sdlc-spec 的输入。
+- 需求树本身的"correctness" = `scripts/backlog.py lint` 干净(无断依赖/重复/孤儿/缺字段)。
+
+## 6. 不做什么(边界)
+
+- ❌ 不收敛单条需求成 spec(那是 sdlc-spec)。
+- ❌ 不拆任务、不写测试、不写实现(plan/build)。
+- ❌ 不调度循环、不自动跑 pipeline(子系统 B / 未来)。
+- ❌ Seed 不臆造需求;Ingest 不把一条需求拆成多叶。
+- ❌ 不把 `_index.md` 当事实源(它是派生产物,事实源 = 叶 frontmatter)。
