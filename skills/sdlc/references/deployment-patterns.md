@@ -266,10 +266,12 @@ registry / 域名），目标工程只引用 env 名：
 
 | 段 | PASS（晋级） | FAIL（回滚 + STATE=blocked，报因） |
 |---|---|---|
-| preflight | 工具就绪（打包 / 编排 CLI 齐）+ 登录态就绪（registry / 集群已认证）+ 目标 env 坐标解析无缺 | 缺工具 / 缺登录 / 缺坐标 → 停，先补齐再发；不带半套上线 |
-| dev | 打包成功 + smoke 绿 + health 绿 | 任一不过 → 回滚 dev last-good |
+| preflight | 工具就绪（打包 / 编排 CLI 齐）+ 登录态就绪（registry / 集群已认证）+ 目标 env 坐标解析无缺 + **registry 与集群同地域** | 缺工具 / 缺登录 / 缺坐标 → 停，先补齐；**registry 与集群不同地域 → 先告知用户并选**（同域仓库 / 公网 endpoint / 跨域复制），否则后面 `ImagePullBackOff` 卡住无端 |
+| dev | 打包成功 + smoke 绿 + health 绿 + **产出可直达地址（LB IP / 域名）并交付用户** | 任一不过 → 回滚 dev last-good |
 | staging | 集成/e2e 绿 + 配置加载/启动校验过 + 迁移演练（含 down）过 | 任一不过 → 回滚 + 修迁移/配置再来 |
 | canary | smoke/health 绿 + 观察期三信号不劣于基线 + 无新告警 | 信号劣化/告警触发 → 撤 canary 流量回 last-good |
 | full | canary 已 PASS + 确认放量（text_mode）+ 全量后 smoke/观察通过 | 全量后劣化 → 回滚到 last-good（含必要时迁移兼容确认） |
 
 > 每段门结果、last-good 指针、产物路径、deferred/blocked 项写入 `STATE.md`（单写者）。降级（Codex/无并行）：确认点用纯文本编号；并行部署/探测用 Task-or-sequential。
+>
+> **交付即可达**：部署成功的定义不是"Pod Running"，而是"用户能直接访问"。每段部署收尾必须产出一个**可直达地址**——有域名给域名，否则给 **LB IP**（默认内网/intranet，除非明确要公网），并附一条 verify（`curl -fsS http://<addr>/<health-path>`）。只停在 `ClusterIP` = 没交付（详见 `deploy-targets/container.md` §2.5）。

@@ -60,9 +60,16 @@ docker push <registry>/<image>:<ENV>
 **Env mapping:** each environment = a distinct `<tag>` (always pin the immutable sha)
 plus a moving env tag, deployed into a distinct `<namespace-ENV>` / `<context-ENV>`.
 
----
-
-## 2. Deploy to orchestrator (per environment)
+> **⚠ Registry/cluster region alignment — flag BEFORE pushing.** Pulls are fast & private
+> only when `<registry>` is in the **same region** as the cluster. A cross-region registry
+> otherwise surfaces later as a stuck `ImagePullBackOff` / slow pull with **no obvious cause** —
+> the user just sees it hang and can't tell why. So:
+> - Resolve the registry region from `PROFILE.Deploy` and compare to the cluster region.
+> - **Differ → tell the user up front**, and pick one: push to a **same-region** registry, OR
+>   use the registry's **public/internet endpoint** so the cluster can still pull (slower + egress cost),
+>   OR enable registry cross-region replication.
+> - On managed registries the **intra-region (VPC) endpoint** is the private, free, fast path —
+>   prefer it when registry and cluster share a region.
 
 Pick **one** path based on what the target repo ships.
 
@@ -100,6 +107,39 @@ Use the project's documented CLI; `PROFILE.Deploy` names the provider. Shape onl
 
 **Env mapping:** dev → staging → canary → full differ only by
 `<context-ENV>` / `<namespace-ENV>` (or `<service-ENV>`) and `<tag>` — same skeleton.
+
+---
+
+## 2.5 Expose — every deploy must end with an address the caller can hit
+
+A rollout that leaves only a `ClusterIP` Service is **in-cluster only** — the user "deployed
+successfully" but then can't reach it and is stuck. **Don't stop at ClusterIP.** Provision a
+`LoadBalancer` Service so the deploy yields a concrete **IP** the user can hit directly, no extra
+steps. Default to an **internal/intranet** LB unless public exposure was explicitly requested.
+
+```bash
+# LoadBalancer Service → provider provisions an LB and assigns an IP
+kubectl --context <context-ENV> -n <namespace-ENV> expose deployment/<deployment> \
+  --name <svc> --port <port> --target-port <container-port> --type LoadBalancer
+
+# Internal/intranet IP (reachable inside the VPC, NOT public) — add the provider's
+# internal-LB annotation; it is provider-specific, resolve from PROFILE. Examples:
+#   Alibaba ACK : service.beta.kubernetes.io/alibaba-cloud-loadbalancer-address-type: intranet
+#   AWS EKS     : service.beta.kubernetes.io/aws-load-balancer-internal: "true"
+#   GCP GKE     : networking.gke.io/load-balancer-type: "Internal"
+kubectl --context <context-ENV> -n <namespace-ENV> annotate svc <svc> <internal-lb-annotation>
+
+# Wait until the IP is assigned (EXTERNAL-IP stops showing <pending>), then read it
+kubectl --context <context-ENV> -n <namespace-ENV> get svc <svc> -w
+```
+
+**Finish by handing the user the resolved `<IP>:<port>`** (or domain if Ingress) and a one-line
+verify, e.g. `curl -fsS http://<IP>:<port>/<health-path>`. Access should require nothing further.
+
+> No-LB fallback (cluster can't provision an LB): `NodePort` + a reachable node IP, or
+> `kubectl port-forward` for a quick check — but state clearly it's a fallback, not the delivered address.
+> `<pending>` forever on EXTERNAL-IP → the LB didn't provision (RAM/perms or wrong address-type
+> annotation); see the generic methodology's exposure-chain checks.
 
 ---
 
