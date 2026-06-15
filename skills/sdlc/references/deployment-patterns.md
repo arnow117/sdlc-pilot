@@ -2,7 +2,8 @@
 title: 部署方法论（环境晋级 / 发布策略 / 迁移安全 / 回滚 / 可观测）
 scope: methodology                # 通用、跨目标类型、跨语言——不含项目特定值
 applies-to: sdlc-ship            # 被 sdlc-ship 加载；目标类型适配器在 adapters/ 引用本文骨架
-distilled-from: [deployment-patterns, land-and-deploy, gsd-ship]
+distilled-from: [deployment-patterns, land-and-deploy, gsd-ship, "session:secret-no-transmit-ingest-2026-06-15"]
+updated: 2026-06-15
 ---
 
 # 部署方法论 · deployment-patterns
@@ -212,12 +213,60 @@ API_TOKEN=${API_TOKEN}             # 注入，不入仓
 读取所需 env/secret → 校验存在且合法（类型/范围/URL 格式）→ 缺失或非法立即退出并报清晰错误
 ```
 
+### 7.1 绝不存储 **且** 绝不传输
+
+"不入仓"只是一半。密钥还要**绝不传输 / 绝不外泄**：不回显进对话、不进日志、不 `echo`/`print`、
+不拼进 URL/query、不发任何外部服务、不截进会被保存或转发的图。命令里引用密钥一律走 env（`$TOKEN`），
+不在命令行明文展开。判据：一个密钥的真值，除"注入运行时"外**不应在任何可留痕处出现一次**。
+
+### 7.2 摄入侧：坐标与密钥分离（从台账 / 控制台 / 文档读配置时）
+
+- 资源信息常把**坐标**（host/port/库名/集群名/namespace/registry/endpoint）与**密钥**混在一处。
+  导入时**只取坐标**写进配置，密钥块就地跳过、**不带出来源**（不整段复制、不全量倾倒进上下文）。
+- **缺授权 ≠ 拒绝用户**：读取所需坐标时遇到登录墙 / 权限墙，不要直接放弃——换一条**有授权的通道**
+  拿坐标（用户已登录的会话 / 导出只读副本 / 最小权限只读凭据），且仍只取坐标、机密就地过滤不外带。
+
+### 7.3 创建 / 校验 secret 的安全手法（示例：k8s，占位）
+
+```bash
+# 由用户本人执行；值经文件输入——不进 shell history、不经任何第三方
+kubectl create secret generic <name> \
+  --from-file=<key>=<本地临时文件> -n <ns>           # 值在文件里，命令行不出现明文
+shred -u <本地临时文件> 2>/dev/null || rm -P <本地临时文件>    # 用完即焚
+
+# 校验只看 key 名 / 条数，绝不回显值
+kubectl get secret <name> -n <ns>                    # 看 DATA 条数
+kubectl describe secret <name> -n <ns>               # 值显示为字节数
+#   ✗ 不要 -o yaml / -o jsonpath：会回显 base64 明文（= 一次传输 + 留痕）
+```
+> 集群 kubeconfig（含 `client-key-data` 私钥）同理：写进本机 `~/.kube/config*` 文件，
+> 之后只用 **context 名** 操作，**绝不 `cat` / 绝不贴出私钥**。
+
+### 7.4 泄露响应
+
+密钥一旦不慎进入仓库 / 对话 / 日志 / 截图，**视为已泄露**——立即**轮换该凭证**，不能只删记录
+（删除挡不住已被读取/缓存）。轮换后用新值重新走注入流程。
+
+### 7.5 可切换的多环境坐标清单（一份清单，切换 = 改一个字段）
+
+把"连哪套环境"做成一份**坐标清单**（每个 env 一条：集群 context / namespace / 数据库 host·port·库名 /
+registry / 域名），目标工程只引用 env 名：
+
+- **坐标与密钥分离**：清单里只存坐标 + 各密钥对应的 **Secret 名**（如 `mysql-credentials`），
+  密钥真值绝不入清单（§7.1）；运行时按 Secret 名引用注入。
+- **切环境 = 改一个字段**（dev↔staging↔canary↔full 只换 env 选择），其余命令骨架与清单结构不变——
+  缩小误操作面、天然可审计（diff 一眼看出切了哪套）。
+- 清单是坐标的**事实来源**，可由运维从台账整理维护；导入时只取坐标、跳过密钥（§7.2）。
+
 ---
 
 ## 8. ship 门控速查
 
+发布前先过 **preflight 就绪门**，再进环境晋级（dev→staging→canary→full）：
+
 | 段 | PASS（晋级） | FAIL（回滚 + STATE=blocked，报因） |
 |---|---|---|
+| preflight | 工具就绪（打包 / 编排 CLI 齐）+ 登录态就绪（registry / 集群已认证）+ 目标 env 坐标解析无缺 | 缺工具 / 缺登录 / 缺坐标 → 停，先补齐再发；不带半套上线 |
 | dev | 打包成功 + smoke 绿 + health 绿 | 任一不过 → 回滚 dev last-good |
 | staging | 集成/e2e 绿 + 配置加载/启动校验过 + 迁移演练（含 down）过 | 任一不过 → 回滚 + 修迁移/配置再来 |
 | canary | smoke/health 绿 + 观察期三信号不劣于基线 + 无新告警 | 信号劣化/告警触发 → 撤 canary 流量回 last-good |

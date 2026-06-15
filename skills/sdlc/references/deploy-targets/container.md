@@ -1,3 +1,4 @@
+<!-- distilled-from: deploy-aliyun(skill); session:secret-no-transmit-ingest-2026-06-15 · updated: 2026-06-15 -->
 # Deploy Target Adapter: Container (Docker → registry → K8s/cloud)
 
 Thin adapter for the **container** target type. Owns the command + rollback *skeleton*;
@@ -64,6 +65,14 @@ plus a moving env tag, deployed into a distinct `<namespace-ENV>` / `<context-EN
 ## 2. Deploy to orchestrator (per environment)
 
 Pick **one** path based on what the target repo ships.
+
+> **Precondition (idempotent) — ensure the namespace exists before apply.** Check, then
+> create-if-missing; **never auto-delete a namespace** (deleting cascades every resource in it).
+> Use only the name the manifests/`PROFILE` declare — don't invent one.
+> ```bash
+> kubectl --context <context-ENV> get namespace <namespace-ENV> \
+>   || kubectl --context <context-ENV> create namespace <namespace-ENV>
+> ```
 
 ### Path A — Kubernetes (manifests present)
 

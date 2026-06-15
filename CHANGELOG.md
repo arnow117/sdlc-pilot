@@ -2,6 +2,16 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.8.1] — 2026-06-15
+
+### Added
+- **deployment-patterns §7 密钥纪律加厚**：§7.1 **绝不存储且绝不传输**（不回显/不进日志/不拼 URL/不外发/不截图，真值除注入运行时外不在任何留痕处出现）；§7.2 **摄入侧坐标与密钥分离**（从台账/控制台/文档读配置只取坐标，密钥就地跳过不外带；"缺授权 ≠ 拒绝用户"——换有授权通道拿坐标）；§7.3 **创建/校验 secret 安全手法**（`--from-file` 本人输入 + 用完 shred；校验只看 key 名/条数，禁 `-o yaml`/`-o jsonpath`；kubeconfig 私钥不 cat）；§7.4 **泄露即轮换**。
+- **deployment-patterns §7.5 可切换多环境坐标清单**：一份坐标清单（context/namespace/host/registry/域名），坐标与密钥分离（清单只存 Secret 名），切环境 = 改一个字段、命令骨架不变、可审计。
+- **deployment-patterns §8 新增 preflight 就绪门**：环境晋级前先过"工具齐 + 登录态齐 + 目标 env 坐标无缺"，缺则停、不带半套上线。
+- **deploy-targets/container.md 命名空间幂等前置**：apply 前 `get || create` 确保 namespace 存在，**绝不自动删 namespace**（级联删资源）。
+
+> 以上为 **deploy-aliyun skill 的可移植子集**蒸馏进 sdlc-ship 通用层（厂商专属 `aliyun`/ACR 命令与扫码读文档、新手手把手交付按 R10 可移植/契约边界不蒸）。distilled-from: `deploy-aliyun(skill)` · `session:secret-no-transmit-ingest-2026-06-15`。
+
 ## [0.8.0] — 2026-06-12
 
 ### Added
