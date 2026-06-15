@@ -2,6 +2,14 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.9.1] — 2026-06-15
+
+### Added
+- **container.md §1 + deployment-patterns §8 preflight：registry 与集群同地域告警**：跨地域 registry 会让用户卡在无端 `ImagePullBackOff`（只见 hang、不知为何），推镜像前先比对地域，不同则**先告知用户并选**（同域仓库 / 公网 endpoint / 跨域复制）；同域优先走 VPC 内网 endpoint（私网、免费、快）。
+- **container.md §2.5 + deployment-patterns §8：部署必产出可直达地址**："部署成功"重定义为"用户能直接访问"而非"Pod Running"。收尾自动建 `LoadBalancer` Service（**默认内网/intranet IP**，除非明确要公网），轮询拿到 `EXTERNAL-IP` 后把 `<IP>:<port>` + 一条 `curl` verify 交给用户，**绝不停在 ClusterIP**；内网 LB 注解 provider-specific（ACK/EKS/GKE 示例在卡内）。
+
+> 继续把 **deploy-aliyun 实战坑**沉淀进 sdlc-ship 通用层（ACR 跨地域卡住 + 部署完无法访问）。distilled-from: `deploy-aliyun(skill)` · `session:secret-no-transmit-ingest-2026-06-15`。
+
 ## [0.9.0] — 2026-06-15
 
 ### Added
