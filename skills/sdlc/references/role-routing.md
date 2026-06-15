@@ -130,6 +130,7 @@
 - [x] **跨 ≥2 面 / 全链路 → + architect**（全链路数据结构对齐 / 跨边界契约 / blast-radius）— R8
 - [x] **AI-上下文/构建配置(CLAUDE.md/.claude/justfile…) → + ai-readiness** — R9（onboard 体检/改造 feature 也加载）
 - [x] **改技能体系自身(skills/** · *SKILL.md · references/** · .claude-plugin/**) → + skill-maintainer** — R10（`/sdlc evolve` 全程透镜）
+  - 注:编辑 `skills/sdlc-backlog/**`(需求树 skill 自身)由 R10 的 `skills/**`·`**/SKILL.md` 覆盖,无需单列规则。需求树**数据**(`<target-repo>/.sdlc/requirements/`)是运行时产物,不是技能体系代码,不进路由。
 - [x] 兜底 → qa + correctness（+ security 当敏感面）— B1/B2
 
 ---

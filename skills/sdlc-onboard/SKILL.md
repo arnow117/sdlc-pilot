@@ -97,6 +97,8 @@ Phase A 采证(纯 bash) → Phase B 类型+入口识别 → Phase C 自建 surf
 | **conventions** | 有无 CLAUDE.md/AGENTS.md/README?测试怎么组织、用什么命令跑?有无覆盖率门控? |
 | **concerns** | 改动热点在哪(超大文件)?敏感面(auth/支付/密钥/原始 SQL)在哪?调试残留/TODO 多不多? |
 
+**顺带探测需求树(backlog)**:若 `<target-repo>/.sdlc/requirements/` 存在,说明该项目已用 `sdlc-backlog` 建了需求树——在 PROFILE 记一句"已有 backlog(N 片叶,可经 `sdlc-backlog` 的 Coverage 看迁移进度)",作为已有需求集合的线索。无则忽略。
+
 **采证原则(避坑,作为原则而非某条命令的写法)**:
 - **排噪声再统计**:`node_modules` / 构建产物(`dist` `build` `out` `.next`)/ agent 运行时产物(`.session*` `memory/` `archive/` `.backups/`)不是源码;统计"大文件""顶层结构"时先把它们剔掉,否则会把产物当源码、把汇总行当文件。
 - **别只扫根目录**:monorepo / 子目录前端(如 `web/package.json`)只看仓库根会误判"无栈";依赖清单要连嵌套一起找。

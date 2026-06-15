@@ -21,7 +21,7 @@
 
 # SDLC State: <feature/topic 一句话标题>
 
-stage: onboard | spec | plan | build | validate | review | ship | done
+stage: onboard | backlog | spec | plan | build | validate | review | ship | done
 status: in-progress | gated | blocked
 work-type: feature | remediation | hotfix     # 流程画像(中央旋钮):各阶段读它自适应走多重。见下方说明
 branch: <写 STATE 时记 `git rev-parse --abbrev-ref HEAD`>     # 并发边界戳:sdlc-guard 据此防串台
@@ -33,6 +33,9 @@ sdlc-gate: <未设置>   # sdlc-review 全过(verdict=PASS)时写 `PASS reviewed
 <!--
   字段取值说明：
   - stage：当前所处阶段，枚举见上。done = 全部 gate 通过且 verify 完成。
+      · backlog：与 onboard 同为【项目级】stage —— 维护 `<target-repo>/.sdlc/requirements/` 需求树
+        （递归 domain→subdomain→leaf），不属单特性生命周期。从需求树选中一片叶后【另起】单特性
+        STATE，stage 从 spec 起跑。backlog 与单特性 STATE 解耦，互不覆盖（由 sdlc-backlog 维护）。
   - status：
       in-progress = 阶段进行中
       gated       = 卡在某个 exit gate（等待批准/等待修复后重测）
