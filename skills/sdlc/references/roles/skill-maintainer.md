@@ -1,8 +1,8 @@
 ---
 role: skill-maintainer
 triggers: ["skills/**", "**/SKILL.md", ".claude-plugin/**", "skills/sdlc/references/**"]   # 编辑技能体系自身时由 role-routing 加载(见 role-routing §2 R10)
-distilled-from: [kb-manage, sop-extractor, skill-creator, distillation-loop, session:sdlc-evolve-design-2026-06-06, session:evolve-dogfood-2026-06-06]
-updated: 2026-06-06
+distilled-from: [kb-manage, sop-extractor, skill-creator, distillation-loop, session:sdlc-evolve-design-2026-06-06, session:evolve-dogfood-2026-06-06, session:sdlc-backlog-build-2026-06-15]
+updated: 2026-06-15
 ---
 
 # skill-maintainer — 技能体系维护者视角角色卡
