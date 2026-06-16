@@ -642,6 +642,12 @@ def cmd_write_tree(args):
             print(f"skip: 叶缺 id/domain_path: {lid}", file=sys.stderr)
             skipped += 1
             continue
+        # 防路径遍历:domain_path 分段禁空/./..,id 禁含 / 或 ..(叶文件不得逃出 root)
+        if (any(p in ("", ".", "..") for p in dp.split("/"))
+                or "/" in lid or ".." in lid):
+            print(f"skip: 非法 domain_path/id(防路径遍历): {lid} @ {dp}", file=sys.stderr)
+            skipped += 1
+            continue
         d = os.path.join(args.root, *dp.split("/"))
         path = os.path.join(d, lid + ".md")
         if os.path.exists(path):

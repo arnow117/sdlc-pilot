@@ -478,6 +478,23 @@ class WriteTreeTest(unittest.TestCase):
             self.assertEqual(run("lint", root=root).returncode, 0, "写出的树应 lint clean")
             self.assertEqual(json.loads(r.stdout)["written"], 1)
 
+    def test_rejects_path_traversal(self):
+        with tempfile.TemporaryDirectory() as root:
+            tree = {"leaves": [
+                {"id": "x.y.a", "title": "t", "domain_path": "../../etc", "cross_link": [],
+                 "old_system_ref": "r", "new_domain_path": "x/y", "status": "captured",
+                 "priority": "P2", "depends_on": [], "risk_level": "low"},
+                {"id": "../../evil", "title": "t", "domain_path": "x/y", "cross_link": [],
+                 "old_system_ref": "r", "new_domain_path": "x/y", "status": "captured",
+                 "priority": "P2", "depends_on": [], "risk_level": "low"}]}
+            fp = os.path.join(root, "t.json")
+            with open(fp, "w", encoding="utf-8") as f:
+                json.dump(tree, f, ensure_ascii=False)
+            r = run("write-tree", "--from", fp, root=root)
+            self.assertEqual(json.loads(r.stdout)["written"], 0)   # 两条都被拒
+            self.assertEqual(json.loads(r.stdout)["skipped"], 2)
+            self.assertFalse(os.path.exists(os.path.join(root, "..", "etc")))  # 未逃出 root
+
     def test_skips_existing_leaf(self):
         with tempfile.TemporaryDirectory() as root:
             write_leaf(root, "order.checkout.a", title="原有")
