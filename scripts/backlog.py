@@ -5,13 +5,17 @@
   readyqueue : 解依赖的就绪叶(A/B 契约),JSON 到 stdout
   coverage   : 按 domain 的 status 计数 burndown,JSON 到 stdout
   lint       : 断依赖 / 重复 old_system_ref / 缺字段 / 孤儿;有问题则非 0 退出
+  retire     : 特性退场(close-out)——归档 .sdlc 工件 + 标源叶 shipped + 回流追加 + 清栈
 
 纯标准库,无第三方依赖(可移植:Claude / Codex 都能跑)。
-事实源 = 叶 frontmatter;本脚本只读不写树。
+事实源 = 叶 frontmatter;派生操作(readyqueue/coverage/lint)只读;
+retire 写树(标 shipped)+ 移工件 + 回流追加。
 """
 import argparse
 import json
 import os
+import re
+import shutil
 import sys
 
 REQUIRED_FIELDS = [
@@ -20,6 +24,7 @@ REQUIRED_FIELDS = [
 ]
 PRIORITY_ORDER = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
 SHIPPED = "shipped"
+RETIRE_ARTIFACTS = ["spec.md", "plan.md", "validate", "review", "STATE.md"]
 
 
 def parse_frontmatter(text):
@@ -131,13 +136,90 @@ def cmd_lint(root):
     return 0
 
 
+def _set_frontmatter_status(path, value):
+    """把叶文件首块 frontmatter 的首个 `status:` 行改成 value,写回(count=1 只改首行)。"""
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
+    new = re.sub(r"(?m)^status:.*$", f"status: {value}", text, count=1)
+    with open(path, "w", encoding="utf-8") as f:
+        f.write(new)
+
+
+def _mark_leaf_shipped(req_root, leaf_id):
+    """源叶 status -> shipped。命中返回 True,未命中返回 False。"""
+    for lf in load_leaves(req_root):
+        if lf.get("id") == leaf_id:
+            _set_frontmatter_status(os.path.join(req_root, lf["_path"]), SHIPPED)
+            return True
+    return False
+
+
+def _append_evolution(profile, sdlc_dir, entry):
+    """耐久教训回流:有 PROFILE 写其 `## Evolution log` 段(缺则建段);否则写 .sdlc/EVOLUTION.md。"""
+    header = "## Evolution log"
+    if profile and os.path.isfile(profile):
+        with open(profile, encoding="utf-8") as f:
+            text = f.read()
+        if header not in text:
+            text = text.rstrip() + "\n\n" + header + "\n"
+        text = text.rstrip() + "\n" + entry + "\n"
+        with open(profile, "w", encoding="utf-8") as f:
+            f.write(text)
+        return profile
+    target = os.path.join(sdlc_dir, "EVOLUTION.md")
+    exists = os.path.isfile(target)
+    with open(target, "a", encoding="utf-8") as f:
+        if not exists:
+            f.write("# Evolution log\n\n")
+        f.write(entry + "\n")
+    return target
+
+
+def cmd_retire(args):
+    """特性退场:①归档工件 ②标源叶 shipped(可选) ③回流追加(可选) ④清栈。幂等:archive 已存在则拒绝。"""
+    archive_dir = os.path.join(args.sdlc, "archive", f"{args.date}-{args.slug}")
+    if os.path.exists(archive_dir):
+        print(f"archive 已存在,拒绝覆盖: {archive_dir}", file=sys.stderr)
+        return 1
+    os.makedirs(archive_dir)
+    moved = []
+    for name in RETIRE_ARTIFACTS:  # ①归档 + ④清栈(move 走顶层即清空)
+        src = os.path.join(args.sdlc, name)
+        if os.path.exists(src):
+            shutil.move(src, os.path.join(archive_dir, name))
+            moved.append(name)
+    leaf_shipped = False
+    if args.leaf and args.req_root:  # ③标 shipped(优雅降级:无叶/无树则跳过)
+        leaf_shipped = _mark_leaf_shipped(args.req_root, args.leaf)
+        if not leaf_shipped:
+            print(f"warn: 未找到源叶 '{args.leaf}',跳过标 shipped", file=sys.stderr)
+    backflow = None
+    if args.evolution_entry:  # ②回流(内容由调用方蒸馏,目标选择确定性)
+        backflow = _append_evolution(args.profile, args.sdlc, args.evolution_entry)
+    print(json.dumps({"archived": archive_dir, "moved": moved,
+                      "leaf_shipped": leaf_shipped, "backflow": backflow},
+                     ensure_ascii=False))
+    return 0
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser(description="sdlc-backlog 需求树派生操作")
     sub = ap.add_subparsers(dest="cmd", required=True)
     for name in ("readyqueue", "coverage", "lint"):
         p = sub.add_parser(name)
         p.add_argument("--root", required=True, help=".sdlc/requirements 目录")
+    pr = sub.add_parser("retire", help="特性退场:归档 + 标叶 shipped + 回流 + 清栈")
+    pr.add_argument("--sdlc", required=True, help=".sdlc 目录")
+    pr.add_argument("--slug", required=True, help="特性 slug(归档目录名用)")
+    pr.add_argument("--date", required=True, help="日期 YYYY-MM-DD(归档目录名用)")
+    pr.add_argument("--leaf", help="源叶 id(给则标 shipped)")
+    pr.add_argument("--req-root", dest="req_root", help="requirements 树根(配合 --leaf)")
+    pr.add_argument("--profile", help="PROFILE.md 路径(回流目标;缺则写 .sdlc/EVOLUTION.md)")
+    pr.add_argument("--evolution-entry", dest="evolution_entry",
+                    help="回流到 Evolution log 的一行(由调用方蒸馏)")
     args = ap.parse_args(argv)
+    if args.cmd == "retire":
+        return cmd_retire(args)
     if not os.path.isdir(args.root):
         print(f"root 不存在: {args.root}", file=sys.stderr)
         return 2

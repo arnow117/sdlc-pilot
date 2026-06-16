@@ -117,5 +117,99 @@ class CoverageLintTest(unittest.TestCase):
             self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
 
 
+def run_retire(*args):
+    r = subprocess.run([sys.executable, BACKLOG, "retire", *args],
+                       capture_output=True, text=True)
+    return r
+
+
+def _read(path):
+    with open(path, encoding="utf-8") as f:
+        return f.read()
+
+
+def _make_sdlc(sdlc, names=("spec.md", "plan.md", "STATE.md"),
+               dirs=("validate", "review")):
+    for name in names:
+        with open(os.path.join(sdlc, name), "w", encoding="utf-8") as f:
+            f.write(name)
+    for d in dirs:
+        os.makedirs(os.path.join(sdlc, d), exist_ok=True)
+        with open(os.path.join(sdlc, d, "r.md"), "w", encoding="utf-8") as f:
+            f.write(d)
+
+
+class RetireTest(unittest.TestCase):
+    def test_archives_and_clears(self):
+        with tempfile.TemporaryDirectory() as sdlc:
+            _make_sdlc(sdlc)
+            r = run_retire("--sdlc", sdlc, "--slug", "feat", "--date", "2026-06-16")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            arch = os.path.join(sdlc, "archive", "2026-06-16-feat")
+            for name in ("spec.md", "plan.md", "STATE.md", "validate", "review"):
+                self.assertTrue(os.path.exists(os.path.join(arch, name)),
+                                f"archived missing {name}")
+                self.assertFalse(os.path.exists(os.path.join(sdlc, name)),
+                                 f"top-level not cleared: {name}")
+
+    def test_marks_leaf_shipped_and_unblocks(self):
+        with tempfile.TemporaryDirectory() as sdlc:
+            req = os.path.join(sdlc, "req")
+            os.makedirs(req)
+            write_leaf(req, "order.checkout.a", priority="P1")
+            write_leaf(req, "order.checkout.b", priority="P0",
+                       depends_on="[order.checkout.a]")
+            _make_sdlc(sdlc, names=("STATE.md",), dirs=())
+            r = run_retire("--sdlc", sdlc, "--slug", "feat", "--date", "2026-06-16",
+                           "--leaf", "order.checkout.a", "--req-root", req)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            leaf_path = os.path.join(req, "order", "checkout", "order.checkout.a.md")
+            self.assertIn("status: shipped", _read(leaf_path))
+            rq = run("readyqueue", root=req)
+            ids = [e["leaf_id"] for e in json.loads(rq.stdout)]
+            self.assertEqual(ids, ["order.checkout.b"])  # downstream unblocked
+
+    def test_backflow_to_profile_section(self):
+        with tempfile.TemporaryDirectory() as sdlc:
+            prof = os.path.join(sdlc, "PROFILE.md")
+            with open(prof, "w", encoding="utf-8") as f:
+                f.write("# Profile\n\n## Tech stack\npython\n")
+            entry = "- 2026-06-16 · feat · lesson-X"
+            r = run_retire("--sdlc", sdlc, "--slug", "feat", "--date", "2026-06-16",
+                           "--profile", prof, "--evolution-entry", entry)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            text = _read(prof)
+            self.assertIn("## Evolution log", text)
+            self.assertIn("lesson-X", text)
+
+    def test_backflow_fallback_evolution_md(self):
+        with tempfile.TemporaryDirectory() as sdlc:
+            entry = "- 2026-06-16 · feat · lesson-Y"
+            r = run_retire("--sdlc", sdlc, "--slug", "feat", "--date", "2026-06-16",
+                           "--evolution-entry", entry)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            ev = os.path.join(sdlc, "EVOLUTION.md")
+            self.assertTrue(os.path.exists(ev))
+            self.assertIn("lesson-Y", _read(ev))
+
+    def test_archive_exists_refuses(self):
+        with tempfile.TemporaryDirectory() as sdlc:
+            with open(os.path.join(sdlc, "spec.md"), "w", encoding="utf-8") as f:
+                f.write("spec")
+            os.makedirs(os.path.join(sdlc, "archive", "2026-06-16-feat"))
+            r = run_retire("--sdlc", sdlc, "--slug", "feat", "--date", "2026-06-16")
+            self.assertNotEqual(r.returncode, 0)  # refuse to overwrite
+            self.assertTrue(os.path.exists(os.path.join(sdlc, "spec.md")))  # untouched
+
+    def test_no_leaf_graceful(self):
+        with tempfile.TemporaryDirectory() as sdlc:
+            with open(os.path.join(sdlc, "spec.md"), "w", encoding="utf-8") as f:
+                f.write("spec")
+            r = run_retire("--sdlc", sdlc, "--slug", "feat", "--date", "2026-06-16")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertTrue(os.path.exists(
+                os.path.join(sdlc, "archive", "2026-06-16-feat", "spec.md")))
+
+
 if __name__ == "__main__":
     unittest.main()
