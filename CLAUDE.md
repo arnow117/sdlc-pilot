@@ -21,6 +21,7 @@
 | **加/改路由规则** | 只改 `references/role-routing.md`(它是改动→角色+模式的**单一事实源**);driver 只调用不内联 |
 | **加一个流程阶段** | **慎重**(要改 stage 枚举:`sdlc/SKILL.md` + `templates/STATE.md` + 各 skill)。一般别加,优先用角色/模式扩展 |
 | **改 spec/plan/build 等流程** | 改对应 `skills/sdlc-<x>/SKILL.md`;保持 §0 可移植前置不动 |
+| **加/改 backlog 派生操作** | ① 在 `scripts/backlog.py` 加子命令 + `scripts/test_backlog.py` 加用例(TDD)→ ② `skills/sdlc-backlog/SKILL.md` 加操作章节 + 顶部 op 枚举 → ③ 若涉及特性生命周期(如 Retire 在 done 触发):driver §2/§4 + `templates/STATE.md` 同步 → ④ validate-skills。**不新增 stage/skill**(派生 op 挂在 backlog 下) |
 | **加/改 meta 能力(改工具自身)** | meta 能力(如 evolve 自更新回流)**不新增顶层 skill**,用"角色卡 + playbook + driver 子命令"表达:`references/roles/skill-maintainer.md`(维护者视角)+ `references/evolve-loop.md`(回流 playbook)+ driver 的 `/sdlc evolve` 入口 + role-routing **R10**。小改走 `/sdlc evolve`(append-only),结构性大改对本仓跑完整 `/sdlc` |
 
 ## 每次提交前必做

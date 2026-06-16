@@ -148,7 +148,7 @@ v1 语言范围 = **Python + Web(TS)**。如何迭代本项目见仓库根 **`CL
 | 场景 | 怎么走 |
 |---|---|
 | **首次进一个已有项目** | `/sdlc` → 无 PROFILE → 自动 `onboard` → 产出 `.sdlc/PROFILE.md` + surface map(agentic-config-demo 这类"配置型工程"也认得,R7) |
-| **散点需求 / 老系统重写** | `/sdlc` → `backlog`:**Seed**(老系统→递归 domain-subdomain 骨架)→ **Ingest**(散点需求归类成叶)→ **Coverage**(迁移 burndown)→ **Ready-queue**(派生就绪叶);选一片叶即起一个 feature 走下面的循环 |
+| **散点需求 / 老系统重写** | `/sdlc` → `backlog`:**Seed**(老系统→递归 domain-subdomain 骨架)→ **Ingest**(散点需求归类成叶)→ **Coverage**(迁移 burndown)→ **Ready-queue**(派生就绪叶);选一片叶即起一个 feature 走下面的循环。feature 走到 `done` 时 backlog 的 **Retire** 收尾(归档工件/回流教训/标源叶 shipped/清栈)——backlog 是生命周期两端书挡 |
 | **每做一个 feature** | `/sdlc` → **spec**(批准前不写码;UI 工作产 `DESIGN.md`;AI 工作前置 eval 标准;开放/高风险决策可选发散 + 范围塑造)→ **plan**(拆阶段/波次/任务)→ **build**(先测后码,同 wave 多阶段可并行)→ **validate**(按改动选 correctness/e2e/eval-bench)→ **review**(多角色 + 安全门 + 收口,写 `sdlc-gate`) |
 | **角色/验证自动选** | 改前端→client-dev+design+e2e:Web;改 API→server-dev+e2e:OpenAPI;改 AI/策略→eval-bench;**跨 ≥2 面→ +architect**;改配置/agent 定义→server-dev+correctness |
 | **跨会话续接** | `/clear` 或隔天 → `/sdlc` 读 `.sdlc/STATE.md`,从上次 stage 接着走,不用复述 |
@@ -179,7 +179,7 @@ v1 语言范围 = **Python + Web(TS)**。如何迭代本项目见仓库根 **`CL
 |---|---|
 | `sdlc`(driver) | handoff(跨会话交接)· gsd 编排(分支路由,去运行时)· gsd-map(Task-or-sequential 降级)· **resolve 路由/surface-map = 净新建** |
 | `sdlc-onboard` | gsd-map-codebase(4-focus 采证 + 降级 + secret + 下游契约)· arch-aifriendly-doctor(纯 bash 采证脚本 + P13 域路由 + P23 模块命令)· explorer-repo-report(type-detection + P0/P1/P2)· startup-claude-md-init(PROFILE schema 带"原因")· agency:codebase-onboarding-engineer(只读纪律/入口发现)· **surface-map 表 + R7 配置型识别 = 净新建** |
-| `sdlc-backlog` | kb-manage(递归 domain-subdomain 树 + Ingest 归类 + Lint 防孤儿/去重)· tb-loop-driver(导演/编排模式)· loop-engineering 文章(需求树作 loop 的 work-source)· **递归需求树 + 5 操作(Seed/Ingest/Coverage/Ready-queue/Lint)+ ready-queue A/B 契约 = 净新建** |
+| `sdlc-backlog` | kb-manage(递归 domain-subdomain 树 + Ingest 归类 + Lint 防孤儿/去重)· tb-loop-driver(导演/编排模式)· loop-engineering 文章(需求树作 loop 的 work-source)· **递归需求树 + 6 操作(Seed/Ingest/Coverage/Ready-queue/Lint/Retire)+ ready-queue A/B 契约 + 特性退场闭环 = 净新建** |
 | `sdlc-spec` | brainstorming(HARD-GATE + 一次一问 + 分节获批 + 双 gate)· hp-feature-dev(文档矩阵 + 怎么算 done 前置)· gsd-discuss(gray-area 具体化 + canonical_refs + scope-guard)· gsd-research(unknown-unknowns + Don't-Hand-Roll)· gsd-plant-seed(结构化 Deferred)· adhd(发散 §2.4)· plan-ceo-review(范围塑造 §2.4b)· ai-evals + gsd-eval-review(eval 前置 §5)· gsd-ui-phase + design-quality + agency:ux-architect(设计契约 §2.6b)· **eval/design 契约前置 = 净新建** |
 | `sdlc-plan` | gsd-new-project(五准则)· gsd-plan-phase(Anti-Shallow 三字段 + depends_on/wave + must_haves + Source Audit/Coverage Gate)· planner-breakdown-sdlc(L1-L4 分级)· writing-plans(TDD 五步 + No-Placeholder + 自查三扫) |
 | `sdlc-build` | test-driven-development(RGR 五拍 + Iron Law + 两个强制 Verify)· systematic-debugging(四阶段根因)· investigate(模式签名表 + Scope Lock + blast-radius + DEBUG REPORT)· hp-bugfix(bug 三分类)· subagent-driven-development(两阶段自检,去 subagent)· gsd-execute-phase(wave 模型:并行 fan-out + 串行降级)· receiving-code-review(受评纪律)· **TDD↔调试统一状态机 = 净新建** |

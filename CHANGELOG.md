@@ -2,6 +2,21 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.10.0] — 2026-06-16
+
+### Added
+- **★`sdlc-backlog` 新增 `Retire`（特性退场 / close-out）操作**：当一个特性走到 `stage=done`，统一收尾其 `.sdlc/` 工件生命周期——① 归档 `spec/plan/validate/review/STATE` → `.sdlc/archive/<date>-<feature>/`；② 把 `STATE.Decisions log` 里**耐久**的决策/教训/新风险蒸馏回流 `PROFILE.md ## Evolution log`（无 PROFILE 兜底 `.sdlc/EVOLUTION.md`）；③（若源自需求树）标源叶 `status=shipped` → ready-queue 自动解锁下游叶；④ 清空 STATE 交还下个特性。backlog 因此成为特性生命周期的**两端书挡**（选叶起特性 / 退场收尾）。
+- **`scripts/backlog.py retire` 子命令**（纯标准库）：承载退场的确定性机械部分（归档移动 / 标 shipped / 回流追加 / 幂等守卫）；`scripts/test_backlog.py` 新增 `RetireTest` 6 用例（归档清栈/标叶解锁下游/回流 PROFILE/回流兜底/幂等拒覆盖/无叶降级）。**retire 是 backlog.py 首个写树操作**（派生 op 仍只读）。
+- **填补 backlog 已知缺口**：叶状态机的终态 `shipped` 回写此前被委托给"尚不存在的子系统 B"（ready-queue 因此永远解锁不了下游）；Retire 填上这个回写点。中间态逐阶段回写与调度循环仍属未来 B。
+- **回流载体**：`PROFILE.md` 新增 `## Evolution log` 段（append-only，区别于 onboard 的静态 `Known risks`），使完成特性的耐久决策作为长寿 context 持续指导后续演进。
+
+### Changed
+- **driver**：§2 新增"退场前置"——入口检测到 `STATE.stage==done` 时**先于**三主分叉路由到 backlog Retire；§4 路由表加 `done` 行；§5 交接说明 done 退场由 backlog 执行（driver 只路由不亲自归档）。
+- **STATE 模板**：把悬空的"归档或清空"改为明确退场指引；新增 `source-leaf` 字段（记特性源叶，供 Retire 回写 shipped）。
+
+### Notes
+- 全 **additive**：未动 stage 枚举（`done` 已在内）、未加顶层 skill（Retire 是 backlog 的 op）、未动 role-routing 取值字典（skill-maintainer 已覆盖）。
+- 范围切线 **L0**（仅终态退场闭环）；逐阶段叶回写 / archive 入 git / 子系统 B / backlog review 看板均显式 Deferred，各自独立特性按 SDLC 逐个做。distilled-from: `session:sdlc-feature-retirement-2026-06-16`。
 ## [0.9.1] — 2026-06-15
 
 ### Added
