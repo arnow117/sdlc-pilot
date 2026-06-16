@@ -20,6 +20,15 @@
 - chatbot = agent 经 web-review Live mode 驱动（**不引独立 AI 后端**），右侧聊天面板自建（不复用 annotate 批注层 UI）。**Deferred**：工程→需求树自动生成器（backlog Seed 升级）、独立 AI 看板应用。
 - dogfood：本特性用 sdlc-pilot 自己的 `/sdlc` 流程开发（独立 worktree `feat/backlog-review-board`）。distilled-from: `session:sdlc-backlog-board-2026-06-16`。
 
+## [0.11.1] — 2026-06-16
+
+### Changed
+- **spec/plan 复核 gate 把「网页审(web-review)」从可选修辞收紧为硬性一次性告知**:此前 `sdlc-spec` §2.9 的「主动提醒」自带"简单 spec 可省那行"逃生舱口、`sdlc-plan` **根本没有**用户确认 gate 提示块(web-review 只埋在末尾可选附录),导致执行模型偏简洁时总是省略、用户从不被问到要不要划词批注。
+  - `sdlc-spec` §2.9:`主动提醒` 改为「硬性告知 · 一次性」——括号「网页审」那行**必须出现在复核提示里**,不得以"默认更快/spec 简单"为由省略;选不选仍归用户。
+  - `sdlc-plan`:**新增 §6.4 用户确认 gate**(呈现定稿 plan 的提示模板,含必含的「网页审」一行 + "只有用户确认后才前进"纪律),与 spec §2.9 对齐;原 §6.3 尾部可选附录降级为纯「机制说明」,把硬性告知职责让给 §6.4。
+- **driver §0.3 新鲜度自检从"best-effort 顺手探"收紧为"入口必做"**:此前措辞("每次入口顺手探一下"+ 标题 best-effort)被执行模型当可选,导致 `/sdlc` 入口几乎从不真去探工具源是否落后 upstream。改为**执行硬性**(每趟 driver 入口必跑,不得以"上次探过/多半最新"跳过)同时**保留输出静默·非阻塞**纪律(只有落后才一行,失败/最新静默);并补一句点明 driver 是唯一新鲜度闸口(子技能直调不带自检,靠 driver 兜底)。
+- 三处均为纯措辞精修(additive/收紧),不改 gate 判定权、不改"批准前不前进"与"自检非阻塞"纪律,不动 stage 枚举/routing/STATE/契约。distilled-from: `session:sdlc-evolve-webreview-prompt-2026-06-16`。
+
 ## [0.11.0] — 2026-06-16
 
 ### Added
