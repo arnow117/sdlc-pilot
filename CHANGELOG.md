@@ -2,6 +2,18 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.11.0] — 2026-06-16
+
+### Added
+- **`.sdlc/` git-track 策略（跨机器/团队持久）**：`.gitignore` 改为 `.sdlc/*` + `!archive/` + `!EVOLUTION.md` + `!PROFILE.md`——**在飞工作态**（顶层 spec/plan/STATE/validate/review）仍本地忽略（churn 不入历史），**已完成/已蒸馏产物**（退场归档 + 演进史 + 项目记忆）纳入 git。退场（Retire op）是把工作态转入 `archive/` 的那道闸。附**隐私提醒**（CLAUDE.md + README）：track 前确认 archive/EVOLUTION 无密钥。
+
+### Changed
+- **★Evolution log 独立化（PROFILE 结构重构）**：把 0.10.0 做成 PROFILE 一节的 `## Evolution log` 提为**独立 `EVOLUTION.md`（唯一正屋）**，PROFILE 仅留一行指针。理由：PROFILE 六节是**有界快照**（每会话整篇读），Evolution log 是**无界 append 流水**，本性不同 → 分文件，避免流水撑爆 PROFILE。
+- **retire 回流单路径**：`backlog.py` 的 `_append_evolution` 简化为 `(sdlc_dir, entry)` 永远写 `EVOLUTION.md`；**移除 `--profile` 参数**（0.10.0 刚引入、无外部依赖，安全简化）。`test_backflow_to_profile_section`→`test_backflow_always_evolution_md` + 新增 `test_retire_rejects_profile_flag`（12/12 绿）。
+
+### Notes
+- 全 **additive**：未动 stage 枚举、未加顶层 skill、未动 role-routing。dogfood：现有 `.sdlc/archive/{sdlc-backlog,feature-retirement}` + `EVOLUTION.md` 首次入仓。distilled-from: `session:sdlc-feature-retirement-2026-06-16`。
+
 ## [0.10.0] — 2026-06-16
 
 ### Added
