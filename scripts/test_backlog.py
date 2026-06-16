@@ -248,5 +248,38 @@ class TreeTest(unittest.TestCase):
             self.assertEqual(json.loads(r.stdout)["summary"]["total"], 0)
 
 
+class MoveTest(unittest.TestCase):
+    def test_relocates_and_rewrites_deps(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "order.checkout.a")
+            write_leaf(root, "user.auth.b", depends_on="[order.checkout.a]")
+            r = run("move", "--leaf", "order.checkout.a", "--to", "billing/pay", root=root)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            new = os.path.join(root, "billing", "pay", "billing.pay.a.md")
+            self.assertTrue(os.path.exists(new))
+            self.assertFalse(os.path.exists(
+                os.path.join(root, "order", "checkout", "order.checkout.a.md")))
+            txt = _read(new)
+            self.assertIn("id: billing.pay.a", txt)
+            self.assertIn("domain_path: billing/pay", txt)
+            dep = _read(os.path.join(root, "user", "auth", "user.auth.b.md"))
+            self.assertIn("billing.pay.a", dep)          # dep 改写
+            self.assertNotIn("order.checkout.a", dep)
+
+    def test_refuses_existing_target(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "order.checkout.a")
+            write_leaf(root, "billing.pay.a")            # 目标已占用
+            r = run("move", "--leaf", "order.checkout.a", "--to", "billing/pay", root=root)
+            self.assertNotEqual(r.returncode, 0)
+            self.assertTrue(os.path.exists(
+                os.path.join(root, "order", "checkout", "order.checkout.a.md")))  # 未动
+
+    def test_missing_source_nonzero(self):
+        with tempfile.TemporaryDirectory() as root:
+            r = run("move", "--leaf", "ghost.x.y", "--to", "a/b", root=root)
+            self.assertNotEqual(r.returncode, 0)
+
+
 if __name__ == "__main__":
     unittest.main()

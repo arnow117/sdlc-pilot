@@ -213,6 +213,50 @@ def _append_evolution(sdlc_dir, entry):
     return target
 
 
+def cmd_move(args):
+    """叶迁域:mv 文件 + 改 id/domain_path + 改写全树指向旧 id 的 depends_on。确定性写 op(仿 retire)。
+    源叶不存在 → 2;目标已存在同 id → 1 拒绝(幂等守卫),均不动文件。"""
+    leaves = load_leaves(args.root)
+    by_id = {lf.get("id"): lf for lf in leaves}
+    src = by_id.get(args.leaf)
+    if not src:
+        print(f"源叶不存在: {args.leaf}", file=sys.stderr)
+        return 2
+    slug = args.leaf.split(".")[-1]
+    new_dp = args.to.strip("/")                       # "<domain>/<subdomain>"
+    new_id = new_dp.replace("/", ".") + "." + slug
+    new_dir = os.path.join(args.root, *new_dp.split("/"))
+    new_path = os.path.join(new_dir, new_id + ".md")
+    if os.path.exists(new_path):
+        print(f"目标已存在,拒绝覆盖: {new_path}", file=sys.stderr)
+        return 1
+    old_path = os.path.join(args.root, src["_path"])
+    with open(old_path, encoding="utf-8") as f:
+        text = f.read()
+    text = re.sub(r"(?m)^id:.*$", f"id: {new_id}", text, count=1)
+    text = re.sub(r"(?m)^domain_path:.*$", f"domain_path: {new_dp}", text, count=1)
+    os.makedirs(new_dir, exist_ok=True)
+    with open(new_path, "w", encoding="utf-8") as f:
+        f.write(text)
+    os.remove(old_path)
+    rewritten = 0
+    for lf in leaves:                                 # 改写其余叶对旧 id 的 depends_on 引用
+        if lf.get("id") == args.leaf:
+            continue
+        if args.leaf in (lf.get("depends_on") or []):
+            p = os.path.join(args.root, lf["_path"])
+            with open(p, encoding="utf-8") as f:
+                t = f.read()
+            t = re.sub(r"(?m)^(depends_on:.*)$",
+                       lambda m: m.group(1).replace(args.leaf, new_id), t, count=1)
+            with open(p, "w", encoding="utf-8") as f:
+                f.write(t)
+            rewritten += 1
+    print(json.dumps({"moved": args.leaf, "to": new_id, "deps_rewritten": rewritten},
+                     ensure_ascii=False))
+    return 0
+
+
 def cmd_retire(args):
     """特性退场:①归档工件 ②标源叶 shipped(可选) ③回流追加(可选) ④清栈。幂等:archive 已存在则拒绝。"""
     archive_dir = os.path.join(args.sdlc, "archive", f"{args.date}-{args.slug}")
@@ -254,12 +298,18 @@ def main(argv=None):
     pr.add_argument("--req-root", dest="req_root", help="requirements 树根(配合 --leaf)")
     pr.add_argument("--evolution-entry", dest="evolution_entry",
                     help="回流到 Evolution log 的一行(由调用方蒸馏)")
+    pm = sub.add_parser("move", help="叶迁域:mv 文件 + 改 id/domain_path + 改写依赖")
+    pm.add_argument("--root", required=True, help=".sdlc/requirements 目录")
+    pm.add_argument("--leaf", required=True, help="要迁移的叶 id")
+    pm.add_argument("--to", required=True, help="目标 <domain>/<subdomain>")
     args = ap.parse_args(argv)
     if args.cmd == "retire":
         return cmd_retire(args)
     if not os.path.isdir(args.root):
         print(f"root 不存在: {args.root}", file=sys.stderr)
         return 2
+    if args.cmd == "move":
+        return cmd_move(args)
     return {"readyqueue": cmd_readyqueue, "coverage": cmd_coverage,
             "lint": cmd_lint, "tree": cmd_tree}[args.cmd](args.root)
 
