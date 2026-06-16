@@ -157,7 +157,10 @@ Seed 只建空骨架靠人 Ingest。Generate 把它升级为**分析已有 codeb
 - **主轴 `domain_path` = 功能/用户故事**:domain = 功能域/epic(入驻/商品/订单/结算/集成…),叶 = **业务可读的用户故事**「作为<角色>,我要<能力>,以便<价值>」。
 - **禁工程术语命名叶**(不叫"实现 OrderService.settle()",叫"运营能对已履约订单发起结算");工程细节(状态跃迁/契约/类)只进 `## 老系统行为参照` 或交叉字段,**不进标题**。
 - **叶粒度自适应**:一条可独立交付的用户故事/功能;**内部用状态跃迁辅助定粒度**(使 `depends_on` 天然无环:创建先于履约),但不主导标题;**每 domain 叶数软上限(≤~12)** 防碎片化,超则合并/上提 subdomain。
-- **4 交叉字段(能推断则填)**:`actor`(角色)/`failure_class`(funds|consistency|compliance|experience)/`contract_refs`(契约路径 list)/`data_owner`(数据真相源)。`status` 从代码状态推断(空骨架→captured / 半成品→built / 真实保留→shipped);`old_system_ref`/`new_domain_path` 从模块/契约路径填双视图。
+- **4 交叉字段(能推断则填)**:`actor`(角色)/`failure_class`(funds|consistency|compliance|experience)/`contract_refs`(契约路径 list)/`data_owner`(数据真相源)。`old_system_ref`/`new_domain_path` 从模块/契约路径填双视图。
+- **★`status` 推断 = 代码完整度的 draft 猜测,不是生命周期真值(dogfood 教训)**:从代码状态推断——**空实现/TODO/占位骨架 → `captured`；实现了但有缺口/无调用方 → `built`；完整实现 + 有测试覆盖 → `validated`**。
+  - **关键语义修正**:`status` 状态机(captured→spec'd→planned→built→validated→shipped)记的是**该需求走 SDLC 到哪了**;而生成器只能看见**代码完整度**——二者不同。"代码写完+测试覆盖"映射到 **`validated` 封顶,不要给 `shipped`**(`shipped` = 走完整 SDLC/有发布证据,代码看不出来)。
+  - **必须当 draft**:推断的 status **很可能与项目真实生命周期 status 不一致**(如代码完整但该需求其实还没正式上线)→ 在预览/落盘时**显式标记为推断值**,**靠人审闸(§下 步骤4)逐域校正**,不可当权威。`old_system_ref` 记下据以推断的代码位置,供人复核。
 
 **输入(复用,不重造分析轮子)**:优先读 `<target-repo>/.sdlc/PROFILE.md` 的 surface-map(onboard 产的"模块→面"骨架,**无 PROFILE 则先跑 sdlc-onboard**);再深读 `contracts/`(OpenAPI 端点)、模块子目录、`db/schema`(实体)、`CLAUDE.md`/`docs`(业务意图)。
 
