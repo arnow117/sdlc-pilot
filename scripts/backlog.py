@@ -24,6 +24,10 @@ REQUIRED_FIELDS = [
     "new_domain_path", "status", "priority", "depends_on", "risk_level",
 ]
 PRIORITY_ORDER = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
+# 生成器(#6)写入的 4 可选交叉字段;非必填(不进 REQUIRED_FIELDS),lint 校验取值合法性。
+# failure_class 枚举(ascii token,对应 资金正确性/数据一致性/合规信任/体验):
+FAILURE_CLASSES = {"funds", "consistency", "compliance", "experience"}
+LEAF_OPTIONAL = ["actor", "failure_class", "contract_refs", "data_owner"]
 SHIPPED = "shipped"
 RETIRE_ARTIFACTS = ["spec.md", "plan.md", "validate", "review", "STATE.md"]
 
@@ -479,6 +483,13 @@ def cmd_lint(root):
         ref = lf.get("old_system_ref")
         if ref:
             seen_ref.setdefault(ref, []).append(lid)
+        # 可选交叉字段取值校验(存在才校验;不存在不报缺字段——非必填)
+        fc = lf.get("failure_class")
+        if fc and fc not in FAILURE_CLASSES:
+            problems.append(f"bad-failure-class: {lid} failure_class='{fc}' 不在 {sorted(FAILURE_CLASSES)}")
+        cr = lf.get("contract_refs")
+        if cr is not None and not isinstance(cr, list):
+            problems.append(f"bad-contract-refs: {lid} contract_refs 须为 list")
     for ref, ids in seen_ref.items():
         if len(ids) > 1:
             problems.append(f"dup-old_system_ref: '{ref}' 出现在多叶 {ids}")

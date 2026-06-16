@@ -88,6 +88,11 @@ priority: P2                             # P0 | P1 | P2 | P3
 depends_on: []                           # 其它 leaf id,构成依赖 DAG
 risk_level: medium                       # low | medium | high(供子系统 B 的成本/gate 分诊)
 updated: <date>
+# —— 以下 4 个为【可选交叉视图字段】(生成器 #6 填;非必填,不进 REQUIRED_FIELDS;存量叶不填仍 lint clean) ——
+actor: <参与者/角色>                      # 可选:该需求服务哪个角色(供应商/运营/采购/集成方…)
+failure_class: <funds|consistency|compliance|experience>  # 可选:失败代价类(资金正确性/数据一致性/合规信任/体验);lint 校验枚举
+contract_refs: []                        # 可选:list,关联的契约路径(OpenAPI/包间契约);lint 校验须为 list
+data_owner: <数据真相源>                  # 可选:该需求读/写哪份数据的真相源
 ---
 
 ## 需求描述

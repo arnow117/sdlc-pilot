@@ -410,5 +410,40 @@ class BoardTest(unittest.TestCase):
             self.assertIn("暂无需求", _read(out))
 
 
+def _write_leaf_extra(root, id, extra_lines):
+    """写一片叶,frontmatter 末尾插入 extra_lines(用于测可选交叉字段)。"""
+    domain_path = "/".join(id.split(".")[:2])
+    d = os.path.join(root, *domain_path.split("/"))
+    os.makedirs(d, exist_ok=True)
+    fm = (f"---\nid: {id}\ntitle: t\ndomain_path: {domain_path}\ncross_link: []\n"
+          f"old_system_ref: r-{id}\nnew_domain_path: {domain_path}\nstatus: captured\n"
+          f"priority: P2\ndepends_on: []\nrisk_level: medium\nupdated: 2026-06-16\n"
+          + extra_lines + "---\n\n## 需求描述\nx\n")
+    with open(os.path.join(d, id + ".md"), "w", encoding="utf-8") as f:
+        f.write(fm)
+
+
+class LintCrossFieldTest(unittest.TestCase):
+    def test_valid_cross_fields_clean(self):
+        with tempfile.TemporaryDirectory() as root:
+            _write_leaf_extra(root, "order.checkout.a",
+                "actor: 运营\nfailure_class: funds\n"
+                "contract_refs: [contracts/provided/bff]\ndata_owner: order-svc\n")
+            r = run("lint", root=root)
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_no_cross_fields_still_clean(self):  # 存量树不受影响
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "order.checkout.a")
+            self.assertEqual(run("lint", root=root).returncode, 0)
+
+    def test_bad_failure_class_flagged(self):
+        with tempfile.TemporaryDirectory() as root:
+            _write_leaf_extra(root, "order.checkout.a", "failure_class: 乱写\n")
+            r = run("lint", root=root)
+            self.assertNotEqual(r.returncode, 0)
+            self.assertIn("bad-failure-class", r.stdout + r.stderr)
+
+
 if __name__ == "__main__":
     unittest.main()
