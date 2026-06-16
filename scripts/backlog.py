@@ -154,18 +154,9 @@ def _mark_leaf_shipped(req_root, leaf_id):
     return False
 
 
-def _append_evolution(profile, sdlc_dir, entry):
-    """耐久教训回流:有 PROFILE 写其 `## Evolution log` 段(缺则建段);否则写 .sdlc/EVOLUTION.md。"""
-    header = "## Evolution log"
-    if profile and os.path.isfile(profile):
-        with open(profile, encoding="utf-8") as f:
-            text = f.read()
-        if header not in text:
-            text = text.rstrip() + "\n\n" + header + "\n"
-        text = text.rstrip() + "\n" + entry + "\n"
-        with open(profile, "w", encoding="utf-8") as f:
-            f.write(text)
-        return profile
+def _append_evolution(sdlc_dir, entry):
+    """耐久教训回流:统一 append `<sdlc>/EVOLUTION.md`(唯一正屋;缺则建 `# Evolution log` 头)。
+    PROFILE 不承载流水(仅留指针)——见 templates/PROFILE.md。"""
     target = os.path.join(sdlc_dir, "EVOLUTION.md")
     exists = os.path.isfile(target)
     with open(target, "a", encoding="utf-8") as f:
@@ -195,7 +186,7 @@ def cmd_retire(args):
             print(f"warn: 未找到源叶 '{args.leaf}',跳过标 shipped", file=sys.stderr)
     backflow = None
     if args.evolution_entry:  # ②回流(内容由调用方蒸馏,目标选择确定性)
-        backflow = _append_evolution(args.profile, args.sdlc, args.evolution_entry)
+        backflow = _append_evolution(args.sdlc, args.evolution_entry)
     print(json.dumps({"archived": archive_dir, "moved": moved,
                       "leaf_shipped": leaf_shipped, "backflow": backflow},
                      ensure_ascii=False))
@@ -214,7 +205,6 @@ def main(argv=None):
     pr.add_argument("--date", required=True, help="日期 YYYY-MM-DD(归档目录名用)")
     pr.add_argument("--leaf", help="源叶 id(给则标 shipped)")
     pr.add_argument("--req-root", dest="req_root", help="requirements 树根(配合 --leaf)")
-    pr.add_argument("--profile", help="PROFILE.md 路径(回流目标;缺则写 .sdlc/EVOLUTION.md)")
     pr.add_argument("--evolution-entry", dest="evolution_entry",
                     help="回流到 Evolution log 的一行(由调用方蒸馏)")
     args = ap.parse_args(argv)

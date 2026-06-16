@@ -115,15 +115,7 @@ test-commands: { unit: "<例如 pytest>", coverage: "<例如 pytest --cov=<pkg> 
 
 ## Evolution log
 
-<!--
-  演进记忆（append-only）：每个特性走到 done 退场时，由 sdlc-backlog 的 Retire op 把
-  STATE.Decisions log 里【耐久】的决策/教训/新风险蒸馏一行回流到这里——使完成的工作
-  作为长寿 context 持续指导后续演进（跨会话/sub-agent 只读本段即可承接历史判断）。
-  与 Known risks 的区别：Known risks = onboard 测绘的静态风险快照；
-  Evolution log = 已完成特性沉淀的动态决策/教训（带特性名 + 归档 breadcrumb）。
-  判据由模型把握：跨特性仍成立的架构/契约决策、踩过的坑才回流；一次性实现细节不回流。
-  格式：- <date> · <feature> · <耐久决策/教训/新风险> · → archive/<date>-<feature>/
--->
-
-- <由 Retire op 追加，例如：2026-06-15 · backlog · 叶 shipped 回写归 Retire（否决委托未来 B）· → archive/2026-06-15-sdlc-backlog/>
-
+> 演进史（append-only，每特性退场由 sdlc-backlog 的 Retire op 追加）见**同目录 `EVOLUTION.md`**。
+> 本文件只留此指针——Evolution log 是无界流水，独立成文件，避免撑爆每会话整篇加载的 PROFILE
+> （PROFILE 六节是有界快照、EVOLUTION.md 是无界流水，本性不同故分文件）。
+> 与 `Known risks` 区别：Known risks = onboard 测绘的静态风险快照；EVOLUTION.md = 已完成特性沉淀的动态决策/教训。

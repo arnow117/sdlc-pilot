@@ -169,18 +169,30 @@ class RetireTest(unittest.TestCase):
             ids = [e["leaf_id"] for e in json.loads(rq.stdout)]
             self.assertEqual(ids, ["order.checkout.b"])  # downstream unblocked
 
-    def test_backflow_to_profile_section(self):
+    def test_backflow_always_evolution_md(self):
+        # 即便目标有 PROFILE.md，回流也只进 EVOLUTION.md（PROFILE 仅留指针，不被追加）
         with tempfile.TemporaryDirectory() as sdlc:
             prof = os.path.join(sdlc, "PROFILE.md")
             with open(prof, "w", encoding="utf-8") as f:
                 f.write("# Profile\n\n## Tech stack\npython\n")
             entry = "- 2026-06-16 · feat · lesson-X"
             r = run_retire("--sdlc", sdlc, "--slug", "feat", "--date", "2026-06-16",
-                           "--profile", prof, "--evolution-entry", entry)
+                           "--evolution-entry", entry)
             self.assertEqual(r.returncode, 0, r.stderr)
-            text = _read(prof)
-            self.assertIn("## Evolution log", text)
-            self.assertIn("lesson-X", text)
+            ev_text = _read(os.path.join(sdlc, "EVOLUTION.md"))
+            self.assertIn("lesson-X", ev_text)
+            prof_text = _read(prof)
+            self.assertNotIn("## Evolution log", prof_text)  # PROFILE 不承载流水
+            self.assertNotIn("lesson-X", prof_text)
+
+    def test_retire_rejects_profile_flag(self):
+        # --profile 已废除：Evolution log 唯一正屋是 EVOLUTION.md，不再写 PROFILE 节
+        with tempfile.TemporaryDirectory() as sdlc:
+            r = run_retire("--sdlc", sdlc, "--slug", "feat", "--date", "2026-06-16",
+                           "--profile", os.path.join(sdlc, "PROFILE.md"),
+                           "--evolution-entry", "- x")
+            self.assertNotEqual(r.returncode, 0)  # argparse 拒绝未知参数
+            self.assertIn("profile", (r.stderr + r.stdout).lower())
 
     def test_backflow_fallback_evolution_md(self):
         with tempfile.TemporaryDirectory() as sdlc:

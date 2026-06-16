@@ -206,19 +206,19 @@ python3 <bk> lint --root <root>
 | 步 | 动作 | 谁做 | 普适 |
 |---|---|---|---|
 | ① 归档 | `.sdlc/{spec.md,plan.md,validate,review,STATE.md}` → `.sdlc/archive/<date>-<slug>/` | 脚本 | 全部特性 |
-| ② 回流 | 从 `STATE.Decisions log` 蒸馏**耐久**决策/教训/新风险成一行,写项目记忆 | **模型蒸馏** + 脚本追加 | 全部特性 |
+| ② 回流 | 从 `STATE.Decisions log` 蒸馏**耐久**决策/教训/新风险成一行,append `.sdlc/EVOLUTION.md` | **模型蒸馏** + 脚本追加 | 全部特性 |
 | ③ 标 shipped | 源叶 `status=shipped` → ready-queue 自动解锁下游叶 | 脚本(`--leaf`+`--req-root`) | **仅** 源自需求树的特性 |
 | ④ 清栈 | STATE.md 随①移走 → 顶层留空,交还给下个特性 | 脚本(随①完成) | 全部特性 |
 
 ```
 python3 <bk> retire --sdlc <target>/.sdlc --slug <feat> --date <YYYY-MM-DD> \
   [--leaf <leaf-id> --req-root <target>/.sdlc/requirements] \
-  [--profile <target>/.sdlc/PROFILE.md] [--evolution-entry "<蒸馏出的一行>"]
+  [--evolution-entry "<蒸馏出的一行>"]
 ```
 
 **确定性 vs 判断性**:文件移动 / 标 shipped / 追加 = 脚本(确定性,命令即交付)。**"哪些决策值得回流"= 模型判断**——判据:**跨特性仍成立**的架构/契约决策、踩过的坑、新发现的风险才回流;一次性实现细节**不**回流。模型据此从 Decisions log 蒸馏出一行,经 `--evolution-entry` 传入(或直接编辑目标文件)。
 
-**回流目标(②)**:有 `--profile` 且文件在 → 追加到其 `## Evolution log` 段(缺则建段);否则兜底写 `<sdlc>/EVOLUTION.md`。这是长寿、可跨会话/sub-agent 复用的"演进记忆",区别于 archive(本地工件留存)。
+**回流目标(②)**:唯一正屋 = `<sdlc>/EVOLUTION.md`(脚本统一 append,缺则建 `# Evolution log` 头)。`PROFILE.md` **不承载流水**,仅留一行指针(见 PROFILE 模板)——因 Evolution log 是无界流水、PROFILE 六节是有界快照,本性不同故分文件。这是长寿、可跨会话/sub-agent 复用的"演进记忆",区别于 archive(本地工件留存)。
 
 **优雅降级**:无 `requirements/` 树、或特性非源自叶(无 `source-leaf`)→ 跳过③,①②④照做(脚本 `--leaf`/`--req-root` 缺省即跳过)。
 
