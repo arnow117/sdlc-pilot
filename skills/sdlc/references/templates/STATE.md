@@ -3,7 +3,10 @@
   ─────────────────────────────────────────────────────────
   作用：跨 session 的"我们到哪了"单一事实源。落在【目标仓库】的
         `<target-repo>/.sdlc/STATE.md`，不在 skill 里。
-  生命周期：短命。每个 feature/topic 一份；feature 完成（stage=done）后归档或清空。
+  生命周期：短命。每个 feature/topic 一份；feature 完成（stage=done）后由 sdlc-backlog 的 Retire op
+        退场——归档到 .sdlc/archive/<date>-<feature>/、耐久决策回流 PROFILE.md ## Evolution log
+        （无 PROFILE 兜底 .sdlc/EVOLUTION.md）、（若源自需求树）标源叶 shipped、清空本文件。
+        由 driver 在下次 /sdlc 检测到 stage==done 时触发（见 driver §2 退场前置 / §4 路由）。
   与 PROFILE.md 的区别：
     - PROFILE.md = 项目级、长命、所有 feature 共享（onboard 建一次）。
     - STATE.md   = feature 级、短命、本任务的 handoff 载体（本文件）。
@@ -26,6 +29,7 @@ status: in-progress | gated | blocked
 work-type: feature | remediation | hotfix     # 流程画像(中央旋钮):各阶段读它自适应走多重。见下方说明
 branch: <写 STATE 时记 `git rev-parse --abbrev-ref HEAD`>     # 并发边界戳:sdlc-guard 据此防串台
 worktree: <写 STATE 时记 `git rev-parse --show-toplevel`>     # 同上(worktree 隔离)
+source-leaf: <若本特性源自 requirements 树则记叶 id，否则 (none)>   # Retire 据此回写源叶 status=shipped（见 driver §2 退场前置）
 updated: <时间戳，由调用方传入，例如 2026-06-04T15:30>
 validate-modes: [correctness, e2e, eval-bench]   # 本次运行从 diff 动态解析（见 spec §6.1）；未进入 validate 前可留 []
 sdlc-gate: <未设置>   # sdlc-review 全过(verdict=PASS)时写 `PASS reviewed-head=<HEAD的sha>`，否则写 `BLOCK`。本地 pre-push hook(若装)只认这一行来决定放不放行 push。

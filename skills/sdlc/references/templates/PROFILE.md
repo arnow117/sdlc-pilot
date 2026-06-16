@@ -113,3 +113,17 @@ test-commands: { unit: "<例如 pytest>", coverage: "<例如 pytest --cov=<pkg> 
 - 密钥来源: <例如 env / secret-manager；只记来源,不记值>
 - <未检测到部署配置 → 写 "none — 尚未配置部署">
 
+## Evolution log
+
+<!--
+  演进记忆（append-only）：每个特性走到 done 退场时，由 sdlc-backlog 的 Retire op 把
+  STATE.Decisions log 里【耐久】的决策/教训/新风险蒸馏一行回流到这里——使完成的工作
+  作为长寿 context 持续指导后续演进（跨会话/sub-agent 只读本段即可承接历史判断）。
+  与 Known risks 的区别：Known risks = onboard 测绘的静态风险快照；
+  Evolution log = 已完成特性沉淀的动态决策/教训（带特性名 + 归档 breadcrumb）。
+  判据由模型把握：跨特性仍成立的架构/契约决策、踩过的坑才回流；一次性实现细节不回流。
+  格式：- <date> · <feature> · <耐久决策/教训/新风险> · → archive/<date>-<feature>/
+-->
+
+- <由 Retire op 追加，例如：2026-06-15 · backlog · 叶 shipped 回写归 Retire（否决委托未来 B）· → archive/2026-06-15-sdlc-backlog/>
+
