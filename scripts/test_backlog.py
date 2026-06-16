@@ -445,5 +445,43 @@ class LintCrossFieldTest(unittest.TestCase):
             self.assertIn("bad-failure-class", r.stdout + r.stderr)
 
 
+class WriteTreeTest(unittest.TestCase):
+    def test_writes_leaves_with_optional_fields(self):
+        with tempfile.TemporaryDirectory() as root:
+            tree = {"leaves": [
+                {"id": "order.checkout.place", "title": "作为采购我要下单以便采货",
+                 "domain_path": "order/checkout", "cross_link": [],
+                 "old_system_ref": "apps/api/modules/order", "new_domain_path": "order/checkout",
+                 "status": "captured", "priority": "P1", "depends_on": [], "risk_level": "high",
+                 "actor": "采购", "failure_class": "consistency",
+                 "contract_refs": ["contracts/provided/bff"], "data_owner": "order-svc"}]}
+            fp = os.path.join(root, "tree.json")
+            with open(fp, "w", encoding="utf-8") as f:
+                json.dump(tree, f, ensure_ascii=False)
+            r = run("write-tree", "--from", fp, root=root)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            leaf = _read(os.path.join(root, "order", "checkout", "order.checkout.place.md"))
+            self.assertIn("id: order.checkout.place", leaf)
+            self.assertIn("failure_class: consistency", leaf)
+            self.assertIn("actor: 采购", leaf)
+            self.assertIn("作为采购我要下单", leaf)
+            self.assertEqual(run("lint", root=root).returncode, 0, "写出的树应 lint clean")
+            self.assertEqual(json.loads(r.stdout)["written"], 1)
+
+    def test_skips_existing_leaf(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "order.checkout.a", title="原有")
+            tree = {"leaves": [{"id": "order.checkout.a", "title": "新的",
+                "domain_path": "order/checkout", "cross_link": [], "old_system_ref": "r",
+                "new_domain_path": "order/checkout", "status": "captured", "priority": "P2",
+                "depends_on": [], "risk_level": "low"}]}
+            fp = os.path.join(root, "t.json")
+            with open(fp, "w", encoding="utf-8") as f:
+                json.dump(tree, f, ensure_ascii=False)
+            r = run("write-tree", "--from", fp, root=root)
+            self.assertEqual(json.loads(r.stdout)["skipped"], 1)
+            self.assertIn("原有", _read(os.path.join(root, "order", "checkout", "order.checkout.a.md")))
+
+
 if __name__ == "__main__":
     unittest.main()

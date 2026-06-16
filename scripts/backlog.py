@@ -596,6 +596,55 @@ def cmd_move(args):
     return 0
 
 
+def _fmt_fm_value(v):
+    """frontmatter 值:list → `[a, b]`(与 parse_frontmatter 互逆);其它 → 原样。"""
+    if isinstance(v, list):
+        return "[" + ", ".join(str(x) for x in v) + "]"
+    return "" if v is None else str(v)
+
+
+def _render_leaf_md(leaf):
+    """把一片叶 dict 渲染成 .md 文本(10 必填按固定顺序 + 出现的可选字段 + updated + 正文)。"""
+    lines = ["---"]
+    for k in REQUIRED_FIELDS:
+        lines.append(f"{k}: {_fmt_fm_value(leaf.get(k))}")
+    for k in LEAF_OPTIONAL:
+        if leaf.get(k) is not None:
+            lines.append(f"{k}: {_fmt_fm_value(leaf[k])}")
+    if leaf.get("updated"):
+        lines.append(f"updated: {leaf['updated']}")
+    lines.append("---")
+    body = leaf.get("body") or ("## 需求描述\n（待补）\n\n## 验收线索\n（待补）\n\n"
+                                 "## 老系统行为参照\n（待补）")
+    return "\n".join(lines) + "\n\n" + body + "\n"
+
+
+def cmd_write_tree(args):
+    """tree JSON → 叶 .md 文件(机械落盘;agent 产 JSON,本脚本写文件)。已存在叶跳过(不覆盖人工改)。"""
+    with open(args.from_, encoding="utf-8") as f:
+        data = json.load(f)
+    leaves = data.get("leaves", []) if isinstance(data, dict) else data
+    written = skipped = 0
+    for leaf in leaves:
+        lid, dp = leaf.get("id"), leaf.get("domain_path")
+        if not lid or not dp:
+            print(f"skip: 叶缺 id/domain_path: {lid}", file=sys.stderr)
+            skipped += 1
+            continue
+        d = os.path.join(args.root, *dp.split("/"))
+        path = os.path.join(d, lid + ".md")
+        if os.path.exists(path):
+            skipped += 1
+            continue
+        os.makedirs(d, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(_render_leaf_md(leaf))
+        written += 1
+    print(json.dumps({"written": written, "skipped": skipped, "root": args.root},
+                     ensure_ascii=False))
+    return 0
+
+
 def cmd_retire(args):
     """特性退场:①归档工件 ②标源叶 shipped(可选) ③回流追加(可选) ④清栈。幂等:archive 已存在则拒绝。"""
     archive_dir = os.path.join(args.sdlc, "archive", f"{args.date}-{args.slug}")
@@ -650,6 +699,9 @@ def main(argv=None):
     pb = sub.add_parser("board", help="渲染折叠树 HTML 看板(注入 web-review annotate)")
     pb.add_argument("--root", required=True, help=".sdlc/requirements 目录")
     pb.add_argument("--out", help="输出 HTML 路径(默认 <root>/_board.html)")
+    pwt = sub.add_parser("write-tree", help="tree JSON → 叶文件(机械落盘;生成器#6 用)")
+    pwt.add_argument("--root", required=True, help=".sdlc/requirements 目录")
+    pwt.add_argument("--from", dest="from_", required=True, help="merged tree JSON 路径")
     args = ap.parse_args(argv)
     if args.cmd == "retire":
         return cmd_retire(args)
@@ -660,6 +712,8 @@ def main(argv=None):
         return cmd_move(args)
     if args.cmd == "board":
         return cmd_board(args)
+    if args.cmd == "write-tree":
+        return cmd_write_tree(args)
     return {"readyqueue": cmd_readyqueue, "coverage": cmd_coverage,
             "lint": cmd_lint, "tree": cmd_tree}[args.cmd](args.root)
 
