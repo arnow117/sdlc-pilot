@@ -222,6 +222,65 @@ class RetireTest(unittest.TestCase):
             self.assertTrue(os.path.exists(
                 os.path.join(sdlc, "archive", "2026-06-16-feat", "spec.md")))
 
+    def test_marks_leaf_and_writes_sdlc_log(self):
+        with tempfile.TemporaryDirectory() as sdlc:
+            req = os.path.join(sdlc, "req")
+            os.makedirs(req)
+            write_leaf(req, "order.checkout.a", priority="P1")
+            _make_sdlc(sdlc, names=("STATE.md",), dirs=())
+            entry = "- 2026-06-16 · feat · 学到了X · → archive/2026-06-16-feat/"
+            r = run_retire("--sdlc", sdlc, "--slug", "feat", "--date", "2026-06-16",
+                           "--leaf", "order.checkout.a", "--req-root", req,
+                           "--evolution-entry", entry)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            leaf = _read(os.path.join(req, "order", "checkout", "order.checkout.a.md"))
+            self.assertIn("status: shipped", leaf)
+            self.assertIn("## sdlc 记录", leaf)
+            self.assertIn("学到了X", leaf)
+            self.assertIn("学到了X", _read(os.path.join(sdlc, "EVOLUTION.md")))
+            self.assertTrue(json.loads(r.stdout)["leaf_evolution"])
+
+    def test_leaf_no_entry_no_sdlc_log(self):
+        with tempfile.TemporaryDirectory() as sdlc:
+            req = os.path.join(sdlc, "req")
+            os.makedirs(req)
+            write_leaf(req, "order.checkout.a")
+            _make_sdlc(sdlc, names=("STATE.md",), dirs=())
+            r = run_retire("--sdlc", sdlc, "--slug", "feat", "--date", "2026-06-16",
+                           "--leaf", "order.checkout.a", "--req-root", req)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            leaf = _read(os.path.join(req, "order", "checkout", "order.checkout.a.md"))
+            self.assertIn("status: shipped", leaf)
+            self.assertNotIn("## sdlc 记录", leaf)
+
+    def test_sdlc_log_appends_to_existing_section(self):
+        with tempfile.TemporaryDirectory() as sdlc:
+            req = os.path.join(sdlc, "req")
+            os.makedirs(req)
+            write_leaf(req, "order.checkout.a")
+            lp = os.path.join(req, "order", "checkout", "order.checkout.a.md")
+            with open(lp, "a", encoding="utf-8") as f:
+                f.write("\n## sdlc 记录\n- 旧条目prior\n")
+            _make_sdlc(sdlc, names=("STATE.md",), dirs=())
+            r = run_retire("--sdlc", sdlc, "--slug", "feat", "--date", "2026-06-16",
+                           "--leaf", "order.checkout.a", "--req-root", req,
+                           "--evolution-entry", "- 新条目fresh")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            leaf = _read(lp)
+            self.assertEqual(leaf.count("## sdlc 记录"), 1)
+            self.assertIn("旧条目prior", leaf)
+            self.assertIn("新条目fresh", leaf)
+
+    def test_no_leaf_still_only_evolution(self):
+        with tempfile.TemporaryDirectory() as sdlc:
+            with open(os.path.join(sdlc, "spec.md"), "w", encoding="utf-8") as f:
+                f.write("spec")
+            r = run_retire("--sdlc", sdlc, "--slug", "feat", "--date", "2026-06-16",
+                           "--evolution-entry", "- 无叶entry")
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertIsNone(json.loads(r.stdout)["leaf_evolution"])
+            self.assertIn("无叶entry", _read(os.path.join(sdlc, "EVOLUTION.md")))
+
 
 class TreeTest(unittest.TestCase):
     def test_nests_and_counts(self):

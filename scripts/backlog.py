@@ -501,12 +501,28 @@ def _set_frontmatter_status(path, value):
 
 
 def _mark_leaf_shipped(req_root, leaf_id):
-    """源叶 status -> shipped。命中返回 True,未命中返回 False。"""
+    """源叶 status -> shipped。命中返回叶绝对路径,未命中返回 None。"""
     for lf in load_leaves(req_root):
         if lf.get("id") == leaf_id:
-            _set_frontmatter_status(os.path.join(req_root, lf["_path"]), SHIPPED)
-            return True
-    return False
+            path = os.path.join(req_root, lf["_path"])
+            _set_frontmatter_status(path, SHIPPED)
+            return path
+    return None
+
+
+LEAF_SDLC_LOG_HEADER = "## sdlc 记录"
+
+
+def _append_leaf_sdlc_log(leaf_path, entry):
+    """把 entry append 到叶的 `## sdlc 记录` 段(段缺则在文件末尾建段头;仿 _append_evolution)。
+    entry 总追加到文件末尾——该段恒为叶末段,故条目累积其下。"""
+    with open(leaf_path, encoding="utf-8") as f:
+        text = f.read()
+    if LEAF_SDLC_LOG_HEADER not in text:
+        text = text.rstrip("\n") + f"\n\n{LEAF_SDLC_LOG_HEADER}\n"
+    text = text.rstrip("\n") + "\n" + entry + "\n"
+    with open(leaf_path, "w", encoding="utf-8") as f:
+        f.write(text)
 
 
 def _append_evolution(sdlc_dir, entry):
@@ -582,16 +598,22 @@ def cmd_retire(args):
         if os.path.exists(src):
             shutil.move(src, os.path.join(archive_dir, name))
             moved.append(name)
-    leaf_shipped = False
+    leaf_path = None
     if args.leaf and args.req_root:  # ③标 shipped(优雅降级:无叶/无树则跳过)
-        leaf_shipped = _mark_leaf_shipped(args.req_root, args.leaf)
-        if not leaf_shipped:
+        leaf_path = _mark_leaf_shipped(args.req_root, args.leaf)
+        if leaf_path is None:
             print(f"warn: 未找到源叶 '{args.leaf}',跳过标 shipped", file=sys.stderr)
+    leaf_shipped = leaf_path is not None
     backflow = None
-    if args.evolution_entry:  # ②回流(内容由调用方蒸馏,目标选择确定性)
+    leaf_evolution = None
+    if args.evolution_entry:  # ②回流 EVOLUTION(内容由调用方蒸馏,目标选择确定性)
         backflow = _append_evolution(args.sdlc, args.evolution_entry)
+        if leaf_path:  # 同条也挂源叶 `## sdlc 记录`(需求树成带 sdlc 记录的活档案)
+            _append_leaf_sdlc_log(leaf_path, args.evolution_entry)
+            leaf_evolution = leaf_path
     print(json.dumps({"archived": archive_dir, "moved": moved,
-                      "leaf_shipped": leaf_shipped, "backflow": backflow},
+                      "leaf_shipped": leaf_shipped, "backflow": backflow,
+                      "leaf_evolution": leaf_evolution},
                      ensure_ascii=False))
     return 0
 
