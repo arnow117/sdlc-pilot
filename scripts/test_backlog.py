@@ -390,6 +390,16 @@ class BoardTest(unittest.TestCase):
             self.assertNotIn("<script>alert(1)</script>", html)   # 未原样出现
             self.assertIn("&lt;script&gt;", html)                 # 已转义
 
+    def test_board_leafdata_has_cross_fields(self):
+        with tempfile.TemporaryDirectory() as root:
+            _write_leaf_extra(root, "order.checkout.a", "actor: 采购\nfailure_class: funds\n")
+            out = os.path.join(root, "_b.html")
+            r = run("board", "--out", out, root=root)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            html = _read(out)
+            self.assertIn('"actor"', html)     # leaf-data JSON 含交叉字段
+            self.assertIn("ld-cross", html)     # 详情渲染交叉行(JS/CSS 容器)
+
     def test_board_embeds_leaf_body_and_fields(self):
         with tempfile.TemporaryDirectory() as root:
             write_leaf(root, "order.checkout.a", old_system_ref="legacy/CartServlet",

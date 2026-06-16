@@ -222,6 +222,7 @@ details>summary:focus-visible{outline:2px solid var(--green);outline-offset:1px}
 .ld-badges{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
 .ld-risk{font-size:11px;color:var(--muted)}
 .ld-meta{font-size:11px;color:var(--muted);margin-bottom:6px;word-break:break-word}
+.ld-cross{font-size:11px;color:var(--muted);margin-bottom:6px;word-break:break-word;border-left:2px solid var(--green-soft);padding-left:6px}
 .ld-body{font-size:12px;line-height:1.55;white-space:pre-wrap;color:var(--ink);background:var(--bg);
   border:1px solid var(--line);border-radius:6px;padding:8px;margin-bottom:10px}
 .chat-msgs{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:8px}
@@ -270,7 +271,16 @@ CHAT_JS = """<script>
       '<span class="prio prio-'+esc(d.priority)+'">'+esc(d.priority)+'</span>'+
       '<span class="ld-risk">risk: '+esc(d.risk_level)+'</span></div>'+
       '<div class="ld-meta">域: '+esc(d.domain_path)+' · old: '+esc(d.old_system_ref||'—')+' · 依赖: '+esc(deps)+'</div>'+
+      crossRow(d)+
       '<div class="ld-body">'+esc(d.body)+'</div>';
+  }
+  function crossRow(d){
+    var parts=[];
+    if(d.actor)parts.push('参与者: '+esc(d.actor));
+    if(d.failure_class)parts.push('失败类: '+esc(d.failure_class));
+    if(d.data_owner)parts.push('数据源: '+esc(d.data_owner));
+    if(d.contract_refs&&d.contract_refs.length)parts.push('契约: '+esc(d.contract_refs.join(', ')));
+    return parts.length?'<div class="ld-cross">'+parts.join(' · ')+'</div>':'';
   }
   function render(){
     msgs.innerHTML='';
@@ -346,7 +356,8 @@ def _css_safe(s):
 
 
 DETAIL_KEYS = ["title", "status", "priority", "risk_level", "domain_path",
-               "old_system_ref", "new_domain_path", "depends_on", "cross_link"]
+               "old_system_ref", "new_domain_path", "depends_on", "cross_link",
+               "actor", "failure_class", "contract_refs", "data_owner"]
 
 
 def _leaf_detail_map(leaves):
