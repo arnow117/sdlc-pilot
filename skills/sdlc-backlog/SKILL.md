@@ -27,7 +27,7 @@ description: >
 > **边界**:本 skill 管"需求集合"。收敛单条需求 = `sdlc-spec`;拆任务 = `sdlc-plan`;调度循环 = 子系统 B。
 > 知识与状态全在纯文件,引擎 = Claude + Read/Edit/Bash/Grep。
 >
-> distilled-from: `session:loop-engineering-article(Addy Osmani)` · `kb-manage`(递归 domain-subdomain + Ingest) · `tb-loop-driver`(导演/编排模式) · `session:sdlc-backlog-build-2026-06-15` · `session:sdlc-feature-retirement-2026-06-16`(Retire op / 特性退场闭环)
+> distilled-from: `session:loop-engineering-article(Addy Osmani)` · `kb-manage`(递归 domain-subdomain + Ingest) · `tb-loop-driver`(导演/编排模式) · `session:sdlc-backlog-build-2026-06-15` · `session:sdlc-feature-retirement-2026-06-16`(Retire op / 特性退场闭环) · `session:sdlc-backlog-board-2026-06-16`(Tree/Board/Move op + 聊天看板 + Live 对话模式)
 
 ---
 

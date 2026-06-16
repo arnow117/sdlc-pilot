@@ -280,6 +280,16 @@ class MoveTest(unittest.TestCase):
             r = run("move", "--leaf", "ghost.x.y", "--to", "a/b", root=root)
             self.assertNotEqual(r.returncode, 0)
 
+    def test_rejects_path_traversal_to(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "order.checkout.a")
+            for bad in ("../evil", "a/../../etc", "a/./b", ".."):
+                r = run("move", "--leaf", "order.checkout.a", "--to", bad, root=root)
+                self.assertNotEqual(r.returncode, 0, f"应拒绝非法 --to: {bad}")
+            # 源叶未被移动
+            self.assertTrue(os.path.exists(
+                os.path.join(root, "order", "checkout", "order.checkout.a.md")))
+
 
 class BoardTest(unittest.TestCase):
     def test_renders_tree_with_chat_panel(self):
@@ -309,6 +319,17 @@ class BoardTest(unittest.TestCase):
             # 叶详情数据嵌入(选叶后面板顶部显示字段+正文)
             self.assertIn("leaf-data", html)
             self.assertIn("test leaf order.checkout.a", html)   # 正文进了详情数据
+
+    def test_board_escapes_html_in_leaf_content(self):
+        # 信任边界:叶内容里的 HTML 不得原样进页面(防注入)
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "order.checkout.a", title="<script>alert(1)</script>")
+            out = os.path.join(root, "_board.html")
+            r = run("board", "--out", out, root=root)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            html = _read(out)
+            self.assertNotIn("<script>alert(1)</script>", html)   # 未原样出现
+            self.assertIn("&lt;script&gt;", html)                 # 已转义
 
     def test_board_embeds_leaf_body_and_fields(self):
         with tempfile.TemporaryDirectory() as root:

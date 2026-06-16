@@ -393,7 +393,7 @@ def render_board(tree, leaves, title="Backlog 需求树看板"):
                                  if deps else "")
                     lvs.append(
                         f'<section class="leaf" id="{lid}" data-leaf="{lid}" '
-                        f'aria-current="false">'
+                        f'role="button" aria-label="选择 {lid} 开始对话" aria-current="false">'
                         f'<h2>{lid} · {esc(lf.get("title") or "")}</h2>'
                         f'<div class="meta">'
                         f'<span class="badge status-{_css_safe(st)}">{esc(st)}</span>'
@@ -416,7 +416,8 @@ def render_board(tree, leaves, title="Backlog 需求树看板"):
         '<div class="chat-msgs" id="chat-msgs">'
         '<p class="chat-empty">点左侧一片需求叶，开始对话。</p></div>'
         '<div class="chat-box">'
-        '<textarea id="chat-input" placeholder="问 / 改这片叶…（Enter 发送，Shift+Enter 换行）" '
+        '<textarea id="chat-input" aria-label="对选中的需求叶发送消息" '
+        'placeholder="问 / 改这片叶…（Enter 发送，Shift+Enter 换行）" '
         'disabled></textarea>'
         '<button id="chat-send" disabled>发送</button></div></aside>'
     )
@@ -531,6 +532,10 @@ def cmd_move(args):
         return 2
     slug = args.leaf.split(".")[-1]
     new_dp = args.to.strip("/")                       # "<domain>/<subdomain>"
+    parts = new_dp.split("/")
+    if not new_dp or any(p in ("", ".", "..") for p in parts):  # 防路径遍历:禁空段/./..
+        print(f"非法目标域(须为 <domain>/<subdomain>,禁含空段/./..): {args.to}", file=sys.stderr)
+        return 2
     new_id = new_dp.replace("/", ".") + "." + slug
     new_dir = os.path.join(args.root, *new_dp.split("/"))
     new_path = os.path.join(new_dir, new_id + ".md")
