@@ -201,12 +201,29 @@ python3 <bk> tree --root <root>
 ```
 把整棵树导成 `domain→subdomain→leaf` 嵌套 JSON(每叶含 9 对外字段)+ `summary`(total / by_status / ready_count)到 stdout。与 readyqueue(就绪切片)、coverage(状态计数)互补:tree 给的是**全貌结构**,供 agent/调度器一次拿到整棵树。**只读**,事实源仍是叶 frontmatter。内部嵌套逻辑 `build_tree(leaves)` 与 board 共用(DRY)。
 
-### 4.5 Board —— 折叠树 HTML 看板(人看视角)+ review gate
+### 4.5 Board —— 折叠树 HTML 看板 + 聊天 chatbot(人看 + 对话编辑)+ review gate
 ```
 python3 <bk> board --root <root> [--out <path>]    # 默认 <root>/_board.html
 ```
-渲染**自包含 HTML 看板**(纯标准库拼装,无模板引擎/网络字体,离线可开):左侧 `domain→subdomain→leaf` 三级折叠树(原生 `<details>`,叶卡带 status 徽章/priority/risk/依赖 + 每 domain coverage 进度条),视觉遵仓根 `DESIGN.md`(暖奶油/鼠尾草绿)。`</head>` 前注入 `annotate.css`、`</body>` 前注入 `annotate.js` + `/rev` 自刷新轮询——**复用 `sdlc/references/web-review/` 的划词批注层 + Live mode**,把页面当 agent 的眼睛和手:用户在某片叶上划词写请求(追问/完善/迁域)→ agent 经 `/wait` 收到 → 改树/答疑 → 写 `/rev` 触发页面刷新。**这等于给 backlog 补一道人看 + 可编辑的 review gate**。**只读渲染**(看板本身不写树;改树由 agent 经 Edit / `move` 落地,守单写者)。
-> 起服演示:把 board 输出复制为 `index.html`,与 `web-review/{annotate.css,annotate.js,server.py}` 同目录,`python3 server.py <port>` 开页(约定见 web-review playbook §2/§3.3)。
+渲染**自包含 HTML 看板**(纯标准库拼装,内联 CSS+JS,无模板引擎/网络字体,离线可开),视觉遵仓根 `DESIGN.md`(暖奶油/鼠尾草绿):
+- **左:三级折叠树** `domain→subdomain→leaf`(原生 `<details>`,叶卡带 status 徽章/priority/risk/依赖 + 每 domain coverage 进度条),点叶=选中。
+- **右:聊天面板(chatbot)** —— 选中叶后顶部显示该叶**完整详情**(字段 + 需求描述/验收/老系统正文,经 `leaf-data` JSON 嵌入),下方 per-leaf 对话气泡 + 输入框。**不依赖 annotate.\***(聊天自建)。
+- **只读渲染**:看板本身不写树;改树由 agent 经 `Edit` / `move` 落地(守单写者)。
+
+**起服**:把 board 输出复制为 `index.html`,与 `sdlc/references/web-review/server.py` **同目录**(server.py 从自身目录提供静态文件 + `/feedback`/`/wait`/`/rev`),写个 `rev` 文件,`python3 server.py <port>` 绑 127.0.0.1 开页。**只需 server.py**(不再需要 annotate.css/js)。
+
+#### ★ Live 对话模式(agent 操作规程 + 用户须知)
+看板默认是**留言板**:用户发的消息进 `feedback.json` + 追加 `feedback-history.jsonl`,**agent 不在场就不会回**。要做到**实时对话应答**,agent 主动切入 Live 循环(present → await → revise,蒸馏自 web-review playbook §6):
+
+1. **await**:agent **前台阻塞** `curl "http://127.0.0.1:<port>/wait?t=240"`,挂起等用户提交;返回 `{id,leaf,message}`,或超时回 204 则 re-arm。
+2. **act**:按消息意图处理——**追问**=读该叶答疑;**完善**=`Edit` 叶 `.md` 字段/正文;**迁域**=`backlog.py move`;**新增需求**=Ingest 新叶。**改了树就重渲染 board + bump `rev` 文件**(页面轮询 `/rev`,值变即 reload)。
+3. **reply**:把回复写进 serve 目录的 `replies.json`(**累积合并**,键=消息 `id`;页面轮询 `/replies.json` 追加 agent 气泡)。线程持久化靠 `feedback-history.jsonl`+`replies.json`,刷新不丢。
+4. **re-arm**:再 `curl /wait` 回到 1。
+
+- **单渠道纪律**:agent 阻塞 `/wait` 期间发不出别的交互(会话被占);要结构化追问只在 `/wait` 返回后的 seam 做。一次只一个活跃渠道(浏览器轮 ⟂ 终端 revise)。
+- **用户须知(要在对用户的话术里说清)**:要实时对话,需让 agent **切到 live 监听**(它会**占住当前会话**,期间只做这件事);不切则消息排队,等 agent 下次在场批量处理。**真·无人值守自动应答 = 独立 daemon(本特性 Deferred,见 spec §8)**,不在看板核心内。
+
+> **这等于给 backlog 补一道人看 + 对话可编辑的 review gate**:树渲染出来给人审,选叶看详情,聊天里直接让 agent 改/迁/补。
 
 ---
 
