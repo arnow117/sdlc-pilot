@@ -54,17 +54,20 @@
 
 | 组件 | 实现 | 规范 |
 |------|------|------|
+| 整体布局 | flex 左右分栏 | 左树（可滚动）+ 右侧常驻聊天栏；<768 右栏收为底部抽屉 |
 | 树节点（三级折叠） | 原生 `<details>/<summary>` | domain→subdomain→leaf；零 JS 框架；键盘可达 |
-| 叶卡 | `<article>` | 显示 id / title / status 徽章 / priority pill / risk 点 / depends_on |
+| 叶卡（可选中） | `<article>` clickable | 显示 id / title / status 徽章 / priority pill / risk 点 / depends_on；点击=选中 |
 | status 徽章 | `<span>` | §2.1 语义色，圆角 4px |
 | coverage 条 | 顶部每 domain 一条 | shipped/total 占比，`--green` 填充 |
-| 右侧意见线程 | 复用 `annotate.css`/`annotate.js` | 每叶一条 thread；agent 回复显示「↩ agent」 |
+| 右侧聊天面板（chatbot） | 自建 `chat.css`/`chat.js`（内联） | 头部=选中叶 id+title；消息区你/agent 气泡；底部输入框+发送；per-leaf 会话 |
+| 消息气泡 | `.msg.user` / `.msg.agent` | user 右对齐 `--green-soft` 底；agent 左对齐 `--panel` 底+`--line` 边 |
 
 ## 5. 交互态（必须设计，不留默认）
 
 - `summary` hover：底色 `--green-soft` 淡入。
 - `summary` `:focus-visible`：2px `--green` 外框（键盘焦点可见）。
-- **选中叶**（右侧线程聚焦的那片）：左侧 3px `--green` 边 + 卡底 `--green-soft`。
+- **选中叶**（右侧聊天聚焦的那片）：左侧 3px `--green` 边 + 卡底 `--green-soft` + `aria-current="true"`；叶卡 hover 微亮、`:focus-visible` 2px green 框（键盘可选）。
+- **聊天输入框** `:focus`：边框转 `--green`；发送按钮 hover/active 态明确。
 - 折叠展开：`<details>` 原生；`prefers-reduced-motion: reduce` 时不加任何过渡动画。
 
 ## 6. a11y / 响应式
@@ -72,11 +75,11 @@
 - 对比：墨绿 `--ink` on 奶油 `--bg` ≥ WCAG AA；徽章文字与底色同样达 AA。
 - 键盘：原生 `<details>` summary 可 Tab/Enter；右侧意见层沿用 annotate.js 既有键盘行为。
 - `aria`：树用 `role` 默认语义即可（details/summary 自带）；选中叶加 `aria-current`。
-- **响应式**：≥768px 左右分栏（树 + 意见线程）；<768px 单列，意见线程折叠为底部抽屉/切换按钮。
+- **响应式**：≥768px 左右分栏（树 + 聊天栏）；<768px 单列，聊天栏收为底部抽屉/切换按钮（选中叶时弹出）。
 - 动效：仅用 `opacity`/`background`，不动 layout 属性；`reduced-motion` 一律关。
 
 ## 7. 复用边界
 
-- `board.css`（看板自身）定义 token + 树/叶/徽章/coverage。
-- `annotate.css`（web-review 现成）管右侧意见面板——**让它继承本文件的 CSS 变量**（同名 `--green` 等），视觉统一。
+- 看板 CSS/JS（token + 树/叶/徽章/coverage + 聊天面板）**全部内联**在 `board` 命令生成的 HTML 里（自包含、离线可开）。
+- 仅运行时依赖 web-review 的 `server.py`（同目录托管 + `/feedback`/`/wait`/`/rev`/`/replies.json` 静态服务）——**不依赖** annotate.css/js（聊天面板自建，不复用批注层 UI）。
 - 不引第三方 UI 库 / 模板引擎 / 网络字体（守可移植铁律：纯标准库生成、离线可开）。

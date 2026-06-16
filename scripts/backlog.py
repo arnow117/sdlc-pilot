@@ -187,17 +187,117 @@ details>summary:focus-visible{outline:2px solid var(--green);outline-offset:1px}
 .risk-high{background:var(--danger)}.risk-medium{background:var(--orange)}.risk-low{background:var(--muted)}
 .deps{font-style:italic}
 .empty{color:var(--muted);padding:48px;text-align:center}
-@media(max-width:768px){.board{padding:16px}.leaf{margin-left:16px}}
+/* 布局:左树 + 右侧常驻聊天栏 */
+.app{display:flex;gap:16px;max-width:1480px;margin:0 auto;align-items:flex-start;padding:0 16px}
+.board{flex:1;min-width:0;padding:24px 8px 80px;max-width:none;margin:0}
+.leaf{cursor:pointer}
+.leaf:hover{border-color:var(--green)}
+.leaf:focus-visible{outline:2px solid var(--green);outline-offset:1px}
+.leaf[aria-current="true"]{border-left:3px solid var(--green);background:var(--green-soft)}
+/* 聊天面板 */
+.chat-panel{width:380px;flex:none;position:sticky;top:16px;height:calc(100vh - 32px);
+  display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);
+  border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.chat-head{padding:12px 14px;border-bottom:1px solid var(--line);font-weight:600;font-size:13px}
+.chat-msgs{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:8px}
+.chat-empty{color:var(--muted);text-align:center;margin-top:48px;font-size:13px}
+.msg{max-width:85%;padding:8px 11px;border-radius:10px;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
+.msg.user{align-self:flex-end;background:var(--green-soft);border:1px solid var(--line)}
+.msg.agent{align-self:flex-start;background:var(--bg);border:1px solid var(--line)}
+.chat-box{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line)}
+.chat-box textarea{flex:1;resize:none;height:42px;border:1px solid var(--line);border-radius:6px;
+  padding:9px;font:13px/1.4 inherit;background:#fff}
+.chat-box textarea:focus{outline:none;border-color:var(--green)}
+.chat-box button{background:var(--green);color:#fff;border:0;border-radius:6px;padding:0 16px;
+  font-weight:600;cursor:pointer}
+.chat-box button:disabled{opacity:.5;cursor:not-allowed}
+.chat-box button:hover:not(:disabled){filter:brightness(1.06)}
+@media(max-width:768px){
+  .app{flex-direction:column;padding:0}
+  .board{padding:16px;width:100%}.leaf{margin-left:16px}
+  .chat-panel{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;height:62vh;
+    border-radius:12px 12px 0 0;transform:translateY(calc(100% - 46px));transition:transform .2s;z-index:50}
+  .chat-panel.open{transform:translateY(0)}
+  .chat-head{cursor:pointer}
+}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 """
 
-# Live mode 自刷新:轮询 /rev,值变即 reload(契约同 web-review/build.py 注入的 poller)。
-REV_POLLER = """<script>
-(function(){var last=null;setInterval(function(){
-  fetch('/rev',{cache:'no-store'}).then(function(r){return r.ok?r.text():null;}).then(function(t){
-    if(t==null)return;if(last===null){last=t;return;}if(t!==last)location.reload();
-  }).catch(function(){});
-},2000);})();
+# 聊天面板逻辑(自包含):点叶选中→该叶会话气泡;发送 POST /feedback;轮询 /replies.json 追加 agent 回复;
+# 轮询 /rev 树变即 reload;加载时读 /feedback-history.jsonl + /replies.json 重建线程(刷新不丢)。
+# 后端复用 web-review/server.py(/feedback /wait /rev + 静态文件),不依赖 annotate.*。
+CHAT_JS = """<script>
+(function(){
+  var current=null, threads={}, shown={};
+  var head=document.getElementById('chat-leaf'), msgs=document.getElementById('chat-msgs');
+  var input=document.getElementById('chat-input'), send=document.getElementById('chat-send');
+  var panel=document.getElementById('chat');
+  var seq=0; function genId(){seq++;return 'm'+seq+'_'+(new Date().getTime());}
+  function render(){
+    msgs.innerHTML='';
+    if(!current){msgs.innerHTML='<p class="chat-empty">点左侧一片需求叶，开始对话。</p>';return;}
+    (threads[current]||[]).forEach(function(m){
+      var d=document.createElement('div');d.className='msg '+m.role;d.textContent=m.text;msgs.appendChild(d);
+    });
+    msgs.scrollTop=msgs.scrollHeight;
+  }
+  function selectLeaf(id){
+    current=id;
+    document.querySelectorAll('.leaf').forEach(function(el){
+      el.setAttribute('aria-current', el.getAttribute('data-leaf')===id?'true':'false');});
+    head.textContent='\\uD83D\\uDCAC '+id;
+    input.disabled=false;send.disabled=false;
+    if(panel)panel.classList.add('open');
+    render();input.focus();
+  }
+  document.querySelectorAll('.leaf').forEach(function(el){
+    el.setAttribute('tabindex','0');
+    el.addEventListener('click',function(){selectLeaf(el.getAttribute('data-leaf'));});
+    el.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();selectLeaf(el.getAttribute('data-leaf'));}});
+  });
+  if(head)head.addEventListener('click',function(){if(panel&&window.innerWidth<=768)panel.classList.toggle('open');});
+  function doSend(){
+    var text=input.value.trim();if(!text||!current)return;
+    var id=genId();(threads[current]=threads[current]||[]).push({id:id,role:'user',text:text});
+    input.value='';render();
+    fetch('/feedback',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({id:id,leaf:current,message:text})}).catch(function(){});
+  }
+  if(send)send.addEventListener('click',doSend);
+  if(input)input.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();doSend();}});
+  function applyReplies(rep){
+    if(!rep)return;
+    Object.keys(rep).forEach(function(mid){
+      if(shown[mid])return;
+      for(var leaf in threads){
+        var t=threads[leaf],i=-1,k;
+        for(k=0;k<t.length;k++){if(t[k].id===mid){i=k;break;}}
+        if(i>=0){
+          var has=false;for(k=0;k<t.length;k++){if(t[k].id===mid+'-r'){has=true;break;}}
+          if(!has)t.splice(i+1,0,{id:mid+'-r',role:'agent',text:rep[mid]});
+          shown[mid]=true;break;
+        }
+      }
+    });
+    if(current)render();
+  }
+  function pollReplies(){fetch('/replies.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(applyReplies).catch(function(){});}
+  // 重建历史:用户消息来自 feedback-history.jsonl,agent 回复来自 replies.json
+  fetch('/feedback-history.jsonl',{cache:'no-store'}).then(function(r){return r.ok?r.text():'';}).then(function(txt){
+    (txt||'').split('\\n').forEach(function(line){
+      if(!line.trim())return;var rec;try{rec=JSON.parse(line);}catch(e){return;}
+      if(!rec.leaf||!rec.id)return;var t=threads[rec.leaf]=threads[rec.leaf]||[];
+      var dup=false,k;for(k=0;k<t.length;k++){if(t[k].id===rec.id){dup=true;break;}}
+      if(!dup)t.push({id:rec.id,role:'user',text:rec.message||''});
+    });
+    pollReplies();
+  }).catch(function(){pollReplies();});
+  setInterval(pollReplies,3000);
+  var lastRev=null;
+  setInterval(function(){fetch('/rev',{cache:'no-store'}).then(function(r){return r.ok?r.text():null;}).then(function(t){
+    if(t==null)return;if(lastRev===null){lastRev=t;return;}if(t!==lastRev)location.reload();}).catch(function(){});},2000);
+  render();
+})();
 </script>"""
 
 
@@ -238,7 +338,8 @@ def render_board(tree, title="Backlog 需求树看板"):
                     deps_html = (f'<span class="deps">依赖: {esc(", ".join(deps))}</span>'
                                  if deps else "")
                     lvs.append(
-                        f'<section class="leaf" id="{lid}" aria-current="false">'
+                        f'<section class="leaf" id="{lid}" data-leaf="{lid}" '
+                        f'aria-current="false">'
                         f'<h2>{lid} · {esc(lf.get("title") or "")}</h2>'
                         f'<div class="meta">'
                         f'<span class="badge status-{_css_safe(st)}">{esc(st)}</span>'
@@ -254,15 +355,24 @@ def render_board(tree, title="Backlog 需求树看板"):
                 + "".join(subs) + "</details>")
         body = "".join(doms)
 
+    chat_panel = (
+        '<aside class="chat-panel" id="chat">'
+        '<div class="chat-head" id="chat-leaf">💬 选择一片需求叶</div>'
+        '<div class="chat-msgs" id="chat-msgs">'
+        '<p class="chat-empty">点左侧一片需求叶，开始对话。</p></div>'
+        '<div class="chat-box">'
+        '<textarea id="chat-input" placeholder="问 / 改这片叶…（Enter 发送，Shift+Enter 换行）" '
+        'disabled></textarea>'
+        '<button id="chat-send" disabled>发送</button></div></aside>'
+    )
     return (
         f'<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">'
         f'<meta name="viewport" content="width=device-width,initial-scale=1">'
-        f'<title>{esc(title)}</title><style>{BOARD_CSS}</style>'
-        f'<link rel="stylesheet" href="annotate.css"></head><body>'
-        f'<div class="board"><h1>{esc(title)}</h1>'
+        f'<title>{esc(title)}</title><style>{BOARD_CSS}</style></head><body>'
+        f'<div class="app"><div class="board"><h1>{esc(title)}</h1>'
         f'<div class="sub">共 {summ["total"]} 条需求 · ready {summ["ready_count"]} 条</div>'
-        f'{cov_html}{body}</div>'
-        f'<script src="annotate.js"></script>{REV_POLLER}</body></html>'
+        f'{cov_html}{body}</div>{chat_panel}</div>'
+        f'{CHAT_JS}</body></html>'
     )
 
 

@@ -282,7 +282,7 @@ class MoveTest(unittest.TestCase):
 
 
 class BoardTest(unittest.TestCase):
-    def test_renders_tree_and_injects_annotate(self):
+    def test_renders_tree_with_chat_panel(self):
         with tempfile.TemporaryDirectory() as root:
             write_leaf(root, "order.checkout.a", status="shipped", title="结算下单")
             write_leaf(root, "user.auth.b", status="captured")
@@ -292,12 +292,20 @@ class BoardTest(unittest.TestCase):
             html = _read(out)
             self.assertIn("order.checkout.a", html)
             self.assertIn("结算下单", html)
-            self.assertIn("<details", html)            # 折叠结构
-            self.assertIn("status-shipped", html)       # 状态徽章类
-            self.assertIn("--green:", html)             # DESIGN token
-            self.assertIn("annotate.css", html)         # 注入
-            self.assertIn("annotate.js", html)
-            self.assertIn("/rev", html)                 # 自刷新轮询
+            self.assertIn("<details", html)              # 折叠树结构
+            self.assertIn("status-shipped", html)         # 状态徽章类
+            self.assertIn("--green:", html)               # DESIGN token
+            # 叶卡可选中(点击 → 聊天)
+            self.assertIn('data-leaf="order.checkout.a"', html)
+            # 右侧聊天面板(替代批注层)
+            self.assertIn("chat-panel", html)
+            self.assertIn("chat-input", html)
+            # 实时回路:发送 POST /feedback、轮询 /replies.json 与 /rev
+            self.assertIn("/feedback", html)
+            self.assertIn("/replies.json", html)
+            self.assertIn("/rev", html)
+            # 不再注入 annotate 批注层(改用自建聊天)
+            self.assertNotIn("annotate.js", html)
 
     def test_empty_tree_placeholder(self):
         with tempfile.TemporaryDirectory() as root:
