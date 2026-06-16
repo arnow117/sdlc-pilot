@@ -2,6 +2,19 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.13.0] — 2026-06-16
+
+### Added
+- **★Retire 标源叶 shipped 时，把 evolution entry 也写进该源叶 `## sdlc 记录` 段**：当退场特性源自需求树（有 `--leaf`）且有 `--evolution-entry` 时，同一条蒸馏教训除 append `.sdlc/EVOLUTION.md`（全局流水，不变）外，**也 append 进该源叶 `.md` 的 `## sdlc 记录` 段**（段缺则建）——使 `.sdlc/requirements/` 需求树成为**带 sdlc 记录的活档案**，每片叶随身携带它 ship 时的耐久结论。新增 `_append_leaf_sdlc_log(leaf_path, entry)`；`cmd_retire` JSON 输出加 `leaf_evolution` 字段。`scripts/test_backlog.py` `RetireTest` +4 用例（挂叶正路径 / 无 entry 不挂 / 段已存在追加不重复建头 / 无叶仅 EVOLUTION）。
+
+### Changed
+- `_mark_leaf_shipped(req_root, leaf_id)` **返回命中叶的绝对路径或 None**（替代原 bool）——供 cmd_retire 拿路径做叶挂载；`leaf_shipped = path is not None` 语义不变。内部重构，无外部调用方。
+
+### Notes
+- 全 **additive**：未加顶层 skill、未动 stage 枚举/routing/STATE 模板/契约。**降级**：无 `--leaf` / 叶未命中 / 无 entry → 不挂（= 旧行为）；sdlc-pilot 自身无需求树 → 永不触发。**幂等**沿用 retire 的 archive-exists 守卫。EVOLUTION.md 行为完全不变。
+- 文档：`sdlc-backlog/SKILL.md §6` Retire 四步表 ③ + 回流目标段 + 顶部 op 描述已同步。driver §2/§4 的 Retire **高层**描述不赘述此 op 子细节（细节归 backlog SKILL，避免 driver 膨胀；其既存 PROFILE/EVOLUTION 措辞本特性不动）。
+- dogfood：用 sdlc-pilot 自己 `/sdlc` 流程开发（worktree-free，feat/evolution-leaf-attach，spec+plan 走网页审）。distilled-from: `session:sdlc-evolution-leaf-attach-2026-06-16`。
+
 ## [0.12.0] — 2026-06-16
 
 ### Added

@@ -7,7 +7,7 @@ description: >
   Ready-queue(派生解依赖的就绪叶 → 喂给未来的 sdlc-loop)、Lint(断依赖/重复/孤儿/缺字段)、
   视图导出(Tree=整树嵌套 JSON 给 agent / Board=折叠树 HTML 看板给人看,复用 web-review annotate 补 review gate)、
   Move(叶迁域:mv 文件+改 id/domain_path+改写依赖)、
-  Retire(特性 done 退场:归档工件/回流教训/标源叶 shipped/清栈——backlog 因此成为特性生命周期的两端书挡)。
+  Retire(特性 done 退场:归档工件/回流教训到 EVOLUTION/标源叶 shipped 并把同条教训写进该叶 `## sdlc 记录`/清栈——backlog 因此成为特性生命周期的两端书挡)。
   触发于:用户说 "建需求树"、"管理需求 backlog"、"散点需求记一下/归档"、"Ingest 这条需求"、
   "老系统重写要把功能点都列出来"、"迁移覆盖到哪了"、"选下一条需求做"、"sdlc-backlog";
   driver 在检测到 <target-repo>/.sdlc/requirements/ 存在且无进行中特性时也路由到此。
@@ -255,7 +255,7 @@ python3 <bk> move --root <root> --leaf <leaf-id> --to <domain>/<subdomain>
 |---|---|---|---|
 | ① 归档 | `.sdlc/{spec.md,plan.md,validate,review,STATE.md}` → `.sdlc/archive/<date>-<slug>/` | 脚本 | 全部特性 |
 | ② 回流 | 从 `STATE.Decisions log` 蒸馏**耐久**决策/教训/新风险成一行,append `.sdlc/EVOLUTION.md` | **模型蒸馏** + 脚本追加 | 全部特性 |
-| ③ 标 shipped | 源叶 `status=shipped` → ready-queue 自动解锁下游叶 | 脚本(`--leaf`+`--req-root`) | **仅** 源自需求树的特性 |
+| ③ 标 shipped + 写叶 sdlc 记录 | 源叶 `status=shipped` → ready-queue 自动解锁下游叶;**若同时传了 `--evolution-entry`,同条也 append 进该源叶 `.md` 的 `## sdlc 记录` 段**(使需求树成带 sdlc 记录的活档案——每叶随身记着它 ship 时的耐久教训) | 脚本(`--leaf`+`--req-root`[+`--evolution-entry`]) | **仅** 源自需求树的特性 |
 | ④ 清栈 | STATE.md 随①移走 → 顶层留空,交还给下个特性 | 脚本(随①完成) | 全部特性 |
 
 ```
@@ -267,6 +267,8 @@ python3 <bk> retire --sdlc <target>/.sdlc --slug <feat> --date <YYYY-MM-DD> \
 **确定性 vs 判断性**:文件移动 / 标 shipped / 追加 = 脚本(确定性,命令即交付)。**"哪些决策值得回流"= 模型判断**——判据:**跨特性仍成立**的架构/契约决策、踩过的坑、新发现的风险才回流;一次性实现细节**不**回流。模型据此从 Decisions log 蒸馏出一行,经 `--evolution-entry` 传入(或直接编辑目标文件)。
 
 **回流目标(②)**:唯一正屋 = `<sdlc>/EVOLUTION.md`(脚本统一 append,缺则建 `# Evolution log` 头)。`PROFILE.md` **不承载流水**,仅留一行指针(见 PROFILE 模板)——因 Evolution log 是无界流水、PROFILE 六节是有界快照,本性不同故分文件。这是长寿、可跨会话/sub-agent 复用的"演进记忆",区别于 archive(本地工件留存)。
+
+**叶挂载(③ 的附带)**:当 `--leaf` 命中且有 `--evolution-entry` 时,脚本把**同一条** entry 也 append 进该源叶的 `## sdlc 记录` 段(段缺则建)。EVOLUTION.md 是**全局**流水,叶 `## sdlc 记录` 是**该需求**的本地记录——二者并行、互不替代。无叶或无 entry → 不挂(降级)。`_mark_leaf_shipped` 命中返回叶路径供此挂载;retire 仍是该时刻唯一写者。
 
 **优雅降级**:无 `requirements/` 树、或特性非源自叶(无 `source-leaf`)→ 跳过③,①②④照做(脚本 `--leaf`/`--req-root` 缺省即跳过)。
 
