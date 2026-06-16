@@ -89,6 +89,53 @@ def cmd_readyqueue(root):
     return 0
 
 
+TREE_LEAF_KEYS = [
+    "id", "title", "status", "priority", "risk_level",
+    "depends_on", "old_system_ref", "new_domain_path", "cross_link",
+]
+
+
+def build_tree(leaves):
+    """把扁平叶 list 组装成 domain→subdomain→leaf 嵌套树 + summary。board 与 tree 共用。"""
+    by_id = {lf.get("id"): lf for lf in leaves}
+
+    def _is_ready(lf):
+        if lf.get("status") == SHIPPED:
+            return False
+        deps = lf.get("depends_on") or []
+        return all(by_id.get(d, {}).get("status") == SHIPPED for d in deps)
+
+    doms = {}            # domain -> {subdomain -> [leaf dict]}（dict 保序）
+    by_status = {}
+    for lf in leaves:
+        dp = lf.get("domain_path") or os.path.dirname(lf.get("_path", ""))
+        parts = dp.split("/") if dp else [""]
+        dom = parts[0] or "(未分类)"
+        sub = parts[1] if len(parts) > 1 else "(根)"
+        doms.setdefault(dom, {}).setdefault(sub, []).append(
+            {k: lf.get(k) for k in TREE_LEAF_KEYS})
+        st = lf.get("status", "unknown")
+        by_status[st] = by_status.get(st, 0) + 1
+    domains = [
+        {"domain": dom,
+         "subdomains": [{"subdomain": sub, "leaves": lvs} for sub, lvs in subs.items()]}
+        for dom, subs in doms.items()
+    ]
+    return {
+        "domains": domains,
+        "summary": {
+            "total": len(leaves),
+            "by_status": by_status,
+            "ready_count": sum(1 for lf in leaves if _is_ready(lf)),
+        },
+    }
+
+
+def cmd_tree(root):
+    print(json.dumps(build_tree(load_leaves(root)), ensure_ascii=False, indent=2))
+    return 0
+
+
 def cmd_coverage(root):
     leaves = load_leaves(root)
     cov = {}
@@ -196,7 +243,7 @@ def cmd_retire(args):
 def main(argv=None):
     ap = argparse.ArgumentParser(description="sdlc-backlog 需求树派生操作")
     sub = ap.add_subparsers(dest="cmd", required=True)
-    for name in ("readyqueue", "coverage", "lint"):
+    for name in ("readyqueue", "coverage", "lint", "tree"):
         p = sub.add_parser(name)
         p.add_argument("--root", required=True, help=".sdlc/requirements 目录")
     pr = sub.add_parser("retire", help="特性退场:归档 + 标叶 shipped + 回流 + 清栈")
@@ -214,7 +261,7 @@ def main(argv=None):
         print(f"root 不存在: {args.root}", file=sys.stderr)
         return 2
     return {"readyqueue": cmd_readyqueue, "coverage": cmd_coverage,
-            "lint": cmd_lint}[args.cmd](args.root)
+            "lint": cmd_lint, "tree": cmd_tree}[args.cmd](args.root)
 
 
 if __name__ == "__main__":

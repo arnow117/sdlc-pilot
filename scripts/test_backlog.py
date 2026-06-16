@@ -223,5 +223,30 @@ class RetireTest(unittest.TestCase):
                 os.path.join(sdlc, "archive", "2026-06-16-feat", "spec.md")))
 
 
+class TreeTest(unittest.TestCase):
+    def test_nests_and_counts(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "order.checkout.a", status="shipped", priority="P1")
+            write_leaf(root, "order.checkout.b", depends_on="[order.checkout.a]")
+            write_leaf(root, "user.auth.c", status="built")
+            r = run("tree", root=root)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            t = json.loads(r.stdout)
+            doms = {d["domain"]: d for d in t["domains"]}
+            self.assertEqual(set(doms), {"order", "user"})
+            subs = doms["order"]["subdomains"]
+            ids = [lf["id"] for s in subs for lf in s["leaves"]]
+            self.assertIn("order.checkout.a", ids)
+            self.assertEqual(t["summary"]["total"], 3)
+            self.assertEqual(t["summary"]["by_status"]["shipped"], 1)
+            self.assertEqual(t["summary"]["ready_count"], 2)  # a shipped→不入; b解锁; c无dep
+
+    def test_empty_tree_ok(self):
+        with tempfile.TemporaryDirectory() as root:
+            r = run("tree", root=root)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            self.assertEqual(json.loads(r.stdout)["summary"]["total"], 0)
+
+
 if __name__ == "__main__":
     unittest.main()
