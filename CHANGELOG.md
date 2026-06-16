@@ -2,6 +2,24 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.12.0] — 2026-06-16
+
+### Added
+- **★`sdlc-backlog` 需求树看板（双表征 + 实时对话编辑）**：给 `scripts/backlog.py` 加三命令——
+  - **`tree`**：把整棵需求树导成 `domain→subdomain→leaf` 嵌套 JSON + `summary`（total/by_status/ready_count），给 agent 一次拿全貌（与 readyqueue/coverage 的切片互补）。内部 `build_tree(leaves)` 与 board 共用（DRY）。
+  - **`board`**：渲染**自包含 HTML 看板**（纯标准库拼装、无模板引擎/网络字体、离线可开）——左侧三级折叠树（原生 `<details>`，叶卡含 status 徽章/priority/risk/依赖 + 每 domain coverage 进度条），`</head>`/`</body>` 注入 `web-review` 的 `annotate.css`/`annotate.js` + `/rev` 自刷新。复用 web-review **Live mode** 把页面当 agent 的眼睛和手（划词请求→agent 改树/答疑→页面刷新）= **给 backlog 补一道人看 + 可编辑的 review gate**。只读渲染。
+  - **`move`**：叶迁域（mv 文件 + 改 `id`/`domain_path` + **改写全树 `depends_on` 引用**），幂等拒覆盖。`backlog.py` 第 2 个**写树** op（retire 之后）。
+- **★仓根 `DESIGN.md`（首次建立设计契约）**：sdlc-pilot 网页类产物的视觉/交互宪法——风格方向（暖色编辑感 + 硬投影）、色板 token（奶油/鼠尾草绿 + status/priority 语义色）、字体/8px 间距、组件、交互态（hover/focus-visible/选中叶）、a11y（对比 AA / 原生 details 键盘 / reduced-motion）、响应式。`design` 角色卡评审以它为基准。
+- **`examples/requirements-fixture/`**：3 domain / 6 叶的示例需求树（含依赖链 + 多 status），供 board e2e 与演示；`lint` clean。
+
+### Changed
+- `sdlc-backlog/SKILL.md`：顶部 op 枚举加 Tree/Board/Move；新增 §4.4 Tree、§4.5 Board、§5 Move 章节；Retire 顺延为 §6（出口→§7、边界→§8）。
+
+### Notes
+- 全 **additive**：未加顶层 skill（tree/board/move 是 backlog 的 op）、未动 stage 枚举、未动 role-routing。守三铁律（可移植纯标准库 / 纯文件单写者 / 不加顶层 skill）。
+- chatbot = agent 经 web-review Live mode 驱动（**不引独立 AI 后端**）。**Deferred**：工程→需求树自动生成器（backlog Seed 升级）、独立 AI 看板应用、自由聊天流。
+- dogfood：本特性用 sdlc-pilot 自己的 `/sdlc` 流程开发（独立 worktree `feat/backlog-review-board`）。distilled-from: `session:sdlc-backlog-board-2026-06-16`。
+
 ## [0.11.0] — 2026-06-16
 
 ### Added
