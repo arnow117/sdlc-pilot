@@ -306,6 +306,21 @@ class BoardTest(unittest.TestCase):
             self.assertIn("/rev", html)
             # 不再注入 annotate 批注层(改用自建聊天)
             self.assertNotIn("annotate.js", html)
+            # 叶详情数据嵌入(选叶后面板顶部显示字段+正文)
+            self.assertIn("leaf-data", html)
+            self.assertIn("test leaf order.checkout.a", html)   # 正文进了详情数据
+
+    def test_board_embeds_leaf_body_and_fields(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "order.checkout.a", old_system_ref="legacy/CartServlet",
+                       depends_on="[order.checkout.x]")
+            write_leaf(root, "order.checkout.x")
+            out = os.path.join(root, "_board.html")
+            r = run("board", "--out", out, root=root)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            html = _read(out)
+            self.assertIn("legacy/CartServlet", html)            # old_system_ref 入详情
+            self.assertIn("order.checkout.x", html)              # depends_on 入详情
 
     def test_empty_tree_placeholder(self):
         with tempfile.TemporaryDirectory() as root:

@@ -49,8 +49,19 @@ def parse_frontmatter(text):
     return fm
 
 
+def _extract_body(text):
+    """取 frontmatter 之后的正文(需求描述/验收线索/老系统参照)。无 frontmatter 则返回全文。"""
+    lines = text.splitlines()
+    if not lines or lines[0].strip() != "---":
+        return text.strip()
+    for i in range(1, len(lines)):
+        if lines[i].strip() == "---":
+            return "\n".join(lines[i + 1:]).strip()
+    return ""
+
+
 def load_leaves(root):
-    """返回叶 list:每个 = {fields..., _path, _depth(相对 root 的目录层数)}。跳过 _ 前缀与 _index。"""
+    """返回叶 list:每个 = {fields..., _path, _depth, _body}。跳过 _ 前缀与 _index。"""
     leaves = []
     for dirpath, _dirs, files in os.walk(root):
         for fn in files:
@@ -58,10 +69,12 @@ def load_leaves(root):
                 continue
             full = os.path.join(dirpath, fn)
             with open(full, encoding="utf-8") as f:
-                fm = parse_frontmatter(f.read())
+                text = f.read()
+            fm = parse_frontmatter(text)
             rel = os.path.relpath(full, root)
             fm["_path"] = rel
             fm["_depth"] = len(os.path.dirname(rel).split(os.sep)) if os.path.dirname(rel) else 0
+            fm["_body"] = _extract_body(text)
             leaves.append(fm)
     return leaves
 
@@ -199,6 +212,14 @@ details>summary:focus-visible{outline:2px solid var(--green);outline-offset:1px}
   display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);
   border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
 .chat-head{padding:12px 14px;border-bottom:1px solid var(--line);font-weight:600;font-size:13px}
+.chat-detail{padding:0 14px;border-bottom:1px solid var(--line);max-height:40%;overflow:auto}
+.chat-detail:empty{display:none}
+.ld-title{font-size:13px;font-weight:600;margin:10px 0 6px}
+.ld-badges{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
+.ld-risk{font-size:11px;color:var(--muted)}
+.ld-meta{font-size:11px;color:var(--muted);margin-bottom:6px;word-break:break-word}
+.ld-body{font-size:12px;line-height:1.55;white-space:pre-wrap;color:var(--ink);background:var(--bg);
+  border:1px solid var(--line);border-radius:6px;padding:8px;margin-bottom:10px}
 .chat-msgs{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:8px}
 .chat-empty{color:var(--muted);text-align:center;margin-top:48px;font-size:13px}
 .msg{max-width:85%;padding:8px 11px;border-radius:10px;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
@@ -231,8 +252,22 @@ CHAT_JS = """<script>
   var current=null, threads={}, shown={};
   var head=document.getElementById('chat-leaf'), msgs=document.getElementById('chat-msgs');
   var input=document.getElementById('chat-input'), send=document.getElementById('chat-send');
-  var panel=document.getElementById('chat');
+  var panel=document.getElementById('chat'), detailEl=document.getElementById('chat-detail');
   var seq=0; function genId(){seq++;return 'm'+seq+'_'+(new Date().getTime());}
+  var LEAFDATA={}; try{LEAFDATA=JSON.parse(document.getElementById('leaf-data').textContent||'{}');}catch(e){}
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+  function csss(s){return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
+  function renderDetail(){
+    if(!current||!LEAFDATA[current]){detailEl.innerHTML='';return;}
+    var d=LEAFDATA[current], deps=(d.depends_on||[]).join(', ')||'无';
+    detailEl.innerHTML=
+      '<div class="ld-title">'+esc(d.title)+'</div>'+
+      '<div class="ld-badges"><span class="badge status-'+csss(d.status)+'">'+esc(d.status)+'</span>'+
+      '<span class="prio prio-'+esc(d.priority)+'">'+esc(d.priority)+'</span>'+
+      '<span class="ld-risk">risk: '+esc(d.risk_level)+'</span></div>'+
+      '<div class="ld-meta">域: '+esc(d.domain_path)+' · old: '+esc(d.old_system_ref||'—')+' · 依赖: '+esc(deps)+'</div>'+
+      '<div class="ld-body">'+esc(d.body)+'</div>';
+  }
   function render(){
     msgs.innerHTML='';
     if(!current){msgs.innerHTML='<p class="chat-empty">点左侧一片需求叶，开始对话。</p>';return;}
@@ -248,7 +283,7 @@ CHAT_JS = """<script>
     head.textContent='\\uD83D\\uDCAC '+id;
     input.disabled=false;send.disabled=false;
     if(panel)panel.classList.add('open');
-    render();input.focus();
+    renderDetail();render();input.focus();
   }
   document.querySelectorAll('.leaf').forEach(function(el){
     el.setAttribute('tabindex','0');
@@ -306,10 +341,29 @@ def _css_safe(s):
     return re.sub(r"[^a-z0-9]", "", str(s or "").lower())
 
 
-def render_board(tree, title="Backlog 需求树看板"):
-    """整树 → 自包含 HTML 看板(左折叠树 + 注入 web-review annotate 层 + rev 自刷新)。只读渲染。"""
+DETAIL_KEYS = ["title", "status", "priority", "risk_level", "domain_path",
+               "old_system_ref", "new_domain_path", "depends_on", "cross_link"]
+
+
+def _leaf_detail_map(leaves):
+    """{id: {字段... + body}} —— 供聊天面板"叶详情"显示(选叶后看清需求内容)。"""
+    detail = {}
+    for lf in leaves:
+        lid = lf.get("id")
+        if not lid:
+            continue
+        d = {k: lf.get(k) for k in DETAIL_KEYS}
+        d["body"] = lf.get("_body", "")
+        detail[lid] = d
+    return detail
+
+
+def render_board(tree, leaves, title="Backlog 需求树看板"):
+    """整树 → 自包含 HTML 看板(左折叠树 + 右聊天面板 + 叶详情 + Live 回路)。只读渲染。"""
     esc = html.escape
     summ = tree["summary"]
+    # 叶详情数据嵌入(防 </script> 注入:转义 </)
+    leaf_data_json = json.dumps(_leaf_detail_map(leaves), ensure_ascii=False).replace("</", "<\\/")
     cov_items = []
     for d in tree["domains"]:
         leaves = [lf for sub in d["subdomains"] for lf in sub["leaves"]]
@@ -358,6 +412,7 @@ def render_board(tree, title="Backlog 需求树看板"):
     chat_panel = (
         '<aside class="chat-panel" id="chat">'
         '<div class="chat-head" id="chat-leaf">💬 选择一片需求叶</div>'
+        '<div class="chat-detail" id="chat-detail"></div>'
         '<div class="chat-msgs" id="chat-msgs">'
         '<p class="chat-empty">点左侧一片需求叶，开始对话。</p></div>'
         '<div class="chat-box">'
@@ -365,6 +420,7 @@ def render_board(tree, title="Backlog 需求树看板"):
         'disabled></textarea>'
         '<button id="chat-send" disabled>发送</button></div></aside>'
     )
+    leaf_data = f'<script type="application/json" id="leaf-data">{leaf_data_json}</script>'
     return (
         f'<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">'
         f'<meta name="viewport" content="width=device-width,initial-scale=1">'
@@ -372,15 +428,16 @@ def render_board(tree, title="Backlog 需求树看板"):
         f'<div class="app"><div class="board"><h1>{esc(title)}</h1>'
         f'<div class="sub">共 {summ["total"]} 条需求 · ready {summ["ready_count"]} 条</div>'
         f'{cov_html}{body}</div>{chat_panel}</div>'
-        f'{CHAT_JS}</body></html>'
+        f'{leaf_data}{CHAT_JS}</body></html>'
     )
 
 
 def cmd_board(args):
-    tree = build_tree(load_leaves(args.root))
+    leaves = load_leaves(args.root)
+    tree = build_tree(leaves)
     out = args.out or os.path.join(args.root, "_board.html")
     with open(out, "w", encoding="utf-8") as f:
-        f.write(render_board(tree))
+        f.write(render_board(tree, leaves))
     print(json.dumps({"board": out, "domains": len(tree["domains"]),
                       "total": tree["summary"]["total"]}, ensure_ascii=False))
     return 0
