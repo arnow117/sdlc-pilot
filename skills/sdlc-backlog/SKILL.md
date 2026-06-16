@@ -165,6 +165,7 @@ Seed 只建空骨架靠人 Ingest。Generate 把它升级为**分析已有 codeb
 1. **阶段1(orchestrator 单趟,便宜)**:从 surface-map + 业务线索/契约归纳【功能域列表】(domain 骨架)。**域列表可先给人审一眼**再 fan-out(防分析方向跑偏后白跑 N 个 agent)。
 2. **阶段2(fan-out,并行)**:**一功能域一 agent**,各自深读该域相关代码/契约 → 产该域用户故事叶(含 status/depends_on/4 交叉字段),**各写各的草稿** `<tmp>/gen/<domain>.json`,**互相隔离**(不把一个域的产出喂给另一个 → 避免锚定)。无 Task → 串行 inline 逐域跑同一规程。
 3. **合并(orchestrator,单写者)**:跨域去重 + 跨域 `cross_link`(一个故事跨 2 域)+ 跨域 `depends_on` 保无环 + 每域叶数上限 → 汇成一份 merged tree JSON。
+   - **★规范化门(write-tree 前必做,dogfood 教训)**:fan-out agent 的原始输出**常不严格合 schema**——逐叶规范化:`priority` 必 ∈ {P0,P1,P2,P3}(误填 high/medium/low → 映射 P1/P2/P3);`domain_path` 必**斜杠分隔且 ≥2 级**(误用点号 `a.b` → 改 `a/b`;单级 → 补子域如 `<x>/general`);`new_domain_path` 必是**域路径非代码路径**(误填 `apps/...` → 回填 = `domain_path`);`failure_class` 若存在必 ∈ {funds,consistency,compliance,experience};`contract_refs` 必 list。不合规就地修或回退该叶。**否则 `write-tree` 落盘后 `lint` 必挂**。
 4. **人审预览(硬闸)**:把 merged tree 渲染成 #4 `board` 看板(或网页审)让人**剪枝/改/确认** —— 生成质量不稳时,人在落盘前把关。
 5. **落盘**:`python3 <bk> write-tree --root <root> --from <merged.json>`(机械写叶,已存在跳过)→ `python3 <bk> lint --root <root>` 必须 clean。
 
