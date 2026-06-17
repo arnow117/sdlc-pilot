@@ -390,6 +390,16 @@ class BoardTest(unittest.TestCase):
             self.assertNotIn("<script>alert(1)</script>", html)   # 未原样出现
             self.assertIn("&lt;script&gt;", html)                 # 已转义
 
+    def test_board_leafdata_has_cross_fields(self):
+        with tempfile.TemporaryDirectory() as root:
+            _write_leaf_extra(root, "order.checkout.a", "actor: 采购\nfailure_class: funds\n")
+            out = os.path.join(root, "_b.html")
+            r = run("board", "--out", out, root=root)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            html = _read(out)
+            self.assertIn('"actor"', html)     # leaf-data JSON 含交叉字段
+            self.assertIn("ld-cross", html)     # 详情渲染交叉行(JS/CSS 容器)
+
     def test_board_embeds_leaf_body_and_fields(self):
         with tempfile.TemporaryDirectory() as root:
             write_leaf(root, "order.checkout.a", old_system_ref="legacy/CartServlet",
@@ -408,6 +418,96 @@ class BoardTest(unittest.TestCase):
             r = run("board", "--out", out, root=root)
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertIn("暂无需求", _read(out))
+
+
+def _write_leaf_extra(root, id, extra_lines):
+    """写一片叶,frontmatter 末尾插入 extra_lines(用于测可选交叉字段)。"""
+    domain_path = "/".join(id.split(".")[:2])
+    d = os.path.join(root, *domain_path.split("/"))
+    os.makedirs(d, exist_ok=True)
+    fm = (f"---\nid: {id}\ntitle: t\ndomain_path: {domain_path}\ncross_link: []\n"
+          f"old_system_ref: r-{id}\nnew_domain_path: {domain_path}\nstatus: captured\n"
+          f"priority: P2\ndepends_on: []\nrisk_level: medium\nupdated: 2026-06-16\n"
+          + extra_lines + "---\n\n## 需求描述\nx\n")
+    with open(os.path.join(d, id + ".md"), "w", encoding="utf-8") as f:
+        f.write(fm)
+
+
+class LintCrossFieldTest(unittest.TestCase):
+    def test_valid_cross_fields_clean(self):
+        with tempfile.TemporaryDirectory() as root:
+            _write_leaf_extra(root, "order.checkout.a",
+                "actor: 运营\nfailure_class: funds\n"
+                "contract_refs: [contracts/provided/bff]\ndata_owner: order-svc\n")
+            r = run("lint", root=root)
+            self.assertEqual(r.returncode, 0, r.stdout + r.stderr)
+
+    def test_no_cross_fields_still_clean(self):  # 存量树不受影响
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "order.checkout.a")
+            self.assertEqual(run("lint", root=root).returncode, 0)
+
+    def test_bad_failure_class_flagged(self):
+        with tempfile.TemporaryDirectory() as root:
+            _write_leaf_extra(root, "order.checkout.a", "failure_class: 乱写\n")
+            r = run("lint", root=root)
+            self.assertNotEqual(r.returncode, 0)
+            self.assertIn("bad-failure-class", r.stdout + r.stderr)
+
+
+class WriteTreeTest(unittest.TestCase):
+    def test_writes_leaves_with_optional_fields(self):
+        with tempfile.TemporaryDirectory() as root:
+            tree = {"leaves": [
+                {"id": "order.checkout.place", "title": "作为采购我要下单以便采货",
+                 "domain_path": "order/checkout", "cross_link": [],
+                 "old_system_ref": "apps/api/modules/order", "new_domain_path": "order/checkout",
+                 "status": "captured", "priority": "P1", "depends_on": [], "risk_level": "high",
+                 "actor": "采购", "failure_class": "consistency",
+                 "contract_refs": ["contracts/provided/bff"], "data_owner": "order-svc"}]}
+            fp = os.path.join(root, "tree.json")
+            with open(fp, "w", encoding="utf-8") as f:
+                json.dump(tree, f, ensure_ascii=False)
+            r = run("write-tree", "--from", fp, root=root)
+            self.assertEqual(r.returncode, 0, r.stderr)
+            leaf = _read(os.path.join(root, "order", "checkout", "order.checkout.place.md"))
+            self.assertIn("id: order.checkout.place", leaf)
+            self.assertIn("failure_class: consistency", leaf)
+            self.assertIn("actor: 采购", leaf)
+            self.assertIn("作为采购我要下单", leaf)
+            self.assertEqual(run("lint", root=root).returncode, 0, "写出的树应 lint clean")
+            self.assertEqual(json.loads(r.stdout)["written"], 1)
+
+    def test_rejects_path_traversal(self):
+        with tempfile.TemporaryDirectory() as root:
+            tree = {"leaves": [
+                {"id": "x.y.a", "title": "t", "domain_path": "../../etc", "cross_link": [],
+                 "old_system_ref": "r", "new_domain_path": "x/y", "status": "captured",
+                 "priority": "P2", "depends_on": [], "risk_level": "low"},
+                {"id": "../../evil", "title": "t", "domain_path": "x/y", "cross_link": [],
+                 "old_system_ref": "r", "new_domain_path": "x/y", "status": "captured",
+                 "priority": "P2", "depends_on": [], "risk_level": "low"}]}
+            fp = os.path.join(root, "t.json")
+            with open(fp, "w", encoding="utf-8") as f:
+                json.dump(tree, f, ensure_ascii=False)
+            r = run("write-tree", "--from", fp, root=root)
+            self.assertEqual(json.loads(r.stdout)["written"], 0)   # 两条都被拒
+            self.assertEqual(json.loads(r.stdout)["skipped"], 2)
+            self.assertFalse(os.path.exists(os.path.join(root, "..", "etc")))  # 未逃出 root
+
+    def test_skips_existing_leaf(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "order.checkout.a", title="原有")
+            tree = {"leaves": [{"id": "order.checkout.a", "title": "新的",
+                "domain_path": "order/checkout", "cross_link": [], "old_system_ref": "r",
+                "new_domain_path": "order/checkout", "status": "captured", "priority": "P2",
+                "depends_on": [], "risk_level": "low"}]}
+            fp = os.path.join(root, "t.json")
+            with open(fp, "w", encoding="utf-8") as f:
+                json.dump(tree, f, ensure_ascii=False)
+            r = run("write-tree", "--from", fp, root=root)
+            self.assertEqual(json.loads(r.stdout)["skipped"], 1)
+            self.assertIn("原有", _read(os.path.join(root, "order", "checkout", "order.checkout.a.md")))
 
 
 if __name__ == "__main__":

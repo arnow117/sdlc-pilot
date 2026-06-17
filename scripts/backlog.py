@@ -24,6 +24,10 @@ REQUIRED_FIELDS = [
     "new_domain_path", "status", "priority", "depends_on", "risk_level",
 ]
 PRIORITY_ORDER = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
+# 生成器(#6)写入的 4 可选交叉字段;非必填(不进 REQUIRED_FIELDS),lint 校验取值合法性。
+# failure_class 枚举(ascii token,对应 资金正确性/数据一致性/合规信任/体验):
+FAILURE_CLASSES = {"funds", "consistency", "compliance", "experience"}
+LEAF_OPTIONAL = ["actor", "failure_class", "contract_refs", "data_owner"]
 SHIPPED = "shipped"
 RETIRE_ARTIFACTS = ["spec.md", "plan.md", "validate", "review", "STATE.md"]
 
@@ -218,6 +222,7 @@ details>summary:focus-visible{outline:2px solid var(--green);outline-offset:1px}
 .ld-badges{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
 .ld-risk{font-size:11px;color:var(--muted)}
 .ld-meta{font-size:11px;color:var(--muted);margin-bottom:6px;word-break:break-word}
+.ld-cross{font-size:11px;color:var(--muted);margin-bottom:6px;word-break:break-word;border-left:2px solid var(--green-soft);padding-left:6px}
 .ld-body{font-size:12px;line-height:1.55;white-space:pre-wrap;color:var(--ink);background:var(--bg);
   border:1px solid var(--line);border-radius:6px;padding:8px;margin-bottom:10px}
 .chat-msgs{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:8px}
@@ -266,7 +271,16 @@ CHAT_JS = """<script>
       '<span class="prio prio-'+esc(d.priority)+'">'+esc(d.priority)+'</span>'+
       '<span class="ld-risk">risk: '+esc(d.risk_level)+'</span></div>'+
       '<div class="ld-meta">域: '+esc(d.domain_path)+' · old: '+esc(d.old_system_ref||'—')+' · 依赖: '+esc(deps)+'</div>'+
+      crossRow(d)+
       '<div class="ld-body">'+esc(d.body)+'</div>';
+  }
+  function crossRow(d){
+    var parts=[];
+    if(d.actor)parts.push('参与者: '+esc(d.actor));
+    if(d.failure_class)parts.push('失败类: '+esc(d.failure_class));
+    if(d.data_owner)parts.push('数据源: '+esc(d.data_owner));
+    if(d.contract_refs&&d.contract_refs.length)parts.push('契约: '+esc(d.contract_refs.join(', ')));
+    return parts.length?'<div class="ld-cross">'+parts.join(' · ')+'</div>':'';
   }
   function render(){
     msgs.innerHTML='';
@@ -342,7 +356,8 @@ def _css_safe(s):
 
 
 DETAIL_KEYS = ["title", "status", "priority", "risk_level", "domain_path",
-               "old_system_ref", "new_domain_path", "depends_on", "cross_link"]
+               "old_system_ref", "new_domain_path", "depends_on", "cross_link",
+               "actor", "failure_class", "contract_refs", "data_owner"]
 
 
 def _leaf_detail_map(leaves):
@@ -479,6 +494,13 @@ def cmd_lint(root):
         ref = lf.get("old_system_ref")
         if ref:
             seen_ref.setdefault(ref, []).append(lid)
+        # 可选交叉字段取值校验(存在才校验;不存在不报缺字段——非必填)
+        fc = lf.get("failure_class")
+        if fc and fc not in FAILURE_CLASSES:
+            problems.append(f"bad-failure-class: {lid} failure_class='{fc}' 不在 {sorted(FAILURE_CLASSES)}")
+        cr = lf.get("contract_refs")
+        if cr is not None and not isinstance(cr, list):
+            problems.append(f"bad-contract-refs: {lid} contract_refs 须为 list")
     for ref, ids in seen_ref.items():
         if len(ids) > 1:
             problems.append(f"dup-old_system_ref: '{ref}' 出现在多叶 {ids}")
@@ -585,6 +607,61 @@ def cmd_move(args):
     return 0
 
 
+def _fmt_fm_value(v):
+    """frontmatter 值:list → `[a, b]`(与 parse_frontmatter 互逆);其它 → 原样。"""
+    if isinstance(v, list):
+        return "[" + ", ".join(str(x) for x in v) + "]"
+    return "" if v is None else str(v)
+
+
+def _render_leaf_md(leaf):
+    """把一片叶 dict 渲染成 .md 文本(10 必填按固定顺序 + 出现的可选字段 + updated + 正文)。"""
+    lines = ["---"]
+    for k in REQUIRED_FIELDS:
+        lines.append(f"{k}: {_fmt_fm_value(leaf.get(k))}")
+    for k in LEAF_OPTIONAL:
+        if leaf.get(k) is not None:
+            lines.append(f"{k}: {_fmt_fm_value(leaf[k])}")
+    if leaf.get("updated"):
+        lines.append(f"updated: {leaf['updated']}")
+    lines.append("---")
+    body = leaf.get("body") or ("## 需求描述\n（待补）\n\n## 验收线索\n（待补）\n\n"
+                                 "## 老系统行为参照\n（待补）")
+    return "\n".join(lines) + "\n\n" + body + "\n"
+
+
+def cmd_write_tree(args):
+    """tree JSON → 叶 .md 文件(机械落盘;agent 产 JSON,本脚本写文件)。已存在叶跳过(不覆盖人工改)。"""
+    with open(args.from_, encoding="utf-8") as f:
+        data = json.load(f)
+    leaves = data.get("leaves", []) if isinstance(data, dict) else data
+    written = skipped = 0
+    for leaf in leaves:
+        lid, dp = leaf.get("id"), leaf.get("domain_path")
+        if not lid or not dp:
+            print(f"skip: 叶缺 id/domain_path: {lid}", file=sys.stderr)
+            skipped += 1
+            continue
+        # 防路径遍历:domain_path 分段禁空/./..,id 禁含 / 或 ..(叶文件不得逃出 root)
+        if (any(p in ("", ".", "..") for p in dp.split("/"))
+                or "/" in lid or ".." in lid):
+            print(f"skip: 非法 domain_path/id(防路径遍历): {lid} @ {dp}", file=sys.stderr)
+            skipped += 1
+            continue
+        d = os.path.join(args.root, *dp.split("/"))
+        path = os.path.join(d, lid + ".md")
+        if os.path.exists(path):
+            skipped += 1
+            continue
+        os.makedirs(d, exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(_render_leaf_md(leaf))
+        written += 1
+    print(json.dumps({"written": written, "skipped": skipped, "root": args.root},
+                     ensure_ascii=False))
+    return 0
+
+
 def cmd_retire(args):
     """特性退场:①归档工件 ②标源叶 shipped(可选) ③回流追加(可选) ④清栈。幂等:archive 已存在则拒绝。"""
     archive_dir = os.path.join(args.sdlc, "archive", f"{args.date}-{args.slug}")
@@ -639,6 +716,9 @@ def main(argv=None):
     pb = sub.add_parser("board", help="渲染折叠树 HTML 看板(注入 web-review annotate)")
     pb.add_argument("--root", required=True, help=".sdlc/requirements 目录")
     pb.add_argument("--out", help="输出 HTML 路径(默认 <root>/_board.html)")
+    pwt = sub.add_parser("write-tree", help="tree JSON → 叶文件(机械落盘;生成器#6 用)")
+    pwt.add_argument("--root", required=True, help=".sdlc/requirements 目录")
+    pwt.add_argument("--from", dest="from_", required=True, help="merged tree JSON 路径")
     args = ap.parse_args(argv)
     if args.cmd == "retire":
         return cmd_retire(args)
@@ -649,6 +729,8 @@ def main(argv=None):
         return cmd_move(args)
     if args.cmd == "board":
         return cmd_board(args)
+    if args.cmd == "write-tree":
+        return cmd_write_tree(args)
     return {"readyqueue": cmd_readyqueue, "coverage": cmd_coverage,
             "lint": cmd_lint, "tree": cmd_tree}[args.cmd](args.root)
 

@@ -2,6 +2,22 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.14.0] — 2026-06-16
+
+### Added
+- **★`sdlc-backlog` `Generate` op：分析工程 codebase → 自动 gen 出带叶的需求树**（Seed 升级；已有项目→树→#4 看板→选叶起特性闭环）。判断性 agent-playbook（写进 SKILL §2.7，像 onboard 读码）+ 确定性脚本落盘。
+  - **轴决策**：主轴 `domain_path` = **功能/用户故事**（PM↔业务对齐场景驱动；domain=功能域/epic，叶=用户故事「作为<角色>要<能力>以便<价值>」，禁工程术语）；叶粒度自适应（对齐状态跃迁→depends_on 无环）+ 每域上限防碎。
+  - **4 可选交叉视图字段**（叶 schema 扩展，非必填，REQUIRED_FIELDS 不变，存量树仍 lint clean）：`actor`/`failure_class`(枚举 funds·consistency·compliance·experience)/`contract_refs`(list)/`data_owner`；lint 校验取值合法性。
+  - **`write-tree` 脚本 op**：merged tree JSON → 叶 `.md` 文件（机械落盘，已存在跳过不覆盖人工改）。
+  - **多 agent 两阶段编排**（§5.6）：orchestrator 归纳功能域 → fan-out 一域一 agent 各写草稿（隔离）→ 合并(去重/cross_link/depends_on 无环/每域上限)→ 人审预览(复用 #4 看板)→ write-tree+lint。复用 Task-or-sequential + 单写者，不引新基建。
+  - **#4 看板叶详情显示 4 交叉字段**（有值即见；高级筛选/着色 Deferred）。
+- 输入复用 `sdlc-onboard` 的 surface-map（无 PROFILE 先 onboard）+ 深读 contracts/模块/schema/docs。
+
+### Notes
+- 全 **additive**：未加顶层 skill（Generate 是 backlog op）、未动 stage 枚举/routing/STATE 模板；叶 schema 扩展为**可选**字段（REQUIRED 不变）。守三铁律。
+- 本期 build 产脚本+playbook；**dogfood 真跑生成器于 workspace/20260615-vendor-research** 在 validate 阶段验。Deferred：轴自动判定 / 看板高级交互(筛选着色) / 不依赖 onboard 的独立深分析。
+- distilled-from: `session:sdlc-tree-generator-2026-06-16`（5 框架发散~30 轴候选 + a1/a2/a3 网页审）。
+
 ## [0.13.0] — 2026-06-16
 
 ### Added
