@@ -53,6 +53,8 @@ description: >
 
 ```
 进入 wave N(plan 已保证 wave 内无文件冲突):
+  ├─ 先做 write-set preflight:从 plan.md 读取本 wave 各 phase/task 的 files 集合
+  │     若任意两个 phase 的 files 有交集 → 不 fan-out;降级串行或回 sdlc-plan 修 wave
   ├─ 有 Task/并行能力 且 本 wave ≥2 个独立**阶段(phase)**
   │     → fan-out:**一阶段一 agent**,各自跑完该阶段的所有任务(每任务完整 TDD)、各写各自文件、各写各自笔记
   │        orchestrator(build 主流程)收集结果 → 合并 → **单写 STATE**
@@ -68,6 +70,9 @@ description: >
 1. **同 wave 不碰同一文件** —— plan 的 wave 规则保证(并行的前提);若发现冲突 = plan 有 bug,回 plan 修波次。
 2. **任务内严格串行单写手** —— 每个 agent 内部 TDD 照旧,绝不在一片代码上并发两个写手。
 3. **STATE 单写者** —— 只有 orchestrator 写 STATE;并行任务只写各自产物/笔记(`review/<role>.md`、任务笔记)。
+
+Codex 运行时的具体 fan-out/降级规则见 `references/runtime-adapters/codex.md`;只有 `multi_tool_use.parallel`
+这类读并行能力时,只并行采证,不并行写实现文件。
 
 > 这是把 `gsd-execute-phase` 的**完整 wave 模型**吸收进来(上档 fan-out + 下档 --interactive 串行),不再只取串行那一半。只读工作(多文件取证)任何时候都可并行。
 
@@ -365,9 +370,10 @@ Status:          DONE | DONE_WITH_CONCERNS | BLOCKED
 
 ## 7. 写什么进 STATE(经 driver 交接)
 
-本 skill **不直接写 `STATE.md`**(单写者 = driver)。阶段结束把以下结果产出给 driver,由它写回:
+本 skill **不直接写 `STATE.md`**(单写者 = driver)。阶段结束输出 `## HANDOFF`,由 driver 写回:
 
 ```markdown
+## HANDOFF
 stage: build
 status: in-progress | gated | blocked
 validate-modes: [correctness, e2e:Web, ...]      # §2 本次 resolve 出的,留给 validate

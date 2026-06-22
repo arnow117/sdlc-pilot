@@ -166,7 +166,7 @@ modes := resolve( changed-files × PROFILE.surface-map × role-routing 规则 )
    - 任一模式 BLOCKED(测试基建起不来 / eval 装置坏 / 缺评估标准且无法回退)→ 阶段 = **blocked**,
      在 STATE.Decisions log 记原因。
 3. 写一份**阶段汇总**(可放 `.sdlc/validate/summary.md` 或直接体现在 STATE),列每个模式的结果与去向。
-4. **回写 STATE.md**(经 driver / 单写者,见 §6):更新 stage / status / gates / validate-modes / next。
+4. **输出 `## HANDOFF` → 回写 STATE.md**(经 driver / 单写者,见 §6):更新 stage / status / gates / validate-modes / next。
 
 ---
 
@@ -211,11 +211,13 @@ modes := resolve( changed-files × PROFILE.surface-map × role-routing 规则 )
 
 ---
 
-## 5. 写什么进 STATE
+## 5. 写什么进 HANDOFF（由 driver 写 STATE）
 
-阶段结束,经 driver / 单写者把进度写回 `<repo>/.sdlc/STATE.md`。validate 阶段要更新的字段:
+阶段结束,输出 `## HANDOFF` block,经 driver / 单写者把进度写回 `<repo>/.sdlc/STATE.md`。
+独立直调时先产同一 HANDOFF,再作为单写者应用。validate 阶段要更新的字段:
 
 ```markdown
+## HANDOFF
 stage: validate            # 若全过且要进下一阶段,由 driver 推进到 review
 status: in-progress | gated | blocked
 updated: <由 caller 传入的时间戳，不自造时钟>
@@ -274,5 +276,5 @@ validate-modes: [correctness, e2e, eval-bench]   # 本轮 Step 1 解析出的子
        实现 bug **escalate 回 build**,不在此偷改实现;单问题 ≤3 次不解即 escalate。
 5. [ ] **Step 4**:读各模式报告 result → 汇总阶段总判定(PASS/gated/blocked)。
 6. [ ] 核对出口门控(§4)全过。
-7. [ ] 回写 STATE.md(§5,单写者),快照 active modes / roles / changed-files,写 next action。
+7. [ ] 输出 `## HANDOFF` 并回写 STATE.md(§5,单写者),快照 active modes / roles / changed-files,写 next action。
 8. [ ] 向用户报告:本轮跑了哪些模式、各自结果、阶段总判定、下一步(→ review / 回 build / 回 spec)。

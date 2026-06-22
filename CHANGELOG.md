@@ -2,6 +2,19 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.15.0] — 2026-06-17
+
+### Added
+- **Codex runtime adapter**：新增 `skills/sdlc/references/runtime-adapters/codex.md`，把 SDLC 抽象接口映射到 Codex 运行时：用户选择(`text_mode`/结构化输入可选)、multi-agent fan-out、只读并行、`apply_patch` 文件编辑、headless 安全默认、web-review Live mode 单渠道纪律、Codex 内不自调 `codex`、repo-local `.agents/skills/sdlc*` discovery。
+- **HANDOFF block 契约**：driver §5、STATE 模板、spec/plan/build/validate/review/ship 交接段统一为「阶段 skill 先输出 `## HANDOFF`，driver 作为 canonical writer 写 `.sdlc/STATE.md`」。独立直调阶段 skill 时也必须先产同一 HANDOFF，再作为单写者应用。
+
+### Changed
+- **build wave fan-out 前置 write-set preflight**：从 `plan.md` 读取同 wave 各 phase/task 的 `files` 集合，若有交集则不 fan-out，降级串行或回 `sdlc-plan` 修 wave；避免 plan invariant 错标时多 agent 并发写同一文件。
+- `scripts/validate-skills` 将 `references/runtime-adapters/codex.md` 纳入关键共享文件检查；plugin / marketplace 版本升至 `0.15.0`。
+
+### Notes
+- 这是结构性兼容性改动（新增 adapter + 收紧 handoff interface），按完整 SDLC/evolve 维护者透镜处理；不新增顶层 skill，不改 stage 枚举，不改 role-routing 字典。distilled-from: `session:sdlc-codex-compat-2026-06-17`。
+
 ## [0.14.0] — 2026-06-16
 
 ### Added

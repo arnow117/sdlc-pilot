@@ -13,12 +13,15 @@
   写入规则（来自 spec §10 兼容性铁律）：
     - 单写者（single-writer）：同一时刻只有主线在写 STATE.md。
     - 并行产物写各自的文件（如 .sdlc/review/<role>.md），不并发写本文件，避免竞态。
+    - 阶段 skill 与 driver 的接口是 `## HANDOFF` block；driver 是 canonical writer。
+      schema 见 sdlc/SKILL.md §5 与 references/runtime-adapters/codex.md。
     - validate-modes 与 Active roles 是【每次运行从 git diff 动态重算】的快照，
       仅供 handoff/审计，不是持久化的事实源（diff 一变就过时）——见 spec §6.1。
   使用方式：
     1) 复制本模板到 <target-repo>/.sdlc/STATE.md
     2) 删除本注释块与所有 <填写...> 占位
-    3) 每个阶段结束时由当前阶段 skill 更新对应字段
+    3) 每个阶段结束时由当前阶段 skill 先输出 `## HANDOFF` block；driver 读取该 block 后作为
+       单写者更新本文件。独立直调阶段 skill 时，也必须先产同一 HANDOFF block，再作为单写者应用。
   ─────────────────────────────────────────────────────────
 -->
 

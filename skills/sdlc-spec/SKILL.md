@@ -358,10 +358,13 @@ AI 系统**非确定性**：同样输入不保证同样输出。单测/集成测
 
 任一未过 → `status: gated`，停在闸口，用 text_mode 列出待办项，**不前进**。
 
-### 6.2 写回 STATE（经 driver，单写者）
-spec 获批后，把交接写回 `<target-repo>/.sdlc/STATE.md`（schema 见 driver / STATE 模板；时间戳由 caller 传入）：
+### 6.2 交接给 driver（HANDOFF → STATE）
+spec 获批后，输出 `## HANDOFF` block；driver 读取该 block 后作为单写者写回
+`<target-repo>/.sdlc/STATE.md`（schema 见 driver / STATE 模板；时间戳由 caller 传入）。
+独立直调本 skill 且没有 driver 时，也必须先产同一 `## HANDOFF`，再作为单写者应用到 STATE：
 
 ```markdown
+## HANDOFF
 # SDLC State: <feature/topic>
 stage: spec
 status: in-progress            # 或 gated（未过复核时）

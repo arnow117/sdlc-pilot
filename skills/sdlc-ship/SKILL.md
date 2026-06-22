@@ -99,7 +99,7 @@ staging 已部署 + smoke 通过。是否晋级到 canary(线上小流量)?
 | 文件 | 动作 | 说明 |
 |---|---|---|
 | `<repo>/.sdlc/PROFILE.md` | **读** | `## Deploy` 节(目标类型 + 配置位置);不写 PROFILE |
-| `<repo>/.sdlc/STATE.md` | **读 + 写**(经 driver,单写者) | 读 `sdlc-gate` 入口门;写 stage=ship/done、ship 进度、Decisions |
+| `<repo>/.sdlc/STATE.md` | **读 + 经 driver 写**(单写者) | 读 `sdlc-gate` 入口门;本 skill 输出 `## HANDOFF`,由 driver 写 stage=ship/done、ship 进度、Decisions |
 | `<repo>/.sdlc/ship/<release>-report.md` | **写** | 本次发布报告:各环境晋级时间/证据/指标/回滚(若有) |
 | `references/deployment-patterns.md` · `deploy-targets/*` · `languages/*` | 读(skill 内) | 方法论 / 目标适配器 / build 命令 |
 
@@ -118,9 +118,10 @@ staging 已部署 + smoke 通过。是否晋级到 canary(线上小流量)?
 
 ---
 
-## 7. 写什么进 STATE(经 driver,单写者)
+## 7. 写什么进 HANDOFF(经 driver 写 STATE)
 
 ```markdown
+## HANDOFF
 stage: done                 # 全量发布且 smoke 过;或停在某环境则 stage=ship,status=gated
 status: in-progress | gated | blocked
 ## Ship 进度

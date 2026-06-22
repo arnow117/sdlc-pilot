@@ -10,7 +10,8 @@ description: >
   "走 sdlc review"、"准备合并/落地前检查"、"sdlc-review"、"代码评审 + 收尾";
   也由 sdlc 驱动器在 STATE.stage=review 时路由进来,或在 validate 通过后主动建议。
   本 skill 是流程(可执行 playbook):它读改动→解析角色+模式→加载角色卡当透镜→产 findings→门控→写状态。
-  它不写实现、不写测试、不跑端到端旅程(那是 sdlc-build / sdlc-validate 的事)。
+  它不写实现、不写测试、不跑端到端旅程(那是 sdlc-build / sdlc-validate 的事)。阶段末输出
+  `## HANDOFF`;driver 是 canonical STATE writer。
 ---
 
 # sdlc-review — 多角色评审 + Verify 收尾(流程 skill)
@@ -256,7 +257,7 @@ blast-radius(最坏情况波及多少系统/人)、boring-by-default(创新 toke
 
 | 文件 | 读/写 | 用途 |
 |---|---|---|
-| `.sdlc/STATE.md` | 读 + **写**(单写者) | 读 stage/gates/active-roles;写回门控结果与 next(§5 schema) |
+| `.sdlc/STATE.md` | 读 + **经 driver 写**(单写者) | 读 stage/gates/active-roles;本 skill 输出 `## HANDOFF`,由 driver 写回门控结果与 next(§5 schema) |
 | `.sdlc/PROFILE.md` | 读 | `## Surface map` 参与角色解析(优先于通用路由表) |
 | `.sdlc/spec.md` | 读 | Step 2 意图来源 + Step 5 威胁模型/缓解声明 |
 | `.sdlc/plan.md` | 读 | Step 2 plan-completion 审计的可执行项 |
@@ -311,11 +312,13 @@ status: clean | issues_found
 
 ---
 
-## 5. 写什么进 STATE(交接契约)
+## 5. 写什么进 HANDOFF(交接契约,由 driver 写 STATE)
 
-门控跑完,**由本 skill 主流程**把结果写回 `<repo>/.sdlc/STATE.md`(单写者)。对齐驱动器 STATE schema(spec §8):
+门控跑完,**由本 skill 主流程**输出 `## HANDOFF`;driver 作为 canonical writer 把结果写回
+`<repo>/.sdlc/STATE.md`(单写者)。独立直调时先产同一 HANDOFF,再作为单写者应用。对齐驱动器 STATE schema(spec §8):
 
 ```markdown
+## HANDOFF
 # SDLC State: <feature/topic>
 stage: review            # 通过则下一步 → done(Verify);未过则停在 review
 status: in-progress | gated | blocked

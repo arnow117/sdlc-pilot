@@ -29,7 +29,8 @@ description: >
 
 ## 0. 可移植前置(每次入口先做,一次性)
 
-本 skill 必须在 Claude 和 Codex 下都能跑。两条降级范式贯穿全程:
+本 skill 必须在 Claude 和 Codex 下都能跑。两条降级范式贯穿全程。Codex 的具体运行时映射见
+`references/runtime-adapters/codex.md`;本文件只定义平台无关接口:
 
 ### 0.1 交互降级 — text_mode
 凡需要向用户提问(确认分叉、确认漂移、选 scope),**优先用纯文本编号列表**,不硬依赖 AskUserQuestion:
@@ -48,7 +49,8 @@ description: >
 **探测有无 Task/并行能力**——
 
 - 有 Task → 可 fan-out,每个 agent 写**各自独立文件**(如 `review/<role>.md`),最后合并。
-- 无 Task(Codex / Gemini CLI / Copilot 等)→ **串行 inline 执行**同一份 playbook,逐个写文件。
+- Codex 有 multi-agent 工具 → 按 `runtime-adapters/codex.md` 的 multi-agent adapter fan-out。
+- 无 Task/Codex multi-agent 能力(Gemini CLI / Copilot 等)→ **串行 inline 执行**同一份 playbook,逐个写文件。
 
 任何时候**不得**让两个写手同时写 `STATE.md`(单写者原则,见 §5)。
 
@@ -270,8 +272,28 @@ resolve 的结果(active roles + validate-modes + changed-files)**写进 `STATE.
 
 ## 5. 交接(handoff)：写回 STATE.md
 
-每个流程 skill 跑完,**经由本 driver** 把进度写回 `STATE.md`。**单写者原则**:只有 driver 写 STATE;
-并行产物各写各的文件(`review/<role>.md`、`validate/<mode>-report.md`),最后由 driver 汇总入 STATE。
+每个流程 skill 跑完,先输出一段机器可读的 **`## HANDOFF` block**,再**经由本 driver** 把进度写回
+`STATE.md`。**单写者原则**:只有 driver 写 STATE;并行产物各写各的文件(`review/<role>.md`、
+`validate/<mode>-report.md`),最后由 driver 汇总入 STATE。若流程 skill 被独立直调且没有 driver,
+它也必须先产 `## HANDOFF`,再作为单写者应用同一 schema 写 STATE(见
+`references/runtime-adapters/codex.md` 的 Handoff adapter)。
+
+`## HANDOFF` 最小 schema:
+
+```markdown
+## HANDOFF
+stage: <stage>
+status: in-progress | gated | blocked
+validate-modes: [...]
+active-roles: [...]
+changed-files:
+- <path>
+gates-passed:
+- <gate>
+decisions:
+- <date> <decision>
+next-action: -> invoke <sdlc-stage>
+```
 
 `STATE.md` schema(由 caller 传入时间戳,不要自造时钟假设):
 
@@ -328,6 +350,7 @@ validate-modes: [correctness, e2e, eval-bench]   # 本次 resolve 出的(§3.4)
 | 2 | STATE 单写者;并行工作写各自文件(`review/<role>.md`)——防 fan-out 竞态 |
 | 3 | 流程平台无关;编排(Task/Workflow)是加速器不是依赖;无并行时降级串行(§0.2);交互用 text_mode(§0.1) |
 | 4 | 维护 `.agents/skills/sdlc*` 符号链接 —— Codex 仓库内发现 |
+| 5 | Codex 特化规则只落 `references/runtime-adapters/codex.md`;流程 skill 只依赖抽象接口,不直接绑定某个运行时工具 |
 
 ---
 
