@@ -2,6 +2,24 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.16.0] — 2026-06-23
+
+### Added
+- **需求树叶生命周期状态同步（C 混合写回 + 三件套强制保证）**：
+  - `backlog.py` 加 **STATUS_ORDER / STATUS_SET / STAGE_TO_STATUS** 权威枚举（单一事实源；CSS/SKILL/钩子/reconcile 都引此）。
+  - `backlog.py lint` 加 **bad-status** 校验（`status` 取值须 ∈ 枚举；`status: banana` 这类现在会被拒）。
+  - `backlog.py set-status` 新 op：机械改叶 status（**allow-any 迁移**，只校验值合法不查迁移；叶不存在/非法值正确拒绝）——写回三件套的共享原语。
+  - **post-checkout git 钩子**（`references/templates/hooks/post-checkout`）：切分支时把在飞特性源叶 status flush 落盘（C 混合·硬层，git 强制；无需求树则 no-op，永不阻断 checkout）。onboard Phase D 脚手架装钩子 2→3。
+  - **driver §1.1b 源叶状态对账（reconcile）**：driver 每次入口对账 source-leaf 叶 status 与 STATE.stage 映射值，落后则补齐（软层，只前进不回退；兜住 Codex 无钩子/worktree/非 checkout 覆盖）。
+- **看板可视化重构（4 痛点，DESIGN.md §8 为契约）**：①状态图例（6 色+含义+点击过滤）+ 按 STATUS_ORDER 分段的进度分布条；②搜索框（即时按 id/title）+ 折叠记忆（localStorage）+ 面包屑；③叶详情 4 组分组（身份/定位/关系/交叉）+ depends_on 可点跳转 + 字段 tooltip；④聊天面板 live 监听状态指示 + 引导文案。**在飞特性源叶叠加 live badge**（惰性派生读 STATE，不写文件；无 STATE 向后兼容）。
+
+### Changed
+- **看板渲染抽到 `scripts/board.py`**（从 `backlog.py` 抽出，守 800 行铁律；`board` 子命令惰性 import）。`backlog.py` 739→470 行，`board.py` 489 行。
+- plugin / marketplace 版本升至 `0.16.0`。
+
+### Notes
+- 写回机制选 **C 混合**（稳态 captured/shipped 落盘 + 过渡态惰性派生 + 边界 flush）而非纯急切回写：blast radius 从 L4（碰 5 个 stage skill）压到 L2（driver + backlog.py + 1 钩子），不动 spec/plan/build/validate 4 个 stage skill。状态机 allow-any-set（不挡跳/退）。distilled-from: `session:sdlc-leaf-lifecycle-board-2026-06-23`。
+
 ## [0.15.0] — 2026-06-17
 
 ### Added

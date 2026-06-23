@@ -101,6 +101,45 @@ details>summary:focus-visible{outline:2px solid var(--green);outline-offset:1px}
   .chat-head{cursor:pointer}
 }
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+/* ── P6 看板重构(DESIGN.md §8) ── */
+/* 图例 */
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px;font-size:11px}
+.legend .lg{padding:2px 8px;border-radius:4px;cursor:pointer;border:1px solid transparent;color:var(--ink)}
+.legend .lg:hover{border-color:var(--green)}
+.legend .lg[aria-pressed="true"]{border-color:var(--ink);font-weight:600}
+/* 进度分布条(分段) */
+.dist{display:flex;height:8px;border-radius:4px;overflow:hidden;border:1px solid var(--line);margin:6px 0}
+.dist .seg{height:100%}
+.dist .seg.status-captured{background:#e6e2d6}.dist .seg.status-specd{background:var(--blue)}
+.dist .seg.status-planned{background:var(--yellow)}.dist .seg.status-built{background:var(--orange)}
+.dist .seg.status-validated{background:var(--green-soft)}.dist .seg.status-shipped{background:var(--green)}
+.dist-total{margin:0 0 18px}
+/* live badge(在飞态) */
+.live-badge{padding:1px 7px;border-radius:4px;font-size:11px;color:var(--ink);
+  border:1px solid var(--green);animation:livepulse 1.6s ease-in-out infinite}
+@keyframes livepulse{0%,100%{opacity:1}50%{opacity:.55}}
+@media(prefers-reduced-motion:reduce){.live-badge{animation:none}}
+/* 搜索 + 面包屑 */
+.toolbar{display:flex;gap:10px;align-items:center;margin:0 0 12px;flex-wrap:wrap}
+#tree-search{flex:1;min-width:180px;padding:7px 10px;border:1px solid var(--line);border-radius:6px;
+  font:13px inherit;background:#fff}
+#tree-search:focus{outline:none;border-color:var(--green)}
+.crumb{font-size:11px;color:var(--muted);margin:0 0 10px;min-height:16px}
+.crumb a{color:var(--green);cursor:pointer;text-decoration:none}
+.crumb a:hover{text-decoration:underline}
+.leaf.hide{display:none}
+/* 状态过滤:body[data-filter] 时淡化非该状态叶 */
+body[data-filter] .leaf{opacity:.28}
+body[data-filter] .leaf.match-filter{opacity:1}
+/* 叶详情字段分组 */
+.ld-group{margin:8px 0 2px;font-size:10px;letter-spacing:.5px;color:var(--muted);text-transform:uppercase}
+.ld-field{font-size:11px;color:var(--ink);margin:2px 0;word-break:break-word}
+.ld-field .k{color:var(--muted)}
+.dep-link{color:var(--green);cursor:pointer;text-decoration:underline}
+/* 聊天监听状态 */
+#live-status{font-size:11px;font-weight:400;margin-left:6px}
+#live-status.on{color:var(--green)}#live-status.off{color:var(--muted)}
+.chat-guide{color:var(--muted);font-size:12px;line-height:1.6;padding:0 4px}
 """
 
 # 聊天面板逻辑(自包含):点叶选中→该叶会话气泡;发送 POST /feedback;轮询 /replies.json 追加 agent 回复;
@@ -116,25 +155,46 @@ CHAT_JS = """<script>
   var LEAFDATA={}; try{LEAFDATA=JSON.parse(document.getElementById('leaf-data').textContent||'{}');}catch(e){}
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
   function csss(s){return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
+  // 字段含义 tooltip(痛点③)
+  var FIELDTIP={actor:'触发/使用该需求的角色',failure_class:'做坏会伤哪类:funds资金/consistency一致性/compliance合规/experience体验',
+    contract_refs:'相关接口/数据契约路径',data_owner:'该数据的真相源/owner',
+    old_system_ref:'对应老系统位置',new_domain_path:'新域路径',depends_on:'前置依赖的其它叶',cross_link:'跨域关联'};
+  function fld(k,label,val){
+    if(val==null||val===''||(val.join&&!val.length))return '';
+    var v=val.join?val.join(', '):val;
+    return '<div class="ld-field" title="'+esc(FIELDTIP[k]||'')+'"><span class="k">'+esc(label)+':</span> '+v+'</div>';
+  }
+  function depLinks(deps){
+    if(!deps||!deps.length)return '无';
+    return deps.map(function(id){
+      return LEAFDATA[id]?'<a class="dep-link" data-goto="'+esc(id)+'">'+esc(id)+'</a>':esc(id);
+    }).join(', ');
+  }
   function renderDetail(){
     if(!current||!LEAFDATA[current]){detailEl.innerHTML='';return;}
-    var d=LEAFDATA[current], deps=(d.depends_on||[]).join(', ')||'无';
+    var d=LEAFDATA[current];
     detailEl.innerHTML=
       '<div class="ld-title">'+esc(d.title)+'</div>'+
+      '<div class="ld-group">身份</div>'+
       '<div class="ld-badges"><span class="badge status-'+csss(d.status)+'">'+esc(d.status)+'</span>'+
       '<span class="prio prio-'+esc(d.priority)+'">'+esc(d.priority)+'</span>'+
       '<span class="ld-risk">risk: '+esc(d.risk_level)+'</span></div>'+
-      '<div class="ld-meta">域: '+esc(d.domain_path)+' · old: '+esc(d.old_system_ref||'—')+' · 依赖: '+esc(deps)+'</div>'+
-      crossRow(d)+
+      '<div class="ld-group">定位</div>'+
+      fld('domain_path','域',esc(d.domain_path))+
+      fld('old_system_ref','old',esc(d.old_system_ref))+
+      fld('new_domain_path','new',esc(d.new_domain_path))+
+      '<div class="ld-group">关系</div>'+
+      fld('depends_on','依赖',depLinks(d.depends_on))+
+      fld('cross_link','关联',d.cross_link&&d.cross_link.length?esc(d.cross_link.join(', ')):'')+
+      crossGroup(d)+
+      '<div class="ld-group">需求</div>'+
       '<div class="ld-body">'+esc(d.body)+'</div>';
   }
-  function crossRow(d){
-    var parts=[];
-    if(d.actor)parts.push('参与者: '+esc(d.actor));
-    if(d.failure_class)parts.push('失败类: '+esc(d.failure_class));
-    if(d.data_owner)parts.push('数据源: '+esc(d.data_owner));
-    if(d.contract_refs&&d.contract_refs.length)parts.push('契约: '+esc(d.contract_refs.join(', ')));
-    return parts.length?'<div class="ld-cross">'+parts.join(' · ')+'</div>':'';
+  function crossGroup(d){
+    var f=fld('actor','参与者',esc(d.actor))+fld('failure_class','失败类',esc(d.failure_class))
+      +fld('data_owner','数据源',esc(d.data_owner))
+      +fld('contract_refs','契约',d.contract_refs&&d.contract_refs.length?esc(d.contract_refs.join(', ')):'');
+    return f?'<div class="ld-group">交叉</div>'+f:'';
   }
   function render(){
     msgs.innerHTML='';
@@ -144,11 +204,20 @@ CHAT_JS = """<script>
     });
     msgs.scrollTop=msgs.scrollHeight;
   }
+  var crumbEl=document.getElementById('crumb');
+  function setCrumb(el){
+    if(!crumbEl)return;
+    if(!el){crumbEl.innerHTML='';return;}
+    crumbEl.innerHTML=esc(el.getAttribute('data-crumb')||'')+' › '+esc(el.getAttribute('data-leaf')||'');
+  }
   function selectLeaf(id){
     current=id;
+    var sel=null;
     document.querySelectorAll('.leaf').forEach(function(el){
-      el.setAttribute('aria-current', el.getAttribute('data-leaf')===id?'true':'false');});
+      var on=el.getAttribute('data-leaf')===id; el.setAttribute('aria-current', on?'true':'false');
+      if(on)sel=el;});
     head.textContent='\\uD83D\\uDCAC '+id;
+    setCrumb(sel);
     input.disabled=false;send.disabled=false;
     if(panel)panel.classList.add('open');
     renderDetail();render();input.focus();
@@ -157,6 +226,40 @@ CHAT_JS = """<script>
     el.setAttribute('tabindex','0');
     el.addEventListener('click',function(){selectLeaf(el.getAttribute('data-leaf'));});
     el.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();selectLeaf(el.getAttribute('data-leaf'));}});
+  });
+  // 痛点③ depends_on 可点跳转(事件委托在叶详情面板)
+  if(detailEl)detailEl.addEventListener('click',function(e){
+    var a=e.target.closest&&e.target.closest('.dep-link');if(!a)return;
+    var gid=a.getAttribute('data-goto');var t=document.getElementById(gid);
+    if(t){t.scrollIntoView({block:'center'});selectLeaf(gid);}
+  });
+  // 痛点② 搜索过滤(即时按 id/title)
+  var search=document.getElementById('tree-search');
+  if(search)search.addEventListener('input',function(){
+    var q=search.value.trim().toLowerCase();
+    document.querySelectorAll('.leaf').forEach(function(el){
+      var hay=((el.getAttribute('data-leaf')||'')+' '+(el.getAttribute('data-title')||'')).toLowerCase();
+      el.classList.toggle('hide', q!=='' && hay.indexOf(q)<0);
+    });
+  });
+  // 痛点① 图例点击=状态过滤(切 body[data-filter])
+  document.querySelectorAll('.legend .lg').forEach(function(lg){
+    lg.addEventListener('click',function(){
+      var s=lg.getAttribute('data-status'), cur=document.body.getAttribute('data-filter');
+      document.querySelectorAll('.legend .lg').forEach(function(x){x.setAttribute('aria-pressed','false');});
+      if(cur===s){document.body.removeAttribute('data-filter');}
+      else{document.body.setAttribute('data-filter',s);lg.setAttribute('aria-pressed','true');
+        document.querySelectorAll('.leaf').forEach(function(el){
+          el.classList.toggle('match-filter', el.getAttribute('data-status')===s);});}
+    });
+  });
+  // 痛点② 折叠记忆(localStorage;隐私模式静默降级)
+  function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+  function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+  document.querySelectorAll('details').forEach(function(dt){
+    var sm=dt.querySelector('summary'),key='fold:'+(sm?sm.textContent.trim():'');
+    var saved=lsGet(key); if(saved==='0')dt.open=false; else if(saved==='1')dt.open=true;
+    dt.addEventListener('toggle',function(){lsSet(key,dt.open?'1':'0');});
   });
   if(head)head.addEventListener('click',function(){if(panel&&window.innerWidth<=768)panel.classList.toggle('open');});
   function doSend(){
@@ -196,9 +299,17 @@ CHAT_JS = """<script>
     pollReplies();
   }).catch(function(){pollReplies();});
   setInterval(pollReplies,3000);
+  // 痛点④ 监听状态指示:/rev 可达=Live server 在(🟢监听中),否则=静态文件(⚪未监听)
+  var liveEl=document.getElementById('live-status');
+  function setLive(on){
+    if(!liveEl)return;
+    liveEl.className=on?'on':'off';
+    liveEl.textContent=on?'🟢 Live 监听中':'⚪ 未监听';
+  }
   var lastRev=null;
   setInterval(function(){fetch('/rev',{cache:'no-store'}).then(function(r){return r.ok?r.text():null;}).then(function(t){
-    if(t==null)return;if(lastRev===null){lastRev=t;return;}if(t!==lastRev)location.reload();}).catch(function(){});},2000);
+    if(t==null){setLive(false);return;}setLive(true);
+    if(lastRev===null){lastRev=t;return;}if(t!==lastRev)location.reload();}).catch(function(){setLive(false);});},2000);
   render();
 })();
 </script>"""
@@ -255,16 +366,40 @@ def render_board(tree, leaves, title="Backlog 需求树看板", live=None):
     summ = tree["summary"]
     # 叶详情数据嵌入(防 </script> 注入:转义 </)
     leaf_data_json = json.dumps(_leaf_detail_map(leaves), ensure_ascii=False).replace("</", "<\\/")
+    # 痛点① 图例(6 状态色 + 含义,可点过滤)
+    legend_meaning = {"captured": "已收集", "spec'd": "已出spec", "planned": "已拆任务",
+                      "built": "已实现", "validated": "已验证", "shipped": "已交付"}
+    legend_html = ('<div class="legend">' + "".join(
+        f'<span class="lg status-{_css_safe(s)}" data-status="{_css_safe(s)}" '
+        f'role="button" aria-pressed="false" title="点击筛选 {esc(s)}">{esc(s)} {esc(legend_meaning[s])}</span>'
+        for s in STATUS_ORDER) + "</div>")
+
+    def _dist_bar(lvs, cls=""):
+        """痛点① 按 STATUS_ORDER 分段的进度分布条。"""
+        total = len(lvs)
+        if not total:
+            return ""
+        counts = {s: 0 for s in STATUS_ORDER}
+        for lf in lvs:
+            st = lf.get("status")
+            if st in counts:
+                counts[st] += 1
+        segs = "".join(
+            f'<i class="seg status-{_css_safe(s)}" style="width:{counts[s]*100/total:.4g}%" '
+            f'title="{esc(s)} · {counts[s]}"></i>'
+            for s in STATUS_ORDER if counts[s])
+        shipped = counts[SHIPPED]
+        klass = f"dist {cls}" if cls else "dist"
+        return f'<div class="{klass}">{segs}</div><div class="sub">{shipped}/{total} shipped</div>'
+
     cov_items = []
     for d in tree["domains"]:
-        leaves = [lf for sub in d["subdomains"] for lf in sub["leaves"]]
-        total = len(leaves)
-        shipped = sum(1 for lf in leaves if lf.get("status") == SHIPPED)
-        pct = int(shipped * 100 / total) if total else 0
+        dlvs = [lf for sub in d["subdomains"] for lf in sub["leaves"]]
         cov_items.append(
-            f'<div class="item"><div class="name">{esc(d["domain"])} · {shipped}/{total} shipped</div>'
-            f'<div class="bar"><i style="width:{pct}%"></i></div></div>')
-    cov_html = ('<div class="cov">' + "".join(cov_items) + "</div>") if cov_items else ""
+            f'<div class="item"><div class="name">{esc(d["domain"])}</div>{_dist_bar(dlvs)}</div>')
+    total_dist = _dist_bar(leaves, cls="dist-total")
+    cov_html = (legend_html + total_dist
+                + ('<div class="cov">' + "".join(cov_items) + "</div>" if cov_items else ""))
 
     if not tree["domains"]:
         body = '<p class="empty">暂无需求（.sdlc/requirements/ 为空）</p>'
@@ -288,10 +423,14 @@ def render_board(tree, leaves, title="Backlog 需求树看板", live=None):
                     if live and live["leaf"] == raw_id:
                         live_html = (f'<span class="live-badge status-{_css_safe(live["status"])}" '
                                      f'title="在飞:{esc(live["stage"])}">⏳ {esc(live["stage"])}中</span>')
+                    title_txt = lf.get("title") or ""
+                    crumb = f'{d["domain"]} › {sub["subdomain"]}'
                     lvs.append(
                         f'<section class="leaf" id="{lid}" data-leaf="{lid}" '
+                        f'data-status="{_css_safe(st)}" data-title="{esc(title_txt)}" '
+                        f'data-crumb="{esc(crumb)}" '
                         f'role="button" aria-label="选择 {lid} 开始对话" aria-current="false">'
-                        f'<h2>{lid} · {esc(lf.get("title") or "")}</h2>'
+                        f'<h2>{lid} · {esc(title_txt)}</h2>'
                         f'<div class="meta">'
                         f'<span class="badge status-{_css_safe(st)}">{esc(st)}</span>'
                         f'{live_html}'
@@ -309,10 +448,13 @@ def render_board(tree, leaves, title="Backlog 需求树看板", live=None):
 
     chat_panel = (
         '<aside class="chat-panel" id="chat">'
-        '<div class="chat-head" id="chat-leaf">💬 选择一片需求叶</div>'
+        '<div class="chat-head"><span id="chat-leaf">💬 选择一片需求叶</span>'
+        '<span id="live-status" class="off">⚪ 未监听</span></div>'
         '<div class="chat-detail" id="chat-detail"></div>'
         '<div class="chat-msgs" id="chat-msgs">'
-        '<p class="chat-empty">点左侧一片需求叶，开始对话。</p></div>'
+        '<div class="chat-guide">点左侧一片需求叶开始对话。<br>'
+        '此聊天框 = 在场 agent 的耳朵：要<b>实时</b>回复，需让 agent 切到 live 监听（占其会话跑 <code>/wait</code>）；'
+        '🟢=监听中。agent 未监听时你的留言仍会被 <code>/feedback</code> 收集，待其下次处理。</div></div>'
         '<div class="chat-box">'
         '<textarea id="chat-input" aria-label="对选中的需求叶发送消息" '
         'placeholder="问 / 改这片叶…（Enter 发送，Shift+Enter 换行）" '
@@ -326,7 +468,11 @@ def render_board(tree, leaves, title="Backlog 需求树看板", live=None):
         f'<title>{esc(title)}</title><style>{BOARD_CSS}</style></head><body>'
         f'<div class="app"><div class="board"><h1>{esc(title)}</h1>'
         f'<div class="sub">共 {summ["total"]} 条需求 · ready {summ["ready_count"]} 条</div>'
-        f'{cov_html}{body}</div>{chat_panel}</div>'
+        f'{cov_html}'
+        f'<div class="toolbar"><input id="tree-search" type="search" '
+        f'placeholder="🔍 搜索 id / 标题…" aria-label="搜索需求叶"></div>'
+        f'<div class="crumb" id="crumb" aria-live="polite"></div>'
+        f'{body}</div>{chat_panel}</div>'
         f'{leaf_data}{CHAT_JS}</body></html>'
     )
 

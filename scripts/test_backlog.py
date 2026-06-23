@@ -512,6 +512,39 @@ class WriteTreeTest(unittest.TestCase):
             self.assertIn("原有", _read(os.path.join(root, "order", "checkout", "order.checkout.a.md")))
 
 
+class BoardRenoTest(unittest.TestCase):
+    """看板 4 痛点重构(P6):①进度/图例/过滤 ②搜索/折叠记忆/面包屑 ③字段分组/dep可点/tooltip ④聊天状态提示。"""
+    def _render(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "order.checkout.a", status="shipped", title="下单")
+            write_leaf(root, "order.checkout.b", status="captured",
+                       depends_on="[order.checkout.a]")
+            out = os.path.join(root, "b.html")
+            run("board", "--out", out, root=root)
+            return _read(out)
+
+    def test_pain1_legend_and_distribution(self):
+        h = self._render()
+        self.assertIn('class="legend"', h)      # 图例
+        self.assertIn('class="dist"', h)         # 进度分布条(分段)
+
+    def test_pain2_search_and_breadcrumb(self):
+        h = self._render()
+        self.assertIn('id="tree-search"', h)     # 搜索框
+        self.assertIn('crumb', h)                # 面包屑容器
+        self.assertIn('localStorage', h)         # 折叠记忆
+
+    def test_pain3_field_grouping_and_dep_link(self):
+        h = self._render()
+        self.assertIn('dep-link', h)             # depends_on 可点
+        self.assertIn('身份', h)                  # 字段分组小标题
+        self.assertIn('交叉', h)
+
+    def test_pain4_chat_live_status(self):
+        h = self._render()
+        self.assertIn('id="live-status"', h)     # 监听状态指示
+
+
 class BoardLiveBadgeTest(unittest.TestCase):
     def _setup(self, with_state=True, stage="build"):
         self.tmp = tempfile.mkdtemp()
@@ -528,14 +561,14 @@ class BoardLiveBadgeTest(unittest.TestCase):
         r = run("board", "--out", out, root=req)
         self.assertEqual(r.returncode, 0)
         html_txt = _read(out)
-        self.assertIn("live-badge", html_txt)
-        self.assertIn("build", html_txt)  # 在飞 stage 显示
+        self.assertIn('class="live-badge', html_txt)  # 真元素(非 CSS 规则)
+        self.assertIn("build中", html_txt)            # 在飞 stage 显示
 
     def test_no_overlay_without_state(self):
         req = self._setup(with_state=False)
         out = os.path.join(self.tmp, "b.html")
         run("board", "--out", out, root=req)
-        self.assertNotIn("live-badge", _read(out))
+        self.assertNotIn('class="live-badge', _read(out))  # 无在飞元素(CSS 规则不算)
 
 
 def _leaf_status(root, leaf_id):
