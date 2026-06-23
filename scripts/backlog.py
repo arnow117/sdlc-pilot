@@ -544,6 +544,21 @@ def _mark_leaf_shipped(req_root, leaf_id):
     return None
 
 
+def cmd_set_status(args):
+    """把指定叶 status 机械改为 args.to(allow-any:只校验值∈STATUS_SET,不查迁移合法性)。
+    供 post-checkout 钩子 / driver reconcile / 人手调用。叶不存在→2;status 非法→1;成功→0。"""
+    if args.to not in STATUS_SET:
+        print(f"非法 status '{args.to}',须∈ {STATUS_ORDER}", file=sys.stderr)
+        return 1
+    for lf in load_leaves(args.root):
+        if lf.get("id") == args.leaf:
+            _set_frontmatter_status(os.path.join(args.root, lf["_path"]), args.to)
+            print(f"set-status: {args.leaf} -> {args.to}")
+            return 0
+    print(f"叶不存在: {args.leaf}", file=sys.stderr)
+    return 2
+
+
 LEAF_SDLC_LOG_HEADER = "## sdlc 记录"
 
 
@@ -731,6 +746,10 @@ def main(argv=None):
     pwt = sub.add_parser("write-tree", help="tree JSON → 叶文件(机械落盘;生成器#6 用)")
     pwt.add_argument("--root", required=True, help=".sdlc/requirements 目录")
     pwt.add_argument("--from", dest="from_", required=True, help="merged tree JSON 路径")
+    pss = sub.add_parser("set-status", help="把指定叶 status 机械改为目标值(allow-any 迁移)")
+    pss.add_argument("--root", required=True, help=".sdlc/requirements 目录")
+    pss.add_argument("--leaf", required=True, help="叶 id")
+    pss.add_argument("--to", required=True, help="目标 status(须∈STATUS_ORDER)")
     args = ap.parse_args(argv)
     if args.cmd == "retire":
         return cmd_retire(args)
@@ -743,6 +762,8 @@ def main(argv=None):
         return cmd_board(args)
     if args.cmd == "write-tree":
         return cmd_write_tree(args)
+    if args.cmd == "set-status":
+        return cmd_set_status(args)
     return {"readyqueue": cmd_readyqueue, "coverage": cmd_coverage,
             "lint": cmd_lint, "tree": cmd_tree}[args.cmd](args.root)
 

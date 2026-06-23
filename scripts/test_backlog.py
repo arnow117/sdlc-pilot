@@ -512,6 +512,44 @@ class WriteTreeTest(unittest.TestCase):
             self.assertIn("原有", _read(os.path.join(root, "order", "checkout", "order.checkout.a.md")))
 
 
+def _leaf_status(root, leaf_id):
+    dp = "/".join(leaf_id.split(".")[:2])
+    txt = _read(os.path.join(root, *dp.split("/"), leaf_id + ".md"))
+    for line in txt.splitlines():
+        if line.startswith("status:"):
+            return line.split(":", 1)[1].strip()
+    return None
+
+
+class SetStatusTest(unittest.TestCase):
+    def test_success(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "user.auth.login", status="captured")
+            r = run("set-status", "--leaf", "user.auth.login", "--to", "built", root=root)
+            self.assertEqual(r.returncode, 0)
+            self.assertEqual(_leaf_status(root, "user.auth.login"), "built")
+
+    def test_allow_any_backward(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "user.auth.login", status="validated")
+            r = run("set-status", "--leaf", "user.auth.login", "--to", "spec'd", root=root)
+            self.assertEqual(r.returncode, 0)  # allow-any:回退也允许
+            self.assertEqual(_leaf_status(root, "user.auth.login"), "spec'd")
+
+    def test_bad_value(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "user.auth.login", status="captured")
+            r = run("set-status", "--leaf", "user.auth.login", "--to", "banana", root=root)
+            self.assertEqual(r.returncode, 1)
+            self.assertEqual(_leaf_status(root, "user.auth.login"), "captured")  # 未写
+
+    def test_missing_leaf(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "user.auth.login", status="captured")
+            r = run("set-status", "--leaf", "nope.x.y", "--to", "built", root=root)
+            self.assertEqual(r.returncode, 2)
+
+
 class LintBadStatusTest(unittest.TestCase):
     def test_rejects_unknown_status(self):
         with tempfile.TemporaryDirectory() as root:
