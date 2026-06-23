@@ -2,6 +2,14 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.16.1] — 2026-06-23
+
+### Fixed
+- **pre-push hook 误拦合法的退场+合并收尾**（0.16.0 dogfood 实测发现）：`references/templates/hooks/pre-push` 两处把正常 SDLC 收尾误判为"没走流程/评审后改代码"——
+  - **无 STATE.md**（retire 清栈后的合法状态）原直接拦截 → 现先看 `.sdlc/archive/` 是否非空（有退场记录=走过 SDLC）→ 放行；archive 也空才判"从没走 SDLC"拦。
+  - **HEAD 移过 `reviewed-head`**（retire 归档提交 + merge 必然推进 HEAD）原判"评审后又改代码" → 现看 `reviewed-head..HEAD` 间**非 `.sdlc/` 的代码**是否真有改动（`git diff -- . ':(exclude).sdlc'`），仅 .sdlc bookkeeping 变动 → 放行；真改了代码才拦（并列出改了哪些）。
+- dogfood 6 场景验证（退场态/从没跑/仅.sdlc变/评审后改码/正常/gate BLOCK）放行与拦截两路径均正确。纯 sh，硬门性质不变。
+
 ## [0.16.0] — 2026-06-23
 
 ### Added
