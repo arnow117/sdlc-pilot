@@ -1,7 +1,7 @@
 ---
 title: 源码协作纪律（分支 / 命名 / 提交 / worktree / 并行收敛）
 scope: methodology                # 通用、跨语言、跨目标——不含项目特定值
-applies-to: sdlc-build           # 由 sdlc-build 加载;开分支/提交/worktree 并行/收敛时遵循
+applies-to: sdlc(driver §1.1, 跨阶段) + sdlc-build §0.2   # driver 在 entry 加载、贯穿 plan→build→review;build 用于提交/波内执行
 distilled-from: [session:collaboration-discipline-2026-06-23]
 updated: 2026-06-23
 ---

@@ -45,7 +45,7 @@ description: >
 
 ### 0.2 执行模型 — wave 并行 / 串行 inline(Task-or-sequential)
 
-> **源码协作纪律**:开分支 / 写提交 / (可选)开 worktree 并行时,遵循 `references/collaboration-discipline.md`——尤其「分支按意图分两类」「worktree 按需,不是默认」「开 worktree 前先定**前置合约**:接口先冻 / 面切分 / 独立性」「收敛时**先基到最新 + 重测才合**(防 merge skew)」。
+> **源码协作纪律(本阶段部分)**:提交守 Conventional Commits;波内并行执行守 plan 的「同 wave 不碰同一文件」。分支模型 / worktree 决策 / 并行**前置合约** / 收敛安全网由 **driver §1.1 跨阶段加载**,见 `references/collaboration-discipline.md`。
 
 **先分清两个层次**:
 - **任务内**(一个任务的 TDD):**永远串行**,一个写手——red→green 是连贯推理,且不得两个写手同改一处。

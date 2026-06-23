@@ -215,6 +215,7 @@ v1 语言范围 = **Python + Web(TS)**。如何迭代本项目见仓库根 **`CL
 | `role-routing.md` | arch-doctor 的 P13/P23 机制原型;**R1-R8 表本身 = 净新建** |
 | `templates/hooks/pre-push` | **自建**(纯 shell,读 STATE 的 sdlc-gate;OneRedOak CI 思路本地化) |
 | `web-review/` | **自建**:spec/plan 可选复核 gate——md→划词批注页 + localhost 回收 feedback;§6 Live mode = `curl /wait` 长轮询实时双向回流(跨引擎,不依赖 harness 特性) |
+| `collaboration-discipline.md` | 源码协作纪律:分支模型两类(trunk-based · Fowler branch-by-abstraction)· worktree 按需 + 并行(Anthropic/OpenAI worktree 实践)· 多 agent 前置合约(上下文对齐)· 收敛安全网(Not-Rocket-Science / merge queue);**由 sdlc driver(§1.1)跨阶段加载,build 用于提交/波内执行** |
 
 ## 出处与致谢
 
