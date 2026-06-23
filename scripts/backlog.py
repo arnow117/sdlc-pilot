@@ -29,6 +29,14 @@ PRIORITY_ORDER = {"P0": 0, "P1": 1, "P2": 2, "P3": 3}
 FAILURE_CLASSES = {"funds", "consistency", "compliance", "experience"}
 LEAF_OPTIONAL = ["actor", "failure_class", "contract_refs", "data_owner"]
 SHIPPED = "shipped"
+# status 状态机权威枚举(单一事实源;CSS/SKILL/钩子/reconcile 都引此,不各自硬编码顺序)
+STATUS_ORDER = ["captured", "spec'd", "planned", "built", "validated", "shipped"]
+STATUS_SET = set(STATUS_ORDER)
+# stage(SDLC 阶段) → 该阶段走过后叶应处的 status(供 post-checkout flush / driver reconcile 映射)
+STAGE_TO_STATUS = {
+    "spec": "spec'd", "plan": "planned", "build": "built",
+    "validate": "validated", "review": "validated", "ship": "shipped",
+}
 RETIRE_ARTIFACTS = ["spec.md", "plan.md", "validate", "review", "STATE.md"]
 
 

@@ -9,6 +9,8 @@ import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 BACKLOG = os.path.join(HERE, "backlog.py")
+sys.path.insert(0, HERE)
+import backlog  # noqa: E402  (直接引用常量/函数;CLI 行为仍走 subprocess run())
 
 LEAF_TMPL = """---
 id: {id}
@@ -508,6 +510,20 @@ class WriteTreeTest(unittest.TestCase):
             r = run("write-tree", "--from", fp, root=root)
             self.assertEqual(json.loads(r.stdout)["skipped"], 1)
             self.assertIn("原有", _read(os.path.join(root, "order", "checkout", "order.checkout.a.md")))
+
+
+class StatusEnumTest(unittest.TestCase):
+    def test_order_endpoints(self):
+        self.assertEqual(backlog.STATUS_ORDER[0], "captured")
+        self.assertEqual(backlog.STATUS_ORDER[-1], "shipped")
+
+    def test_set_matches_order(self):
+        self.assertEqual(backlog.STATUS_SET, set(backlog.STATUS_ORDER))
+
+    def test_stage_map(self):
+        self.assertEqual(backlog.STAGE_TO_STATUS["spec"], "spec'd")
+        self.assertEqual(backlog.STAGE_TO_STATUS["build"], "built")
+        self.assertEqual(backlog.STAGE_TO_STATUS["validate"], "validated")
 
 
 if __name__ == "__main__":
