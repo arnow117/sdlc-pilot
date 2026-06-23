@@ -45,6 +45,8 @@ description: >
 
 ### 0.2 执行模型 — wave 并行 / 串行 inline(Task-or-sequential)
 
+> **源码协作纪律**:开分支 / 写提交 / (可选)开 worktree 并行时,遵循 `references/collaboration-discipline.md`——尤其「分支按意图分两类」「worktree 按需,不是默认」「开 worktree 前先定**前置合约**:接口先冻 / 面切分 / 独立性」「收敛时**先基到最新 + 重测才合**(防 merge skew)」。
+
 **先分清两个层次**:
 - **任务内**(一个任务的 TDD):**永远串行**,一个写手——red→green 是连贯推理,且不得两个写手同改一处。
 - **任务间**:**可并行**,且"哪些能并行"已由 `plan.md` 的 **wave/depends_on** 算好。关键保证:plan 的硬规则「**同 wave 不碰同一文件**」(§plan 4.3)使得**同一 wave 内并行写代码是构造上安全的**。

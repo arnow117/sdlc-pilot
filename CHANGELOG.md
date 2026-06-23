@@ -2,6 +2,18 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.15.0] — 2026-06-23
+
+### Added
+- **新增 `references/collaboration-discipline.md`(源码协作纪律)** —— 补上工具此前唯一缺的「源码协作」通用能力,由 `sdlc-build §0.2` 引用:
+  - 分支模型按意图分两类(**收敛型短命→主干** / **分叉型长命是设计**:客户定制·私有部署·LTS·上游 fork,优先配置+扩展点而非 fork);
+  - 分支命名 `<type>/<summary>` + Conventional Commits;
+  - **worktree 按需(不是默认)** + 开/合命令骨架;
+  - **并行协作:前置合约(接口先冻/面切分/独立性/自包含简报)+ 收敛安全网(串行收敛 + 先基到最新+重测才合,防 merge skew 与语义冲突)**。
+
+### Changed
+- `.gitignore` 忽略 `.playwright-mcp/`(浏览器 MCP 会话产物,非源码)。
+
 ## [0.14.0] — 2026-06-16
 
 ### Added
