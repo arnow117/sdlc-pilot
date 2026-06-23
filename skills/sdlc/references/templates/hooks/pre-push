@@ -42,6 +42,12 @@ REVIEWED=$(printf '%s' "$GATE_LINE" | sed -n 's/.*reviewed-head=\([0-9a-f]*\).*/
 if [ -n "$REVIEWED" ] && [ "$REVIEWED" != "$HEAD_SHA" ]; then
   # HEAD 移过 reviewed-head 不一定是"又改了代码":退场归档(retire)+合并收尾会推进 HEAD 但
   # 只动 .sdlc/ bookkeeping。判据=reviewed-head..HEAD 间【非 .sdlc/ 的代码】是否真有改动。
+  # 先确认 reviewed-head 是本仓有效 commit(异仓/rebase 致失效时 diff 会空,不能据此误放行)→ 失效则保守拦。
+  if ! git cat-file -e "${REVIEWED}^{commit}" 2>/dev/null; then
+    echo "✗ sdlc: reviewed-head ${REVIEWED} 不是本仓有效 commit(可能 rebase/异仓)—— 保守拦截。"
+    echo "  重新跑 /sdlc-review 刷新 reviewed-head。绕过：git push --no-verify"
+    exit 1
+  fi
   CODE_CHANGED=$(git diff --name-only "$REVIEWED..$HEAD_SHA" -- . ':(exclude).sdlc' 2>/dev/null)
   if [ -z "$CODE_CHANGED" ]; then
     echo "✓ sdlc: 评审后仅 .sdlc/ 收尾变动(retire/merge),代码未变 —— 放行 (reviewed ${REVIEWED} → HEAD ${SHORT})"
