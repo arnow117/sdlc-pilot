@@ -512,6 +512,21 @@ class WriteTreeTest(unittest.TestCase):
             self.assertIn("原有", _read(os.path.join(root, "order", "checkout", "order.checkout.a.md")))
 
 
+class LintBadStatusTest(unittest.TestCase):
+    def test_rejects_unknown_status(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "order.checkout.a", status="banana")
+            r = run("lint", root=root)
+            self.assertEqual(r.returncode, 1)
+            self.assertIn("bad-status", r.stderr)
+
+    def test_accepts_valid_status(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "order.checkout.a", status="built")
+            r = run("lint", root=root)
+            self.assertEqual(r.returncode, 0)
+
+
 class StatusEnumTest(unittest.TestCase):
     def test_order_endpoints(self):
         self.assertEqual(backlog.STATUS_ORDER[0], "captured")

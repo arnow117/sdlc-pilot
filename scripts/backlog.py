@@ -498,6 +498,10 @@ def cmd_lint(root):
         # 孤儿:叶不在 <domain>/<subdomain>/ 形态(目录深度 < 2)
         if lf["_depth"] < 2:
             problems.append(f"orphan: {lid} 路径深度不足(应在 <domain>/<subdomain>/ 下)")
+        # status 取值校验(存在但非法;缺失已由 missing-field 抓)
+        status = lf.get("status")
+        if status and status not in STATUS_SET:
+            problems.append(f"bad-status: {lid} status='{status}' 不在 {STATUS_ORDER}")
         # 重复 old_system_ref
         ref = lf.get("old_system_ref")
         if ref:
