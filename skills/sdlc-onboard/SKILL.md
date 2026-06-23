@@ -164,14 +164,15 @@ Phase A 采证(纯 bash) → Phase B 类型+入口识别 → Phase C 自建 surf
    - `## Deploy`(只读探测,供 `sdlc-ship` 用):扫 `vercel.json` / `netlify.toml` / `Dockerfile` + k8s manifests / `.github/workflows/*deploy*` / 部署脚本(`deploy.sh` 等)/ 目标工程 `CLAUDE.md` 的部署段 → 判**部署目标类型**(static-site / container / vps / 未知)+ 记关键**配置位置**(项目名/集群/主机在哪个文件)。**只记位置与类型,不抄密钥、不臆造**;探不到就写"未检测到部署配置"。
 3. 清理临时笔记(`.sdlc/onboard-notes/` 若用过)。
 4. text_mode 把 surface-map 草案给用户确认(§0.1),用户改完再定稿。
-5. **脚手架自检 — 询问装两个硬门 hook**(纯 shell,不跑 AI、无密钥;由 **git 执行,模型绕不过**,唯一逃逸 = 人 `--no-verify`)。检测 `<repo>/.git/hooks/{pre-commit,pre-push}` 是否已是 sdlc 的。缺则 text_mode 问:
+5. **脚手架自检 — 询问装三个硬门 hook**(纯 shell,不跑 AI、无密钥;由 **git 执行,模型绕不过**,唯一逃逸 = 人 `--no-verify`/删钩子)。检测 `<repo>/.git/hooks/{pre-commit,pre-push,post-checkout}` 是否已是 sdlc 的。缺则 text_mode 问:
    ```
-   要装这两个硬门吗?(git 自动跑,模型绕不过)
+   要装这三个硬门吗?(git 自动跑,模型绕不过)
      · pre-commit:并发/边界守卫 —— commit 前查 STATE 与当前 branch/worktree 是否串台(防同分支并行/串台)
      · pre-push:SDLC 检查 —— push 前核对 validate+review 已过(读 sdlc-gate 行)
-     1) 都装(推荐)  2) 只装 pre-commit  3) 只装 pre-push  4) 跳过
+     · post-checkout:叶状态 flush —— 切分支时把在飞特性源叶 status 固化落盘(防中间态丢失;无需求树则 no-op)
+     1) 都装(推荐)  2) 只装 pre-commit  3) 只装 pre-push  4) 只装 post-checkout  5) 跳过
    ```
-   选装 → 把 `references/templates/hooks/pre-commit` / `pre-push` 拷到 `<repo>/.git/hooks/` 并 `chmod +x`;**仅 git 仓装**(非 git 仓跳过)。pre-commit 调 `sdlc-guard`(确定性边界检测,脚本在 `skills/sdlc/scripts/sdlc-guard`,随技能自包含),为让 hook 在任何安装方式下都能找到,把它拷/软链到 `<repo>/.sdlc/bin/sdlc-guard`(hook 优先找这里)。装完一句话说明各自管什么。
+   选装 → 把 `references/templates/hooks/{pre-commit,pre-push,post-checkout}` 拷到 `<repo>/.git/hooks/` 并 `chmod +x`;**仅 git 仓装**(非 git 仓跳过)。pre-commit 调 `sdlc-guard`(确定性边界检测,脚本在 `skills/sdlc/scripts/sdlc-guard`,随技能自包含),为让 hook 在任何安装方式下都能找到,把它拷/软链到 `<repo>/.sdlc/bin/sdlc-guard`(hook 优先找这里)。post-checkout 调 `backlog.py set-status` 做 flush(C 混合写回硬层;详见该项目生命周期同步设计)。装完一句话说明各自管什么。
 
 ---
 
@@ -181,9 +182,9 @@ Phase A 采证(纯 bash) → Phase B 类型+入口识别 → Phase C 自建 surf
 |---|---|---|
 | `<repo>/.sdlc/PROFILE.md` | **写(主交付物)** | 据 `references/templates/PROFILE.md` 模板填实测结果 |
 | `references/templates/PROFILE.md` | 读(skill 内) | PROFILE 模板,复制后填写 |
-| `references/templates/hooks/pre-push` | 读(skill 内) | push 前 SDLC 检查模板,Phase D 用户同意后拷贝 |
+| `references/templates/hooks/{pre-commit,pre-push,post-checkout}` | 读(skill 内) | 三个硬门模板,Phase D 用户同意后拷贝 |
 | `references/role-routing.md` | 读(skill 内) | §2 规则表 + §3/§4 取值字典,给 surface 推荐默认角色/模式 |
-| `<repo>/.git/hooks/pre-push` | **写(仅用户同意 + git 仓)** | Phase D 脚手架自检装的纯 shell 检查;装完即与 skill 解耦 |
+| `<repo>/.git/hooks/{pre-commit,pre-push,post-checkout}` | **写(仅用户同意 + git 仓)** | Phase D 脚手架自检装的纯 shell 硬门;装完即与 skill 解耦 |
 | `<repo>/.sdlc/onboard-notes/<focus>.md` | 临时写/读(可选) | 仅并行采证用的中转笔记,Phase D 聚合后删除 |
 | `<repo>/.sdlc/STATE.md` | **不碰** | STATE 是 feature 级,由 driver 单写;onboard 只管项目级 PROFILE |
 

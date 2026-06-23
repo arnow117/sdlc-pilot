@@ -9,6 +9,8 @@ import unittest
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 BACKLOG = os.path.join(HERE, "backlog.py")
+sys.path.insert(0, HERE)
+import backlog  # noqa: E402  (直接引用常量/函数;CLI 行为仍走 subprocess run())
 
 LEAF_TMPL = """---
 id: {id}
@@ -508,6 +510,132 @@ class WriteTreeTest(unittest.TestCase):
             r = run("write-tree", "--from", fp, root=root)
             self.assertEqual(json.loads(r.stdout)["skipped"], 1)
             self.assertIn("原有", _read(os.path.join(root, "order", "checkout", "order.checkout.a.md")))
+
+
+class BoardRenoTest(unittest.TestCase):
+    """看板 4 痛点重构(P6):①进度/图例/过滤 ②搜索/折叠记忆/面包屑 ③字段分组/dep可点/tooltip ④聊天状态提示。"""
+    def _render(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "order.checkout.a", status="shipped", title="下单")
+            write_leaf(root, "order.checkout.b", status="captured",
+                       depends_on="[order.checkout.a]")
+            out = os.path.join(root, "b.html")
+            run("board", "--out", out, root=root)
+            return _read(out)
+
+    def test_pain1_legend_and_distribution(self):
+        h = self._render()
+        self.assertIn('class="legend"', h)      # 图例
+        self.assertIn('class="dist"', h)         # 进度分布条(分段)
+
+    def test_pain2_search_and_breadcrumb(self):
+        h = self._render()
+        self.assertIn('id="tree-search"', h)     # 搜索框
+        self.assertIn('crumb', h)                # 面包屑容器
+        self.assertIn('localStorage', h)         # 折叠记忆
+
+    def test_pain3_field_grouping_and_dep_link(self):
+        h = self._render()
+        self.assertIn('dep-link', h)             # depends_on 可点
+        self.assertIn('身份', h)                  # 字段分组小标题
+        self.assertIn('交叉', h)
+
+    def test_pain4_chat_live_status(self):
+        h = self._render()
+        self.assertIn('id="live-status"', h)     # 监听状态指示
+
+
+class BoardLiveBadgeTest(unittest.TestCase):
+    def _setup(self, with_state=True, stage="build"):
+        self.tmp = tempfile.mkdtemp()
+        req = os.path.join(self.tmp, "requirements")
+        write_leaf(req, "user.auth.login", status="captured", title="登录")
+        if with_state:
+            with open(os.path.join(self.tmp, "STATE.md"), "w", encoding="utf-8") as f:
+                f.write(f"# SDLC State: x\nstage: {stage}\nsource-leaf: user.auth.login\n")
+        return req
+
+    def test_overlay_when_state_present(self):
+        req = self._setup(stage="build")
+        out = os.path.join(self.tmp, "b.html")
+        r = run("board", "--out", out, root=req)
+        self.assertEqual(r.returncode, 0)
+        html_txt = _read(out)
+        self.assertIn('class="live-badge', html_txt)  # 真元素(非 CSS 规则)
+        self.assertIn("build中", html_txt)            # 在飞 stage 显示
+
+    def test_no_overlay_without_state(self):
+        req = self._setup(with_state=False)
+        out = os.path.join(self.tmp, "b.html")
+        run("board", "--out", out, root=req)
+        self.assertNotIn('class="live-badge', _read(out))  # 无在飞元素(CSS 规则不算)
+
+
+def _leaf_status(root, leaf_id):
+    dp = "/".join(leaf_id.split(".")[:2])
+    txt = _read(os.path.join(root, *dp.split("/"), leaf_id + ".md"))
+    for line in txt.splitlines():
+        if line.startswith("status:"):
+            return line.split(":", 1)[1].strip()
+    return None
+
+
+class SetStatusTest(unittest.TestCase):
+    def test_success(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "user.auth.login", status="captured")
+            r = run("set-status", "--leaf", "user.auth.login", "--to", "built", root=root)
+            self.assertEqual(r.returncode, 0)
+            self.assertEqual(_leaf_status(root, "user.auth.login"), "built")
+
+    def test_allow_any_backward(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "user.auth.login", status="validated")
+            r = run("set-status", "--leaf", "user.auth.login", "--to", "spec'd", root=root)
+            self.assertEqual(r.returncode, 0)  # allow-any:回退也允许
+            self.assertEqual(_leaf_status(root, "user.auth.login"), "spec'd")
+
+    def test_bad_value(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "user.auth.login", status="captured")
+            r = run("set-status", "--leaf", "user.auth.login", "--to", "banana", root=root)
+            self.assertEqual(r.returncode, 1)
+            self.assertEqual(_leaf_status(root, "user.auth.login"), "captured")  # 未写
+
+    def test_missing_leaf(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "user.auth.login", status="captured")
+            r = run("set-status", "--leaf", "nope.x.y", "--to", "built", root=root)
+            self.assertEqual(r.returncode, 2)
+
+
+class LintBadStatusTest(unittest.TestCase):
+    def test_rejects_unknown_status(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "order.checkout.a", status="banana")
+            r = run("lint", root=root)
+            self.assertEqual(r.returncode, 1)
+            self.assertIn("bad-status", r.stderr)
+
+    def test_accepts_valid_status(self):
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "order.checkout.a", status="built")
+            r = run("lint", root=root)
+            self.assertEqual(r.returncode, 0)
+
+
+class StatusEnumTest(unittest.TestCase):
+    def test_order_endpoints(self):
+        self.assertEqual(backlog.STATUS_ORDER[0], "captured")
+        self.assertEqual(backlog.STATUS_ORDER[-1], "shipped")
+
+    def test_set_matches_order(self):
+        self.assertEqual(backlog.STATUS_SET, set(backlog.STATUS_ORDER))
+
+    def test_stage_map(self):
+        self.assertEqual(backlog.STAGE_TO_STATUS["spec"], "spec'd")
+        self.assertEqual(backlog.STAGE_TO_STATUS["build"], "built")
+        self.assertEqual(backlog.STAGE_TO_STATUS["validate"], "validated")
 
 
 if __name__ == "__main__":

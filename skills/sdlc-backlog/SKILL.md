@@ -4,7 +4,8 @@ description: >
   SDLC 主线的 pre-spec 阶段:把"一堆散点需求 / 一个待重写的老系统"测绘成一棵可路由的
   需求树(产出 <target-repo>/.sdlc/requirements/ 递归 domain→subdomain→leaf)。管的是 spec
   之前的【需求集合】:Seed(老系统→骨架)、Generate(分析代码→自动 gen 带叶的 capability/user-story 树,多 agent)、Ingest(散点需求归类成叶)、Coverage(迁移 burndown)、
-  Ready-queue(派生解依赖的就绪叶 → 喂给未来的 sdlc-loop)、Lint(断依赖/重复/孤儿/缺字段)、
+  Ready-queue(派生解依赖的就绪叶 → 喂给未来的 sdlc-loop)、Lint(断依赖/重复/孤儿/缺字段/非法 status)、
+  set-status(机械改叶 status,叶生命周期同步原语,供 post-checkout 钩子/driver reconcile 调)、
   视图导出(Tree=整树嵌套 JSON 给 agent / Board=折叠树 HTML 看板给人看,复用 web-review annotate 补 review gate)、
   Move(叶迁域:mv 文件+改 id/domain_path+改写依赖)、
   Retire(特性 done 退场:归档工件/回流教训到 EVOLUTION/标源叶 shipped 并把同条教训写进该叶 `## sdlc 记录`/清栈——backlog 因此成为特性生命周期的两端书挡)。
@@ -27,7 +28,7 @@ description: >
 > **边界**:本 skill 管"需求集合"。收敛单条需求 = `sdlc-spec`;拆任务 = `sdlc-plan`;调度循环 = 子系统 B。
 > 知识与状态全在纯文件,引擎 = Claude + Read/Edit/Bash/Grep。
 >
-> distilled-from: `session:loop-engineering-article(Addy Osmani)` · `kb-manage`(递归 domain-subdomain + Ingest) · `tb-loop-driver`(导演/编排模式) · `session:sdlc-backlog-build-2026-06-15` · `session:sdlc-feature-retirement-2026-06-16`(Retire op / 特性退场闭环) · `session:sdlc-backlog-board-2026-06-16`(Tree/Board/Move op + 聊天看板 + Live 对话模式) · `session:sdlc-evolution-leaf-attach-2026-06-16`(Retire 标 shipped 时把 evolution entry 也写进源叶 `## sdlc 记录`) · `session:sdlc-tree-generator-2026-06-16`(Generate op:分析代码→capability/user-story 树 + 4 交叉字段 + write-tree + 多 agent 两阶段)
+> distilled-from: `session:loop-engineering-article(Addy Osmani)` · `kb-manage`(递归 domain-subdomain + Ingest) · `tb-loop-driver`(导演/编排模式) · `session:sdlc-backlog-build-2026-06-15` · `session:sdlc-feature-retirement-2026-06-16`(Retire op / 特性退场闭环) · `session:sdlc-backlog-board-2026-06-16`(Tree/Board/Move op + 聊天看板 + Live 对话模式) · `session:sdlc-evolution-leaf-attach-2026-06-16`(Retire 标 shipped 时把 evolution entry 也写进源叶 `## sdlc 记录`) · `session:sdlc-tree-generator-2026-06-16`(Generate op:分析代码→capability/user-story 树 + 4 交叉字段 + write-tree + 多 agent 两阶段) · `session:sdlc-leaf-lifecycle-board-2026-06-23`(set-status op + 叶生命周期状态同步 C 混合写回[post-checkout 钩子+driver reconcile]+ 看板重构 4 痛点 + lint bad-status)
 
 ---
 
@@ -226,10 +227,22 @@ python3 <bk> coverage --root <root>
 ```
 python3 <bk> lint --root <root>
 ```
-报四类问题并以非 0 退出码标记:① **dangling-dep**(depends_on 指向不存在 id)② **dup-old_system_ref**
+报问题并以非 0 退出码标记:① **dangling-dep**(depends_on 指向不存在 id)② **dup-old_system_ref**
 (同 old_system_ref 出现在多叶,提示一条需求被重复 Ingest)③ **missing-field**(10 必填 frontmatter 缺任一)
-④ **orphan**(叶不在 `<domain>/<subdomain>/` 形态下)。lint 只**报**不**修**,问题清单 text_mode 给用户决策。
+④ **orphan**(叶不在 `<domain>/<subdomain>/` 形态下)⑤ **bad-status**(status 取值不在 STATUS_ORDER 枚举)
+⑥ **bad-failure-class / bad-contract-refs**(4 可选交叉字段取值非法)。lint 只**报**不**修**,问题清单 text_mode 给用户决策。
 这就是需求树的 correctness 门(对应 validate 阶段)。
+
+### 4.3b set-status —— 机械改叶 status(生命周期同步原语)
+```
+python3 <bk> set-status --root <root> --leaf <id> --to <status>
+```
+把指定叶 frontmatter 的 `status` 机械改为目标值(须 ∈ STATUS_ORDER:captured→spec'd→planned→built→validated→shipped)。
+**allow-any 迁移**:只校验目标值合法,不查迁移合法性(可前进可回退);叶不存在 exit 2、非法值 exit 1、成功 exit 0。
+这是**叶生命周期状态同步**(C 混合写回)的共享机械写原语,主要由两处自动调用,人手亦可用:
+- **post-checkout git 钩子**(硬层):切分支时把在飞特性源叶 status flush 落盘(过渡态不丢)。
+- **driver §1.1b reconcile**(软层):driver 入口对账,叶 status 落后 STATE.stage 映射值则补齐(只前进)。
+稳态(captured/shipped)落盘持久,过渡态(spec'd→validated)平时由看板读 STATE 惰性叠加显示(不写文件),离开特性时由钩子/reconcile flush。
 
 ### 4.4 Tree —— 整树嵌套 JSON(agent 视角)
 ```

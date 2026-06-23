@@ -58,7 +58,7 @@
 | 树节点（三级折叠） | 原生 `<details>/<summary>` | domain→subdomain→leaf；零 JS 框架；键盘可达 |
 | 叶卡（可选中） | `<article>` clickable | 显示 id / title / status 徽章 / priority pill / risk 点 / depends_on；点击=选中 |
 | status 徽章 | `<span>` | §2.1 语义色，圆角 4px |
-| coverage 条 | 顶部每 domain 一条 | shipped/total 占比，`--green` 填充 |
+| coverage 条 | 顶部每 domain 一条 | **升级为进度分布条**（见 §8.1）：旧 shipped/total 单填充 → 按 STATUS_ORDER 全状态分段 |
 | 右侧聊天面板（chatbot） | 自建 `chat.css`/`chat.js`（内联） | 头部=选中叶 id+title；消息区你/agent 气泡；底部输入框+发送；per-leaf 会话 |
 | 消息气泡 | `.msg.user` / `.msg.agent` | user 右对齐 `--green-soft` 底；agent 左对齐 `--panel` 底+`--line` 边 |
 
@@ -83,3 +83,35 @@
 - 看板 CSS/JS（token + 树/叶/徽章/coverage + 聊天面板）**全部内联**在 `board` 命令生成的 HTML 里（自包含、离线可开）。
 - 仅运行时依赖 web-review 的 `server.py`（同目录托管 + `/feedback`/`/wait`/`/rev`/`/replies.json` 静态服务）——**不依赖** annotate.css/js（聊天面板自建，不复用批注层 UI）。
 - 不引第三方 UI 库 / 模板引擎 / 网络字体（守可移植铁律：纯标准库生成、离线可开）。
+
+## 8. 本特性新增（0.16.0 生命周期同步 + 看板重构）
+
+> 复用 §2.1 状态语义色 + §2 token；以下是本期新增/收紧的组件规范，供 design 评审与 build 校准。
+
+### 8.1 进度分布条（升级旧 coverage 条）
+- 每 domain 一条 + 顶部一条全树总览。**按 STATUS_ORDER 分段着色**（captured→shipped 从左到右），段宽 = 该状态叶数占比，用 §2.1 各 status 色。
+- 段悬停 tooltip 显示「状态名 · N 片」。整体 8px 高、圆角 4px、`--line` 描边。
+- 旁注文字保留 `shipped/total`（最右段=已交付占比）。
+
+### 8.2 live badge（在飞态叠加，惰性派生）
+- 当看板读到 `STATE.source-leaf` 命中某叶 → 该叶 status 徽章旁叠加一枚 **live badge**：文案「⏳ <stage>中」（如"⏳ build 中"），底色用该 stage 映射 status 的 §2.1 色 + 1px `--green` 描边表"实时"。
+- 动效仅 `opacity` 脉冲（`prefers-reduced-motion` 关）；**不动 layout**。
+- 无 STATE / 无 source-leaf → 不渲染 badge（向后兼容纯文件 status）。
+
+### 8.3 叶详情字段分组（§4 叶卡详情面板细化）
+10+ 字段分 **4 组**，每组小标题（`--muted` 12px）：
+- **身份**：id / title / status / priority
+- **定位**：domain_path / old_system_ref / new_domain_path
+- **关系**：depends_on（**渲染成可点链接**，点击选中并滚动到目标叶；仅在已知叶 id 集合内跳转）/ cross_link
+- **交叉**：actor / failure_class / contract_refs / data_owner / risk_level
+- 每个字段名带 `title` tooltip 说明含义（如 failure_class="该需求做坏会伤哪类：资金/一致性/合规/体验"）。
+
+### 8.4 树导航增强
+- **搜索框**（顶部）：即时按 id/title 过滤可见叶；空查询=全展开。
+- **折叠记忆**：`<details>` 开合态存 localStorage，刷新/重渲染不丢。
+- **面包屑**：选中叶时显示 `domain › subdomain › leaf`，各级可点回跳。
+- **状态过滤**：点 §1 图例某状态 → 高亮/筛出该状态叶。
+
+### 8.5 聊天面板状态提示（§4 chatbot 头部）
+- 头部加**监听状态指示**：🟢「Live 监听中」/ ⚪「未监听 — 需 agent 切 live 才能实时对话」。
+- 空消息态**引导文案**：说明何时能用、如何让 agent 切 live（占会话监听 `/wait`）。
