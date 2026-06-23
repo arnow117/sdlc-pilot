@@ -512,6 +512,32 @@ class WriteTreeTest(unittest.TestCase):
             self.assertIn("原有", _read(os.path.join(root, "order", "checkout", "order.checkout.a.md")))
 
 
+class BoardLiveBadgeTest(unittest.TestCase):
+    def _setup(self, with_state=True, stage="build"):
+        self.tmp = tempfile.mkdtemp()
+        req = os.path.join(self.tmp, "requirements")
+        write_leaf(req, "user.auth.login", status="captured", title="登录")
+        if with_state:
+            with open(os.path.join(self.tmp, "STATE.md"), "w", encoding="utf-8") as f:
+                f.write(f"# SDLC State: x\nstage: {stage}\nsource-leaf: user.auth.login\n")
+        return req
+
+    def test_overlay_when_state_present(self):
+        req = self._setup(stage="build")
+        out = os.path.join(self.tmp, "b.html")
+        r = run("board", "--out", out, root=req)
+        self.assertEqual(r.returncode, 0)
+        html_txt = _read(out)
+        self.assertIn("live-badge", html_txt)
+        self.assertIn("build", html_txt)  # 在飞 stage 显示
+
+    def test_no_overlay_without_state(self):
+        req = self._setup(with_state=False)
+        out = os.path.join(self.tmp, "b.html")
+        run("board", "--out", out, root=req)
+        self.assertNotIn("live-badge", _read(out))
+
+
 def _leaf_status(root, leaf_id):
     dp = "/".join(leaf_id.split(".")[:2])
     txt = _read(os.path.join(root, *dp.split("/"), leaf_id + ".md"))

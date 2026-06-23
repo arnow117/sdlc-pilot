@@ -227,8 +227,30 @@ def _leaf_detail_map(leaves):
     return detail
 
 
-def render_board(tree, leaves, title="Backlog 需求树看板"):
-    """整树 → 自包含 HTML 看板(左折叠树 + 右聊天面板 + 叶详情 + Live 回路)。只读渲染。"""
+def _read_state_overlay(req_root):
+    """读 <req_root>/../STATE.md → {leaf, stage, status} 供看板惰性叠加在飞特性 live badge。
+    无 STATE / source-leaf=(none) / stage 非过渡态 → None(向后兼容纯文件 status 渲染)。"""
+    state = os.path.join(os.path.dirname(os.path.abspath(req_root.rstrip("/"))), "STATE.md")
+    if not os.path.isfile(state):
+        return None
+    try:
+        txt = open(state, encoding="utf-8").read()
+    except OSError:
+        return None
+
+    def v(key):
+        m = re.search(rf"(?mi)^{key}:\s*(.+)$", txt)
+        return m.group(1).strip() if m else ""
+    leaf, stage = v("source-leaf"), v("stage")
+    if not leaf or leaf == "(none)":
+        return None
+    to = STAGE_TO_STATUS.get(stage)
+    return {"leaf": leaf, "stage": stage, "status": to} if to else None
+
+
+def render_board(tree, leaves, title="Backlog 需求树看板", live=None):
+    """整树 → 自包含 HTML 看板(左折叠树 + 右聊天面板 + 叶详情 + Live 回路)。只读渲染。
+    live={leaf,stage,status}: 对在飞特性源叶叠加 live badge(惰性派生,不写文件);None=纯文件 status。"""
     esc = html.escape
     summ = tree["summary"]
     # 叶详情数据嵌入(防 </script> 注入:转义 </)
@@ -253,19 +275,26 @@ def render_board(tree, leaves, title="Backlog 需求树看板"):
             for sub in d["subdomains"]:
                 lvs = []
                 for lf in sub["leaves"]:
-                    lid = esc(lf.get("id") or "")
+                    raw_id = lf.get("id") or ""
+                    lid = esc(raw_id)
                     st = lf.get("status") or "unknown"
                     pr = esc(lf.get("priority") or "P?")
                     risk = lf.get("risk_level") or "medium"
                     deps = lf.get("depends_on") or []
                     deps_html = (f'<span class="deps">依赖: {esc(", ".join(deps))}</span>'
                                  if deps else "")
+                    # 惰性叠加:在飞特性源叶显示 live badge(不改文件 status)
+                    live_html = ""
+                    if live and live["leaf"] == raw_id:
+                        live_html = (f'<span class="live-badge status-{_css_safe(live["status"])}" '
+                                     f'title="在飞:{esc(live["stage"])}">⏳ {esc(live["stage"])}中</span>')
                     lvs.append(
                         f'<section class="leaf" id="{lid}" data-leaf="{lid}" '
                         f'role="button" aria-label="选择 {lid} 开始对话" aria-current="false">'
                         f'<h2>{lid} · {esc(lf.get("title") or "")}</h2>'
                         f'<div class="meta">'
                         f'<span class="badge status-{_css_safe(st)}">{esc(st)}</span>'
+                        f'{live_html}'
                         f'<span class="prio prio-{pr}">{pr}</span>'
                         f'<span class="dot risk-{_css_safe(risk)}" title="risk: {esc(risk)}"></span>'
                         f'{deps_html}</div></section>')
@@ -306,8 +335,9 @@ def cmd_board(args):
     leaves = load_leaves(args.root)
     tree = build_tree(leaves)
     out = args.out or os.path.join(args.root, "_board.html")
+    live = _read_state_overlay(args.root)
     with open(out, "w", encoding="utf-8") as f:
-        f.write(render_board(tree, leaves))
+        f.write(render_board(tree, leaves, live=live))
     print(json.dumps({"board": out, "domains": len(tree["domains"]),
                       "total": tree["summary"]["total"]}, ensure_ascii=False))
     return 0
