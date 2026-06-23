@@ -345,7 +345,8 @@ def _read_state_overlay(req_root):
     if not os.path.isfile(state):
         return None
     try:
-        txt = open(state, encoding="utf-8").read()
+        with open(state, encoding="utf-8") as f:
+            txt = f.read()
     except OSError:
         return None
 
