@@ -20,18 +20,27 @@
 ### Notes
 - 写回机制选 **C 混合**（稳态 captured/shipped 落盘 + 过渡态惰性派生 + 边界 flush）而非纯急切回写：blast radius 从 L4（碰 5 个 stage skill）压到 L2（driver + backlog.py + 1 钩子），不动 spec/plan/build/validate 4 个 stage skill。状态机 allow-any-set（不挡跳/退）。distilled-from: `session:sdlc-leaf-lifecycle-board-2026-06-23`。
 
-## [0.15.0] — 2026-06-17
+## [0.15.0] — 2026-06-17 ~ 06-23
+
+> 注：本版本号在两条并行开发线上各发生过一次（Codex adapter 线 06-17 未推 + 协作纪律线 06-23 已推 origin），合并时归并到同一 0.15.0 section；后续避免并行线撞版本号。
 
 ### Added
 - **Codex runtime adapter**：新增 `skills/sdlc/references/runtime-adapters/codex.md`，把 SDLC 抽象接口映射到 Codex 运行时：用户选择(`text_mode`/结构化输入可选)、multi-agent fan-out、只读并行、`apply_patch` 文件编辑、headless 安全默认、web-review Live mode 单渠道纪律、Codex 内不自调 `codex`、repo-local `.agents/skills/sdlc*` discovery。
 - **HANDOFF block 契约**：driver §5、STATE 模板、spec/plan/build/validate/review/ship 交接段统一为「阶段 skill 先输出 `## HANDOFF`，driver 作为 canonical writer 写 `.sdlc/STATE.md`」。独立直调阶段 skill 时也必须先产同一 HANDOFF，再作为单写者应用。
+- **新增 `references/collaboration-discipline.md`(源码协作纪律)** —— 补上工具此前唯一缺的「源码协作」通用能力,**由 sdlc driver `§1.1` 跨阶段加载**(贯穿 entry→plan→build→review),`sdlc-build §0.2` 用于提交/波内执行:
+  - 分支模型按意图分两类(**收敛型短命→主干** / **分叉型长命是设计**:客户定制·私有部署·LTS·上游 fork,优先配置+扩展点而非 fork);
+  - 分支命名 `<type>/<summary>` + Conventional Commits;
+  - **worktree 按需(不是默认)** + 开/合命令骨架;
+  - **并行协作:前置合约(接口先冻/面切分/独立性/自包含简报)+ 收敛安全网(串行收敛 + 先基到最新+重测才合,防 merge skew 与语义冲突)**。
 
 ### Changed
 - **build wave fan-out 前置 write-set preflight**：从 `plan.md` 读取同 wave 各 phase/task 的 `files` 集合，若有交集则不 fan-out，降级串行或回 `sdlc-plan` 修 wave；避免 plan invariant 错标时多 agent 并发写同一文件。
-- `scripts/validate-skills` 将 `references/runtime-adapters/codex.md` 纳入关键共享文件检查；plugin / marketplace 版本升至 `0.15.0`。
+- `scripts/validate-skills` 将 `references/runtime-adapters/codex.md` 纳入关键共享文件检查。
+- `.gitignore` 忽略 `.playwright-mcp/`(浏览器 MCP 会话产物,非源码)。
+- plugin / marketplace 版本升至 `0.15.0`。
 
 ### Notes
-- 这是结构性兼容性改动（新增 adapter + 收紧 handoff interface），按完整 SDLC/evolve 维护者透镜处理；不新增顶层 skill，不改 stage 枚举，不改 role-routing 字典。distilled-from: `session:sdlc-codex-compat-2026-06-17`。
+- 结构性兼容性改动（Codex adapter + handoff interface + 协作纪律卡），按完整 SDLC/evolve 维护者透镜处理；不新增顶层 skill，不改 stage 枚举，不改 role-routing 字典。distilled-from: `session:sdlc-codex-compat-2026-06-17` · `session:collaboration-discipline-2026-06-23`。
 
 ## [0.14.0] — 2026-06-16
 

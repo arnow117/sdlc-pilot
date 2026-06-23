@@ -45,6 +45,8 @@ description: >
 
 ### 0.2 执行模型 — wave 并行 / 串行 inline(Task-or-sequential)
 
+> **源码协作纪律(本阶段部分)**:提交守 Conventional Commits;波内并行执行守 plan 的「同 wave 不碰同一文件」。分支模型 / worktree 决策 / 并行**前置合约** / 收敛安全网由 **driver §1.1 跨阶段加载**,见 `references/collaboration-discipline.md`。
+
 **先分清两个层次**:
 - **任务内**(一个任务的 TDD):**永远串行**,一个写手——red→green 是连贯推理,且不得两个写手同改一处。
 - **任务间**:**可并行**,且"哪些能并行"已由 `plan.md` 的 **wave/depends_on** 算好。关键保证:plan 的硬规则「**同 wave 不碰同一文件**」(§plan 4.3)使得**同一 wave 内并行写代码是构造上安全的**。
