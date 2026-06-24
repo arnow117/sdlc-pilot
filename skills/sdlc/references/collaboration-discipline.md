@@ -2,8 +2,8 @@
 title: 源码协作纪律（分支 / 命名 / 提交 / worktree / 并行收敛）
 scope: methodology                # 通用、跨语言、跨目标——不含项目特定值
 applies-to: sdlc(driver §1.1, 跨阶段) + sdlc-build §0.2   # driver 在 entry 加载、贯穿 plan→build→review;build 用于提交/波内执行
-distilled-from: [session:collaboration-discipline-2026-06-23]
-updated: 2026-06-23
+distilled-from: [session:collaboration-discipline-2026-06-23, session:portal-auth-multiagent-loop-2026-06-24]
+updated: 2026-06-24
 ---
 
 # 源码协作纪律 · collaboration-discipline
@@ -98,6 +98,37 @@ git worktree remove ../<repo>-<purpose> && git branch -d <type>/<summary> && git
 ```
 
 > 有 CI 时,§5.3 的"先基+重测"可由 merge queue 自动化;无 CI 则作人工纪律。
+
+### 5.4 监督式多-agent build loop(自治并行的高烈度形态)
+
+把 §5 的并行交给**后台 / 自治 agent**(主循环只监督、不在每步等人确认)时,§5.1 的前置要再收紧、§5.3 的收敛要多一道闸——这是同一纪律在"**agent 中途问不了人**"约束下的强化版,不是新方法。
+
+**loop 形状(串行冻 → 并行建 → 集成收敛):**
+
+```
+串行(人在环):  冻决策 + 冻契约 → 独立评审契约(对抗式,可多轮)
+   ▼
+并行(后台 agent,主循环监督):每 track 一 worktree,摸不重叠的面,各自跑到绿
+   ▼
+串行(主循环):  合并 → ★跨 track 集成闸 → 定向 remediation → 复审 → 收口
+```
+
+关键:**不是"撒 N 个 agent 各自跑完整 SDLC"**(各自猜、合不拢),而是"**串行冻契约 → 并行建竖切 → 主循环跑一次集成 SDLC 收敛**"。
+
+**前置再收紧(补 §5.1)—— 自治 agent 无人工通道:**
+
+- 后台 agent 遇模糊点**没法问你、只会自己猜**。所以冻死的不只是接口契约,而是**所有会让 agent 现场拍板的决策**(架构取舍 / 边界口径 / 取值语义)——派发前在串行段(人在环)全部敲定并落成文件。
+- 每个 agent 简报必含一句硬约束:**"契约 / 边界之外受阻 → 停下回报,不要猜。"** 把"猜"改成"停",让漂移在派发后第一时间暴露,而非埋进产物到集成时才炸。
+- 真栈并行的 agent 各自**自举隔离环境**(独立 DB/schema + 端口 + 缓存 db + 依赖安装),否则并发 e2e 互撞(呼应 §4 worktree 纪律)。
+
+**收敛再加闸(补 §5.3)—— 契约解读漂移,per-track 测试看不见:**
+
+- ★**冻结的契约只保证"形状",不保证"解读"**:并行 track 会对同一共享边界做出**各自局部自洽、彼此不兼容**的解读(路径如何 normalize、字段顺序、canonical 串拼法、空 body 的 hash)。每条 track 的单测都**对着自己那套解读**跑、且都绿——所以 per-track 测试**根本测不出**这种跨 track 解读漂移。
+  - 实证:一侧签名用 `/suppliers`、另一侧验签用 `/vendor/api/v1/suppliers` → canonical 不一致 → **真实请求 100% 401(flow-dead)**;两侧单测全绿,整条链路却不通。
+- 故收敛**必过一道跨 track 集成闸**:由**独立评审者**(新 agent / 第二模型,喂**两端真实接线**而非各 track 的自述摘要)审"边界两侧是否真对齐",或跑**一条真穿过那条缝的 e2e**。这是 §5.3"合后跑全量抓语义冲突"的尖锐特例——专盯**共享边界的解读一致性**。
+- 闸是**对抗式 + 迭代**的:评审 → 定向 remediation → 复审,直到收敛(契约阶段、集成阶段各可能多轮);别指望一轮过。
+
+一句话(5.4):**自治并行 = 决策全部前移到冻结点 + 边界对齐后移到一道跨 track 集成闸;agent 问不了人,所以"猜"要改"停",per-track 绿 ≠ 集成通。**
 
 ---
 

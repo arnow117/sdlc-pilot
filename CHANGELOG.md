@@ -2,6 +2,15 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.16.2] — 2026-06-24
+
+### Added
+- **`collaboration-discipline.md` §5.4 监督式多-agent build loop**（dogfood 实战蒸馏 `session:portal-auth-multiagent-loop-2026-06-24`，跨两仓统一认证集成）——把 §5 的并行协作纪律强化到"**后台/自治 agent 中途问不了人**"的形态，additive 补两条 + 一道闸：
+  - **loop 形状**：串行冻决策+冻契约（人在环，对抗式审）→ 并行后台 build agent（每 track 一 worktree、各自绿）→ 主循环跑一次集成 SDLC 收敛；**不是"撒 N 个 agent 各跑完整 SDLC"**。
+  - **前置再收紧（补 §5.1）**：自治 agent 无人工通道 → 冻死的不只是接口契约、而是**所有会让 agent 现场拍板的决策**；简报必含"契约/边界外受阻→停下回报，不要猜"（把"猜"改成"停"）；真栈并行 agent 各自自举隔离环境。
+  - **收敛再加闸（补 §5.3）**：★**冻结的契约只保证"形状"不保证"解读"**——并行 track 对同一边界的解读漂移（路径 normalize/字段顺序/canonical 串/空 body hash）**per-track 单测看不见**（各测各的假设全绿、整链路 100% 401 flow-dead）；故必过一道**跨 track 集成闸**（独立评审者喂两端真实接线、或穿缝 e2e），且对抗式迭代到收敛。
+- 纯 additive 内容补充（只动既有卡 + 溯源 frontmatter）；`validate-skills` PASS。
+
 ## [0.16.1] — 2026-06-23
 
 ### Fixed
