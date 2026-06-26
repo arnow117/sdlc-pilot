@@ -151,6 +151,7 @@ v1 语言范围 = **Python + Web(TS)**。如何迭代本项目见仓库根 **`CL
 | **散点需求 / 老系统重写** | `/sdlc` → `backlog`:**Seed**(老系统→递归 domain-subdomain 骨架)→ **Ingest**(散点需求归类成叶)→ **Coverage**(迁移 burndown)→ **Ready-queue**(派生就绪叶);选一片叶即起一个 feature 走下面的循环。feature 走到 `done` 时 backlog 的 **Retire** 收尾(归档工件/回流教训/标源叶 shipped/清栈)——backlog 是生命周期两端书挡。已完成工件(`archive/`)+ 演进史(`EVOLUTION.md`)默认**纳入 git** 跨机器持久(在飞工作态仍本地);track 前留意 archive 无密钥 |
 | **每做一个 feature** | `/sdlc` → **spec**(批准前不写码;UI 工作产 `DESIGN.md`;AI 工作前置 eval 标准;开放/高风险决策可选发散 + 范围塑造)→ **plan**(拆阶段/波次/任务)→ **build**(先测后码,同 wave 多阶段可并行)→ **validate**(按改动选 correctness/e2e/eval-bench)→ **review**(多角色 + 安全门 + 收口,写 `sdlc-gate`) |
 | **角色/验证自动选** | 改前端→client-dev+design+e2e:Web;改 API→server-dev+e2e:OpenAPI;改 AI/策略→eval-bench;**跨 ≥2 面→ +architect**;改配置/agent 定义→server-dev+correctness |
+| **批量自治推进(loop)** | 需求树已建、有多片 ready 叶 → `/sdlc loop`:从 ready-queue 取就绪叶,逐叶自动跑 TDD 主线(spec→…→ship)到队列干。内核 TDD(测试=ground truth),阶段间 **converge oracle** 判"真做完没"。不绕硬门、串行取叶、状态全在文件可恢复。见 [`build-loop.md`](skills/sdlc/references/build-loop.md) |
 | **跨会话续接** | `/clear` 或隔天 → `/sdlc` 读 `.sdlc/STATE.md`,从上次 stage 接着走,不用复述 |
 | **push 把关** | 装了 `pre-push` hook 的话,review 没过会拦下 push(`--no-verify` 可绕) |
 | **重型动作可选** | 发散 ideation、范围塑造**只在开放 + 高风险设计决策时**点用;日常需求直接走,不增负担 |

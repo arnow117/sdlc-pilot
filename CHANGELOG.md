@@ -2,6 +2,17 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.17.0] — 2026-06-26
+
+### Added
+- **`references/build-loop.md` + driver `/sdlc loop` 子命令 —— 测试驱动的自治特性循环(子系统 B)**(完整 `/sdlc` dogfood 落地;设计 `docs/specs/2026-06-26-sdlc-loop-design.md`)。兑现 `sdlc-backlog` 早标注的"ready-queue → 喂给未来的 sdlc-loop":
+  - **形态**:meta 子命令(同 evolve/next,**不新增 skill、不进 STATE 枚举、零契约改动**),只**编排**既有 8 阶段,不重写任一阶段纪律。
+  - **主循环**:从 ready-queue(`backlog.py readyqueue`)取就绪叶 → 逐叶跑 spec→plan→build(RGR)→validate→review→ship → Retire 退场 → 取下一片,直到队列干。**内核 TDD**:测试=ground truth(Anthropic building-effective-agents)。
+  - **converge oracle(本特性新增核心)**:阶段间判"该叶**真做完没**"=测试全绿 + 满足 spec Done Criteria + review PASS;没做完把缺口 append 回 build,不误判完成。空队列=全局收敛 done。
+  - **不绕硬门**(review / 安全 open=0 / 覆盖率照旧)、**串行取叶**(单写 STATE 防竞态)、**可恢复**(状态全在 STATE + 叶 status + 任务 `[X]`,崩了重进续接)、**停止条件**(队列干 / max-iter / blocker / 漂移)、**可移植**(text_mode + 纯文件,Codex 也能跑)。
+  - `build-loop.md` **§E 留 5 条权威 loop 先进思路蒸馏占位**(Manus 复述 / Reflexion 写教训 / AlphaCodium 自生成测试 / evaluator-optimizer 外脑 / Anthropic 停止收紧),供后续 `/sdlc evolve` 逐条 append。
+- 纯 additive + 一新 playbook;driver/CLAUDE/README 引用无孤儿;`validate-skills` PASS。
+
 ## [0.16.2] — 2026-06-24
 
 ### Added
