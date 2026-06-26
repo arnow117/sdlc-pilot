@@ -23,6 +23,7 @@
 | **改 spec/plan/build 等流程** | 改对应 `skills/sdlc-<x>/SKILL.md`;保持 §0 可移植前置不动 |
 | **加/改 backlog 派生操作** | ① 在 `scripts/backlog.py` 加子命令 + `scripts/test_backlog.py` 加用例(TDD)→ ② `skills/sdlc-backlog/SKILL.md` 加操作章节 + 顶部 op 枚举 → ③ 若涉及特性生命周期(如 Retire 在 done 触发):driver §2/§4 + `templates/STATE.md` 同步 → ④ validate-skills。**不新增 stage/skill**(派生 op 挂在 backlog 下) |
 | **加/改 meta 能力(改工具自身)** | meta 能力(如 evolve 自更新回流)**不新增顶层 skill**,用"角色卡 + playbook + driver 子命令"表达:`references/roles/skill-maintainer.md`(维护者视角)+ `references/evolve-loop.md`(回流 playbook)+ driver 的 `/sdlc evolve` 入口 + role-routing **R10**。小改走 `/sdlc evolve`(append-only),结构性大改对本仓跑完整 `/sdlc` |
+| **改/扩 loop 编排** | loop(自治批量推进)同 evolve 范式:`references/build-loop.md`(playbook)+ driver `/sdlc loop` 入口,**不新增 skill、不进 STATE 枚举、只编排既有阶段**。往 `build-loop.md` append 一条原则(如 §E 蒸馏区)= 小改走 `/sdlc evolve`;改 loop 骨架/converge 契约 = 大改走完整 `/sdlc` |
 
 ## 每次提交前必做
 1. **跑结构 lint**:`bash scripts/validate-skills`(角色名↔文件、模式名↔文件、frontmatter、引用一致)。**不过不提交。**
