@@ -150,10 +150,22 @@ loop 不裸奔(Anthropic:须有明确停止条件)。任一触发即停并 text_
 
 ## E. 先进思路蒸馏区(逐条由 `/sdlc evolve` append)
 
-> 蒸馏自权威 agent loop 研究。v1 留此占位;每条 = 一节 + `distilled-from`。详见 `docs/specs/2026-06-26-sdlc-loop-design.md §7`。
+> 蒸馏自权威 agent loop 研究(详见 `docs/specs/2026-06-26-sdlc-loop-design.md §7`)。
+> 每条由 `/sdlc evolve` 以 **append-only** 落为下方 `### E#` 小节 + `distilled-from` 溯源。索引:
 
-- **E1 复述(recitation)** — distilled-from: Manus context-engineering。*(待 evolve)*
-- **E2 失败写教训** — distilled-from: Reflexion。*(待 evolve)*
-- **E3 自生成测试强化 oracle** — distilled-from: AlphaCodium。*(待 evolve)*
-- **E4 独立外脑交叉验证** — distilled-from: Anthropic evaluator-optimizer。*(待 evolve)*
-- **E5 停止条件 + ground-truth 收紧** — distilled-from: Anthropic building-effective-agents。*(待 evolve)*
+- **E1 复述(recitation)** — Manus context-engineering
+- **E2 失败写教训** — Reflexion
+- **E3 自生成测试强化 oracle** — AlphaCodium
+- **E4 可选外脑交叉验证** — Anthropic evaluator-optimizer
+- **E5 停止 + ground-truth 收紧** — Anthropic building-effective-agents
+
+---
+
+### E1. 每圈复述 Done Criteria(recitation)
+
+> distilled-from: Manus context-engineering(todo.md recitation / soft attention control)
+
+长循环上下文会膨胀、目标会"中间遗忘(lost-in-the-middle)"。**每进入一片叶的内循环、每次回到 build 前**,先**重读本叶 spec 的 `## Done Criteria` + plan 未勾 `[X]` 任务**,把目标顶回注意力末端。
+
+- 不是重新规划,只是**把目标 + 剩余项复述一遍**(soft attention control,无需特殊机制)。
+- 复述源 = 文件(spec/plan),**不是对话记忆**——与 §6"状态在文件"一致;fresh-context 重进时,复述即自然恢复目标对焦。
