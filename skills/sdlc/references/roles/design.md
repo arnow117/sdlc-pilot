@@ -1,7 +1,7 @@
 ---
 role: design
 triggers: ["web/**", "components/**", "**/*.tsx", "**/*.vue", "**/*.css", "**/*.scss", "**/*.swift", "**/*.kt", "**/*.dart", "mobile/**", "ios/**", "android/**", "**/*.html", "design-system.md", "DESIGN.md"]
-distilled-from: [gstack/review/design-checklist, web/design-quality(user-rules), design-ux-architect, design-ux-researcher, design-persona-walkthrough, "google-labs/design.md PHILOSOPHY(session:design-md-research-2026-06-26)", "scripts/contrast_check.py(session:design-contrast-check-2026-06-26)"]
+distilled-from: [gstack/review/design-checklist, web/design-quality(user-rules), design-ux-architect, design-ux-researcher, design-persona-walkthrough, "google-labs/design.md PHILOSOPHY(session:design-md-research-2026-06-26)", "scripts/contrast_check.py(session:design-contrast-check-2026-06-26)", "happycompany-eval(session:contrast-prefix-match-2026-06-26)"]
 updated: 2026-06-26
 ---
 
@@ -43,7 +43,7 @@ updated: 2026-06-26
 - [ ] `[diff]` 文本容器有 max-width；固定 px 宽容器有 max-width 或 @media 兜底（防移动端横向滚动）。
 - [ ] `[diff]` 间距/颜色/字体走 token，未重复硬编码；若有 DESIGN.md，颜色/字体/间距均在其声明范围内。
 - [ ] `[diff]` 语义化 HTML 优先；动效只用 compositor 友好属性。
-- [ ] `[diff]` **DESIGN.md 颜色对比度静态自检**：`python3 <sdlc>/scripts/contrast_check.py <DESIGN.md>`（纯 stdlib，无需浏览器）——把 a11y 对比度从 B 腿 [render] 提到 A 腿静态可判。报 < WCAG AA 4.5:1 的前景/背景对（advisory，非强制必要条件）。默认启发式配对偏宽（语义底色当前景会有噪声），DESIGN.md 里写一行 `<!-- contrast: ink on bg, muted on panel -->` 可收窄到真正承载文字的对；oklch/lab 等会诚实标 skipped。
+- [ ] `[diff]` **DESIGN.md 颜色对比度静态自检**：`python3 <sdlc>/scripts/contrast_check.py <DESIGN.md>`（纯 stdlib，无需浏览器）——把 a11y 对比度从 B 腿 [render] 提到 A 腿静态可判。报 < WCAG AA 4.5:1 的前景/背景对（advisory，非强制必要条件）。默认启发式配对偏宽（语义底色当前景会有噪声），DESIGN.md 里写一行 `<!-- contrast: ink on bg, muted on panel -->` 可收窄到真正承载文字的对；oklch/lab 等会诚实标 skipped。**大 token 集（生产前端，几十个 token）务必用注释收窄**——裸启发式是笛卡尔积，噪声会淹没真信号（实测某项目 176 对 / 109 噪声 → 注释收窄到 3 个真问题）。**前缀归一**：token 带公共前缀（`--color-text-primary`）时注释写短名 `text-primary` 即可（自动匹配；歧义会报 info 不静默）。
 
 ### B. UX 深度（理解意图 / 跑页面）
 - [ ] `[diff]` 有意挑选了风格方向（编辑/瑞士/玻璃拟态/bento/暗奢…），而非"clean minimal"含糊默认。

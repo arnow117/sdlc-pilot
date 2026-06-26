@@ -2,6 +2,15 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.18.1] — 2026-06-26
+
+### Changed
+- **`contrast_check.py`：前缀归一匹配 + 大集用法纪律**（happycompany 真实生产前端评估暴露后回灌；完整 `/sdlc` dogfood）：
+  - **前缀归一**：新增 `resolve_token()`——注释里写短名 `text-primary` 自动匹配唯一的 `--color-text-primary`（精确名优先；后缀唯一匹配；歧义/零匹配返回 None 不猜）。解决"token 带公共前缀时注释要写冗长全名、写短名静默失效（0 pairs）"。
+  - **不静默吞**：override 名归一失败 → `info` finding（"未匹配到 token，该对未检查"），避免短名拼错却以为检查过了。
+  - **文档纪律**：`design` 角色卡接入说明补——大 token 集（生产前端几十个 token）裸启发式是笛卡尔积、噪声淹没信号（实测 176 对/109 噪声 → 注释收窄到 3 真问题），务必注释收窄；带公共前缀可用短名。
+  - 范围：经判定改 `contrast_check.py` 代码（行为变更）超出 evolve append-only，走完整 `/sdlc`（非 evolve 轻量路）。36 测试全绿（新增 8 前缀归一用例）。
+
 ## [0.18.0] — 2026-06-26
 
 ### Added

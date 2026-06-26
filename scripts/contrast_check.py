@@ -91,10 +91,25 @@ def classify(name):
     return "either"
 
 
+def resolve_token(name, colors):
+    """把 override/短名解析到真实 token key（前缀归一）。
+    精确匹配优先；否则唯一后缀匹配（key 以 "-<name>" 结尾）；歧义或零匹配返回 None。"""
+    if name in colors:
+        return name
+    matches = [k for k in colors if k.endswith("-" + name)]
+    return matches[0] if len(matches) == 1 else None
+
+
 def build_pairs(colors, overrides):
-    """决定要比哪些 (fg,bg) 对。注释覆盖优先；否则启发式跨类（fg/either × bg）。"""
+    """决定要比哪些 (fg,bg) 对。注释覆盖优先；否则启发式跨类（fg/either × bg）。
+    override 端用前缀归一解析到真实 token key；解析失败的对丢弃（lint 另报 info）。"""
     if overrides:
-        return [p for p in overrides]
+        out = []
+        for fg, bg in overrides:
+            rfg, rbg = resolve_token(fg, colors), resolve_token(bg, colors)
+            if rfg is not None and rbg is not None:
+                out.append((rfg, rbg))
+        return out
     names = list(colors)
     bgs = [n for n in names if classify(n) == "bg"]
     fgs = [n for n in names if classify(n) in ("fg", "either")]
@@ -148,6 +163,18 @@ def lint(text):
                                           else "invalid-hex"})
         else:
             rgb[name] = c
+
+    # override 名归一失败 → info（不静默吞，避免短名拼错却以为检查过了）
+    if overrides:
+        seen_unresolved = set()
+        for fg, bg in overrides:
+            for nm in (fg, bg):
+                if resolve_token(nm, colors) is None and nm not in seen_unresolved:
+                    seen_unresolved.add(nm)
+                    findings.append({
+                        "severity": "info", "fg": None, "bg": None, "ratio": None,
+                        "message": f"override 名 '{nm}' 未匹配到任何 token（不存在或前缀归一歧义）——该对未检查。",
+                    })
 
     pairs = build_pairs(colors, overrides)
     checked = 0

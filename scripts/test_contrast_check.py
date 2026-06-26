@@ -201,5 +201,59 @@ class TestCLI(unittest.TestCase):
         self.assertGreater(rep["summary"]["pairs_checked"], 0)
 
 
+# ── 前缀归一匹配（happycompany 场景）──────────────────────────────
+class TestResolveToken(unittest.TestCase):
+    def setUp(self):
+        self.colors = {
+            "color-text-primary": "#182026",
+            "color-text-muted": "#687782",
+            "color-bg-base": "#ffffff",
+            "color-bg-deep": "#f6f7f8",
+        }
+
+    def test_exact_match_wins(self):
+        self.assertEqual(cc.resolve_token("color-bg-base", self.colors), "color-bg-base")
+
+    def test_suffix_shortname(self):
+        self.assertEqual(cc.resolve_token("text-primary", self.colors), "color-text-primary")
+        self.assertEqual(cc.resolve_token("bg-deep", self.colors), "color-bg-deep")
+
+    def test_ambiguous_returns_none(self):
+        colors = {"a-tone": "#000", "b-tone": "#111"}
+        self.assertIsNone(cc.resolve_token("tone", colors))
+
+    def test_no_match_returns_none(self):
+        self.assertIsNone(cc.resolve_token("nope", self.colors))
+
+    def test_exact_beats_suffix(self):
+        # 同时存在 "primary" 和 "color-text-primary"，写 "primary" 精确命中 "primary"
+        colors = {"primary": "#000", "color-text-primary": "#111"}
+        self.assertEqual(cc.resolve_token("primary", colors), "primary")
+
+
+class TestPrefixMatchInPipeline(unittest.TestCase):
+    def test_build_pairs_override_shortname(self):
+        colors = {"color-text-primary": "#000", "color-bg-base": "#fff"}
+        pairs = cc.build_pairs(colors, [("text-primary", "bg-base")])
+        self.assertEqual(pairs, [("color-text-primary", "color-bg-base")])
+
+    def test_lint_override_shortname_happycompany(self):
+        # text-muted #687782 on bg-deep #f6f7f8 ≈ 4.3 < 4.5
+        text = ("<!-- contrast: text-muted on bg-deep -->\n```css\n:root{\n"
+                "  --color-text-muted: #687782;\n  --color-bg-deep: #f6f7f8;\n}\n```")
+        rep = cc.lint(text)
+        warns = [f for f in rep["findings"] if f["severity"] == "warning"]
+        self.assertEqual(len(warns), 1)
+        self.assertEqual(warns[0]["fg"], "color-text-muted")
+        self.assertEqual(warns[0]["bg"], "color-bg-deep")
+
+    def test_lint_override_unresolved_is_info_not_silent(self):
+        text = ("<!-- contrast: ghost on bg-base -->\n```css\n:root{\n"
+                "  --color-bg-base: #fff;\n}\n```")
+        rep = cc.lint(text)
+        infos = [f for f in rep["findings"] if f["severity"] == "info"]
+        self.assertTrue(any("ghost" in f.get("message", "") for f in infos))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
