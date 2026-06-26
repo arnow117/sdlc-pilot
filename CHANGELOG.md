@@ -2,6 +2,13 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.17.1] — 2026-06-26
+
+### Changed
+- **DESIGN.md 撰写纪律：注入两条设计哲学**（蒸馏自 google-labs/design.md PHILOSOPHY，调研 + doubt-driven 复审后落地；append-only 小改走 `/sdlc evolve`）：
+  - `sdlc-spec §2.6b` + `design` 角色卡 spec 介入行新增 **"具体参照物 > 形容词堆砌"**（用"1970 年代研究生讲义"式具体参照物锚定风格，胜过"modern/clean/premium"——参照物描述一个点、形容词描述一个区域，负约束随参照物自带）与 **"散文为主、token 为辅"**（token 是校准 context 不是渲染指令）。与既有"禁 clean minimal 空话"+ §2 gray-area 具体化同源、互相强化。
+  - **未**引入官方 `@google/design.md` CLI（复审证据：alpha 格式 + node_modules 供应链不宜绑入放行路径；官方 lint 对本族 DESIGN.md「纯散文 + `:root` CSS 变量」结构覆盖=0）。自研轻量 WCAG 对比度校验作为独立结构性改动，走完整 `/sdlc`，不在本次。
+
 ## [0.17.0] — 2026-06-26
 
 ### Added

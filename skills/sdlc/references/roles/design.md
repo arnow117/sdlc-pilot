@@ -1,7 +1,8 @@
 ---
 role: design
 triggers: ["web/**", "components/**", "**/*.tsx", "**/*.vue", "**/*.css", "**/*.scss", "**/*.swift", "**/*.kt", "**/*.dart", "mobile/**", "ios/**", "android/**", "**/*.html", "design-system.md", "DESIGN.md"]
-distilled-from: [gstack/review/design-checklist, web/design-quality(user-rules), design-ux-architect, design-ux-researcher, design-persona-walkthrough]
+distilled-from: [gstack/review/design-checklist, web/design-quality(user-rules), design-ux-architect, design-ux-researcher, design-persona-walkthrough, "google-labs/design.md PHILOSOPHY(session:design-md-research-2026-06-26)"]
+updated: 2026-06-26
 ---
 
 # design — 设计视角角色卡
@@ -78,7 +79,7 @@ distilled-from: [gstack/review/design-checklist, web/design-quality(user-rules),
 
 | 阶段 | 设计视角做什么 |
 |------|----------------|
-| **spec** | 当特性涉及 UI 面：确认风格方向（不要"clean minimal"含糊）、定调色板/排版策略、画信息架构骨架与关键用户旅程；这些进 spec，成为后续校准基线。 |
+| **spec** | 当特性涉及 UI 面：确认风格方向（不要"clean minimal"含糊）、定调色板/排版策略、画信息架构骨架与关键用户旅程；这些进 spec，成为后续校准基线。**用具体参照物锚定风格而非形容词堆砌**（"1970 年代研究生讲义" > "modern/clean/premium"——参照物描述一个点、形容词描述一个区域，负约束随参照物自带）；DESIGN.md **散文为主、token 为辅**（token 是校准 context 不是渲染指令）。详见 sdlc-spec §2.6b。 |
 | **build** | 实现时守 token 化、语义化 HTML、交互态、a11y 基线；A 腿 `[diff]` 检查清单可即时自查。 |
 | **validate (e2e 模式)** | 跑页面执行 B 腿 `[render]` 检查：5 秒测试、断点无溢出、对比/键盘可达、reduced-motion；失败截图回灌 build。详见 validate-mode `e2e` playbook 下方。 |
 | **review** | 对 diff 跑完整 A 腿审查（读改动前端文件全文），按下方证据 schema 出 findings；与 client-dev 卡并行但各写各的文件，互不抢 STATE。 |

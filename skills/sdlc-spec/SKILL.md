@@ -178,6 +178,10 @@ description: >
 - **设计系统**：组件约定、圆角/阴影规范、**交互态**（hover/focus/active + focus-visible）、动效（只动 compositor 属性）。
 - **响应式断点** / **a11y 基线**（对比 ≥WCAG AA、键盘可达、reduced-motion）。
 
+**两条撰写纪律**（蒸馏自 google-labs/design.md PHILOSOPHY，与本节"禁 clean minimal 空话"+ §2 gray-area 具体化同源、互相强化）：
+- **具体参照物 > 形容词堆砌**：用一个具体参照物锚定风格（如"1970 年代某老牌大学的研究生讲义"），比"modern / clean / premium"携带的信息多一个数量级——形容词描述一个区域，参照物描述一个点。**负约束随参照物自带**（讲义不会发光/渐变，不必逐条列）；Do's/Don'ts 用来收紧参照物覆盖不到的边角，不是替代它。
+- **散文为主、token 为辅**：token（色值/字号/间距）是给实现者校准的 *context*，不是渲染指令；DESIGN.md 的判定力主要来自散文把"为什么是这个值、何时怎么用"讲清楚，而非堆砌精确数值。
+
 **轻重自适应**：首个 UI 特性 → 建完整 DESIGN.md；后续 UI 特性 → 只**增补/收紧**新模式，不重写。UI 微调（已在 DESIGN.md 范围内）→ 无需改。
 
 **闭环**：spec 产 DESIGN.md → build 照它实现 → design 卡校准到它（不再退回通用原则）→ review 的 design 透镜 + e2e:Web 据它验。
