@@ -181,3 +181,15 @@ build 红 / converge 不通过 / 调试失败时,**先落一行根因教训**进
 - 教训格式(一行,自然语言):`<现象> ← <根因> ⇒ <下次怎么避>`。
 - 与 §E5 三振互补:**三振是"停",reflexion 是"把失败变成输入"**;三振封顶前,每次失败都先沉淀教训。
 - 复用既有 `sdlc-build` DEBUG REPORT + `STATE.Decisions log`,**不新建载体**。
+
+---
+
+### E3. converge 自生成边界测试强化 oracle(flow-engineering)
+
+> distilled-from: AlphaCodium(public tests + AI-generated tests + test anchors;弱 oracle 放过真 bug)
+
+converge(§4)的"测试全绿"不应**只**跑 plan 列出的测试——**额外生成边界 / 反例测试**(空值 / 越界 / 并发 / 错误路径 / 非法输入)再判收敛,否则弱 oracle 会让"看着绿、实则错"的代码通过。
+
+- **测试锚点(test anchors)**:已绿的测试集是锚,消缺口改代码时**不得让任何锚变红**(防"改 A 坏 B")。
+- 自生成测试**入库**(进 plan 任务清单 + 该叶回归集),不是一次性抛弃。
+- 与 `sdlc-validate` correctness 模式**叠加**:correctness 跑既有 + 本条补生成;证据要求不变(真命令 + exit 0,§E5)。
