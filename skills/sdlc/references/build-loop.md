@@ -169,3 +169,15 @@ loop 不裸奔(Anthropic:须有明确停止条件)。任一触发即停并 text_
 
 - 不是重新规划,只是**把目标 + 剩余项复述一遍**(soft attention control,无需特殊机制)。
 - 复述源 = 文件(spec/plan),**不是对话记忆**——与 §6"状态在文件"一致;fresh-context 重进时,复述即自然恢复目标对焦。
+
+---
+
+### E2. 失败先写教训,下轮先读(reflexion)
+
+> distilled-from: Reflexion(把失败转成自然语言反思,存 episodic memory 喂下一次尝试)
+
+build 红 / converge 不通过 / 调试失败时,**先落一行根因教训**进 `STATE.Decisions log`(本叶段),**下一轮迭代开始先读本叶教训栈**再动手——让每次失败成为下次的输入,而非白费。
+
+- 教训格式(一行,自然语言):`<现象> ← <根因> ⇒ <下次怎么避>`。
+- 与 §E5 三振互补:**三振是"停",reflexion 是"把失败变成输入"**;三振封顶前,每次失败都先沉淀教训。
+- 复用既有 `sdlc-build` DEBUG REPORT + `STATE.Decisions log`,**不新建载体**。
