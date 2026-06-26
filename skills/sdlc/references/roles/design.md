@@ -1,7 +1,7 @@
 ---
 role: design
 triggers: ["web/**", "components/**", "**/*.tsx", "**/*.vue", "**/*.css", "**/*.scss", "**/*.swift", "**/*.kt", "**/*.dart", "mobile/**", "ios/**", "android/**", "**/*.html", "design-system.md", "DESIGN.md"]
-distilled-from: [gstack/review/design-checklist, web/design-quality(user-rules), design-ux-architect, design-ux-researcher, design-persona-walkthrough, "google-labs/design.md PHILOSOPHY(session:design-md-research-2026-06-26)"]
+distilled-from: [gstack/review/design-checklist, web/design-quality(user-rules), design-ux-architect, design-ux-researcher, design-persona-walkthrough, "google-labs/design.md PHILOSOPHY(session:design-md-research-2026-06-26)", "scripts/contrast_check.py(session:design-contrast-check-2026-06-26)"]
 updated: 2026-06-26
 ---
 
@@ -43,6 +43,7 @@ updated: 2026-06-26
 - [ ] `[diff]` 文本容器有 max-width；固定 px 宽容器有 max-width 或 @media 兜底（防移动端横向滚动）。
 - [ ] `[diff]` 间距/颜色/字体走 token，未重复硬编码；若有 DESIGN.md，颜色/字体/间距均在其声明范围内。
 - [ ] `[diff]` 语义化 HTML 优先；动效只用 compositor 友好属性。
+- [ ] `[diff]` **DESIGN.md 颜色对比度静态自检**：`python3 <sdlc>/scripts/contrast_check.py <DESIGN.md>`（纯 stdlib，无需浏览器）——把 a11y 对比度从 B 腿 [render] 提到 A 腿静态可判。报 < WCAG AA 4.5:1 的前景/背景对（advisory，非强制必要条件）。默认启发式配对偏宽（语义底色当前景会有噪声），DESIGN.md 里写一行 `<!-- contrast: ink on bg, muted on panel -->` 可收窄到真正承载文字的对；oklch/lab 等会诚实标 skipped。
 
 ### B. UX 深度（理解意图 / 跑页面）
 - [ ] `[diff]` 有意挑选了风格方向（编辑/瑞士/玻璃拟态/bento/暗奢…），而非"clean minimal"含糊默认。
@@ -99,6 +100,7 @@ updated: 2026-06-26
 ### 步骤流程
 1. **校准**：若仓库根有 `DESIGN.md`/`design-system.md`，先读，作为所有判定基准；否则用通用原则。
 2. **A 腿（静态，无需浏览器）**：对 diff 命中的前端文件**读全文**（非仅 hunk），逐条跑上面"检查清单 A"。
+   - **对比度静态自检**：若仓库有 `DESIGN.md`，跑 `python3 <sdlc>/scripts/contrast_check.py DESIGN.md`——确定性算出 < WCAG AA 的前景/背景对，作为 a11y 对比度的 advisory 证据（info/warning，**非强制必要条件**；不改"以 DESIGN.md 为准、无则退回通用原则"的语义）。findings 并入下方 NEEDS INPUT（category: a11y）。诚实门：oklch/lab 标 skipped 的颜色未被检查，须在 scope-declaration 注明。
    - 机械可自动修（HIGH 置信、无需设计判断）：`outline:none` 补 `:focus-visible{outline:2px solid currentColor}`、删新增 `!important` 并修特异性、正文 <16px 提到 16px。
    - 其余（AI-slop、排版结构、间距、交互态缺失、DESIGN.md 违规）→ 需设计判断，列 NEEDS INPUT。
    - LOW 置信项 → 标 "Possible: …，请视觉核验或跑 /design-review"，绝不自动改。

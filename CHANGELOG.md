@@ -2,6 +2,16 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.18.0] — 2026-06-26
+
+### Added
+- **`scripts/contrast_check.py` —— 静态 WCAG 对比度校验 DESIGN.md（纯 stdlib，无第三方依赖）**（完整 `/sdlc` dogfood：spec→plan→build(TDD)→validate→review→ship；改进 2，承接 0.17.1 的 design.md 哲学注入）：
+  - **把 design 角色卡的颜色对比度检查从 B 腿 `[render]`（需浏览器）降为 A 腿 `[diff]`（静态解析）**。解析 DESIGN.md 的 `:root{}` CSS 变量 + markdown 表格语义色 → 启发式跨类配对（fg/either × bg，可被 `<!-- contrast: ink on bg -->` 注释覆盖收窄）→ WCAG 2.1 相对亮度算对比度 → 标 < AA 4.5:1 的组合。
+  - **定位 = 确定性 advisory（info/warning），非强制必要条件**：默认 exit 0；`--strict` 才在低对比时 exit 1。不打乱 design 卡"以 DESIGN.md 为准、无则退回通用原则"的二值语义。
+  - **诚实门**：oklch/lab/hsl 等 stdlib 无法精确转 sRGB 的色彩空间，跳过并标 `skipped: unsupported-color-space`，不假装算过。
+  - 接入 `design` 角色卡检查清单 A + validate-mode playbook A 腿（防孤儿）；配套 `scripts/test_contrast_check.py`（28 用例：算法/配对/解析/负路径/CLI 全绿）。
+  - **复审依据**：经 doubt-driven 复审否决官方 `@google/design.md` CLI（alpha 格式 + node_modules 供应链不入放行路径；官方 lint 对本族「散文 + `:root` CSS 变量」DESIGN.md 覆盖=0、对比度规则只看 `components.{bg,text}` 配对看不见我们的语义色）。自研脚本确定性、可离线、覆盖真实数据结构。
+
 ## [0.17.1] — 2026-06-26
 
 ### Changed
