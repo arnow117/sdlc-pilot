@@ -103,7 +103,7 @@ ship → backlog Retire           → 标叶 shipped、解锁下游(§5 checkpoi
 
 ```
 ship(按 PROFILE.Deploy + deploy-targets,可跳)
-  → python3 scripts/backlog.py retire ...        # 归档工件 / 标源叶 shipped / 回流教训到 EVOLUTION
+  → python3 <bk> retire --root <root> ...        # 归档工件 / 标源叶 shipped / 回流教训到 EVOLUTION
   → 清 STATE 顶层(在飞态) → 回 §2 取下一片 ready 叶
 ```
 
