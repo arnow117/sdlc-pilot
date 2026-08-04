@@ -3,7 +3,7 @@ name: sdlc
 description: >
   SDLC 主线驱动器 / 路由器 / 跨会话交接中枢。读 <target-repo>/.sdlc/(PROFILE 项目记忆 + STATE 特性状态),
   分叉决定入口阶段,按改动代码路由到对应 sdlc-* 流程 skill,并把进度写回 STATE 供下次会话/sub-agent 接续。
-  触发于:用户说 "/sdlc"、"开始一个特性"、"走 SDLC 流程"、"继续上次的开发"、"resume sdlc"、
+  触发于:用户说 "/sdlc"、"/sdlc intake"、"/sdlc deliver"、"开始一个特性"、"走 SDLC 流程"、"继续上次的开发"、"resume sdlc"、
   "我要做一个新功能/改一个 bug 想走完整流程"、"接着开发"、"上次做到哪了"、"on this repo run sdlc";
   也在用户要对一个项目首次启动结构化研发流程时主动建议。
   另含 meta 子命令 **`/sdlc evolve`**(改进 sdlc-pilot 工具自身并发回 GitHub):触发于 "把这个蒸馏进 sdlc"、
@@ -26,6 +26,10 @@ description: >
 
 > **铁律**：你不执行任何阶段的实际工作。看到该 spec 就转 `sdlc-spec`,该 build 就转 `sdlc-build`。
 > 你只负责"去哪、带什么、记到哪"。所有知识与状态都在纯文件里,引擎=Claude + Read/Edit/Bash/Grep。
+
+> **控制协议优先**：入口必须读 `references/control-plane.md`。存在 control context 时，
+> `.sdlc-control/` 是跨 clone 的权威执行账本，`STATE.md` 只是本地续接缓存；后文任何按
+> `STATE.stage` 推导 requirement 状态、修改 plan checkbox 或直接拼 control Git 命令的旧描述均不适用于 control 模式。
 
 ---
 
@@ -69,6 +73,17 @@ description: >
 - 一致 / 领先 / fetch 失败(离线、无 upstream、非 owner)→ 静默。**绝不**自动 pull、绝不因此停下本次流程(用 vN 改不出 vN+1 的当场生效,新版下趟才加载)。
 - 与 §1.1 边界守卫正交:守卫管"特性串台",本节管"工具版本新鲜度"。
 
+### 0.4 三个入口与执行模式
+
+| 入口 | 固定语义 |
+|---|---|
+| `/sdlc intake <需求>` | 只进入 `sdlc-backlog` 捕获 request、拆/更新 requirement leaf；即使已有活跃 Feature STATE 也不切换当前交付 |
+| `/sdlc deliver [leaf-id]` | 从 ready requirements 中选择一片，先通过 control adapter 原子 claim，成功后才创建 Feature 分支/STATE 并进入 spec |
+| `/sdlc` | 有 `TASK.md` 时恢复该 Task；否则有 STATE 时恢复 Feature；否则按用户意图路由 intake/deliver/onboard |
+
+入口按 `references/control-plane.md` 解析 `shared-control | local-serial | legacy`。shared 模式的 claim
+push 竞争失败后必须 fetch、返回现有 owner/feature 并停止，不能创建 Feature 分支。
+
 ---
 
 ## 1. 读状态：定位并解析 .sdlc/
@@ -78,7 +93,8 @@ description: >
 | 文件 | 角色 | 谁产出 |
 |---|---|---|
 | `PROFILE.md` | **项目记忆**(长寿):技术栈 / 约定 / surface-map / 入口 / 测试命令 | `sdlc-onboard`,漂移时刷新 |
-| `STATE.md` | **特性交接**(短寿):stage / status / gates / active roles / changed-files / decisions / next | 每个流程 skill 经由本 driver 写 |
+| `STATE.md` | **Feature 本地交接缓存**(短寿):stage / status / active roles / changed-files / decisions / next | driver 单写；control 模式不作为全局权威 |
+| `TASK.md` | **Task worktree 只读身份**：feature/task/branch/write-set/plan revision | deliver/build 编排者创建；Task agent 不修改 |
 | `spec.md` `plan.md` | 阶段产物 | sdlc-spec / sdlc-plan |
 | `validate/*.md` `review/*.md` | 验证 / 评审报告 | sdlc-validate / sdlc-review |
 
@@ -111,9 +127,13 @@ sh <sdlc 技能目录>/scripts/sdlc-guard    # 脚本随 sdlc 技能自包含;�
 
 > **源码协作纪律(跨阶段)** —— 分支模型(收敛型短命 / 分叉型长命变体)、**worktree 开不开的判据**、并行**前置合约**(接口先冻 / 面切分 / 独立性 / 自包含简报)、收敛时**先基到最新 + 重测才合**(防 merge skew):统一见 `references/collaboration-discipline.md`。本卡贯穿 entry→plan→build→review,driver 在此(源码 setup 决策点)加载,各阶段沿用。
 
-#### 1.1b 源叶状态对账(reconcile,边界自检后做)
+#### 1.1b 源叶状态对账(reconcile,仅 legacy)
 
-边界一致后,**对账在飞特性源叶的 lifecycle 状态**——这是叶生命周期同步的"软层兜底"(硬层 = `post-checkout` 钩子在切分支时 flush;详见该机制的 C 混合写回设计)。规程:
+仅在 `execution-mode: legacy` 时保留原有 stage→leaf 前进同步。`shared-control` 与
+`local-serial` 明确跳过本节：`validated` 只由当前 integration HEAD 的 feature evidence 产生，
+`shipped` 只由 release/retire 事务产生，详见 `references/control-plane.md`。
+
+legacy 规程:
 
 - 仅当 `STATE.source-leaf` 非 `(none)` 且 `<repo>/.sdlc/requirements/` 存在时执行(否则跳过——无需求树的项目天然 no-op)。
 - 取该源叶**当前 status**,与 `STATE.stage` 的映射值比较(映射 = `backlog.py` 的 `STAGE_TO_STATUS`;状态序 = `STATUS_ORDER`,**单一事实源在脚本,不在此重抄顺序**)。
@@ -129,8 +149,10 @@ sh <sdlc 技能目录>/scripts/sdlc-guard    # 脚本随 sdlc 技能自包含;�
 - **读 `STATE.work-type`**(feature / remediation / hotfix)并**透传给将进入的流程 skill**——它是"整条流走多重"的中央旋钮(定义见 STATE 模板)。各阶段读它自适应:remediation/hotfix 走轻(L1 / Skip-TDD / 跳无关契约),但**硬门(覆盖率 / 安全 open=0 / review / push gate)一律不短**。
 - 新流程开始时若 STATE 无 work-type:默认 `feature`;若用户意图是"改造遗留/整 AI-readiness"→ 由 `sdlc-spec`/`sdlc-onboard` 定为 `remediation`;紧急修 → `hotfix`。
 - **`/sdlc next`** = driver 的"直接推进"姿势:跑 §1.1 边界自检 → 读 `STATE.Next action` → 直接路由到下一步,不重复寒暄。(只是 driver 的一种调用,不是新 skill。)
+- **`/sdlc intake`** = 始终路由 backlog intake；不领取、不建 Feature 分支、不覆盖活跃 STATE。
+- **`/sdlc deliver`** = 始终先执行 ready 检查 + control claim；claim 成功后才建立 Feature context。
 - **`/sdlc evolve`** = driver 的"**改进工具自身并发回 GitHub**"姿势(meta,**不是 stage、不进 STATE 枚举**):加载 `references/evolve-loop.md` playbook + `skill-maintainer` 角色卡(R10),把当前 session 的改进洞察安全地落回 sdlc-pilot 源 → lint → 升版本 → 人工过目 → owner 直推 main / 第三方 fork+PR。**仅做 append-only 小改**;若洞察是结构性大改(新建卡/动契约),evolve 自己会 escalate 让你对 sdlc-pilot 跑完整 `/sdlc`。触发语:"把这个蒸馏进 sdlc"、"沉淀到 sdlc"、"evolve the skills"、"自更新"、"distill 这个"。
-- **`/sdlc loop`** = driver 的"**测试驱动自治批量推进**"姿势(meta,**不是 stage、不进 STATE 枚举**,同 evolve/next):加载 `references/build-loop.md` playbook,从 `<target-repo>/.sdlc/requirements/` 的 **ready-queue**(`backlog.py readyqueue`)取就绪叶 → 逐叶自动跑标准主线(spec→plan→build→validate→review→ship)→ Retire 退场 → 取下一片,直到队列干。**内核是 TDD**(测试=ground truth,非自我感觉);阶段间过 **converge oracle** 判"该叶真做完没"(测试全绿 + 满足 spec Done Criteria + review PASS),没做完把缺口 append 回 build 不退出该叶。**不绕任何硬门**(review / 安全 open=0 / 覆盖率门照旧)、**串行取叶**(单写 STATE 防竞态;worktree 并行另见 `collaboration-discipline.md`)、**可恢复**(状态全在 STATE + 叶 status + 任务 `[X]`,崩了重进续接)。停止 = 队列干(done)/ max-iterations / blocker / 漂移。触发语:"跑 loop"、"自动推进 backlog"、"批量做 ready 的需求"、"sdlc loop"。
+- **`/sdlc loop`** = 加载 `references/build-loop.md`，逐次调用 **deliver** 完成 claim 后再跑单 Feature 主线。静态 plan 不保存进度；恢复依据 control task records + STATE/TASK context + immutable evidence。
 
 ---
 
@@ -143,7 +165,9 @@ sh <sdlc 技能目录>/scripts/sdlc-guard    # 脚本随 sdlc 技能自包含;�
    └─ 有 PROFILE.md                                        → 在 STATE.stage 处续接特性循环
 ```
 
-**退场前置:特性已完成未退场(`STATE.stage==done`)——先于三主分叉判定。** 入口读到 `stage==done`(上个特性走完但工件没收尾)→ **先路由到 `sdlc-backlog` 的 Retire 操作**(§4):归档 `.sdlc` 工件 → `.sdlc/archive/<date>-<feat>/`、把耐久决策从 `STATE.Decisions log` 蒸馏回流 `PROFILE.md ## Evolution log`(无 PROFILE 兜底 `.sdlc/EVOLUTION.md`)、(若 `STATE.source-leaf` 有)标源叶 `shipped` 解锁 ready-queue、清空 STATE;收尾后再按下面三主分叉处理新特性。**必须先于**三主分叉(否则 done 的 STATE 会被误当"续接特性")。driver 自己不归档(导演只路由不干活);用户也可显式 `/sdlc retire` 触发同一操作(非新 stage,仅 driver 调用姿势)。
+**退场前置**：legacy 继续在 `STATE.stage==done` 时路由 Retire。control 模式不能只看 stage；
+必须先由 ship 写 passing release evidence，并由 control adapter 原子确认 leaf=`shipped`、claim=`released`、
+Feature=`shipped`。完成该事务后再路由 backlog 归档本地 `.sdlc` 工件并清 STATE。
 
 判定"repo 是否为空"(忽略 `.git`、`.sdlc`):有源码文件即非空。
 **别只靠 `git ls-files` 判空**——目标可能是未跟踪子目录(父仓里显示 `??`、无嵌套 `.git`)或刚克隆未 init,只看跟踪文件会把真实项目误判为空仓;空时 fallback 到直接列文件。(与 sdlc-onboard 入口门同一原则。)
@@ -184,6 +208,9 @@ backlog 存在与否**不影响**上面 onboard/spec/续-STATE 三条路径(纯�
 ```
 
 **没有 STATE.md 但有 PROFILE** = 一个新特性的开始 → 路由到 `sdlc-spec`,并初始化一份新的 `STATE.md`(§5 schema)。
+
+control 模式例外：无 STATE 时不默认直接 spec。若用户在新增/拆需求，走 intake；若用户要开始实现，
+走 deliver。只有 deliver 的 claim 事务成功后才初始化 Feature STATE。
 
 ### 2.1 PROFILE 缺失提醒(greenfield 也要建工程记忆)
 greenfield 走 `空仓 → sdlc-spec`,一路 spec→build 期间**不会自动产生 PROFILE**——项目可能长出大量代码却始终没有工程级持久 doc(跨迭代/新会话的统一入口、surface-map 路由的来源)。每次入口顺手探一下:**repo 已有真实源码(非刚起步空仓)但无 `.sdlc/PROFILE.md`** → text_mode **软提醒,不阻断**:
@@ -267,7 +294,7 @@ resolve 的结果(active roles + validate-modes + changed-files)**写进 `STATE.
 | validate | `sdlc-validate` | **先 resolve**,传 resolve 出的 `validate-modes`,各模式 playbook 在 `references/validate-modes/` |
 | review | `sdlc-review` | **先 resolve**,装载 active 角色卡;并行能力按 §0.2 探测,每角色写 `review/<role>.md` |
 | ship | `sdlc-ship` | review PASS(`sdlc-gate`)后;环境晋级发布(dev→staging→canary→full),读 `PROFILE.Deploy` + `deploy-targets/<type>` |
-| done(退场) | `sdlc-backlog`(Retire op) | 传 `.sdlc` 目录 + `STATE.source-leaf`(若有);归档工件 / 回流决策到 `PROFILE.md ## Evolution log` / 标源叶 shipped / 清栈。入口检测到 `stage==done` 时**先于**新特性分叉触发(§2 退场前置) |
+| done(退场) | `sdlc-backlog`(Retire op) | control 先核对 claim released 且 Feature/leaf shipped，再归档本地工件；legacy 仍按 STATE.done 归档/标源叶/清栈 |
 
 > **Meta 编排命令(非 stage,不在上表)**:`/sdlc loop` → 加载 `references/build-loop.md`,在上述既有 stage **之上**做自治批量编排(从 ready-queue 逐叶跑主线 + converge oracle 判收敛);`/sdlc evolve` → 加载 `references/evolve-loop.md`。两者都只编排/改自身,不是新 stage。
 
@@ -319,6 +346,15 @@ next-action: -> invoke <sdlc-stage>
 # SDLC State: <feature/topic>
 stage: onboard | backlog | spec | plan | build | validate | review | ship | done
 status: in-progress | gated | blocked
+execution-mode: shared-control | local-serial | legacy
+feature-id: <control feature id | (none)>
+branch: <feature branch>
+worktree: <absolute path>
+source-request: <request id | (none)>
+source-leaf: <requirement leaf id | (none)>
+control-head: <last observed control SHA | (none)>
+plan-revision: <immutable plan commit SHA | (none)>
+integration-head: <latest Feature integration SHA | (none)>
 updated: <由 caller 传入的时间戳>
 validate-modes: [correctness, e2e, eval-bench]   # 本次 resolve 出的(§3.4)
 
@@ -345,7 +381,8 @@ validate-modes: [correctness, e2e, eval-bench]   # 本次 resolve 出的(§3.4)
 - `gated` → 停在闸口,等用户确认(text_mode 列出待批项)。
 - `blocked` → 报告阻塞原因,不前进。
 
-**特性退场(stage→done)**:某流程把特性推到 `done` 后,STATE 不就地清理——退场仪式(归档/回流/标 shipped/清栈)由 `sdlc-backlog` 的 Retire op 执行(§2 退场前置 + §4 路由),driver 只**路由**不亲自归档。退场把决策从短命 STATE 蒸馏进长命 `PROFILE.md ## Evolution log`,使完成的工作持续指导后续演进。`STATE.source-leaf` 记本特性源自哪片需求树叶(无则 `(none)`),供 Retire 回写 shipped。
+**特性退场**：control 模式的 lifecycle 先由 release evidence + retire transaction 完成，backlog
+随后只做本地归档/决策回流/清 STATE；legacy 保留 stage→done 后由 Retire 标 leaf shipped 的行为。
 
 ### 跨会话流
 ```
@@ -354,7 +391,8 @@ validate-modes: [correctness, e2e, eval-bench]   # 本次 resolve 出的(§3.4)
    ↓ /clear 或隔天
 会话 B: /sdlc → 读 STATE(stage=plan) → 直接续 sdlc-plan,无需重放上下文
 ```
-这就是"持久状态 + 无上下文重放"的交接:新会话 / sub-agent 只读 `STATE.md` + 角色卡即可接力。
+control 模式的新会话先刷新 control snapshot，再用 STATE/TASK 定位本地 worktree；legacy 继续只读
+STATE + 角色卡。两种模式都无需重放对话上下文。
 
 ---
 
@@ -374,8 +412,8 @@ validate-modes: [correctness, e2e, eval-bench]   # 本次 resolve 出的(§3.4)
 
 ## 7. 一次完整入口的动作清单(checklist)
 
-1. [ ] `ls .sdlc/` 读 PROFILE.md + STATE.md
-2. [ ] 判定分叉(§2),text_mode 报告并让用户确认/改向
+1. [ ] 读 control context + `.sdlc/{TASK,STATE,PROFILE}.md`，判定 shared/local/legacy
+2. [ ] 按显式 intake/deliver 或智能 `/sdlc` 判定分叉(§0.4/§2)
 3. [ ] 若进改动阶段(build/validate/review):`git diff` → resolve(§3) → 漂移检测
 4. [ ] 装载 active 角色卡 + 选定 validate 模式(§4)
 5. [ ] 路由到对应 `sdlc-*` 流程 skill(自己不执行其内容)

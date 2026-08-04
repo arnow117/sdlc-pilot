@@ -1,7 +1,7 @@
 ---
 name: sdlc-backlog
 description: >
-  SDLC 主线的 pre-spec 阶段:把"一堆散点需求 / 一个待重写的老系统"测绘成一棵可路由的
+  SDLC 主线的 intake / pre-spec 阶段:捕获原始 request，并把"一堆散点需求 / 一个待重写的老系统"测绘成一棵可路由的
   需求树(产出 <target-repo>/.sdlc/requirements/ 递归 domain→subdomain→leaf)。管的是 spec
   之前的【需求集合】:Seed(老系统→骨架)、Generate(分析代码→自动 gen 带叶的 capability/user-story 树,多 agent)、Ingest(散点需求归类成叶)、Coverage(迁移 burndown)、
   Ready-queue(派生解依赖的就绪叶 → 喂给未来的 sdlc-loop)、Lint(断依赖/重复/孤儿/缺字段/非法 status)、
@@ -27,6 +27,10 @@ description: >
 >
 > **边界**:本 skill 管"需求集合"。收敛单条需求 = `sdlc-spec`;拆任务 = `sdlc-plan`;调度循环 = 子系统 B。
 > 知识与状态全在纯文件,引擎 = Claude + Read/Edit/Bash/Grep。
+>
+> control 模式先读 `sdlc/references/control-plane.md`。`/sdlc intake` 的最小事务是
+> request + requirement leaf + `source_request`；已有活跃 Feature 不改变这个入口。无 control 数据时
+> 保持 legacy 行为且不自动创建或迁移 `.sdlc-control/`。
 >
 > distilled-from: `session:loop-engineering-article(Addy Osmani)` · `kb-manage`(递归 domain-subdomain + Ingest) · `tb-loop-driver`(导演/编排模式) · `session:sdlc-backlog-build-2026-06-15` · `session:sdlc-feature-retirement-2026-06-16`(Retire op / 特性退场闭环) · `session:sdlc-backlog-board-2026-06-16`(Tree/Board/Move op + 聊天看板 + Live 对话模式) · `session:sdlc-evolution-leaf-attach-2026-06-16`(Retire 标 shipped 时把 evolution entry 也写进源叶 `## sdlc 记录`) · `session:sdlc-tree-generator-2026-06-16`(Generate op:分析代码→capability/user-story 树 + 4 交叉字段 + write-tree + 多 agent 两阶段) · `session:sdlc-leaf-lifecycle-board-2026-06-23`(set-status op + 叶生命周期状态同步 C 混合写回[post-checkout 钩子+driver reconcile]+ 看板重构 4 痛点 + lint bad-status)
 
@@ -54,7 +58,13 @@ description: >
 
 ---
 
-## 1. 数据模型(事实源 = 叶 frontmatter)
+## 1. 数据模型
+
+### 1.0 request 与 requirement trace
+
+`/sdlc intake` 先保存用户原始输入为 request record：`request_id,title,status,created_at,updated_at`，
+原文放 Markdown body。一次 request 可拆成多个 leaf，每个 control requirement 必须含
+`source_request: <request-id>`。legacy 叶仍保持原 10 字段兼容，不因缺 source_request 失败。
 
 ### 1.1 树存储(文件系统递归镜像)
 
@@ -85,6 +95,7 @@ cross_link: []                           # 次分类:跨 subdomain 时挂多父(
 old_system_ref: <老系统模块/页面/接口/故事编号>   # 双视图之一(迁移对齐)
 new_domain_path: <新系统归属,可与 domain_path 不同>  # 双视图之二(rewrite≠1:1)
 status: captured                         # captured → spec'd → planned → built → validated → shipped
+source_request: <request-id>             # control 模式必填；legacy 可缺省
 priority: P2                             # P0 | P1 | P2 | P3
 depends_on: []                           # 其它 leaf id,构成依赖 DAG
 risk_level: medium                       # low | medium | high(供子系统 B 的成本/gate 分诊)
@@ -124,9 +135,8 @@ Ready-queue(由 `scripts/backlog.py readyqueue` 派生,写入 _index.md ready �
 ```
 
 子系统 B(sdlc-loop)只依赖这个结构,不依赖树的内部存储细节 → A/B 解耦,可独立演进。
-**终态 `shipped` 回写**由本 skill 的 **Retire 操作**(§6,特性 done 时)负责——填上原先悬空的回写点,
-ready-queue 据此自动解锁下游叶。中间态(captured→spec'd→planned→built→validated)的逐阶段回写
-与调度循环仍属未来子系统 B(本仓本特性 spec §8 已 Deferred)。
+**终态 `shipped` 回写**由本 skill 的 **Retire 操作**负责。control 模式下中间任务状态由 Task
+记录维护，`validated` 由 feature evidence 产生，不再根据 STATE stage 推断。
 
 ---
 
@@ -233,13 +243,14 @@ python3 <bk> lint --root <root>
 ⑥ **bad-failure-class / bad-contract-refs**(4 可选交叉字段取值非法)。lint 只**报**不**修**,问题清单 text_mode 给用户决策。
 这就是需求树的 correctness 门(对应 validate 阶段)。
 
-### 4.3b set-status —— 机械改叶 status(生命周期同步原语)
+### 4.3b set-status —— legacy 机械写原语
 ```
 python3 <bk> set-status --root <root> --leaf <id> --to <status>
 ```
 把指定叶 frontmatter 的 `status` 机械改为目标值(须 ∈ STATUS_ORDER:captured→spec'd→planned→built→validated→shipped)。
 **allow-any 迁移**:只校验目标值合法,不查迁移合法性(可前进可回退);叶不存在 exit 2、非法值 exit 1、成功 exit 0。
-这是**叶生命周期状态同步**(C 混合写回)的共享机械写原语,主要由两处自动调用,人手亦可用:
+这是 legacy 兼容原语。control roots 禁止调用；shared/local control 的状态转换必须经 control adapter
+校验 evidence 与事务基线。legacy 下仍由两处自动调用:
 - **post-checkout git 钩子**(硬层):切分支时把在飞特性源叶 status flush 落盘(过渡态不丢)。
 - **driver §1.1b reconcile**(软层):driver 入口对账,叶 status 落后 STATE.stage 映射值则补齐(只前进)。
 稳态(captured/shipped)落盘持久,过渡态(spec'd→validated)平时由看板读 STATE 惰性叠加显示(不写文件),离开特性时由钩子/reconcile flush。
@@ -294,7 +305,9 @@ python3 <bk> move --root <root> --leaf <leaf-id> --to <domain>/<subdomain>
 
 ## 6. 操作: Retire(特性退场 / close-out)
 
-**何时**:一个单特性走到 `stage=done`。由 **driver** 在 `/sdlc` 入口检测到 `STATE.stage==done` 时路由进来(见 sdlc driver §2/§4),给完成的特性收尾。这是 backlog 在生命周期**末端**的职责——与"选 ready 叶起特性"(§7 出口的开端)首尾呼应。
+**何时**:release 已成功且满足退场条件。legacy 可继续由 `STATE.stage==done` 路由；control 模式必须
+由 ship/retire adapter 在同一 control 事务内写 release evidence、leaf=`shipped`、claim=`released`、
+feature=`shipped`，成功后才归档本地 `.sdlc`。
 
 **输入**:`<target-repo>/.sdlc/`(含本特性的 spec/plan/validate/review/STATE)、`STATE.source-leaf`(若特性源自需求树)、`STATE.Decisions log`。
 
@@ -332,7 +345,7 @@ python3 <bk> retire --sdlc <target>/.sdlc --slug <feat> --date <YYYY-MM-DD> \
 ## 7. 出口 / 交接
 
 - backlog 操作不推进单特性 stage;它维护项目级需求树 + 特性退场。
-- 选中一片 ready 叶进入开发 → 由 driver 另起单特性 STATE(stage=spec),把该叶的 `id` / 需求描述 / `old_system_ref` 作为 sdlc-spec 的输入(开端)。
+- 选中 ready 叶进入开发 → 由 `/sdlc deliver` 先 claim；成功后另起 Feature STATE(stage=spec)，并绑定 request/leaf/feature branch。
 - 特性 done → driver 路由 Retire 收尾(末端):归档 + 回流 + 标源叶 shipped + 清栈。
 - 需求树本身的"correctness" = `scripts/backlog.py lint` 干净(无断依赖/重复/孤儿/缺字段)。
 

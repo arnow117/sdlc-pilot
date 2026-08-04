@@ -19,6 +19,9 @@ description: >
 > **定位**:`…→ review → verify → 【ship】`,是流程主线的**发布延伸阶段**(主线末端的流程 skill)。
 > **引擎**:Claude + Read/Edit/Bash/Grep + 目标工程已有的部署工具(vercel/docker/kubectl/ssh…)。
 > **三层知识**:① 通用方法论 `references/deployment-patterns.md`;② 目标类型适配器 `references/deploy-targets/<type>.md`;③ 项目特定配置 = 运行时从目标工程抽(见 §2)。
+> control 模式必须读 `sdlc/references/control-plane.md`。发布只接受 reviewed HEAD 与当前
+> integration/evidence HEAD 三者一致；成功后写 immutable release evidence，再由 retire 事务原子推进
+> leaf=`shipped`、claim=`released`、feature=`shipped`。不得仅根据 merge 或 STATE.stage 推断 shipped。
 
 ---
 
@@ -44,10 +47,11 @@ staging 已部署 + smoke 通过。是否晋级到 canary(线上小流量)?
 
 | 条件 | 检查 | 不满足 |
 |---|---|---|
-| **review 已 PASS** | `STATE.md` 有 `sdlc-gate: PASS reviewed-head=<当前 HEAD>` | 回 `sdlc-review`(没评审过不发布) |
+| **review 已 PASS** | legacy 查 `STATE.md`；control 查 Feature `review_status=pass` 且 `reviewed_sha=<当前 integration SHA>` | 回 `sdlc-review`(没评审过不发布) |
 | **verify 已收口** | `STATE.stage` 已到 `review` 完成 / verify 过 | 先完成 verify |
 | **改动已提交** | 工作树干净、HEAD 即要发布的版本 | 先提交 |
 | **知道往哪发** | 能从 PROFILE.Deploy 或目标工程读到部署目标类型 | 走 §2 探测;探不到则 text_mode 问用户 |
+| **control HEAD 一致** | durable reviewed_sha == feature integration_sha == 实际 Feature ref HEAD，feature evidence fresh | 回 validate/review |
 
 > `sdlc-gate` 与 HEAD 不符(评审后又改了码)→ **停**,回 review 重审。发布的必须是被评审过的那个版本。
 
@@ -101,6 +105,7 @@ staging 已部署 + smoke 通过。是否晋级到 canary(线上小流量)?
 | `<repo>/.sdlc/PROFILE.md` | **读** | `## Deploy` 节(目标类型 + 配置位置);不写 PROFILE |
 | `<repo>/.sdlc/STATE.md` | **读 + 经 driver 写**(单写者) | 读 `sdlc-gate` 入口门;本 skill 输出 `## HANDOFF`,由 driver 写 stage=ship/done、ship 进度、Decisions |
 | `<repo>/.sdlc/ship/<release>-report.md` | **写** | 本次发布报告:各环境晋级时间/证据/指标/回滚(若有) |
+| `.sdlc-control/evidence/<feature>/_feature/...` | **经 adapter 写** | release scope/result/deployed SHA/环境与报告引用 |
 | `references/deployment-patterns.md` · `deploy-targets/*` · `languages/*` | 读(skill 内) | 方法论 / 目标适配器 / build 命令 |
 
 ---
@@ -113,6 +118,8 @@ staging 已部署 + smoke 通过。是否晋级到 canary(线上小流量)?
 - [ ] **晋级到 full 经用户显式确认**。
 - [ ] **ship 报告已写** `.sdlc/ship/<release>-report.md`;STATE 更新(stage=done)。
 - [ ] **密钥未入仓**(全程从环境读)。
+- [ ] **control release/retire 已提交**(control 模式):release evidence 对应实际 deployed SHA；adapter
+  `retire` 再校验实际 Feature ref HEAD 和 durable PASS review，随后原子 release claim/retire Feature/mark leaf shipped。
 
 任一未过 / 中途回滚 → status=`gated`/`blocked`,STATE.next 指明(回滚后多回 build/review)。
 

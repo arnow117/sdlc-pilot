@@ -5,12 +5,16 @@ import os
 import subprocess
 import sys
 import tempfile
+from dataclasses import dataclass, field
+from types import SimpleNamespace
 import unittest
+from unittest import mock
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 BACKLOG = os.path.join(HERE, "backlog.py")
 sys.path.insert(0, HERE)
 import backlog  # noqa: E402  (直接引用常量/函数;CLI 行为仍走 subprocess run())
+import board  # noqa: E402  (控制看板纯渲染 helper 直接做单测)
 
 LEAF_TMPL = """---
 id: {id}
@@ -420,6 +424,221 @@ class BoardTest(unittest.TestCase):
             r = run("board", "--out", out, root=root)
             self.assertEqual(r.returncode, 0, r.stderr)
             self.assertIn("暂无需求", _read(out))
+
+
+@dataclass
+class _SnapshotStub:
+    """验证 board adapter 同时接受核心 dict 与 dataclass snapshot。"""
+    schema_version: int = 1
+    mode: str = "shared-control"
+    control_root: str = ".sdlc-control"
+    requests_by_id: dict = field(default_factory=dict)
+    requirements_by_id: dict = field(default_factory=dict)
+    claims_by_leaf: dict = field(default_factory=dict)
+    features_by_id: dict = field(default_factory=dict)
+    tasks_by_feature: dict = field(default_factory=dict)
+    evidence_by_task: dict = field(default_factory=dict)
+    feature_evidence_by_feature: dict = field(default_factory=dict)
+    warnings: list = field(default_factory=list)
+
+
+def _tracking_snapshot(payload=None):
+    request_title = payload or "登录原始需求"
+    owner = payload or "agent-a"
+    branch = payload or "feature/feat-login"
+    blocked = payload or "等待接口确认"
+    command = payload or "python3 scripts/test_auth.py"
+    return {
+        "schema_version": 1,
+        "mode": "shared-control",
+        "control_root": ".sdlc-control",
+        "requests_by_id": {
+            "req-001": {"request_id": "req-001", "title": request_title,
+                        "status": "captured", "_body": request_title},
+        },
+        "requirements_by_id": {
+            "user.auth.login": {"id": "user.auth.login", "title": "登录",
+                                "domain_path": "user/auth", "cross_link": [],
+                                "old_system_ref": "legacy/Auth", "new_domain_path": "user/auth",
+                                "status": "captured", "priority": "P1", "depends_on": [],
+                                "risk_level": "medium", "source_request": "req-001",
+                                "_body": "control requirement"},
+        },
+        "claims_by_leaf": {
+            "user.auth.login": {"leaf_id": "user.auth.login", "feature_id": "feat-login",
+                                "status": "active", "owner": owner},
+        },
+        "features_by_id": {
+            "feat-login": {"feature_id": "feat-login", "leaf_id": "user.auth.login",
+                           "feature_branch": branch, "owner": owner, "status": "in_progress",
+                           "integration_sha": "feedface00000001"},
+        },
+        # 故意逆序，board 必须稳定按 task id 排序。
+        "tasks_by_feature": {
+            "feat-login": [
+                {"task_id": "task-z", "status": "blocked", "branch_name": "task/z",
+                 "owner": owner, "merge_status": "active", "blocked_reason": blocked,
+                 "integration_sha": "feedface00000003", "freshness": "unknown"},
+                {"task_id": "task-a", "status": "verified", "branch_name": "task/a",
+                 "owner": owner, "merge_status": "integrated", "blocked_reason": "",
+                 "integration_sha": "feedface00000002", "freshness": "fresh"},
+            ],
+        },
+        "evidence_by_task": {
+            "task-a": [
+                {"evidence_id": "ev-z", "result": "pass", "scope": "task",
+                 "tested_sha": "feedface00000002", "_body": command,
+                 "created_at": "2026-08-04T10:02:00Z"},
+                {"evidence_id": "ev-a", "result": "fail", "scope": "task",
+                 "tested_sha": "feedface00000001", "_body": command,
+                 "created_at": "2026-08-04T10:01:00Z"},
+            ],
+        },
+        "feature_evidence_by_feature": {
+            "feat-login": [{"evidence_id": "ev-feature", "result": "pass", "scope": "feature",
+                            "tested_sha": "feedface00000001", "_body": command,
+                            "created_at": "2026-08-04T10:03:00Z"}],
+        },
+        "warnings": [],
+    }
+
+
+class ControlBoardTest(unittest.TestCase):
+    def _render(self, snapshot):
+        with tempfile.TemporaryDirectory() as root:
+            write_leaf(root, "user.auth.login", title="登录")
+            leaves = backlog.load_leaves(root)
+            return board.render_board(backlog.build_tree(leaves), leaves, control=snapshot)
+
+    def test_renders_request_leaf_claim_feature_task_evidence_chain_in_stable_order(self):
+        page = self._render(_tracking_snapshot())
+        for expected in ("req-001", "登录原始需求", "user.auth.login", "feat-login",
+                         "feature/feat-login", "agent-a", "task/a", "task/z",
+                         "integrated", "等待接口确认", "feedface00000002",
+                         "python3 scripts/test_auth.py", "ev-feature"):
+            self.assertIn(expected, page)
+        self.assertIn("tracking-chain", page)
+        self.assertLess(page.index('"task_id": "task-a"'), page.index('"task_id": "task-z"'))
+        self.assertLess(page.index('"evidence_id": "ev-a"'),
+                        page.index('"evidence_id": "ev-z"'))
+
+    def test_accepts_dataclass_snapshot(self):
+        snapshot = _SnapshotStub(**_tracking_snapshot())
+        page = self._render(snapshot)
+        self.assertIn("feat-login", page)
+        self.assertIn("task-a", page)
+
+    def test_local_mode_is_tracked_control_not_legacy(self):
+        snapshot = _tracking_snapshot()
+        snapshot["mode"] = "local-serial"
+        page = self._render(snapshot)
+        self.assertIn("control local-serial", page)
+        self.assertIn('class="tracking-summary"', page)
+
+    def test_control_fields_cannot_break_json_script_or_html(self):
+        payload = "</script><img src=x onerror=alert(1)>&\u2028\u2029"
+        snapshot = _tracking_snapshot(payload)
+        snapshot["warnings"] = [payload]
+        page = self._render(snapshot)
+        self.assertNotIn(payload, page)
+        self.assertNotIn("<img src=x onerror=alert(1)>", page)
+        self.assertIn("\\u003c/script\\u003e", page)
+        self.assertIn("\\u0026", page)
+        self.assertIn("\\u2028\\u2029", page)
+
+    def test_missing_reference_warning_is_visible_without_crashing(self):
+        snapshot = _tracking_snapshot()
+        snapshot["features_by_id"] = {}
+        snapshot["tasks_by_feature"] = {}
+        snapshot["evidence_by_task"] = {}
+        snapshot["feature_evidence_by_feature"] = {}
+        snapshot["warnings"] = ["missing-feature: feat-login"]
+        page = self._render(snapshot)
+        self.assertIn("control-warning", page)
+        self.assertIn("missing-feature: feat-login", page)
+        self.assertIn("user.auth.login", page)
+
+    def test_control_snapshot_suppresses_conflicting_local_state_overlay(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            req = os.path.join(tmp, "requirements")
+            write_leaf(req, "user.auth.login", title="登录")
+            with open(os.path.join(tmp, "STATE.md"), "w", encoding="utf-8") as f:
+                f.write("stage: build\nsource-leaf: user.auth.login\n")
+            out = os.path.join(tmp, "board.html")
+            fake_control = SimpleNamespace(
+                load_snapshot_from_ref=mock.Mock(return_value=_tracking_snapshot()))
+            args = SimpleNamespace(root=req, out=out, control_repo=tmp,
+                                   control_ref="sdlc-control")
+            with mock.patch.dict(sys.modules, {"control": fake_control}), \
+                    mock.patch("builtins.print"):
+                board.cmd_board(args)
+            fake_control.load_snapshot_from_ref.assert_called_once_with(
+                tmp, ref="sdlc-control", legacy_requirements_root=req,
+                local_state_path=os.path.join(tmp, "STATE.md"))
+            page = _read(out)
+            self.assertIn("feat-login", page)
+            self.assertNotIn('class="live-badge', page)
+            self.assertNotIn("build中", page)
+
+    def test_control_requirements_replace_stale_legacy_tree(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            req = os.path.join(tmp, "requirements")
+            write_leaf(req, "legacy.keep.a", title="旧树")
+            out = os.path.join(tmp, "board.html")
+            fake_control = SimpleNamespace(
+                load_snapshot_from_ref=mock.Mock(return_value=_tracking_snapshot()))
+            args = SimpleNamespace(root=req, out=out, control_repo=tmp,
+                                   control_ref="sdlc-control")
+            with mock.patch.dict(sys.modules, {"control": fake_control}), \
+                    mock.patch("builtins.print"):
+                board.cmd_board(args)
+            page = _read(out)
+            self.assertIn("user.auth.login", page)
+            self.assertIn("control requirement", page)
+            self.assertNotIn("legacy.keep.a", page)
+
+    def test_legacy_snapshot_keeps_state_overlay_and_creates_nothing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            req = os.path.join(tmp, "requirements")
+            write_leaf(req, "user.auth.login", title="登录")
+            with open(os.path.join(tmp, "STATE.md"), "w", encoding="utf-8") as f:
+                f.write("stage: build\nsource-leaf: user.auth.login\n")
+            out = os.path.join(tmp, "board.html")
+            legacy = _tracking_snapshot()
+            legacy.update({"mode": "legacy", "requests_by_id": {},
+                           "requirements_by_id": {}, "claims_by_leaf": {},
+                           "features_by_id": {}, "tasks_by_feature": {},
+                           "evidence_by_task": {}, "feature_evidence_by_feature": {},
+                           "warnings": ["control-ref-missing:missing-control"]})
+            fake_control = SimpleNamespace(
+                load_snapshot_from_ref=mock.Mock(return_value=legacy))
+            args = SimpleNamespace(root=req, out=out, control_repo=tmp,
+                                   control_ref="missing-control")
+            before = set(os.listdir(tmp))
+            with mock.patch.dict(sys.modules, {"control": fake_control}), \
+                    mock.patch("builtins.print"):
+                board.cmd_board(args)
+            page = _read(out)
+            self.assertIn('class="live-badge', page)
+            self.assertIn("build中", page)
+            self.assertNotIn('class="tracking-summary"', page)
+            self.assertIn("control-ref-missing:missing-control", page)
+            self.assertNotIn(".sdlc-control", set(os.listdir(tmp)) - before)
+
+    def test_cli_accepts_control_repo_and_ref_without_mutating_legacy_root(self):
+        with tempfile.TemporaryDirectory() as repo:
+            subprocess.run(["git", "init", "-q", repo], check=True)
+            root = os.path.join(repo, "requirements")
+            write_leaf(root, "user.auth.login", title="登录")
+            out = os.path.join(root, "board.html")
+            before = set(os.listdir(repo))
+            result = run("board", "--out", out, "--control-repo", repo,
+                         "--control-ref", "missing-control", root=root)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            page = _read(out)
+            self.assertIn("user.auth.login", page)
+            self.assertIn("control-ref-missing:missing-control", page)
+            self.assertNotIn(".sdlc-control", set(os.listdir(repo)) - before)
 
 
 def _write_leaf_extra(root, id, extra_lines):

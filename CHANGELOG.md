@@ -2,6 +2,20 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.19.0] — 2026-08-04
+
+### Added
+- 新增 `/sdlc intake` 与 `/sdlc deliver`：需求捕获/拆解和 ready requirement 领取分离；`/sdlc` 保持智能恢复与路由。
+- 新增长期 `sdlc-control` 分支协议及 strict schema v1，追踪 request→requirement→claim→Feature→Task→evidence，并用 fast-forward push 竞争保证跨 clone 唯一领取。
+- 新增 Feature/Task 分支绑定、Task readiness/状态机、write set/interface/runtime 并行资格、每 Feature 最多 3 个活动 Task 分支与 serial 回退。
+- 新增 immutable evidence 与 freshness：记录 resulting integration SHA，Task/Feature 验证必须精确匹配被测试 HEAD。
+- 新增 TASK worktree identity、control-aware Git hooks、任务/分支/evidence 看板追踪链与行为测试。
+
+### Changed
+- 批准后的 `plan.md` 改为不可变基线；动态进度迁移到 control Task records。
+- `validated`/`shipped` 不再由 STATE stage 推导，分别由当前 HEAD feature evidence 与 release/retire 事务产生。
+- 无 control 数据的项目保持 legacy 行为，不自动迁移。
+
 ## [0.18.1] — 2026-06-26
 
 ### Changed

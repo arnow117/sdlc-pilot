@@ -1,63 +1,324 @@
 #!/bin/sh
-# sdlc-pilot pre-push 检查
-# 作用：代码离开本机(push)前，确保该跑的 SDLC 检查(validate + review)都过了。
-# 纯 shell —— 不调用任何 AI、不需要任何密钥(评审由你在本地用 /sdlc-review 跑，
-#            它会把结论写进 .sdlc/STATE.md；本 hook 只核对那行结论)。
-# 绕过(明知故犯)：git push --no-verify
+# sdlc-pilot pre-push
 #
-# 安装：由 sdlc-onboard 的"脚手架自检"主动询问后拷到 .git/hooks/pre-push 并 chmod +x，
-#       或手动：cp 本文件 .git/hooks/pre-push && chmod +x .git/hooks/pre-push
+# git 会把每个待更新 ref 以四列写到 stdin:
+#   <local-ref> <local-sha> <remote-ref> <remote-sha>
+# 本脚本逐条按上下文路由:
+#   - TASK:只能把声明的 task branch 推到同名远端 ref,且不能推 main/master。
+#   - sdlc-control:不可删除、只接受 fast-forward、提交树只能改 .sdlc-control/**。
+#   - feature/legacy:核对 STATE 中的 validate + review 结论。
+#
+# 纯 shell,不调用 AI、不需要密钥。人工紧急绕过:git push --no-verify。
 
-STATE=".sdlc/STATE.md"
-HEAD_SHA=$(git rev-parse HEAD 2>/dev/null)
-SHORT=$(git rev-parse --short HEAD 2>/dev/null)
+ZERO_SHA=0000000000000000000000000000000000000000
 
-if [ ! -f "$STATE" ]; then
-  # 无 STATE 有两种情形:① 特性已退场(retire 清栈,工件归档到 .sdlc/archive/)= 合法收尾
-  #                    ② 从没走过 SDLC。用 archive 区分。
-  if [ -n "$(ls -A .sdlc/archive 2>/dev/null)" ]; then
-    echo "✓ sdlc: 无在飞特性(STATE 已随退场归档),.sdlc/archive 有退场记录 —— 放行 (HEAD ${SHORT})"
-    exit 0
-  fi
-  echo "✗ sdlc: 没找到 $STATE 且无 .sdlc/archive —— 这些改动还没走过 SDLC 流程。"
-  echo "  先跑 /sdlc 走一遍(spec→plan→build→validate→review)。"
-  echo "  确实要跳过：git push --no-verify"
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+STATE="$repo_root/.sdlc/STATE.md"
+TASK="$repo_root/.sdlc/TASK.md"
+cd "$repo_root" || exit 1
+
+if [ -f "$STATE" ] && [ -f "$TASK" ]; then
+  echo "✗ sdlc: STATE 与 TASK 同时存在,无法判定 push 身份。"
+  echo "  feature worktree 只保留 STATE;task worktree 只保留 TASK。"
   exit 1
 fi
 
-# 契约：sdlc-review 全部通过时，会向 STATE 写入恰好一行：
-#   sdlc-gate: PASS reviewed-head=<被评审的 commit sha>
-# 未通过/被门控时写 BLOCK。本 hook 只认这行。
-GATE_LINE=$(grep -iE '^sdlc-gate:' "$STATE" | tail -1)
+field(){
+  file=$1
+  shift
+  for key in "$@"; do
+    value=$(grep -iE "^${key}:" "$file" 2>/dev/null | head -1 | sed 's/^[^:]*: *//' | tr -d '\r' | sed 's/^ *//;s/ *$//')
+    if [ -n "$value" ]; then
+      printf '%s' "$value"
+      return 0
+    fi
+  done
+  return 1
+}
 
-case "$GATE_LINE" in
-  *"PASS"*) ;;  # 继续核对 head
-  *)
-    echo "✗ sdlc: STATE 里没有 'sdlc-gate: PASS' —— validate / review 还没全过。"
-    echo "  跑 /sdlc(会进 validate)+ /sdlc-review。绕过：git push --no-verify"
-    exit 1 ;;
-esac
+is_full_sha(){
+  candidate=$1
+  [ "${#candidate}" -eq 40 ] || return 1
+  case "$candidate" in
+    *[!0-9a-fA-F]*) return 1 ;;
+  esac
+  return 0
+}
 
-REVIEWED=$(printf '%s' "$GATE_LINE" | sed -n 's/.*reviewed-head=\([0-9a-f]*\).*/\1/p')
-if [ -n "$REVIEWED" ] && [ "$REVIEWED" != "$HEAD_SHA" ]; then
-  # HEAD 移过 reviewed-head 不一定是"又改了代码":退场归档(retire)+合并收尾会推进 HEAD 但
-  # 只动 .sdlc/ bookkeeping。判据=reviewed-head..HEAD 间【非 .sdlc/ 的代码】是否真有改动。
-  # 先确认 reviewed-head 是本仓有效 commit(异仓/rebase 致失效时 diff 会空,不能据此误放行)→ 失效则保守拦。
-  if ! git cat-file -e "${REVIEWED}^{commit}" 2>/dev/null; then
-    echo "✗ sdlc: reviewed-head ${REVIEWED} 不是本仓有效 commit(可能 rebase/异仓)—— 保守拦截。"
-    echo "  重新跑 /sdlc-review 刷新 reviewed-head。绕过：git push --no-verify"
-    exit 1
+task_context_valid(){
+  task_invalid=0
+  required="execution-mode feature-id task-id feature-branch task-branch worktree branch-base-sha plan-revision control-head control-ref control-base-sha owner"
+  for key in $required; do
+    value=$(field "$TASK" "$key")
+    if [ -z "$value" ]; then
+      echo "✗ sdlc: TASK 缺少身份字段 '$key'。"
+      task_invalid=1
+    fi
+  done
+
+  task_mode=$(field "$TASK" execution-mode)
+  task_feature=$(field "$TASK" feature-id)
+  task_id=$(field "$TASK" task-id)
+  task_feature_branch=$(field "$TASK" feature-branch)
+  task_branch=$(field "$TASK" task-branch)
+  task_owner=$(field "$TASK" owner)
+  task_worktree=$(field "$TASK" worktree)
+  task_branch_base=$(field "$TASK" branch-base-sha)
+  task_plan=$(field "$TASK" plan-revision)
+  task_control_head=$(field "$TASK" control-head)
+  task_control_ref=$(field "$TASK" control-ref)
+  task_control_base=$(field "$TASK" control-base-sha)
+
+  case "$task_mode" in
+    shared-control|local-serial) ;;
+    *)
+      echo "✗ sdlc: TASK execution-mode 必须是 shared-control 或 local-serial,当前为 '${task_mode:-缺失}'。"
+      task_invalid=1 ;;
+  esac
+
+  for pair in "branch-base-sha:$task_branch_base" "plan-revision:$task_plan" "control-head:$task_control_head" "control-base-sha:$task_control_base"; do
+    sha_name=${pair%%:*}
+    sha_value=${pair#*:}
+    if [ -n "$sha_value" ] && ! is_full_sha "$sha_value"; then
+      echo "✗ sdlc: TASK 的 $sha_name 必须是完整 40 位 commit id。"
+      task_invalid=1
+    fi
+  done
+
+  case "$task_branch" in
+    main|master|sdlc-control|refs/*|"")
+      echo "✗ sdlc: TASK task-branch '${task_branch:-缺失}' 不是可用的任务分支名。"
+      task_invalid=1 ;;
+  esac
+
+  current_branch=$(git symbolic-ref --quiet --short HEAD 2>/dev/null)
+  current_root=$(git rev-parse --show-toplevel 2>/dev/null)
+  if [ -n "$task_branch" ] && [ "$task_branch" != "$current_branch" ]; then
+    echo "✗ sdlc: TASK 属于分支 '$task_branch',当前是 '${current_branch:-detached HEAD}'。"
+    task_invalid=1
   fi
-  CODE_CHANGED=$(git diff --name-only "$REVIEWED..$HEAD_SHA" -- . ':(exclude).sdlc' 2>/dev/null)
-  if [ -z "$CODE_CHANGED" ]; then
-    echo "✓ sdlc: 评审后仅 .sdlc/ 收尾变动(retire/merge),代码未变 —— 放行 (reviewed ${REVIEWED} → HEAD ${SHORT})"
-    exit 0
+  if [ -n "$task_worktree" ] && [ "$task_worktree" != "$current_root" ]; then
+    echo "✗ sdlc: TASK 属于 worktree '$task_worktree',当前是 '$current_root'。"
+    task_invalid=1
   fi
-  echo "✗ sdlc: 评审过的是 ${REVIEWED}，当前 HEAD 是 ${HEAD_SHA} —— 评审之后改了代码:"
-  printf '    %s\n' $CODE_CHANGED
-  echo "  重新跑 /sdlc-review。绕过：git push --no-verify"
-  exit 1
-fi
 
-echo "✓ sdlc: validate + review 均通过 (HEAD ${SHORT})"
+  [ "$task_invalid" -eq 0 ]
+}
+
+task_allowed_write_set(){
+  awk '
+    /^## Allowed write set[[:space:]]*$/ { inside=1; next }
+    inside && /^## / { exit }
+    inside && /^- / { sub(/^- /, ""); print }
+  ' "$TASK"
+}
+
+task_path_allowed(){
+  changed_path=$1
+  allowed_entries=$2
+  old_ifs=$IFS
+  IFS='
+'
+  for entry in $allowed_entries; do
+    IFS=$old_ifs
+    case "$entry" in
+      ""|/*|*".."*|*\\*|*\**|*\?*|*\[*|*\]*)
+        echo "✗ sdlc: TASK Allowed write set 含非法路径 '$entry'。"
+        return 2 ;;
+      */) case "$changed_path" in "${entry}"*) return 0 ;; esac ;;
+      *) [ "$changed_path" = "$entry" ] && return 0 ;;
+    esac
+    IFS='
+'
+  done
+  IFS=$old_ifs
+  return 1
+}
+
+control_paths_valid(){
+  control_paths=$1
+  [ -n "$control_paths" ] || {
+    echo "✗ sdlc: sdlc-control 更新没有可验证的 .sdlc-control/** 内容。"
+    return 1
+  }
+
+  bad_control_paths=$(printf '%s\n' "$control_paths" | LC_ALL=C grep -v '^\.sdlc-control/' 2>/dev/null)
+  if [ -n "$bad_control_paths" ]; then
+    echo "✗ sdlc: sdlc-control 只能包含 .sdlc-control/**,发现越界路径:"
+    printf '%s\n' "$bad_control_paths" | sed 's/^/    /'
+    return 1
+  fi
+  return 0
+}
+
+check_control_update(){
+  local_sha=$1
+  remote_sha=$2
+
+  if [ "$local_sha" = "$ZERO_SHA" ]; then
+    echo "✗ sdlc: 禁止删除远端 sdlc-control。"
+    return 1
+  fi
+  if ! git cat-file -e "${local_sha}^{commit}" 2>/dev/null; then
+    echo "✗ sdlc: sdlc-control 的 local sha '$local_sha' 不是本仓有效 commit。"
+    return 1
+  fi
+
+  if [ "$remote_sha" = "$ZERO_SHA" ]; then
+    control_paths=$(git ls-tree -r --name-only "$local_sha" 2>/dev/null)
+    control_paths_valid "$control_paths" || return 1
+    echo "✓ sdlc: 新建 sdlc-control,提交树仅含 .sdlc-control/**。"
+    return 0
+  fi
+
+  if ! git cat-file -e "${remote_sha}^{commit}" 2>/dev/null; then
+    echo "✗ sdlc: sdlc-control 的 remote sha '$remote_sha' 不是本仓有效 commit。"
+    return 1
+  fi
+  if ! git merge-base --is-ancestor "$remote_sha" "$local_sha" 2>/dev/null; then
+    echo "✗ sdlc: sdlc-control 只接受 fast-forward 更新。请先同步并重放本地控制变更。"
+    return 1
+  fi
+
+  target_paths=$(git ls-tree -r --name-only "$local_sha" 2>/dev/null)
+  control_paths_valid "$target_paths" || return 1
+  control_paths=$(git diff --name-only "$remote_sha" "$local_sha" -- 2>/dev/null)
+  if [ -n "$control_paths" ]; then
+    control_paths_valid "$control_paths" || return 1
+  fi
+  echo "✓ sdlc: sdlc-control 为 fast-forward,且仅改 .sdlc-control/**。"
+  return 0
+}
+
+check_task_update(){
+  local_ref=$1
+  local_sha=$2
+  remote_ref=$3
+
+  task_context_valid || return 1
+  declared_ref="refs/heads/$task_branch"
+
+  case "$remote_ref" in
+    refs/heads/main|refs/heads/master)
+      echo "✗ sdlc: task worktree 禁止 push 到 main/master。"
+      return 1 ;;
+  esac
+  if [ "$local_sha" = "$ZERO_SHA" ]; then
+    echo "✗ sdlc: task worktree 不能通过本上下文删除任务分支。"
+    return 1
+  fi
+  if [ "$local_ref" != "$declared_ref" ] || [ "$remote_ref" != "$declared_ref" ]; then
+    echo "✗ sdlc: TASK 只允许 '$declared_ref' → '$declared_ref'。"
+    echo "  本次为 '$local_ref' → '$remote_ref'。"
+    return 1
+  fi
+  if ! git cat-file -e "${local_sha}^{commit}" 2>/dev/null; then
+    echo "✗ sdlc: task local sha '$local_sha' 不是本仓有效 commit。"
+    return 1
+  fi
+  if ! git cat-file -e "${task_branch_base}^{commit}" 2>/dev/null; then
+    echo "✗ sdlc: TASK branch-base-sha '$task_branch_base' 不是本仓有效 commit。"
+    return 1
+  fi
+  if ! git merge-base --is-ancestor "$task_branch_base" "$local_sha" 2>/dev/null; then
+    echo "✗ sdlc: task branch HEAD 不基于声明的 branch-base-sha。"
+    return 1
+  fi
+  allowed_entries=$(task_allowed_write_set)
+  if [ -z "$allowed_entries" ]; then
+    echo "✗ sdlc: TASK 没有 Allowed write set。"
+    return 1
+  fi
+  changed_paths=$(git diff --name-only "$task_branch_base" "$local_sha" -- 2>/dev/null)
+  old_ifs=$IFS
+  IFS='
+'
+  for changed_path in $changed_paths; do
+    IFS=$old_ifs
+    if ! task_path_allowed "$changed_path" "$allowed_entries"; then
+      echo "✗ sdlc: task 修改越过 Allowed write set: $changed_path"
+      return 1
+    fi
+    IFS='
+'
+  done
+  IFS=$old_ifs
+
+  echo "✓ sdlc: task '$task_id' of feature '$task_feature' 只更新声明 ref '$declared_ref'。"
+  return 0
+}
+
+check_feature_update(){
+  local_sha=$1
+
+  # 删除普通临时 ref 不携带代码内容;控制分支和 task 分支已在各自路径中禁止删除。
+  if [ "$local_sha" = "$ZERO_SHA" ]; then
+    echo "✓ sdlc: 普通远端 ref 删除不包含待发布代码,跳过 review 核对。"
+    return 0
+  fi
+  if ! git cat-file -e "${local_sha}^{commit}" 2>/dev/null; then
+    echo "✗ sdlc: 待 push 的 local sha '$local_sha' 不是本仓有效 commit。"
+    return 1
+  fi
+
+  if [ ! -f "$STATE" ]; then
+    if [ -n "$(ls -A "$repo_root/.sdlc/archive" 2>/dev/null)" ]; then
+      echo "✓ sdlc: 无在飞 feature,archive 有退场记录。"
+      return 0
+    fi
+    echo "✗ sdlc: 没找到 .sdlc/STATE.md 且无 .sdlc/archive 退场记录。"
+    echo "  先跑 /sdlc 完成 spec→plan→build→validate→review。"
+    return 1
+  fi
+
+  gate_line=$(grep -iE '^sdlc-gate:' "$STATE" 2>/dev/null | tail -1)
+  if ! printf '%s\n' "$gate_line" | grep -qiE '^sdlc-gate:[[:space:]]*PASS[[:space:]]+reviewed-head=[0-9a-f]{40}[[:space:]]*$'; then
+    echo "✗ sdlc: STATE 没有精确的 'sdlc-gate: PASS reviewed-head=<40位sha>'。"
+    return 1
+  fi
+
+  reviewed=$(printf '%s' "$gate_line" | sed -n 's/.*reviewed-head=\([0-9a-fA-F]*\).*/\1/p')
+  if ! is_full_sha "$reviewed" || ! git cat-file -e "${reviewed}^{commit}" 2>/dev/null; then
+    echo "✗ sdlc: reviewed-head '${reviewed:-缺失}' 不是本仓有效的完整 commit id。"
+    echo "  重新跑 /sdlc-review 刷新 reviewed-head。"
+    return 1
+  fi
+
+  if [ "$reviewed" != "$local_sha" ]; then
+    if ! git merge-base --is-ancestor "$reviewed" "$local_sha" 2>/dev/null; then
+      echo "✗ sdlc: 待 push commit 不再基于 reviewed-head;请重新 review。"
+      return 1
+    fi
+    code_changed=$(git diff --name-only "$reviewed" "$local_sha" -- . ':(exclude).sdlc' ':(exclude).sdlc/**' 2>/dev/null)
+    if [ -n "$code_changed" ]; then
+      echo "✗ sdlc: reviewed-head 之后又改了代码:"
+      printf '%s\n' "$code_changed" | sed 's/^/    /'
+      echo "  重新跑 /sdlc-review。"
+      return 1
+    fi
+    echo "✓ sdlc: reviewed-head 之后仅有 .sdlc/** 收尾变更。"
+    return 0
+  fi
+
+  short=$(git rev-parse --short "$local_sha" 2>/dev/null)
+  echo "✓ sdlc: validate + review 已覆盖待 push commit ${short}。"
+  return 0
+}
+
+while IFS=' ' read -r local_ref local_sha remote_ref remote_sha; do
+  [ -n "$local_ref" ] || continue
+
+  if [ -f "$TASK" ]; then
+    check_task_update "$local_ref" "$local_sha" "$remote_ref" || exit 1
+    continue
+  fi
+
+  if [ "$remote_ref" = "refs/heads/sdlc-control" ]; then
+    check_control_update "$local_sha" "$remote_sha" || exit 1
+    continue
+  fi
+
+  check_feature_update "$local_sha" || exit 1
+done
+
 exit 0

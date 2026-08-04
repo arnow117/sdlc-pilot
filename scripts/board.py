@@ -5,6 +5,8 @@ import html
 import json
 import os
 import re
+from collections.abc import Mapping
+from dataclasses import asdict, is_dataclass
 
 from backlog import load_leaves, build_tree, SHIPPED, STATUS_ORDER, STAGE_TO_STATUS
 
@@ -136,6 +138,17 @@ body[data-filter] .leaf.match-filter{opacity:1}
 .ld-field{font-size:11px;color:var(--ink);margin:2px 0;word-break:break-word}
 .ld-field .k{color:var(--muted)}
 .dep-link{color:var(--green);cursor:pointer;text-decoration:underline}
+/* control snapshot 只读追踪链 */
+.control-warnings{border:1px solid var(--orange);background:var(--panel);border-radius:6px;
+  padding:8px 12px;margin:0 0 12px;font-size:11px}
+.control-warning{word-break:break-word;color:var(--ink)}
+.tracking-summary{padding:1px 7px;border-radius:4px;background:var(--green-soft);color:var(--ink)}
+.tracking-chain{margin:8px 0 10px;border-left:2px solid var(--green);padding-left:8px}
+.tracking-node{padding:6px 8px;margin:5px 0;background:var(--bg);border:1px solid var(--line);
+  border-radius:6px;font-size:11px;word-break:break-word}
+.tracking-node .kind{font-weight:600;color:var(--green);margin-right:5px}
+.tracking-fields{color:var(--muted);margin-top:2px;white-space:pre-wrap}
+.tracking-task{margin-left:8px}.tracking-evidence{margin-left:16px;border-left:2px solid var(--green-soft)}
 /* 聊天监听状态 */
 #live-status{font-size:11px;font-weight:400;margin-left:6px}
 #live-status.on{color:var(--green)}#live-status.off{color:var(--muted)}
@@ -170,6 +183,59 @@ CHAT_JS = """<script>
       return LEAFDATA[id]?'<a class="dep-link" data-goto="'+esc(id)+'">'+esc(id)+'</a>':esc(id);
     }).join(', ');
   }
+  function pick(obj){
+    if(!obj)return '';
+    for(var i=1;i<arguments.length;i++){
+      var v=obj[arguments[i]];if(v!==undefined&&v!==null&&v!=='')return v;
+    }
+    return '';
+  }
+  function trackingFields(items){
+    return items.filter(function(item){return item[1]!==''&&item[1]!==null&&item[1]!==undefined;})
+      .map(function(item){return '<span><b>'+esc(item[0])+':</b> '+esc(item[1])+'</span>';}).join(' · ');
+  }
+  function evidenceNode(e,extra){
+    var id=pick(e,'evidence_id','id'),cmd=pick(e,'command','_body');
+    var fields=trackingFields([['result',pick(e,'result')],['scope',pick(e,'scope')],
+      ['tested SHA',pick(e,'tested_sha','tested-sha')],['created',pick(e,'created_at','created-at','created')],
+      ['command',cmd]]);
+    return '<div class="tracking-node tracking-evidence '+(extra||'')+'"><span class="kind">evidence</span> '
+      +esc(id)+'<div class="tracking-fields">'+fields+'</div></div>';
+  }
+  function renderTracking(t){
+    if(!t)return '';
+    var out=[],request=t.request||{},claim=t.claim||{},feature=t.feature||{},leaf=t.leaf||{};
+    var requestId=t.request_id||pick(request,'request_id','id');
+    out.push('<div class="tracking-node"><span class="kind">request</span> '+esc(requestId)
+      +'<div class="tracking-fields">'+trackingFields([['title',pick(request,'title')],
+        ['status',pick(request,'status')],['body',pick(request,'_body','body')]])+'</div></div>');
+    out.push('<div class="tracking-node"><span class="kind">leaf</span> '+esc(pick(leaf,'id'))
+      +'<div class="tracking-fields">'+trackingFields([['source request',pick(leaf,'source_request','source-request')]])+'</div></div>');
+    if(Object.keys(claim).length){
+      out.push('<div class="tracking-node"><span class="kind">claim</span> '+esc(pick(claim,'leaf_id','leaf-id'))
+        +'<div class="tracking-fields">'+trackingFields([['status',pick(claim,'status')],
+          ['feature',pick(claim,'feature_id','feature-id')],['owner',pick(claim,'owner')]])+'</div></div>');
+    }
+    if(Object.keys(feature).length){
+      out.push('<div class="tracking-node"><span class="kind">feature</span> '
+        +esc(t.feature_id||pick(feature,'feature_id','id'))+'<div class="tracking-fields">'
+        +trackingFields([['branch',pick(feature,'branch_name','feature_branch','branch')],
+          ['owner',pick(feature,'owner')],['status',pick(feature,'status')],
+          ['integration SHA',pick(feature,'integration_sha','integration-sha')]])+'</div></div>');
+    }
+    (t.tasks||[]).forEach(function(task){
+      var evidence=(task.evidence||[]).map(function(e){return evidenceNode(e,'');}).join('');
+      out.push('<div class="tracking-node tracking-task"><span class="kind">task</span> '
+        +esc(pick(task,'task_id','id'))+'<div class="tracking-fields">'
+        +trackingFields([['status',pick(task,'status')],['branch',pick(task,'branch_name','branch-name')],
+          ['owner',pick(task,'owner')],['merge',pick(task,'merge_status','merge-status')],
+          ['blocked',pick(task,'blocked_reason','blocked-reason')],
+          ['integration SHA',pick(task,'integration_sha','integration-sha')],
+          ['freshness',pick(task,'freshness')]])+'</div>'+evidence+'</div>');
+    });
+    (t.feature_evidence||[]).forEach(function(e){out.push(evidenceNode(e,'feature-evidence'));});
+    return '<div class="ld-group">执行追踪</div><div class="tracking-chain">'+out.join('')+'</div>';
+  }
   function renderDetail(){
     if(!current||!LEAFDATA[current]){detailEl.innerHTML='';return;}
     var d=LEAFDATA[current];
@@ -187,6 +253,7 @@ CHAT_JS = """<script>
       fld('depends_on','依赖',depLinks(d.depends_on))+
       fld('cross_link','关联',d.cross_link&&d.cross_link.length?esc(d.cross_link.join(', ')):'')+
       crossGroup(d)+
+      renderTracking(d.tracking)+
       '<div class="ld-group">需求</div>'+
       '<div class="ld-body">'+esc(d.body)+'</div>';
   }
@@ -322,10 +389,134 @@ def _css_safe(s):
 
 DETAIL_KEYS = ["title", "status", "priority", "risk_level", "domain_path",
                "old_system_ref", "new_domain_path", "depends_on", "cross_link",
-               "actor", "failure_class", "contract_refs", "data_owner"]
+               "actor", "failure_class", "contract_refs", "data_owner",
+               "source_request"]
 
 
-def _leaf_detail_map(leaves):
+def _as_dict(value):
+    """核心 API 的 dict/dataclass → 普通 dict；其它值安全降级为空。"""
+    if isinstance(value, Mapping):
+        return dict(value)
+    if is_dataclass(value):
+        return asdict(value)
+    fields = getattr(value, "__dict__", None)
+    return dict(fields) if isinstance(fields, Mapping) else {}
+
+
+def _value(record, *keys, default=""):
+    data = _as_dict(record)
+    for key in keys:
+        value = data.get(key)
+        if value is not None and value != "":
+            return value
+    return default
+
+
+def _records(value):
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple)):
+        return [_as_dict(item) for item in value]
+    data = _as_dict(value)
+    return [data] if data else []
+
+
+def _evidence_for(mapping, feature_id, task_id):
+    """兼容 task-id、feature/task、tuple 与嵌套映射四种只读索引形状。"""
+    data = _as_dict(mapping)
+    candidates = (task_id, f"{feature_id}/{task_id}", (feature_id, task_id))
+    for key in candidates:
+        if key in data:
+            return _records(data[key])
+    nested = data.get(feature_id)
+    if isinstance(nested, Mapping):
+        return _records(nested.get(task_id))
+    return []
+
+
+def _safe_json_for_html(value):
+    """JSON 嵌入 script[type=application/json] 时隔离 HTML/script 上下文。"""
+    return json.dumps(value, ensure_ascii=False).translate({
+        ord("<"): "\\u003c",
+        ord(">"): "\\u003e",
+        ord("&"): "\\u0026",
+        0x2028: "\\u2028",
+        0x2029: "\\u2029",
+    })
+
+
+def _build_tracking_map(leaves, snapshot):
+    """ControlSnapshot → 按 leaf 索引的 request→claim→feature→task→evidence 链。"""
+    snap = _as_dict(snapshot)
+    if not snap:
+        return {}, []
+    warnings = [str(item) for item in (snap.get("warnings") or [])]
+    if snap.get("mode") == "legacy":
+        return {}, warnings
+
+    requests = _as_dict(snap.get("requests_by_id"))
+    requirements = _as_dict(snap.get("requirements_by_id"))
+    claims = _as_dict(snap.get("claims_by_leaf"))
+    features = _as_dict(snap.get("features_by_id"))
+    tasks_by_feature = _as_dict(snap.get("tasks_by_feature"))
+    evidence_by_task = snap.get("evidence_by_task") or {}
+    feature_evidence = _as_dict(snap.get("feature_evidence_by_feature"))
+    tracking = {}
+
+    for leaf in leaves:
+        leaf_id = str(leaf.get("id") or "")
+        if not leaf_id:
+            continue
+        requirement = _as_dict(requirements.get(leaf_id))
+        source_request = (_value(requirement, "source_request", "source-request")
+                          or leaf.get("source_request") or leaf.get("source-request") or "")
+        request = _as_dict(requests.get(source_request)) if source_request else {}
+        claim = _as_dict(claims.get(leaf_id))
+        feature_id = str(_value(claim, "feature_id", "feature-id"))
+        feature = _as_dict(features.get(feature_id)) if feature_id else {}
+        if not feature:
+            # Released/history snapshots may retain feature without a claim index.
+            for candidate_id, candidate in features.items():
+                candidate_data = _as_dict(candidate)
+                if _value(candidate_data, "leaf_id", "source_leaf", "source-leaf") == leaf_id:
+                    feature_id, feature = str(candidate_id), candidate_data
+                    break
+
+        tasks = _records(tasks_by_feature.get(feature_id)) if feature_id else []
+        tasks.sort(key=lambda item: str(_value(item, "id", "task_id", "task-id")))
+        task_views = []
+        for task in tasks:
+            task_id = str(_value(task, "id", "task_id", "task-id"))
+            evidence = _evidence_for(evidence_by_task, feature_id, task_id)
+            evidence.sort(key=lambda item: (
+                str(_value(item, "created_at", "created-at", "created")),
+                str(_value(item, "id", "evidence_id", "evidence-id")),
+            ))
+            task_view = dict(task)
+            task_view["id"] = task_id
+            task_view["evidence"] = evidence
+            task_views.append(task_view)
+
+        feature_evidence_items = _records(feature_evidence.get(feature_id))
+        feature_evidence_items.sort(key=lambda item: (
+            str(_value(item, "created_at", "created-at", "created")),
+            str(_value(item, "id", "evidence_id", "evidence-id")),
+        ))
+        if source_request or claim or feature or task_views or feature_evidence_items:
+            tracking[leaf_id] = {
+                "request": request,
+                "request_id": source_request,
+                "leaf": {"id": leaf_id, "source_request": source_request},
+                "claim": claim,
+                "feature": feature,
+                "feature_id": feature_id,
+                "tasks": task_views,
+                "feature_evidence": feature_evidence_items,
+            }
+    return tracking, warnings
+
+
+def _leaf_detail_map(leaves, tracking=None):
     """{id: {字段... + body}} —— 供聊天面板"叶详情"显示(选叶后看清需求内容)。"""
     detail = {}
     for lf in leaves:
@@ -334,6 +525,8 @@ def _leaf_detail_map(leaves):
             continue
         d = {k: lf.get(k) for k in DETAIL_KEYS}
         d["body"] = lf.get("_body", "")
+        if tracking and lid in tracking:
+            d["tracking"] = tracking[lid]
         detail[lid] = d
     return detail
 
@@ -360,13 +553,17 @@ def _read_state_overlay(req_root):
     return {"leaf": leaf, "stage": stage, "status": to} if to else None
 
 
-def render_board(tree, leaves, title="Backlog 需求树看板", live=None):
+def render_board(tree, leaves, title="Backlog 需求树看板", live=None, control=None):
     """整树 → 自包含 HTML 看板(左折叠树 + 右聊天面板 + 叶详情 + Live 回路)。只读渲染。
-    live={leaf,stage,status}: 对在飞特性源叶叠加 live badge(惰性派生,不写文件);None=纯文件 status。"""
+    live={leaf,stage,status}: legacy 在飞特性叠加；control:可选 ControlSnapshot。"""
     esc = html.escape
     summ = tree["summary"]
-    # 叶详情数据嵌入(防 </script> 注入:转义 </)
-    leaf_data_json = json.dumps(_leaf_detail_map(leaves), ensure_ascii=False).replace("</", "<\\/")
+    tracking, control_warnings = _build_tracking_map(leaves, control)
+    control_data = _as_dict(control)
+    control_mode = str(control_data.get("mode") or "")
+    control_active = bool(control_data) and control_mode != "legacy"
+    # 叶详情数据嵌入：统一隔离 HTML/script 上下文。
+    leaf_data_json = _safe_json_for_html(_leaf_detail_map(leaves, tracking))
     # 痛点① 图例(6 状态色 + 含义,可点过滤)
     legend_meaning = {"captured": "已收集", "spec'd": "已出spec", "planned": "已拆任务",
                       "built": "已实现", "validated": "已验证", "shipped": "已交付"}
@@ -401,6 +598,12 @@ def render_board(tree, leaves, title="Backlog 需求树看板", live=None):
     total_dist = _dist_bar(leaves, cls="dist-total")
     cov_html = (legend_html + total_dist
                 + ('<div class="cov">' + "".join(cov_items) + "</div>" if cov_items else ""))
+    warning_html = ""
+    if control_warnings:
+        warning_html = ('<div class="control-warnings" role="status"><b>控制记录提示</b>'
+                        + "".join(f'<div class="control-warning">{esc(item)}</div>'
+                                  for item in control_warnings)
+                        + "</div>")
 
     if not tree["domains"]:
         body = '<p class="empty">暂无需求（.sdlc/requirements/ 为空）</p>'
@@ -424,6 +627,15 @@ def render_board(tree, leaves, title="Backlog 需求树看板", live=None):
                     if live and live["leaf"] == raw_id:
                         live_html = (f'<span class="live-badge status-{_css_safe(live["status"])}" '
                                      f'title="在飞:{esc(live["stage"])}">⏳ {esc(live["stage"])}中</span>')
+                    tracking_html = ""
+                    tracked = tracking.get(raw_id)
+                    if tracked:
+                        feature_id = str(tracked.get("feature_id") or "")
+                        tasks = tracked.get("tasks") or []
+                        verified = sum(1 for task in tasks if task.get("status") == "verified")
+                        summary = (f'{feature_id} · task {verified}/{len(tasks)}'
+                                   if feature_id else f'task {verified}/{len(tasks)}')
+                        tracking_html = f'<span class="tracking-summary">{esc(summary)}</span>'
                     title_txt = lf.get("title") or ""
                     crumb = f'{d["domain"]} › {sub["subdomain"]}'
                     lvs.append(
@@ -435,6 +647,7 @@ def render_board(tree, leaves, title="Backlog 需求树看板", live=None):
                         f'<div class="meta">'
                         f'<span class="badge status-{_css_safe(st)}">{esc(st)}</span>'
                         f'{live_html}'
+                        f'{tracking_html}'
                         f'<span class="prio prio-{pr}">{pr}</span>'
                         f'<span class="dot risk-{_css_safe(risk)}" title="risk: {esc(risk)}"></span>'
                         f'{deps_html}</div></section>')
@@ -468,7 +681,9 @@ def render_board(tree, leaves, title="Backlog 需求树看板", live=None):
         f'<meta name="viewport" content="width=device-width,initial-scale=1">'
         f'<title>{esc(title)}</title><style>{BOARD_CSS}</style></head><body>'
         f'<div class="app"><div class="board"><h1>{esc(title)}</h1>'
-        f'<div class="sub">共 {summ["total"]} 条需求 · ready {summ["ready_count"]} 条</div>'
+        f'<div class="sub">共 {summ["total"]} 条需求 · ready {summ["ready_count"]} 条'
+        f'{(" · control " + esc(control_mode)) if control_active else ""}</div>'
+        f'{warning_html}'
         f'{cov_html}'
         f'<div class="toolbar"><input id="tree-search" type="search" '
         f'placeholder="🔍 搜索 id / 标题…" aria-label="搜索需求叶"></div>'
@@ -479,12 +694,34 @@ def render_board(tree, leaves, title="Backlog 需求树看板", live=None):
 
 
 def cmd_board(args):
-    leaves = load_leaves(args.root)
-    tree = build_tree(leaves)
     out = args.out or os.path.join(args.root, "_board.html")
-    live = _read_state_overlay(args.root)
+    snapshot = None
+    control_repo = getattr(args, "control_repo", None)
+    if control_repo:
+        # 延迟 import：legacy board 不依赖 control 模块，也不触发任何 Git 操作。
+        from control import load_snapshot_from_ref
+        state_path = os.path.join(
+            os.path.dirname(os.path.abspath(args.root.rstrip("/"))), "STATE.md")
+        snapshot = load_snapshot_from_ref(
+            control_repo,
+            ref=getattr(args, "control_ref", None) or "sdlc-control",
+            legacy_requirements_root=args.root,
+            local_state_path=state_path,
+        )
+    mode = str(_as_dict(snapshot).get("mode") or "legacy")
+    if mode == "legacy":
+        leaves = load_leaves(args.root)
+    else:
+        requirements = _as_dict(_as_dict(snapshot).get("requirements_by_id"))
+        leaves = []
+        for leaf_id, record in sorted(requirements.items(), key=lambda item: str(item[0])):
+            leaf = _as_dict(record)
+            leaf.setdefault("id", str(leaf_id))
+            leaves.append(leaf)
+    tree = build_tree(leaves)
+    live = _read_state_overlay(args.root) if mode == "legacy" else None
     with open(out, "w", encoding="utf-8") as f:
-        f.write(render_board(tree, leaves, live=live))
+        f.write(render_board(tree, leaves, live=live, control=snapshot))
     print(json.dumps({"board": out, "domains": len(tree["domains"]),
                       "total": tree["summary"]["total"]}, ensure_ascii=False))
     return 0

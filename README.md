@@ -57,7 +57,7 @@ sdlc-pilot/                          # 未来独立 GitHub repo 的根
 │   ├── sdlc-validate/SKILL.md       # ⑥ 验证中枢:correctness / e2e / eval-bench 模式
 │   ├── sdlc-review/SKILL.md         # ⑦ 多角色评审 + Verify
 │   └── sdlc-ship/SKILL.md           # ⑧ 部署/发布:环境晋级 dev→staging→canary→full + 回滚
-└── scripts/                         # 可选辅助(state linter · backlog.py 需求树派生)
+└── scripts/                         # control ledger/store · backlog/board · behavior tests · static validation
 ```
 
 ### 主线一图流
@@ -68,13 +68,12 @@ sdlc-pilot/                          # 未来独立 GitHub repo 的根
 [greenfield] ─────────┘            → Validate{correctness | e2e | eval-bench} → Review → Verify
 ```
 
-driver 在入口分支:
+driver 提供两个显式操作和一个智能续接入口:
 
 ```
-/sdlc → 读 .sdlc/
-   ├─ 无 PROFILE.md 且仓库非空(已有项目) → 先走 sdlc-onboard
-   ├─ 无 PROFILE.md 且仓库空(全新项目)   → 直接到 sdlc-spec
-   └─ 有 PROFILE.md → 从 STATE.stage 恢复 per-feature 循环
+/sdlc intake  → 捕获原始 request，拆/更新 requirement leaf，不打断当前 Feature
+/sdlc deliver → 对 ready leaf 做唯一 claim，绑定 Feature branch 后进入 spec
+/sdlc         → 优先恢复 TASK/STATE；无在飞工作时按意图路由 intake/deliver/onboard
 ```
 
 ### 状态文件(落在**目标仓库**,不在技能里)
@@ -88,6 +87,11 @@ driver 在入口分支:
 ├── validate/      # 各 validate 模式产出(含截图报告)
 └── review/        # 每个角色一份 findings(并行安全)
 ```
+
+启用跨 clone 追踪时，长期 `sdlc-control` 分支保存 `.sdlc-control/`：request、requirement、claim、
+Feature、静态 plan revision、Task、分支绑定和 immutable evidence。`STATE.md` 退化为本地续接缓存；
+任务 worktree 使用 `.sdlc/TASK.md`，两者不得共存。无 control 数据的旧项目继续 legacy 串行方式，
+不会被自动迁移。协议见 [`control-plane.md`](skills/sdlc/references/control-plane.md)。
 
 ## 安装
 
@@ -143,16 +147,17 @@ v1 语言范围 = **Python + Web(TS)**。如何迭代本项目见仓库根 **`CL
 
 ## 怎么用(日常工作流)
 
-装好软链后,在任意项目里**入口只有一个 `/sdlc`**,它自己判断该干嘛:
+装好软链后，可用两个显式操作和一个智能入口：`/sdlc intake`、`/sdlc deliver`、`/sdlc`。
 
 | 场景 | 怎么走 |
 |---|---|
 | **首次进一个已有项目** | `/sdlc` → 无 PROFILE → 自动 `onboard` → 产出 `.sdlc/PROFILE.md` + surface map(agentic-config-demo 这类"配置型工程"也认得,R7) |
-| **散点需求 / 老系统重写** | `/sdlc` → `backlog`:**Seed**(老系统→递归 domain-subdomain 骨架)→ **Ingest**(散点需求归类成叶)→ **Coverage**(迁移 burndown)→ **Ready-queue**(派生就绪叶);选一片叶即起一个 feature 走下面的循环。feature 走到 `done` 时 backlog 的 **Retire** 收尾(归档工件/回流教训/标源叶 shipped/清栈)——backlog 是生命周期两端书挡。已完成工件(`archive/`)+ 演进史(`EVOLUTION.md`)默认**纳入 git** 跨机器持久(在飞工作态仍本地);track 前留意 archive 无密钥 |
-| **每做一个 feature** | `/sdlc` → **spec**(批准前不写码;UI 工作产 `DESIGN.md`;AI 工作前置 eval 标准;开放/高风险决策可选发散 + 范围塑造)→ **plan**(拆阶段/波次/任务)→ **build**(先测后码,同 wave 多阶段可并行)→ **validate**(按改动选 correctness/e2e/eval-bench)→ **review**(多角色 + 安全门 + 收口,写 `sdlc-gate`) |
+| **新增/继续拆需求** | `/sdlc intake <需求>` → 保存 request 原文并拆/更新 requirement leaf；可在另一个 Feature 开发期间持续进行 |
+| **开始交付一条需求** | `/sdlc deliver [leaf-id]` → ready 检查 → claim 竞争 → 绑定 Feature branch → spec；claim 失败不会创建分支 |
+| **每做一个 feature** | **spec** → **静态 plan + Task records** → **build**(Task 依赖/写集/接口/环境满足时最多 3 个 task branches，否则串行)→ **validate**(当前 integration HEAD evidence)→ **review**→ **ship/retire** |
 | **角色/验证自动选** | 改前端→client-dev+design+e2e:Web;改 API→server-dev+e2e:OpenAPI;改 AI/策略→eval-bench;**跨 ≥2 面→ +architect**;改配置/agent 定义→server-dev+correctness |
-| **批量自治推进(loop)** | 需求树已建、有多片 ready 叶 → `/sdlc loop`:从 ready-queue 取就绪叶,逐叶自动跑 TDD 主线(spec→…→ship)到队列干。内核 TDD(测试=ground truth),阶段间 **converge oracle** 判"真做完没"。不绕硬门、串行取叶、状态全在文件可恢复。见 [`build-loop.md`](skills/sdlc/references/build-loop.md) |
-| **跨会话续接** | `/clear` 或隔天 → `/sdlc` 读 `.sdlc/STATE.md`,从上次 stage 接着走,不用复述 |
+| **批量自治推进(loop)** | `/sdlc loop` 每次先调用 deliver 取得 claim，再跑单 Feature 主线；进度由 control Task records/evidence 恢复，plan 不改写。见 [`build-loop.md`](skills/sdlc/references/build-loop.md) |
+| **跨会话续接** | `/clear` 或隔天 → `/sdlc` 刷新 control snapshot，再按 TASK/STATE 恢复，不用复述 |
 | **push 把关** | 装了 `pre-push` hook 的话,review 没过会拦下 push(`--no-verify` 可绕) |
 | **重型动作可选** | 发散 ideation、范围塑造**只在开放 + 高风险设计决策时**点用;日常需求直接走,不增负担 |
 

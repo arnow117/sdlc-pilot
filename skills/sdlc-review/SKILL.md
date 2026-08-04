@@ -22,6 +22,8 @@ description: >
 > **引擎 = Claude + Read/Edit/Bash/Grep。** 所有知识在纯文件里(`references/roles/*.md`、本 skill)。
 > 不依赖 gsd-tools / `.planning/` / subagent 人格 / AskUserQuestion / gstack 二进制。
 > **可移植铁律**:交互用 text_mode(纯文本编号列表),并行用 Task-or-sequential 降级(见 §0)。
+> control 模式必须读 `sdlc/references/control-plane.md`。Plan 完成度以当前 revision 的 Task records
+> 为准，不以 plan checkbox 为准；review 记录 reviewed HEAD/verdict，但不推进 requirement lifecycle。
 
 ---
 
@@ -64,6 +66,8 @@ description: >
 3. **validate 已跑**(推荐但不强制):`STATE.validate-modes` 已解析,`.sdlc/validate/` 下有对应报告。
    - 若 validate 未跑且改动触及用户可见面/AI 策略 → 提示"建议先跑 sdlc-validate",但不阻断 review(review 可独立跑)。
 4. **能定位状态**:`<target-repo>/.sdlc/STATE.md` 可读(没有则按 stage=review 新建一份骨架,见 §5)。
+5. **control evidence 新鲜**(control 模式):全部当前 Task verified，feature pass evidence 的
+   `tested_sha == integration_sha == 当前 HEAD`。否则先回 validate。
 
 > 独立调用也允许:用户直接 `/sdlc-review` 审当前 diff。此时跳过驱动器,自己做 §2 的角色解析。
 
@@ -232,14 +236,19 @@ blast-radius(最坏情况波及多少系统/人)、boring-by-default(创新 toke
 
 **每条 finding 都给动作,不只是 CRITICAL。** 按 `disposition` 分流:
 
-- **auto-fix**:机械、低风险、明确的修复(空 catch、漏 import、`==`→`===`、加 null 判等)→ 直接改,逐条输出 `[AUTO-FIXED] file:line 问题 → 改了什么`。
+- **auto-fix**:legacy 模式下，机械、低风险、明确的修复可直接改。control 模式下即使是机械修复，
+  也先登记新的 remediation plan revision/Task，再回 `sdlc-build` 执行，不能绕过 integration 记录。
 - **ask**:有判断成分 / 触及行为 / CRITICAL/HIGH → 交互态用一次 text_mode 批量征询(每条:A 按建议修 / B 跳过 / C 误报);**headless 态**:不自动改,标 `needs-human`,写进 SUMMARY。
 - **needs-human**:无法自动验证或需要领域判断。
 - **accept**:用户/规则明确接受(记入 finding)。
 
 **处置铁律**:
 - **修每条 finding 前守 `references/receiving-feedback.md` 纪律**:先核实该 finding **真成立、对本仓正确**(看着对≠真的对),再 auto-fix;**一次一项、各自验证、验无回归**;意见错了就技术反驳(标误报),别盲目照单全收;别顺手加没要求的(YAGNI grep)。治"被指出就乱改"。
-- review 阶段**只改代码,不 commit / 不 push / 不建 PR**(那是 ship 的事)。
+- review 阶段**不 commit / 不 push / 不建 PR**。control 模式也不直接改代码；修复经新的
+  remediation Task 走 build → integration → validate → review。legacy 模式保留原 fix-first 改码流程。
+- **任何 repo 代码/测试修改都会使 feature evidence 失效**：完成该 finding 的修改和定向测试后，
+  立即停止本轮 PASS 流程，回 `sdlc-validate` 在新 HEAD 生成 evidence，再从头 review。不能沿用旧
+  validate 报告或旧 reviewed-head。
 - **不改测试去迁就实现**;发现实现 bug → 标 finding 升级,不在 review 里默默改实现逻辑(除非是上面的机械 auto-fix)。
 - 跨评审去重:本分支上一轮被用户 `skipped` 且相关文件未再变的 finding → 抑制(只抑制 skipped,绝不抑制 fixed)。
 
@@ -364,8 +373,12 @@ sdlc-gate: <见下>        # ★ G1–G6 全过(verdict=PASS)→ 写 `PASS revie
 
 review 门控 PASS 后做轻量 Verify 把整个特性收口(不重复 validate 的执行,只做最终确认):
 1. **复核 validate 证据**:`.sdlc/validate/` 下报告存在且结论为通过(correctness 覆盖率达门、e2e 旅程 PASS、eval 分达阈)。缺失或不通过 → 回 sdlc-validate。
-2. **plan-completion 收口**:Step 2 的 plan 项全部 DONE/CHANGED,或剩余 NOT-DONE 已显式落 P1 待办。
-3. 满足 → `stage=done, status=in-progress→done`,**并向 STATE 写入 `sdlc-gate: PASS reviewed-head=$(git rev-parse HEAD)`**(给本地 pre-push hook 放行用),输出收尾摘要;不满足 → 停在 review、写 `sdlc-gate: BLOCK`、指出缺口。
+2. **plan-completion 收口**:control 模式核对当前 revision 全部非 superseded Task verified、无
+   abandoned，并核对当前 HEAD 的 feature evidence；freshness 作为审计提示。legacy 才使用本地 plan 项。
+3. 满足 → 记录 `sdlc-gate: PASS reviewed-head=$(git rev-parse HEAD)`；control 模式同时调用
+   adapter `record-review`，持久化 `feature_id + plan_revision + reviewed_sha + pass + report refs + reviewer`。
+   下一步进入 ship；review 不直接把 leaf 标 validated/shipped。若任何代码修复发生，必须通过
+   remediation Task 回 build/integration，再重新 validate 和 review。
 
 ---
 

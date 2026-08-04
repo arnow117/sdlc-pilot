@@ -101,6 +101,21 @@ git worktree remove ../<repo>-<purpose> && git branch -d <type>/<summary> && git
 
 ### 5.4 监督式多-agent build loop(自治并行的高烈度形态)
 
+#### 5.4a SDLC control Task 分支协议
+
+当仓库启用 `shared-control` 或 `local-serial` 时，具体执行以 `control-plane.md` 为准：
+
+- Feature branch 绑定一个 active claim；Task branch 绑定 `feature_id + task_id + plan_revision`。
+- Task 分支不是默认选项。只有依赖已 verified、write_set 不重叠、接口固定且 owner 唯一、runtime
+  可隔离、活动 Task 分支少于 3、无 serial Task 时才允许创建。
+- Task worktree 使用只读 `.sdlc/TASK.md`，不得复制 Feature `.sdlc/STATE.md`；Task agent 不写 control。
+- Feature orchestrator 串行集成。每次基于当前 Feature integration HEAD 重放 Task 变更并重测，
+  记录 source tip、merge method、 resulting integration SHA；证据必须精确测试该 resulting SHA。
+- serial Task 独占 Feature branch，与活动 Task branches 互斥。并行资格失效时安全降级为 serial，
+  仍保留 Task record 追踪。
+
+这些规则把分支生命周期、写集冲突和测试证据变成可查询数据，避免依赖 agent 自述。
+
 把 §5 的并行交给**后台 / 自治 agent**(主循环只监督、不在每步等人确认)时,§5.1 的前置要再收紧、§5.3 的收敛要多一道闸——这是同一纪律在"**agent 中途问不了人**"约束下的强化版,不是新方法。
 
 **loop 形状(串行冻 → 并行建 → 集成收敛):**

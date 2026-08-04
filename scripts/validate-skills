@@ -11,7 +11,7 @@ err(){ echo "  ✗ $1"; fail=$((fail+1)); }
 ok(){ echo "  ✓ $1"; }
 
 echo "== 1. 关键共享文件/目录 =="
-for p in "$REF/role-routing.md" "$REF/distillation-loop.md" "$REF/runtime-adapters/codex.md" "$REF/roles" "$REF/validate-modes" "$REF/templates/STATE.md" "$REF/templates/PROFILE.md"; do
+for p in "$REF/role-routing.md" "$REF/distillation-loop.md" "$REF/control-plane.md" "$REF/runtime-adapters/codex.md" "$REF/roles" "$REF/validate-modes" "$REF/templates/STATE.md" "$REF/templates/TASK.md" "$REF/templates/PROFILE.md"; do
   [ -e "$p" ] && ok "$p" || err "缺失:$p"
 done
 
@@ -57,7 +57,35 @@ if [ -d "$REF/languages" ]; then
   ok "语言包检查完成($(ls "$REF"/languages/*.md 2>/dev/null | wc -l | tr -d ' ') 个)"
 fi
 
-echo "== 7. 强门禁脚本 sdlc-guard 随技能自包含且可执行 =="
+echo "== 7. control 协议跨流程引用与行为测试 =="
+for f in "$ROOT/sdlc/SKILL.md" "$ROOT/sdlc-backlog/SKILL.md" "$ROOT/sdlc-onboard/SKILL.md" "$ROOT/sdlc-plan/SKILL.md" "$ROOT/sdlc-build/SKILL.md" "$ROOT/sdlc-spec/SKILL.md" "$ROOT/sdlc-validate/SKILL.md" "$ROOT/sdlc-review/SKILL.md" "$ROOT/sdlc-ship/SKILL.md"; do
+  grep -q "control-plane.md" "$f" || err "$f 未引用 control-plane.md"
+done
+for f in scripts/test_control.py scripts/test_hooks.py; do
+  [ -f "$f" ] && ok "$f" || err "缺失:$f"
+done
+for f in scripts/control.py scripts/control_cli.py scripts/control_intake.py scripts/control_lint.py scripts/control_model.py scripts/control_store.py; do
+  if [ -f "$f" ]; then
+    lines=$(wc -l < "$f" | tr -d ' ')
+    [ "$lines" -lt 1000 ] && ok "$f(${lines} lines)" || err "$f 达 ${lines} 行,需拆分(<1000)"
+  else
+    err "缺失:$f"
+  fi
+done
+python3 -m py_compile scripts/control.py scripts/control_cli.py scripts/control_intake.py scripts/control_lint.py scripts/control_model.py scripts/control_store.py \
+  && ok "control modules 可导入/编译" || err "control modules 编译失败"
+[ -f docs/adr/0001-sdlc-control-branch.md ] && ok "control ADR 存在" || err "缺失 control ADR"
+grep -q "docs/adr/0001-sdlc-control-branch.md" "$REF/control-plane.md" \
+  || err "control-plane.md 未引用 control ADR"
+grep -q "/sdlc intake" "$ROOT/sdlc/SKILL.md" || err "driver 缺 /sdlc intake"
+grep -q "/sdlc deliver" "$ROOT/sdlc/SKILL.md" || err "driver 缺 /sdlc deliver"
+grep -q "depends_on_tasks" "$ROOT/sdlc-plan/SKILL.md" || err "sdlc-plan 缺 Task 依赖字段"
+grep -q "write_set" "$ROOT/sdlc-plan/SKILL.md" || err "sdlc-plan 缺 Task write_set 字段"
+grep -q "TASK.md" "$ROOT/sdlc-build/SKILL.md" || err "sdlc-build 未接入 TASK identity"
+grep -q "integration_sha" "$ROOT/sdlc-build/SKILL.md" || err "sdlc-build 未引用 integration_sha"
+grep -q "tested_sha" "$ROOT/sdlc-validate/SKILL.md" || err "sdlc-validate 未引用 tested_sha evidence"
+
+echo "== 8. 强门禁脚本 sdlc-guard 随技能自包含且可执行 =="
 GUARD="$ROOT/sdlc/scripts/sdlc-guard"
 if [ -f "$GUARD" ]; then
   [ -x "$GUARD" ] && ok "$GUARD(存在且可执行)" || err "$GUARD 不可执行(chmod +x)"
@@ -67,6 +95,9 @@ if [ -f "$GUARD" ]; then
 else
   err "缺失:$GUARD(强门禁脚本应随 sdlc 技能自包含)"
 fi
+for f in "$GUARD" "$REF"/templates/hooks/pre-commit "$REF"/templates/hooks/pre-push "$REF"/templates/hooks/post-checkout; do
+  sh -n "$f" || err "$f shell syntax 无效"
+done
 
 echo
 if [ $fail -eq 0 ]; then echo "RESULT: PASS ✅"; exit 0

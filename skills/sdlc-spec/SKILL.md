@@ -18,6 +18,8 @@ description: >
 
 > **本 skill 是导演交给的"收敛器"**：知识与状态全在纯文件里，引擎 = Claude + Read/Edit/Bash/Grep。
 > 唯一的"下一步终态"是产出获批 `spec.md` 并把交接写回 STATE，由 driver 路由到 `sdlc-plan`。
+> control 模式必须读 `sdlc/references/control-plane.md`，并从已领取 Feature context 带入
+> `source-request`、`source-leaf`、`feature-id`、`feature-branch`、`claimed-base-sha`。Spec 不创建 claim。
 
 ---
 
@@ -58,6 +60,7 @@ description: >
 | 有 `<target-repo>/.sdlc/PROFILE.md`，或确认是 greenfield | 有 PROFILE 即可;brownfield 缺 PROFILE 应先 `sdlc-onboard` |
 | `STATE.stage` 为 `spec`，或这是一个全新特性的开始 | 读 `.sdlc/STATE.md`；无 STATE = 新特性，本 skill 会初始化一份 |
 | 有一个待澄清的"点子 / 需求 / 变更意图" | 来自用户原话 |
+| control 模式已有 active claim | Feature/leaf/branch 与 claim 一致；无 claim 则回 `/sdlc deliver` |
 
 入口动作:先看一眼 `<target-repo>/.sdlc/` 里有没有 PROFILE / STATE / 既有 spec,再:
 
@@ -372,6 +375,11 @@ spec 获批后，输出 `## HANDOFF` block；driver 读取该 block 后作为单
 # SDLC State: <feature/topic>
 stage: spec
 status: in-progress            # 或 gated（未过复核时）
+execution-mode: shared-control | local-serial | legacy
+feature-id: <control feature id>
+source-request: <request id>
+source-leaf: <requirement leaf id>
+control-head: <读取该 Feature context 的 control SHA>
 updated: <caller 传入时间戳>
 validate-modes: [correctness, e2e:Web, eval-bench]   # §1.0 预解析的快照（非权威，build 会重算）
 

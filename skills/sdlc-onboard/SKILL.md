@@ -26,6 +26,9 @@ description: >
 
 > **共享 references 的位置(单一约定)**:本文出现的 `references/role-routing.md`、`references/roles/<role>.md`、`references/validate-modes/<mode>.md`、`references/templates/*.md` **物理上只存在于 sdlc 驱动器 skill 目录下**(`sdlc/references/`)。它们不在各流程 skill 自己的目录里。解析路径时一律指向 `sdlc/references/...`(相对 skills 根),或经 dogfooding 软链接定位——**不要**当作相对本 skill 目录的路径去 `cat`/Read,那样会找不到。
 
+安装 control-aware hooks 或识别 `shared-control` / `local-serial` 时，遵循
+`sdlc/references/control-plane.md`，不得在 onboard 中另写一套控制事务规则。
+
 本 skill 在 Claude 和 Codex 下都要能跑。两条降级范式(来自 driver §0):
 
 ### 0.1 交互降级 — text_mode
@@ -164,15 +167,15 @@ Phase A 采证(纯 bash) → Phase B 类型+入口识别 → Phase C 自建 surf
    - `## Deploy`(只读探测,供 `sdlc-ship` 用):扫 `vercel.json` / `netlify.toml` / `Dockerfile` + k8s manifests / `.github/workflows/*deploy*` / 部署脚本(`deploy.sh` 等)/ 目标工程 `CLAUDE.md` 的部署段 → 判**部署目标类型**(static-site / container / vps / 未知)+ 记关键**配置位置**(项目名/集群/主机在哪个文件)。**只记位置与类型,不抄密钥、不臆造**;探不到就写"未检测到部署配置"。
 3. 清理临时笔记(`.sdlc/onboard-notes/` 若用过)。
 4. text_mode 把 surface-map 草案给用户确认(§0.1),用户改完再定稿。
-5. **脚手架自检 — 询问装三个硬门 hook**(纯 shell,不跑 AI、无密钥;由 **git 执行,模型绕不过**,唯一逃逸 = 人 `--no-verify`/删钩子)。检测 `<repo>/.git/hooks/{pre-commit,pre-push,post-checkout}` 是否已是 sdlc 的。缺则 text_mode 问:
+5. **脚手架自检 — 询问安装三个 Git hook**(纯 shell,不跑 AI、无密钥;由 **git 执行**,人工可用 `--no-verify` 或删除 hook 紧急绕过)。先在目标仓库运行 `git rev-parse --git-common-dir`,把相对结果按仓库根解析为绝对 `<common-dir>`,再令 `<common-hooks>=<common-dir>/hooks`;这是 linked worktree 共用的 **common hooks** 目录,不要写各 worktree 私有的 `.git` 文件。极旧 Git 无法解析 common dir 时才用 `git rev-parse --git-path hooks` 兜底。检测 `<common-hooks>/{pre-commit,pre-push,post-checkout,sdlc-guard}` 是否已是 sdlc 版本。缺则 text_mode 问:
    ```
-   要装这三个硬门吗?(git 自动跑,模型绕不过)
-     · pre-commit:并发/边界守卫 —— commit 前查 STATE 与当前 branch/worktree 是否串台(防同分支并行/串台)
-     · pre-push:SDLC 检查 —— push 前核对 validate+review 已过(读 sdlc-gate 行)
-     · post-checkout:叶状态 flush —— 切分支时把在飞特性源叶 status 固化落盘(防中间态丢失;无需求树则 no-op)
+   要装这三个 Git hook 吗?(git 自动运行)
+     · pre-commit:上下文校验 —— STATE/TASK 二选一,并精确核对 branch/worktree 与任务身份
+     · pre-push:ref 路由 —— task 只推声明分支;sdlc-control 只接受 metadata-only fast-forward;feature 核对 validate+review
+     · post-checkout:兼容 flush —— 仅 legacy 模式按 stage 固化源叶 status;shared-control/local-serial/TASK/control 不做 stage flush
      1) 都装(推荐)  2) 只装 pre-commit  3) 只装 pre-push  4) 只装 post-checkout  5) 跳过
    ```
-   选装 → 把 `references/templates/hooks/{pre-commit,pre-push,post-checkout}` 拷到 `<repo>/.git/hooks/` 并 `chmod +x`;**仅 git 仓装**(非 git 仓跳过)。pre-commit 调 `sdlc-guard`(确定性边界检测,脚本在 `skills/sdlc/scripts/sdlc-guard`,随技能自包含),为让 hook 在任何安装方式下都能找到,把它拷/软链到 `<repo>/.sdlc/bin/sdlc-guard`(hook 优先找这里)。post-checkout 调 `backlog.py set-status` 做 flush(C 混合写回硬层;详见该项目生命周期同步设计)。装完一句话说明各自管什么。
+   选装 → 把 `references/templates/hooks/{pre-commit,pre-push,post-checkout}` 按用户选择拷到 `<common-hooks>/`,并把 `skills/sdlc/scripts/sdlc-guard` 拷贝或软链为同级 `<common-hooks>/sdlc-guard`;对已安装文件执行 `chmod +x`。**仅 git 仓安装**(非 git 仓跳过)。pre-commit 优先调用 common hooks 中的同级 guard,因此主 worktree 与所有 linked worktree 使用同一套确定性校验;不要再把 `.sdlc/bin/sdlc-guard` 作为首选安装位置(只保留运行时向后兼容查找)。post-checkout 仅在 legacy STATE 下调用 `backlog.py set-status`;shared-control/local-serial feature、TASK worktree 与 `sdlc-control` worktree均 no-op。装完一句话说明各自负责什么。
 
 ---
 
@@ -182,9 +185,9 @@ Phase A 采证(纯 bash) → Phase B 类型+入口识别 → Phase C 自建 surf
 |---|---|---|
 | `<repo>/.sdlc/PROFILE.md` | **写(主交付物)** | 据 `references/templates/PROFILE.md` 模板填实测结果 |
 | `references/templates/PROFILE.md` | 读(skill 内) | PROFILE 模板,复制后填写 |
-| `references/templates/hooks/{pre-commit,pre-push,post-checkout}` | 读(skill 内) | 三个硬门模板,Phase D 用户同意后拷贝 |
+| `references/templates/hooks/{pre-commit,pre-push,post-checkout}` | 读(skill 内) | 三个 hook 模板,Phase D 用户同意后拷贝 |
 | `references/role-routing.md` | 读(skill 内) | §2 规则表 + §3/§4 取值字典,给 surface 推荐默认角色/模式 |
-| `<repo>/.git/hooks/{pre-commit,pre-push,post-checkout}` | **写(仅用户同意 + git 仓)** | Phase D 脚手架自检装的纯 shell 硬门;装完即与 skill 解耦 |
+| `<common-hooks>/{pre-commit,pre-push,post-checkout,sdlc-guard}` | **写(仅用户同意 + git 仓)** | `git rev-parse --git-common-dir` 后拼 `/hooks`;主 worktree 与 linked worktree 共用 |
 | `<repo>/.sdlc/onboard-notes/<focus>.md` | 临时写/读(可选) | 仅并行采证用的中转笔记,Phase D 聚合后删除 |
 | `<repo>/.sdlc/STATE.md` | **不碰** | STATE 是 feature 级,由 driver 单写;onboard 只管项目级 PROFILE |
 
@@ -202,8 +205,8 @@ PROFILE.md 视为合格、可交回 driver,需**全部**通过:
 - [ ] 每个 surface 的角色/模式落在 role-routing 字典内。
 - [ ] `## Entry points` 至少给出一个可执行的启动/入口线索。
 - [ ] surface-map 草案已经 text_mode 给用户确认。
-- [ ] **只读纪律守住**:onboard 期间**未修改任何源码**;写动作仅限 PROFILE(+临时笔记)+ 用户明确同意后装的 `pre-push` hook(在 `.git/hooks/`,非源码)。
-- [ ] (若为 git 仓)已询问是否装 push 前 SDLC 检查(Phase D 步 5);用户选了才装。
+- [ ] **只读纪律守住**:onboard 期间**未修改任何源码**;写动作仅限 PROFILE(+临时笔记)+ 用户明确同意后装入 common hooks 的 hook/guard(非源码)。
+- [ ] (若为 git 仓)已询问是否安装 Git hooks(Phase D 步 5);用户选了才按选择写入 common hooks,且同级 `sdlc-guard` 可执行。
 
 任一未过 → 停在门口(不前进),text_mode 列出缺项让用户补全或确认。
 

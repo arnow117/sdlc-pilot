@@ -24,9 +24,17 @@ Codex may expose different orchestration tools across environments. Treat them a
 1. If a true sub-agent tool is available, fan out only to independent units that write disjoint files.
 2. If only `multi_tool_use.parallel` is available, use it for read-only evidence gathering, not as a replacement for independent writing agents.
 3. If no multi-agent tool is available, run each role, mode, focus, or phase sequentially in the current session and write the same per-unit output files.
-4. The orchestrator remains the only writer for shared state files such as `.sdlc/STATE.md`.
+4. The Feature orchestrator remains the only writer for `.sdlc/STATE.md` and control transitions; Task agents write neither.
 
-Before any write fan-out, run a deterministic write-set preflight. For build waves, compute each phase's planned `files` set from `plan.md`; if two same-wave phases intersect, do not fan out. Either downgrade to sequential execution or return to `sdlc-plan` to repair the wave assignment.
+Before any write fan-out, call the control adapter's Task eligibility check. Use Task-level
+`depends_on_tasks`, normalized `write_set`, interface ownership, runtime isolation, active branch
+count, and serial-task exclusion. If the check fails, execute that Task serially on the Feature branch;
+do not infer safety from Phase wave alone.
+
+For an eligible Task, create a dedicated branch/worktree from the current Feature integration HEAD
+and materialize `.sdlc/TASK.md` from the template. Give the sub-agent a self-contained contract and an
+explicit write set. It returns changed files, RED/GREEN commands, and source tip. The orchestrator
+integrates tasks one at a time, retests, and records the resulting integration SHA and evidence.
 
 ## User-choice adapter
 

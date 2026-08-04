@@ -28,6 +28,12 @@ description: >
 > ③ 汇总各模式门控成本阶段总门控;④ 写报告 + 回写 STATE 交接。
 > 具体怎么跑测、怎么截图、怎么打分,全在 `references/validate-modes/<mode>.md`——你**读它、照它做**,
 > 不把它的内容重抄进本文件。引擎 = Claude + Read/Edit/Bash/Grep(+ e2e 模式用 Playwright MCP)。
+>
+> control 模式必须读 `sdlc/references/control-plane.md`。开始前核对当前 Feature HEAD 等于 control
+> `integration_sha`，当前 revision 的 Task 全部 verified。freshness 用于指出后续改动影响，但不改写
+> verified 历史事实；最终结论由当前 Feature HEAD 的 feature evidence 决定。完成后把本轮
+> 报告转成 `_feature` immutable evidence；只有 pass evidence 的 `tested_sha` 精确等于当前 HEAD，
+> 才允许 Feature/leaf 转 `validated`。STATE stage 本身不能推进生命周期。
 
 ---
 
@@ -168,6 +174,9 @@ modes := resolve( changed-files × PROFILE.surface-map × role-routing 规则 )
 3. 写一份**阶段汇总**(可放 `.sdlc/validate/summary.md` 或直接体现在 STATE),列每个模式的结果与去向。
 4. **输出 `## HANDOFF` → 回写 STATE.md**(经 driver / 单写者,见 §6):更新 stage / status / gates / validate-modes / next。
 
+5. control 模式通过 adapter 写 feature evidence（`task_id: _feature`）并执行 feature validation；若
+   写入前 HEAD 已变化，丢弃本轮 PASS，重新运行验证。
+
 ---
 
 ## 3. 读写哪些 .sdlc/ 文件
@@ -182,6 +191,7 @@ modes := resolve( changed-files × PROFILE.surface-map × role-routing 规则 )
 | `<repo>/.sdlc/validate/e2e-<scope>-report.md` | **写** | e2e 模式产物(截图齐全) |
 | `<repo>/.sdlc/validate/eval-<scope>-report.md` | **写** | eval-bench 模式产物(质量/性能分) |
 | `<repo>/.sdlc/validate/summary.md` | **写**(可选) | 多模式阶段汇总 |
+| `.sdlc-control/evidence/<feature>/_feature/...` | **经 adapter 写** | 当前 integration HEAD 的不可变 feature evidence |
 | `references/role-routing.md` | **读** | 解析 changed-files → active modes |
 | `references/validate-modes/<mode>.md` | **读** | 各模式的执行 playbook(照做) |
 
@@ -205,6 +215,7 @@ modes := resolve( changed-files × PROFILE.surface-map × role-routing 规则 )
 - [ ] **无偷改实现**:所有暴露的实现 bug 都 escalate 回 build,validate 期间实现文件 0 改动(可 `git diff` 自证)。
 - [ ] **证据完整**:每个模式报告的每条 PASS/COVERED 都挂本轮真跑证据;无"应该过/上次过"判定。
 - [ ] **STATE 已更新**:gates 勾选、validate-modes 快照、next action 写明(独立运行模式可豁免 STATE,但要在报告注明)。
+- [ ] **control evidence 已写**(control 模式):tested_sha == 实际 HEAD == recorded integration_sha；Feature 状态转换由 adapter 验证。
 
 任一项不过 → 阶段 status = `gated` 或 `blocked`,STATE.next 指回缺口对应阶段(多为 build,eval 标准缺失则回 spec)。
 **validate 阶段 PASS 是进入 review 的前置门。**

@@ -5,38 +5,124 @@
 # 也被 sdlc driver 入口调用作可移植软层(Codex/无 hook 环境)。
 # 退出码:0 = 边界一致,放行;1 = 边界违例,阻断。
 #
-# 检测(确定性,只读 git + .sdlc/STATE.md):
-#   ① STATE.branch ≠ 当前分支    → 串台(STATE 属于别的分支)
-#   ② STATE.worktree ≠ 当前根    → 串台(STATE 属于别的 worktree)
-#   ③ 无违例时:把"当前活跃特性 + 阶段"大声打出来 —— 提醒"若本次提交不属于它 = 你在同分支并行,先隔离"
+# 检测(确定性,只读 git + 本地上下文):
+#   ① `.sdlc/STATE.md`(feature) 与 `.sdlc/TASK.md`(task) 必须二选一。
+#   ② STATE.branch/worktree 必须与当前 feature worktree 一致。
+#   ③ TASK 的稳定身份字段必须齐全,task-branch/worktree 必须与当前 task worktree 精确一致。
+#   ④ 无违例时输出当前 feature/task 身份,提醒提交者核对归属。
 
-STATE=".sdlc/STATE.md"
-[ -f "$STATE" ] || exit 0   # 无活跃特性 → 放行
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+STATE="$repo_root/.sdlc/STATE.md"
+TASK="$repo_root/.sdlc/TASK.md"
+
+if [ -f "$STATE" ] && [ -f "$TASK" ]; then
+  echo "✗ sdlc-guard: .sdlc/STATE.md 与 .sdlc/TASK.md 同时存在。"
+  echo "  feature worktree 只保留 STATE;task worktree 只保留 TASK。"
+  exit 1
+fi
+
+[ -f "$STATE" ] || [ -f "$TASK" ] || exit 0
 
 cur_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
 cur_root=$(git rev-parse --show-toplevel 2>/dev/null)
-val(){ grep -iE "^$1:" "$STATE" 2>/dev/null | head -1 | sed "s/^[^:]*: *//" | tr -d '\r'; }
-st_branch=$(val branch | tr -d '[:space:]')
-st_worktree=$(val worktree | tr -d '[:space:]')
-st_stage=$(val stage | tr -d '[:space:]')
-st_status=$(val status | tr -d '[:space:]')
-st_feature=$(grep -iE '^# SDLC State:' "$STATE" 2>/dev/null | head -1 | sed 's/^# SDLC State: *//')
+
+field(){
+  file=$1
+  shift
+  for key in "$@"; do
+    value=$(grep -iE "^${key}:" "$file" 2>/dev/null | head -1 | sed 's/^[^:]*: *//' | tr -d '\r' | sed 's/^ *//;s/ *$//')
+    if [ -n "$value" ]; then
+      printf '%s' "$value"
+      return 0
+    fi
+  done
+  return 1
+}
+
+is_full_sha(){
+  candidate=$1
+  [ "${#candidate}" -eq 40 ] || return 1
+  case "$candidate" in
+    *[!0-9a-fA-F]*) return 1 ;;
+  esac
+  return 0
+}
 
 viol=0
+
+if [ -f "$TASK" ]; then
+  required="execution-mode feature-id task-id feature-branch task-branch worktree branch-base-sha plan-revision control-head control-ref control-base-sha owner"
+  for key in $required; do
+    value=$(field "$TASK" "$key")
+    if [ -z "$value" ]; then
+      echo "✗ sdlc-guard: TASK 缺少身份字段 '$key'。"
+      viol=1
+    fi
+  done
+
+  task_mode=$(field "$TASK" execution-mode)
+  task_branch=$(field "$TASK" task-branch)
+  task_worktree=$(field "$TASK" worktree)
+  feature_id=$(field "$TASK" feature-id)
+  task_id=$(field "$TASK" task-id)
+  branch_base=$(field "$TASK" branch-base-sha)
+  plan_revision=$(field "$TASK" plan-revision)
+  control_head=$(field "$TASK" control-head)
+  control_base=$(field "$TASK" control-base-sha)
+
+  case "$task_mode" in
+    shared-control|local-serial) ;;
+    *)
+      echo "✗ sdlc-guard: TASK execution-mode 必须是 shared-control 或 local-serial,当前为 '${task_mode:-缺失}'。"
+      viol=1 ;;
+  esac
+  for pair in "branch-base-sha:$branch_base" "plan-revision:$plan_revision" "control-head:$control_head" "control-base-sha:$control_base"; do
+    sha_name=${pair%%:*}
+    sha_value=${pair#*:}
+    if [ -n "$sha_value" ] && ! is_full_sha "$sha_value"; then
+      echo "✗ sdlc-guard: TASK 的 $sha_name 必须是完整 40 位 commit id。"
+      viol=1
+    fi
+  done
+  case "$task_branch" in
+    main|master|sdlc-control|refs/*|"")
+      echo "✗ sdlc-guard: TASK task-branch '${task_branch:-缺失}' 不是可用的任务分支名。"
+      viol=1 ;;
+  esac
+  if [ -n "$task_branch" ] && [ "$task_branch" != "$cur_branch" ]; then
+    echo "✗ sdlc-guard: TASK 属于分支 '$task_branch',当前是 '$cur_branch'。"
+    viol=1
+  fi
+  if [ -n "$task_worktree" ] && [ "$task_worktree" != "$cur_root" ]; then
+    echo "✗ sdlc-guard: TASK 属于 worktree '$task_worktree',当前是 '$cur_root'。"
+    viol=1
+  fi
+
+  if [ "$viol" -eq 0 ]; then
+    echo "✓ sdlc-guard: task '${task_id:-?}' of feature '${feature_id:-?}' @ '$cur_branch' 身份一致。"
+  fi
+  exit "$viol"
+fi
+
+st_branch=$(field "$STATE" branch | tr -d '[:space:]')
+st_worktree=$(field "$STATE" worktree | tr -d '[:space:]')
+st_stage=$(field "$STATE" stage | tr -d '[:space:]')
+st_status=$(field "$STATE" status | tr -d '[:space:]')
+st_feature=$(grep -iE '^# SDLC State:' "$STATE" 2>/dev/null | head -1 | sed 's/^# SDLC State: *//')
+
 if [ -n "$st_branch" ] && [ "$st_branch" != "$cur_branch" ]; then
-  echo "✗ sdlc-guard: 当前 STATE 属于分支 '$st_branch',你现在在 '$cur_branch' —— 串台风险。"
-  echo "  出路:1) 切回 '$st_branch' 续接该特性  2) 为新工作开 worktree / 新分支(各自独立 .sdlc)"
+  echo "✗ sdlc-guard: 当前 STATE 属于分支 '$st_branch',你现在在 '$cur_branch'。"
+  echo "  切回 '$st_branch',或为新工作创建独立 worktree / 分支。"
   viol=1
 fi
 if [ -n "$st_worktree" ] && [ "$st_worktree" != "$cur_root" ]; then
-  echo "✗ sdlc-guard: 当前 STATE 属于 worktree '$st_worktree',你现在在 '$cur_root' —— 串台风险。"
-  echo "  出路:回到该 worktree;或本 worktree 用自己的 .sdlc(每 worktree 一份)。"
+  echo "✗ sdlc-guard: 当前 STATE 属于 worktree '$st_worktree',你现在在 '$cur_root'。"
+  echo "  回到该 worktree,或让当前 worktree 使用自己的本地上下文。"
   viol=1
 fi
 
 if [ "$viol" -eq 0 ]; then
-  echo "✓ sdlc-guard: 活跃特性 '${st_feature:-?}'(stage=${st_stage:-?}, status=${st_status:-?})@ '$cur_branch' — 边界一致。"
-  echo "  ⚠ 若本次提交**不属于**这个特性,你正在同分支并行第二个特性 = 危险(文件冲突 + STATE 互覆盖)。"
-  echo "    真要并行:先为新特性开 worktree(推荐)或新分支,别在同分支同时跑两个。"
+  echo "✓ sdlc-guard: feature '${st_feature:-?}'(stage=${st_stage:-?}, status=${st_status:-?}) @ '$cur_branch' 身份一致。"
+  echo "  ⚠ 若本次提交不属于这个 feature,请先创建独立 worktree / 分支。"
 fi
 exit $viol

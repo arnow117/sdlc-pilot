@@ -9,7 +9,7 @@
 ## 三条不可破的铁律(改任何东西都要守)
 1. **不新增顶层 skill**(除非是 SDLC 主线缺的真·生命周期阶段,如新增 ship / backlog 那样的重大决策)。家族 = `sdlc` driver + **8 流程 skill**(onboard / backlog / spec / plan / build / validate / review / ship;其中 onboard、backlog 是项目级 stage)。新增能力优先走:职能视角→`references/roles/<r>.md`;验证手法→`references/validate-modes/<m>.md`;语言→`references/languages/<lang>.md`;部署目标→`references/deploy-targets/<type>.md`;流程纪律→`references/*.md`。**真要加流程阶段**=改 stage 枚举(driver + STATE 模板)+ driver 路由表 + 计数,慎重。
 2. **可移植**:不硬依赖 Workflow / AskUserQuestion / subagent。交互用 text_mode(纯文本编号),并行用 Task-or-sequential 降级。必须在 Codex 下也能跑。
-3. **纯文件 + 单写者**:知识/状态都是文件;`STATE.md` 单写者,并行产物各写各的。
+3. **纯文件 + 单写者**:知识/状态都是文件;Feature driver 单写 `STATE.md`，control transitions 只经 adapter；Task agent 两者都不写。
 4. **skill 约束"做什么/为什么/避哪些坑",不规定"怎么执行命令"**。流程 skill 是约束与原则,不是命令手册——别写死带一堆 flag/转义/shell 怪癖的 `find`/`grep`/`awk` 一行流(模型自己会写,写死只会脆、只会在某个 shell 崩)。把"坑"写成**原则**(如"统计大文件先排掉构建产物""别只扫根目录"),让模型自己选实现。例外:① `git diff --name-only` 这类**稳定且是契约输入**的单命令可留;② `references/languages/<lang>.md`、`deploy-targets/<type>.md` 这类**参考卡**——它们的职责就是记录某语言/目标的具体 lint/test/build 命令,命令本身即交付物,保留。判据:这条命令是"流程怎么走"还是"某环境的具体工具调用"?前者→原则化,后者→留在参考卡。
 
 ## 怎么迭代(常见改动 → 要同步哪些地方)
@@ -22,11 +22,12 @@
 | **加一个流程阶段** | **慎重**(要改 stage 枚举:`sdlc/SKILL.md` + `templates/STATE.md` + 各 skill)。一般别加,优先用角色/模式扩展 |
 | **改 spec/plan/build 等流程** | 改对应 `skills/sdlc-<x>/SKILL.md`;保持 §0 可移植前置不动 |
 | **加/改 backlog 派生操作** | ① 在 `scripts/backlog.py` 加子命令 + `scripts/test_backlog.py` 加用例(TDD)→ ② `skills/sdlc-backlog/SKILL.md` 加操作章节 + 顶部 op 枚举 → ③ 若涉及特性生命周期(如 Retire 在 done 触发):driver §2/§4 + `templates/STATE.md` 同步 → ④ validate-skills。**不新增 stage/skill**(派生 op 挂在 backlog 下) |
+| **改控制记录/任务分支协议** | ① 先改 `references/control-plane.md` + `scripts/control*.py`/`test_control.py`；② 同步 driver/backlog/plan/build/validate/review/ship；③ 同步 STATE/TASK/hook；④ 跑 control + hook + backlog + static validation。禁止各 skill 自行拼一套 Git transaction |
 | **加/改 meta 能力(改工具自身)** | meta 能力(如 evolve 自更新回流)**不新增顶层 skill**,用"角色卡 + playbook + driver 子命令"表达:`references/roles/skill-maintainer.md`(维护者视角)+ `references/evolve-loop.md`(回流 playbook)+ driver 的 `/sdlc evolve` 入口 + role-routing **R10**。小改走 `/sdlc evolve`(append-only),结构性大改对本仓跑完整 `/sdlc` |
 | **改/扩 loop 编排** | loop(自治批量推进)同 evolve 范式:`references/build-loop.md`(playbook)+ driver `/sdlc loop` 入口,**不新增 skill、不进 STATE 枚举、只编排既有阶段**。往 `build-loop.md` append 一条原则(如 §E 蒸馏区)= 小改走 `/sdlc evolve`;改 loop 骨架/converge 契约 = 大改走完整 `/sdlc` |
 
 ## 每次提交前必做
-1. **跑结构 lint**:`bash scripts/validate-skills`(角色名↔文件、模式名↔文件、frontmatter、引用一致)。**不过不提交。**
+1. **跑全量检查**:`python3 scripts/test_control.py && python3 scripts/test_backlog.py && python3 scripts/test_hooks.py && bash scripts/validate-skills`。**不过不提交。**
 2. **更新 `CHANGELOG.md`** + 必要时升 `.claude-plugin/{plugin,marketplace}.json` 的 `version`(语义化)。
 3. 行为变更 → 用 dogfood 验证(见下"测试")。
 

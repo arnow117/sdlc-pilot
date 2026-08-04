@@ -18,11 +18,11 @@ test-commands: { unit: "python3 scripts/test_backlog.py", coverage: "none — �
 
 <!-- 本仓 = sdlc-pilot 技能体系自身 → 改其知识/脚本由 skill-maintainer(R10) 承载(非普通目标项目)。 -->
 
-- scripts-core:   globs[ scripts/backlog.py, scripts/test_backlog.py ]   roles[skill-maintainer, qa]   modes[correctness]
+- scripts-core:   globs[ scripts/backlog.py, scripts/control*.py, scripts/test_backlog.py, scripts/test_control.py ]   roles[skill-maintainer, qa, architect]   modes[correctness]
 - board-render:   globs[ scripts/board.py ]                              roles[skill-maintainer, design]   modes[correctness]   # 看板 HTML/CSS/JS(0.16.0 从 backlog.py 抽出,守 800 行),改渲染叠 design 透镜
 - skill-prose:    globs[ skills/**/SKILL.md, skills/sdlc/references/**/*.md ]   roles[skill-maintainer]   modes[correctness]
 - web-review:     globs[ skills/sdlc/references/web-review/** ]           roles[skill-maintainer, server-dev]   modes[correctness]
-- tooling:        globs[ scripts/validate-skills, skills/sdlc/scripts/sdlc-guard, skills/sdlc/references/templates/hooks/** ]   roles[skill-maintainer]   modes[correctness]
+- tooling:        globs[ scripts/validate-skills, scripts/test_hooks.py, skills/sdlc/scripts/sdlc-guard, skills/sdlc/references/templates/hooks/** ]   roles[skill-maintainer, qa]   modes[correctness]
 - plugin-meta:    globs[ .claude-plugin/**, CHANGELOG.md ]               roles[skill-maintainer]   modes[correctness]
 
 ## Conventions
@@ -31,12 +31,13 @@ test-commands: { unit: "python3 scripts/test_backlog.py", coverage: "none — �
 - **不可变 / 显式错误**：脚本里返回新对象不就地变更；frontmatter 改写用 `re.sub(count=1)` 精确改首行。
 - **共享 references 单一物理位置**：所有 `references/...` 只在 `skills/sdlc/references/` 下，各流程 skill 经此引用（不在自己目录里放副本）。
 - **提交规范**：约定式提交（feat/fix/docs/chore/refactor…）；语义化版本（`.claude-plugin/plugin.json` 的 `version`）。
-- **每次提交前**跑 `python3 scripts/test_backlog.py` + `bash scripts/validate-skills`。
+- **每次提交前**跑 `python3 scripts/test_control.py` + `python3 scripts/test_backlog.py` + `python3 scripts/test_hooks.py` + `bash scripts/validate-skills`。
 - **dogfood**：用它自己的 `/sdlc` 流程开发自己；feature 分支用完即删；退场走 backlog Retire op（归档 + 回流 EVOLUTION + 清栈）。
 
 ## Entry points
 
-- **driver 入口** = `/sdlc`（skill `skills/sdlc/SKILL.md`；实际加载源在 `~/.claude/skills/sdlc` 软链到本仓）。
+- **driver 入口** = `/sdlc intake`（捕获/拆需求）+ `/sdlc deliver`（领取 ready leaf）+ `/sdlc`（智能恢复/路由）。
+- **控制记录** = `python3 scripts/control.py <op>`；Git fast-forward transaction 在 `scripts/control_store.py`。
 - **需求树脚本** = `python3 scripts/backlog.py <op> --root <.sdlc/requirements>`；op = readyqueue/coverage/lint/tree/board/move/retire/write-tree（注册见 `backlog.py:695` `main()`）。
 - **看板渲染** = `backlog.py board --root <req-root> [--out _board.html]`；HTML 生成在 `render_board`（`backlog.py:376`），聊天 JS 在 `CHAT_JS`（`:255`）。
 - **单测** = `python3 scripts/test_backlog.py`；**skill 体检** = `bash scripts/validate-skills`。
@@ -44,11 +45,11 @@ test-commands: { unit: "python3 scripts/test_backlog.py", coverage: "none — �
 
 ## Known risks
 
-- **`backlog.py` 是单体大文件（739 行）**，逼近 800 行铁律上限——看板 HTML/CSS/JS + 全部 op 都在内。本特性会再加枚举/lint/渲染，**注意逼近上限可能需要拆模块**（但纯 stdlib 单文件可移植性 vs 拆分要权衡）。
-- **status 枚举无权威定义、lint 不校验**：6 个状态值只散在看板 CSS（渲染）+ SKILL §2.7 散文（顺序）+ `SHIPPED` 单常量；`status: banana` 能过 lint。本特性首要补的就是这个缺口。
-- **中间态从不回写源叶**：只有 Retire 标 `shipped`；spec/plan/build/validate 走过时不更新源叶 status（#1 待补）。看板"进度"因此长期失真。
-- **看板 JS 用 `innerHTML` 注入**（`:266/268/286/287`）：叶字段来自受控树文件，但渲染重构时若引入用户可控内容需防 XSS。
-- **无覆盖率/类型门控**：纯 stdlib 脚本靠 test_backlog.py 全绿兜底，新增 op 必须同步加用例（qa 负路径）。
+- **shared-control 依赖 Git remote 可用性**：远端不可达时不能声明跨 clone 唯一领取；只能显式降级 local-serial，不能假装已发布 claim。
+- **local-serial 只保证当前仓库 CAS**：它不提供跨 clone 排他；团队协作必须使用 shared-control。
+- **Git hooks 可被人工绕过**：`--no-verify`/删除 hook 会绕过本地检查；control adapter 自身仍必须验证 schema、ref baseline 与证据。
+- **看板仍使用 HTML 字符串渲染**：所有控制字段必须继续经过 `_safe_json_for_html` 与 `esc()`；新增字段要补 XSS payload 回归。
+- **无覆盖率/类型检查基线**：纯 stdlib 脚本依靠 control/backlog/hooks 三套行为测试；新增操作必须同步覆盖错误路径与 legacy 回归。
 
 ## Deploy
 

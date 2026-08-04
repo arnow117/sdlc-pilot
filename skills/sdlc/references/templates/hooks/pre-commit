@@ -2,13 +2,29 @@
 # sdlc-pilot pre-commit —— 并发/边界硬门禁。
 # 作用:commit 前由 git 自动跑 sdlc-guard(skills/sdlc/scripts/),检测 STATE 与当前 branch/worktree 是否串台。
 #       **由 git 执行,不是模型执行** → 模型绕不过;唯一逃逸 = 人显式 `git commit --no-verify`。
-# 安装:由 sdlc-onboard 脚手架自检询问后拷到 .git/hooks/pre-commit 并 chmod +x;
-#       或手动:cp 本文件 .git/hooks/pre-commit && chmod +x .git/hooks/pre-commit
+# 安装:由 sdlc-onboard 询问后拷到 `git rev-parse --git-common-dir`/hooks 并 chmod +x。
 #
-# 找 sdlc-guard:优先用项目内软链/拷贝的 sdlc 技能;否则在常见安装位置找。
+# 找 sdlc-guard:优先用 common hooks 目录内的同级脚本(所有 linked worktree 共用),
+# 再找旧版项目内安装与常见技能安装位置。
 repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
+common_dir=$(git -C "$repo_root" rev-parse --git-common-dir 2>/dev/null)
+if [ -n "$common_dir" ]; then
+  case "$common_dir" in
+    /*) ;;
+    *) common_dir="$repo_root/$common_dir" ;;
+  esac
+  hooks_dir="$common_dir/hooks"
+else
+  # 极旧 Git 的兼容兜底。
+  hooks_dir=$(git -C "$repo_root" rev-parse --git-path hooks 2>/dev/null)
+  case "$hooks_dir" in
+    /*) ;;
+    *) hooks_dir="$repo_root/$hooks_dir" ;;
+  esac
+fi
 guard=""
 for c in \
+  "$hooks_dir/sdlc-guard" \
   "$repo_root/.sdlc/bin/sdlc-guard" \
   "$HOME/.claude/skills/sdlc/scripts/sdlc-guard" \
   "$HOME/.claude/plugins/cache"/*/sdlc-pilot/*/skills/sdlc/scripts/sdlc-guard ; do
@@ -16,8 +32,20 @@ for c in \
 done
 
 if [ -z "$guard" ]; then
-  # 找不到脚本时不静默放行也不硬挂:做内联最小检查(branch 戳)。
+  # TASK 身份字段较多,没有共享 guard 时不能可靠校验,保守拒绝。
   STATE="$repo_root/.sdlc/STATE.md"
+  TASK="$repo_root/.sdlc/TASK.md"
+  if [ -f "$STATE" ] && [ -f "$TASK" ]; then
+    echo "✗ sdlc-guard(内联): STATE 与 TASK 同时存在。feature/task 本地上下文必须二选一。"
+    exit 1
+  fi
+  if [ -f "$TASK" ]; then
+    echo "✗ sdlc-guard: 找不到 common hooks 目录内的 sdlc-guard,无法校验 TASK 身份。"
+    echo "  重新通过 sdlc-onboard 安装 hooks 与同级 sdlc-guard。"
+    exit 1
+  fi
+
+  # legacy STATE 仍做内联最小检查(branch 戳)。
   [ -f "$STATE" ] || exit 0
   st_branch=$(grep -iE '^branch:' "$STATE" | head -1 | sed 's/^[^:]*: *//' | tr -d '[:space:]')
   cur=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)

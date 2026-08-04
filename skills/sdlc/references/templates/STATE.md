@@ -9,7 +9,8 @@
         由 driver 在下次 /sdlc 检测到 stage==done 时触发（见 driver §2 退场前置 / §4 路由）。
   与 PROFILE.md 的区别：
     - PROFILE.md = 项目级、长命、所有 feature 共享（onboard 建一次）。
-    - STATE.md   = feature 级、短命、本任务的 handoff 载体（本文件）。
+    - STATE.md   = feature 级、短命、本任务的 handoff 缓存（本文件）；control 模式下不是全局权威。
+    - TASK.md    = task worktree 的只读身份文件；与 STATE.md 不得共存。
   写入规则（来自 spec §10 兼容性铁律）：
     - 单写者（single-writer）：同一时刻只有主线在写 STATE.md。
     - 并行产物写各自的文件（如 .sdlc/review/<role>.md），不并发写本文件，避免竞态。
@@ -30,16 +31,22 @@
 stage: onboard | backlog | spec | plan | build | validate | review | ship | done
 status: in-progress | gated | blocked
 work-type: feature | remediation | hotfix     # 流程画像(中央旋钮):各阶段读它自适应走多重。见下方说明
+execution-mode: shared-control | local-serial | legacy
+feature-id: <control feature id；legacy 可写 (none)>
 branch: <写 STATE 时记 `git rev-parse --abbrev-ref HEAD`>     # 并发边界戳:sdlc-guard 据此防串台
 worktree: <写 STATE 时记 `git rev-parse --show-toplevel`>     # 同上(worktree 隔离)
 source-leaf: <若本特性源自 requirements 树则记叶 id，否则 (none)>   # Retire 据此回写源叶 status=shipped（见 driver §2 退场前置）
+source-request: <原始 request id；无则 (none)>
+control-head: <最后成功读取/写入的 control commit；legacy 为 (none)>
+plan-revision: <批准 plan 所在 control commit；未规划/legacy 可为 (none)>
+integration-head: <最新 Feature integration SHA；未 build/legacy 可为 (none)>
 updated: <时间戳，由调用方传入，例如 2026-06-04T15:30>
 validate-modes: [correctness, e2e, eval-bench]   # 本次运行从 diff 动态解析（见 spec §6.1）；未进入 validate 前可留 []
 sdlc-gate: <未设置>   # sdlc-review 全过(verdict=PASS)时写 `PASS reviewed-head=<HEAD的sha>`，否则写 `BLOCK`。本地 pre-push hook(若装)只认这一行来决定放不放行 push。
 
 <!--
   字段取值说明：
-  - stage：当前所处阶段，枚举见上。done = 全部 gate 通过且 verify 完成。
+  - stage：当前所处阶段，枚举见上。它只用于本地续接；control 模式不得据此推导 validated/shipped。
       · backlog：与 onboard 同为【项目级】stage —— 维护 `<target-repo>/.sdlc/requirements/` 需求树
         （递归 domain→subdomain→leaf），不属单特性生命周期。从需求树选中一片叶后【另起】单特性
         STATE，stage 从 spec 起跑。backlog 与单特性 STATE 解耦，互不覆盖（由 sdlc-backlog 维护）。
@@ -70,6 +77,7 @@ sdlc-gate: <未设置>   # sdlc-review 全过(verdict=PASS)时写 `PASS reviewed
 - [ ] onboard：PROFILE.md 已建立 / 已确认无漂移
 - [ ] spec：spec.md 已获批（含 AI 工作的 eval 标准，若适用）
 - [ ] plan：plan.md 已拆分（阶段含依赖、任务含三字段）
+- [ ] plan：静态 plan 已注册，plan-revision 已固定，Task 记录已创建
 - [ ] build：tests written (red) — 测试先行且确认失败
 - [ ] build：implementation (green) — 实现使测试通过
 - [ ] validate：correctness 通过（套件 + 覆盖率门控）

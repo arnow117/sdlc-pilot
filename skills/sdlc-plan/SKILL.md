@@ -2,7 +2,7 @@
 name: sdlc-plan
 description: >
   SDLC 主线的「规划」流程 skill:把【已批准的 spec.md】拆成可直接执行的 plan.md——两级贯通:
-  spec → 阶段(phase,含 depends_on/wave 波次依赖) → 任务(task,含三必填字段 read_first/acceptance_criteria/action);
+  spec → 阶段(phase) → 静态任务(task,含依赖、写集、接口归属、read_first/action/acceptance_criteria);
   按 L1-L4 复杂度自适应粒度。
   触发于:用户说 "/sdlc plan"、"拆任务"、"做计划"、"规划阶段"、"plan this"、"把 spec 拆成任务"、
   "spec 批了下一步怎么做",或 driver 在 STATE.stage=plan 处路由进来。
@@ -16,7 +16,7 @@ description: >
 它把需求**两级贯通**：
 
 ```
-spec(已批准)  →  阶段 phase(含 depends_on + wave 波次)  →  任务 task(含三必填字段)
+spec(已批准)  →  阶段 phase(含 depends_on + wave 波次)  →  静态任务 task(含完整执行契约)
 ```
 
 产物必须满足两条铁律（贯穿全文）：
@@ -28,6 +28,10 @@ spec(已批准)  →  阶段 phase(含 depends_on + wave 波次)  →  任务 ta
 
 > **引擎 = Claude + Read/Edit/Bash/Grep。** 不依赖 gsd-tools.cjs / Task 子代理 / `.planning/`
 > 目录 / AskUserQuestion。所有交互用 **text_mode**（纯文本编号列表），所有产物落纯文件。
+
+> control 模式必须读 `sdlc/references/control-plane.md`。用户批准后 `plan.md` 成为不可变基线：
+> commit A 保存 plan，commit B 创建 Feature/Task 记录并以 A 的 SHA 作为 `plan_revision`。
+> 运行进度只写 Task records；不得修改 plan checkbox。
 
 ---
 
@@ -189,22 +193,27 @@ text_mode 提示"架构漂移，建议先刷新 PROFILE（重跑 sdlc-onboard �
 
 ---
 
-## 5. 第二级：阶段 → 任务（task，三必填字段 + TDD 五步粒度）
+## 5. 第二级：阶段 → 静态任务契约
 
 蒸馏自 `gsd-plan-phase` 的 **Anti-Shallow** 任务模板 + `writing-plans` 的 **TDD 五步粒度** +
 `planner-antipatterns` 的具体化对照。
 
-### 5.1 任务三必填字段（Anti-Shallow）
+### 5.1 任务必填字段（Anti-Shallow + 并行契约）
 
-每个任务**必须**有这三个字段（缺一即不合格的"浅任务"）：
+每个任务必须包含下表字段：
 
 | 字段 | 含义 | 好 vs 坏 |
 |---|---|---|
 | **read_first** | 执行前必读的文件/上下文（精确路径，含行号区间更好） | 好：`src/auth/jwt.py:1-40, .sdlc/spec.md#auth`；坏：「相关文件」 |
 | **acceptance_criteria** | **必可验证**的完成判据（命令 + 期望输出，或可观察状态） | 好：`pytest tests/test_login.py::test_401 -q` 期望 PASS；有效凭据返回 200+cookie，无效返回 401。坏：「能登录就行」 |
 | **action** | 具体实现指令，**含具体值**（路径、库、参数、为什么避开某选择） | 好：「新建 `POST /api/login` 收 {email,password}，用 bcrypt 比对 User 表，返回 jose 签发的 JWT(15min) 进 httpOnly cookie。**不用 jsonwebtoken**——Edge runtime 的 CommonJS 问题」。坏：「加上认证」 |
+| **id / requirements** | 稳定 task id 与非空需求追溯 | `P2-T1` / `[R-02]` |
+| **depends_on_tasks** | Task 级依赖，只能引用当前 revision | `[P1-T2]` |
+| **write_set** | repo-relative POSIX 文件或目录前缀；禁止 glob/绝对路径/`..` | `[scripts/control.py, skills/sdlc/]` |
+| **interface_owner** | 共享接口唯一 owner；无接口写 `(none)` | `P1-T1` |
+| **interfaces_fixed / runtime_isolated** | 是否满足 task branch 的接口与环境条件 | `true / false` |
 
-> 另带：**files**（精确创建/修改路径）。三字段里的 action 即等价 gsd 的 `<action>`，
+> `write_set` 取代旧的 `files` 字段并作为精确创建/修改边界。action 等价 gsd 的 `<action>`，
 > acceptance_criteria 合并了 gsd 的 `<verify>`(自动化命令) + `<done>`(可测完成态)，read_first 合并 `<files>` 的读侧。
 
 **具体化测试**：换一个全新上下文的 Claude/工程师，**能不能不问问题就执行这个任务？** 不能 → 加细节。
@@ -214,18 +223,18 @@ text_mode 提示"架构漂移，建议先刷新 PROFILE（重跑 sdlc-onboard �
 > 蒸馏自 `writing-plans`。**每步是一个动作（2–5 分钟）**，代码步必须**贴真实代码**，不许"类似上面"。
 
 对能写出 `expect(fn(input)).toBe(output)` 的任务（业务逻辑/接口契约/数据转换/校验/算法/状态机），
-拆成五步：
+拆成五个静态编号动作；这些编号描述执行协议，不表示运行状态：
 
 ```
-- [ ] Step 1: 写失败的测试    （贴出真实测试代码）
-- [ ] Step 2: 跑测试确认失败  （贴出命令 + 期望 FAIL 信息）
-- [ ] Step 3: 写最小实现      （贴出真实实现代码）
-- [ ] Step 4: 跑测试确认通过  （贴出命令 + 期望 PASS）
-- [ ] Step 5: 提交            （贴出 git add/commit 命令）
+1. 写失败的测试（贴出真实测试代码）
+2. 跑测试确认失败（命令 + 期望 FAIL）
+3. 写最小实现（贴出真实实现代码）
+4. 跑测试确认通过（命令 + 期望 PASS）
+5. 交付变更与证据（是否 commit 由调用方/用户策略决定）
 ```
 
 非 TDD 任务（UI 布局/样式、纯配置、胶水代码、一次性脚本、无业务逻辑的简单 CRUD）：
-不强求五步，但仍要满足三必填字段 + No-Placeholder。
+不强求五步，但仍要满足全部任务字段 + No-Placeholder。
 
 ### 5.3 任务定大小（context 预算，不用时间估）
 
@@ -328,6 +337,7 @@ EVAL-CRIT  | E-01   | 答案准确率 ≥0.85(若有AI工作) | T5       | COVER
 | `references/role-routing.md` | **读** | §2 路由解析规则（不内联，调用其 §1 算法） |
 | `.sdlc/plan.md` | **写** | 本 skill 的主产物（§5 schema），单写者 |
 | `.sdlc/STATE.md` | **写** | 经 driver 回写：stage/gates/active roles/modes/changed-files/decisions/next（§8），单写者 |
+| `.sdlc-control/plans|tasks` | **经 control adapter 写** | 用户批准后注册不可变 plan revision 与初始 Task records |
 
 > 注：本设计用**单一 `.sdlc/plan.md`** 承载"阶段(含依赖)→任务(含三字段)"两级，
 > **不**生成 gsd 的 `.planning/phases/*/NN-PLAN.md` 多文件结构（已剥离运行时目录依赖）。
@@ -365,18 +375,23 @@ EVAL-CRIT  | E-01   | 答案准确率 ≥0.85(若有AI工作) | T5       | COVER
 **可观察成功标准**: <用将来会跑的验证手段表述：e2e:Web 旅程 / OpenAPI 端点断言 / eval-bench 指标≥阈值 / 覆盖率≥X%>
 
 ### Task P1-T1: <动作名>
+- **id**: P1-T1
 - **requirements**: R-01            # 反向追溯，必填非空
-- **files**: <精确创建/修改路径>
+- **depends_on_tasks**: []
+- **write_set**: [<精确创建/修改路径或目录前缀>]
+- **interface_owner**: <task id 或 (none)>
+- **interfaces_fixed**: true | false
+- **runtime_isolated**: true | false
 - **read_first**: <执行前必读：路径#锚点 或 路径:行号区间>
 - **action**: <含具体值的实现指令；含要避开什么 + 为什么>
 - **acceptance_criteria**: <命令 + 期望输出 / 可观察完成态>
 
-<!-- 代码型任务用 TDD 五步展开（§5.2），每步贴真实代码/命令 -->
-- [ ] Step 1: 写失败测试 …（真实测试代码）
-- [ ] Step 2: 跑测试确认 FAIL …（命令 + 期望）
-- [ ] Step 3: 写最小实现 …（真实实现代码）
-- [ ] Step 4: 跑测试确认 PASS …（命令 + 期望）
-- [ ] Step 5: 提交 …（git 命令）
+<!-- 代码型任务用 §5.2 的静态编号动作；运行结果写 Task record，不改本文件 -->
+1. 写失败测试 …（真实测试代码）
+2. 跑测试确认 FAIL …（命令 + 期望）
+3. 写最小实现 …（真实实现代码）
+4. 跑测试确认 PASS …（命令 + 期望）
+5. 交付变更与证据 …
 
 ### Task P1-T2: …
 
@@ -402,7 +417,7 @@ plan 定稿、双向追溯全过后，输出 `## HANDOFF` block，**经由 drive
 
 - `stage: plan`，`status: in-progress`（若有 MISSING 未决 → `gated`；被外部缺口阻塞 → `blocked`）。
 - `validate-modes: [...]`：§2 预解析出的模式快照（仅交接/审计，不当权威源）。
-- **Gates passed**：勾选 `- [x] plan：plan.md 已拆分（阶段含依赖、任务含三字段）`。
+- **Gates passed**：记录静态 plan 已批准；control 模式同时记录 `plan-revision` 与 Task 初始化结果。
 - **Active roles (from last diff scan)**：§2 预解析出的角色快照。
 - **Changed-files snapshot**：§2 取到的改动/目标 surface 路径。
 - **Decisions log**：追加本次复杂度定级理由 + 任何 spec 歧义/MISSING 的处置结论。
@@ -419,7 +434,7 @@ plan 定稿、双向追溯全过后，输出 `## HANDOFF` block，**经由 drive
 3. [ ] 入口预解析：`git diff`/目标 surface → 调 role-routing 算 active roles + modes + 漂移检测（§2）
 4. [ ] 复杂度定级 L1–L4 + 写理由（§3）
 5. [ ] 第一级拆阶段：五准则 + must_haves 目标倒推 + depends_on/wave 波次（§4）
-6. [ ] 第二级拆任务：三必填字段 + TDD 五步粒度 + 任务大小 + No-Placeholder（§5）
+6. [ ] 第二级拆任务：完整任务契约 + TDD 静态编号动作 + 任务大小 + No-Placeholder（§5）
 7. [ ] 出口门控：Source Audit（正向全 COVERED）+ Coverage Gate（反向全指回）+ 自查三扫（§6）
 8. [ ] 写 `.sdlc/plan.md`（§7 schema，单写者）
 9. [ ] 输出 `## HANDOFF` 并经 driver 写回 `STATE.md`：gates / roles / modes / changed-files / decisions / next（§8）

@@ -440,6 +440,10 @@ def main(argv=None):
     pb = sub.add_parser("board", help="渲染折叠树 HTML 看板(注入 web-review annotate)")
     pb.add_argument("--root", required=True, help=".sdlc/requirements 目录")
     pb.add_argument("--out", help="输出 HTML 路径(默认 <root>/_board.html)")
+    pb.add_argument("--control-repo", dest="control_repo",
+                    help="只读 sdlc-control ref 的 Git 仓库路径；缺省保持 legacy")
+    pb.add_argument("--control-ref", dest="control_ref", default="sdlc-control",
+                    help="控制记录 ref（默认 sdlc-control；缺失时降级 legacy）")
     pwt = sub.add_parser("write-tree", help="tree JSON → 叶文件(机械落盘;生成器#6 用)")
     pwt.add_argument("--root", required=True, help=".sdlc/requirements 目录")
     pwt.add_argument("--from", dest="from_", required=True, help="merged tree JSON 路径")

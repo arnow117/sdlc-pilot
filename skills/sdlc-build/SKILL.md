@@ -22,6 +22,8 @@ description: >
 
 > 知识与状态全在纯文件,引擎 = Claude + Read/Edit/Bash/Grep。可移植:Claude / Codex 都能跑(§0)。
 > **单写者原则**:本 skill 不直接写 `STATE.md`;进度由 `sdlc` driver 在阶段结束时写回(见 §7 交接)。
+> control 模式必须先读 `sdlc/references/control-plane.md` 与当前 Task records。批准后的
+> `plan.md` 是不可变输入；Task 状态、分支绑定、integration SHA 和 evidence 只经 control adapter 写入。
 
 ---
 
@@ -44,6 +46,23 @@ description: >
 有 AskUserQuestion 时可用,但**回退路径必须是上面这种编号文本**。STOP 点就是 STOP:停下等用户,不要自作主张续跑。
 
 ### 0.2 执行模型 — wave 并行 / 串行 inline(Task-or-sequential)
+
+#### 0.2a control 模式的 Task 级调度（优先于下方 legacy phase 模型）
+
+每次只领取 `derive_task_readiness()` 判为 ready 的 Task。并行单元是 **Task**，不是 Phase；
+创建 task branch 前必须由 adapter 同时检查：依赖均 verified、write_set 不重叠、接口已固定且
+owner 唯一、runtime 可隔离、活动 task branches 少于 3、无 serial task 活动。任何一项不满足就
+在 Feature 分支 `execution_mode: serial` 执行，仍维护 Task record，但不创建 task branch。
+
+Task worktree 只放 `.sdlc/TASK.md`，不得复制 Feature `STATE.md`。Task agent 只能修改声明的
+write_set、运行 RED/GREEN 测试并返回 source tip；不能写 STATE/control、不能集成或确认 verified。
+
+Feature orchestrator 串行集成每个 task branch：先把它更新到当前 Feature integration HEAD，解决冲突，
+执行定向测试，记录 `integrated_source_sha`、merge method 和**集成后 Feature HEAD** 作为
+`integration_sha`。随后为该 SHA 写 immutable task evidence；只有 pass evidence 的 `tested_sha`
+精确等于 `integration_sha`，Task 才转 `verified`。每次集成后重新派生剩余 Task readiness/freshness。
+
+下方 Phase fan-out 只描述 `execution-mode: legacy` 的兼容行为。
 
 > **源码协作纪律(本阶段部分)**:提交守 Conventional Commits;波内并行执行守 plan 的「同 wave 不碰同一文件」。分支模型 / worktree 决策 / 并行**前置合约** / 收敛安全网由 **driver §1.1 跨阶段加载**,见 `references/collaboration-discipline.md`。
 
@@ -88,6 +107,8 @@ Codex 运行时的具体 fan-out/降级规则见 `references/runtime-adapters/co
 | 在 git 仓库且非 main/master 直写 | 当前在特性分支,不是直写主干 | 提示先切特性分支(text_mode 确认) |
 | 已 resolve 出 active 角色 + validate 模式 | 读 `STATE.md` 的 `## Active roles`;若空则现做(§2) | 现场 resolve |
 | spec 已批准(SDD 前置) | `STATE.md` 中 spec 状态为 approved | 回 `sdlc-spec` |
+| control identity 一致 | Feature worktree 有 STATE，Task worktree有 TASK；二者不得共存 | 停止并修复 worktree 身份 |
+| plan revision 已注册 | control Task 的 `plan_revision` 均指向批准 plan commit | 回 `sdlc-plan` 注册，不执行未登记任务 |
 
 > 入口铁律:**改动代码→角色+模式解析先做**(§2),再开始第一个任务。这样实现时就带着对的视角(client-dev/server-dev/...)
 > 和对的"完成后要跑什么验证"的预期。
@@ -139,7 +160,8 @@ git -C <repo> status --porcelain           # 含 untracked
 
 ## 3. 主循环:逐任务 TDD(red → green → refactor)
 
-按 `plan.md` 的 **wave 顺序**推进(执行模型见 §0.2:同 wave 多**阶段**有并行能力则一阶段一 agent fan-out,否则串行 inline;后波依赖前波)。**无论并行还是串行,每个任务都跑完整 TDD 五拍状态机,任务内永远单写手串行。**
+control 模式按 Task records 的派生 readiness 推进；legacy 才按 `plan.md` wave/phase 推进。
+**无论 task branch 还是 serial，每个任务都跑完整 TDD 五拍状态机，任务内永远单写手串行。**
 
 ### 3.0 统一状态机(TDD ⊕ 调试子循环)
 
@@ -221,7 +243,8 @@ git -C <repo> status --porcelain           # 含 untracked
 1. **spec 符合自检**:本任务实现是否**恰好**满足 plan/spec 的验收标准?——没有缺漏(missing),也**没有多做**(extra,如塞了没要求的 flag)。多做 = 也要删。
 2. **质量自检**:对照 §2 装载的角色卡"常见翻车"——魔法数抽常量、错误处理齐全、命名清楚、无调试残留(console.log/print)。
 
-两项都过 → 该任务在 `plan.md` 标记完成,**进入下一个任务**(回 3.1)。任一项不过 → 当作"行为 bug"在本任务内修掉再过。
+两项都过 → control 模式提交 task result 给 Feature orchestrator，由其集成、重测、写 evidence 并更新
+Task record；**不得修改 `plan.md`**。legacy 保留原有本地进度方式。任一项不过 → 当作"行为 bug"在本任务内修掉再过。
 
 > **修复时守 `references/receiving-feedback.md` 纪律**:自检/调试发现问题 → **先核实该问题真成立、对本仓正确,再改;一次一项、各自验证**;别一被指出就乱改、别顺手加没要求的东西(YAGNI)。治"疯狂过度修复"。
 
@@ -354,7 +377,7 @@ Status:          DONE | DONE_WITH_CONCERNS | BLOCKED
 
 逐项核对(对照 TDD 检查清单 + 本阶段铁律):
 
-- [ ] `plan.md` 的本批任务全部完成并标记。
+- [ ] 当前 `plan_revision` 下全部非 superseded Task records 已 verified，且无 abandoned Task。
 - [ ] 每个新函数/方法都有测试。
 - [ ] **每条测试都先看它失败过**,且失败原因正确(功能缺失,非 typo)。
 - [ ] 每条测试用最小实现转绿;现全部测试通过,输出干净(无 error/warning)。
@@ -364,6 +387,10 @@ Status:          DONE | DONE_WITH_CONCERNS | BLOCKED
 - [ ] 类型检查通过(`tsc --noEmit` / `mypy`,若适用)。
 
 **勾不全 = 跳过了 TDD,回去补**。全勾 → 报 `DONE`,交给 driver 路由到 `sdlc-validate`(跑 §2 解析出的 modes)。
+
+control 模式额外要求：实际 Feature HEAD 等于 control 记录的最新 `integration_sha`；每个 Task 的
+pass evidence 精确测试其 resulting integration SHA。Task freshness 保留为历史提示，最终以当前
+Feature HEAD 的 feature evidence 验证聚合结果。
 
 完成状态协议:`DONE`(有证据)/ `DONE_WITH_CONCERNS`(完成但列出顾虑)/ `BLOCKED`(说明阻塞 + 已尝试)/
 `NEEDS_CONTEXT`(说明缺什么)。3 次失败、不可验证的安全敏感改动、或无法验证的范围 → 升级。
@@ -402,7 +429,8 @@ validate-modes: [correctness, e2e:Web, ...]      # §2 本次 resolve 出的,留
 并行产物(若有,如调试取证笔记)写各自文件,**不与 STATE 同写**(防竞态)。driver 据 `status` 决定:
 `in-progress` 续到 validate;`gated` 停闸口列待批项;`blocked` 报阻塞不前进。
 
-跨会话:新会话 `/sdlc` 读 `STATE(stage=build)` + 角色卡 + `plan.md` 即可接力,无需重放上下文。
+跨会话:Feature 读 control Task records + STATE + immutable plan；Task worktree 读 TASK.md + 对应 Task
+record。control 为权威，STATE/TASK 只提供本地身份与续接提示。
 
 ---
 

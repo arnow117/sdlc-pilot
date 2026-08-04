@@ -44,7 +44,9 @@ python3 <bk> readyqueue --root <root>   # <bk>=sdlc-pilot 仓 scripts/backlog.py
 
 - **ready** ⟺ 叶 `status != shipped` 且其 `depends_on` 全部已 shipped(或无依赖)。
 - 外层循环 = "队列非空就取队首叶"。loop **只依赖这个契约**,不碰树内部结构(A/B 解耦:backlog 演进树 schema,loop 只消费 ready-queue)。
-- 取到一片叶(队首)→ 起 feature 分支/worktree → 写 STATE(`source-leaf=<queue[0].leaf_id>`,§6;字段名是 `leaf_id`,Retire 据此回写源叶),进入单叶内循环(§3)。
+- 取到一片叶(队首)→ 调 `/sdlc deliver <leaf-id>`。deliver 必须先在最新 control HEAD 上完成
+  claim 的 fast-forward push；成功后才起 Feature 分支/worktree 并写 STATE。竞争失败则返回现有
+  owner/feature 并停止本轮，不得先创建分支再补 claim。
 
 ---
 
@@ -55,7 +57,7 @@ python3 <bk> readyqueue --root <root>   # <bk>=sdlc-pilot 仓 scripts/backlog.py
 ```
 spec(若该叶无 spec.md)   → 收敛需求 + 定 Done Criteria(§4 oracle 的判据来源)
   ↓                         AI 工作前置 eval rubric;UI 工作前置 DESIGN.md(sdlc-spec 既有纪律)
-plan                      → 拆成扁平、可勾 [X] 的任务清单(sdlc-plan 既有纪律)
+plan                      → 生成批准后不可变的静态 Task 契约，并注册 plan_revision
   ↓
 build: 逐任务 RED→GREEN→verify   → 测试=ground truth(sdlc-build RGR 内核,Iron Law 不破)
   ↓                              → 失败 → systematic-debugging 子环(三振升级)
@@ -68,7 +70,8 @@ converge oracle(§4)            → 真做完没?没 → 回 build;做完 → sh
 ship → backlog Retire           → 标叶 shipped、解锁下游(§5 checkpoint)
 ```
 
-**关键**:plan 把任务拆成**扁平可勾清单**——这张清单本身就是本叶内循环的**进度账本**(§6),取一条→做→勾 `[X]`→取下一条。
+**关键**:plan 是静态执行契约，不是运行账本。loop 从 control Task records 派生 waiting/ready/
+in_progress/verified，取一条 ready Task 执行；任何重规划都创建新的 plan revision，而不是改旧 plan。
 
 > **loop 模式的状态转移(避免抢跑)**:converge(§4)是 **review-PASS 与 ship 之间**的闸——**单叶只有 ship 完成后才推进 `stage→done`**。故 driver §2 的"`done` 前置 Retire"**不会在单叶半途触发**(converge 没过时停在 build/converge,`stage` 仍 in-progress);Retire 只在该叶 ship 后、回 §2 取下一片前由 §5 显式触发。
 
@@ -119,9 +122,11 @@ ship(按 PROFILE.Deploy + deploy-targets,可跳)
 |---|---|
 | `.sdlc/STATE.md` | 当前叶(`source-leaf`)/ stage / status / gates / Next action(driver 单写者) |
 | 叶 `status`(captured→…→shipped) | 该需求在树里的生命周期位(`backlog.py set-status`,§5 retire 推进) |
-| plan 任务清单 `[X]` | 本叶内循环的微进度账本(取一条→做→勾) |
+| control Feature/Task records | claim、plan revision、Task 状态、branch、integration SHA、freshness 与 evidence refs |
+| immutable plan | Task 的需求追溯、依赖、写集、接口、action 与 acceptance criteria |
 
-→ 任意时刻崩溃 / `/clear` / 换 session,重进 `/sdlc loop`:读 STATE + 叶 status + 任务 `[X]` 即可续接,**无需重放上下文**。
+→ 任意时刻崩溃 / `/clear` / 换 session,重进 `/sdlc loop`:先刷新 control snapshot，再读
+STATE/TASK 本地身份与 immutable plan，即可续接，**无需重放上下文**。
 **单写者**:仍只有 driver 写 STATE;loop 串行取叶,无 fan-out 竞态。
 
 ---
@@ -165,7 +170,7 @@ loop 不裸奔(Anthropic:须有明确停止条件)。任一触发即停并 text_
 
 > distilled-from: Manus context-engineering(todo.md recitation / soft attention control)
 
-长循环上下文会膨胀、目标会"中间遗忘(lost-in-the-middle)"。**每进入一片叶的内循环、每次回到 build 前**,先**重读本叶 spec 的 `## Done Criteria` + plan 未勾 `[X]` 任务**,把目标顶回注意力末端。
+长循环上下文会膨胀、目标会"中间遗忘(lost-in-the-middle)"。**每进入一片叶的内循环、每次回到 build 前**,先**重读本叶 spec 的 `## Done Criteria` + control 中尚未 verified 的 Task 对应静态 plan 段**,把目标顶回注意力末端。
 
 - 不是重新规划,只是**把目标 + 剩余项复述一遍**(soft attention control,无需特殊机制)。
 - 复述源 = 文件(spec/plan),**不是对话记忆**——与 §6"状态在文件"一致;fresh-context 重进时,复述即自然恢复目标对焦。
