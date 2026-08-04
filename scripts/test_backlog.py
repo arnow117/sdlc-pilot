@@ -535,6 +535,10 @@ class ControlBoardTest(unittest.TestCase):
         self.assertIn("control local-serial", page)
         self.assertIn('class="tracking-summary"', page)
 
+    def test_active_claim_is_not_counted_as_ready(self):
+        page = self._render(_tracking_snapshot())
+        self.assertIn("ready 0 条", page)
+
     def test_control_fields_cannot_break_json_script_or_html(self):
         payload = "</script><img src=x onerror=alert(1)>&\u2028\u2029"
         snapshot = _tracking_snapshot(payload)
@@ -566,7 +570,8 @@ class ControlBoardTest(unittest.TestCase):
                 f.write("stage: build\nsource-leaf: user.auth.login\n")
             out = os.path.join(tmp, "board.html")
             fake_control = SimpleNamespace(
-                load_snapshot_from_ref=mock.Mock(return_value=_tracking_snapshot()))
+                load_snapshot_from_ref=mock.Mock(return_value=_tracking_snapshot()),
+                readyqueue_from_snapshot=mock.Mock(return_value=[]))
             args = SimpleNamespace(root=req, out=out, control_repo=tmp,
                                    control_ref="sdlc-control")
             with mock.patch.dict(sys.modules, {"control": fake_control}), \
@@ -586,7 +591,8 @@ class ControlBoardTest(unittest.TestCase):
             write_leaf(req, "legacy.keep.a", title="旧树")
             out = os.path.join(tmp, "board.html")
             fake_control = SimpleNamespace(
-                load_snapshot_from_ref=mock.Mock(return_value=_tracking_snapshot()))
+                load_snapshot_from_ref=mock.Mock(return_value=_tracking_snapshot()),
+                readyqueue_from_snapshot=mock.Mock(return_value=[]))
             args = SimpleNamespace(root=req, out=out, control_repo=tmp,
                                    control_ref="sdlc-control")
             with mock.patch.dict(sys.modules, {"control": fake_control}), \
