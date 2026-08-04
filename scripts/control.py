@@ -119,8 +119,14 @@ def requirement_record(leaf: dict[str, Any]) -> dict[str, Any]:
         raise SchemaError(f"requirement:{leaf_id}: invalid priority {leaf['priority']!r}")
     if not isinstance(leaf["depends_on"], list) or not isinstance(leaf["cross_link"], list):
         raise SchemaError(f"requirement:{leaf_id}: depends_on/cross_link must be lists")
-    record = dict(leaf)
+    body = leaf["body"] if "body" in leaf else leaf.get("_body", "")
+    if not isinstance(body, str):
+        raise SchemaError(f"requirement:{leaf_id}: body must be a string")
+    record = {key: value for key, value in leaf.items()
+              if key not in {"body", "_body"}}
     record.update({"schema_version": str(SCHEMA_VERSION), "record_type": "requirement"})
+    if body:
+        record["_body"] = body
     return record
 
 
@@ -196,7 +202,7 @@ def intake(control_root: str | os.PathLike[str], *, request: dict[str, Any],
     request_body = _body_section("Raw request", str(request.get("body", "")))
     control_store.write_record(request_path, request_rec, body=request_body)
     for record, path in prepared_paths:
-        control_store.write_record(path, record, body=str(record.get("body", "")))
+        control_store.write_record(path, record, body=str(record.get("_body", "")))
     return {"request_id": request_id, "leaf_ids": sorted(seen), "written": len(normalized)}
 
 

@@ -61,9 +61,11 @@ echo "== 7. control 协议跨流程引用与行为测试 =="
 for f in "$ROOT/sdlc/SKILL.md" "$ROOT/sdlc-backlog/SKILL.md" "$ROOT/sdlc-onboard/SKILL.md" "$ROOT/sdlc-plan/SKILL.md" "$ROOT/sdlc-build/SKILL.md" "$ROOT/sdlc-spec/SKILL.md" "$ROOT/sdlc-validate/SKILL.md" "$ROOT/sdlc-review/SKILL.md" "$ROOT/sdlc-ship/SKILL.md"; do
   grep -q "control-plane.md" "$f" || err "$f 未引用 control-plane.md"
 done
-for f in scripts/test_control.py scripts/test_hooks.py; do
+for f in scripts/test_control.py scripts/test_control_intake.py scripts/test_hooks.py; do
   [ -f "$f" ] && ok "$f" || err "缺失:$f"
 done
+python3 scripts/test_control_intake.py \
+  && ok "control intake 正文行为测试通过" || err "control intake 正文行为测试失败"
 for f in scripts/control.py scripts/control_cli.py scripts/control_intake.py scripts/control_lint.py scripts/control_model.py scripts/control_store.py; do
   if [ -f "$f" ]; then
     lines=$(wc -l < "$f" | tr -d ' ')
