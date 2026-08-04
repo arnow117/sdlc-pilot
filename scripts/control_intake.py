@@ -65,5 +65,5 @@ def decompose_request(control_root: str | os.PathLike[str], *, request_id: str,
         raise SchemaError("requirement dependency cycle: " + " -> ".join(cycle))
     for record, path in prepared:
         record["updated"] = at
-        control_store.write_record(path, record, body=str(record.get("body", "")))
+        control_store.write_record(path, record, body=str(record.get("_body", "")))
     return {"request_id": request_id, "leaf_ids": sorted(new_ids), "written": len(prepared)}

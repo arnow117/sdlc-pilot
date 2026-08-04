@@ -2,6 +2,12 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.19.1] — 2026-08-04
+
+### Fixed
+- `/sdlc intake` 与 `decompose-request` 现在把需求叶的多行描述和验收线索保存在 Markdown 正文，不再把 `body` 写进 strict flat frontmatter；非字符串正文会在写入前被拒绝。
+- 正文持久化回归测试已接入 `scripts/validate-skills` 的标准提交检查。
+
 ## [0.19.0] — 2026-08-04
 
 ### Added
