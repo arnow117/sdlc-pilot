@@ -2,6 +2,11 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.19.2] — 2026-08-04
+
+### Fixed
+- control 看板的 `ready` 数量现在复用权威 claim-aware ready-queue；已被 active Feature 领取的需求叶不再继续显示为可领取。
+
 ## [0.19.1] — 2026-08-04
 
 ### Fixed

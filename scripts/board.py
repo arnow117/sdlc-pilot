@@ -562,6 +562,10 @@ def render_board(tree, leaves, title="Backlog 需求树看板", live=None, contr
     control_data = _as_dict(control)
     control_mode = str(control_data.get("mode") or "")
     control_active = bool(control_data) and control_mode != "legacy"
+    ready_count = summ["ready_count"]
+    if control_active:
+        from control import readyqueue_from_snapshot
+        ready_count = len(readyqueue_from_snapshot(control_data))
     # 叶详情数据嵌入：统一隔离 HTML/script 上下文。
     leaf_data_json = _safe_json_for_html(_leaf_detail_map(leaves, tracking))
     # 痛点① 图例(6 状态色 + 含义,可点过滤)
@@ -681,7 +685,7 @@ def render_board(tree, leaves, title="Backlog 需求树看板", live=None, contr
         f'<meta name="viewport" content="width=device-width,initial-scale=1">'
         f'<title>{esc(title)}</title><style>{BOARD_CSS}</style></head><body>'
         f'<div class="app"><div class="board"><h1>{esc(title)}</h1>'
-        f'<div class="sub">共 {summ["total"]} 条需求 · ready {summ["ready_count"]} 条'
+        f'<div class="sub">共 {summ["total"]} 条需求 · ready {ready_count} 条'
         f'{(" · control " + esc(control_mode)) if control_active else ""}</div>'
         f'{warning_html}'
         f'{cov_html}'

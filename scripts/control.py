@@ -224,8 +224,8 @@ def _requirements_ready(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
     return ready
 
 
-def readyqueue(control_root: str | os.PathLike[str]) -> list[dict[str, Any]]:
-    snapshot = load_control_snapshot(control_root)
+def readyqueue_from_snapshot(snapshot: dict[str, Any]) -> list[dict[str, Any]]:
+    """Return claimable requirements from an already loaded control snapshot."""
     return [{
         "leaf_id": leaf.get("id"),
         "title": leaf.get("title"),
@@ -235,6 +235,10 @@ def readyqueue(control_root: str | os.PathLike[str]) -> list[dict[str, Any]]:
         "risk_level": leaf.get("risk_level"),
         "status": leaf.get("status"),
     } for leaf in _requirements_ready(snapshot)]
+
+
+def readyqueue(control_root: str | os.PathLike[str]) -> list[dict[str, Any]]:
+    return readyqueue_from_snapshot(load_control_snapshot(control_root))
 
 
 def claim(control_root: str | os.PathLike[str], *, leaf_id: str, feature_id: str,
