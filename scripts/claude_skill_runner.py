@@ -120,7 +120,7 @@ def _prompt(request: Mapping[str, object]) -> str:
     return "\n".join([
         "You are a read-only SDLC Skill behavior evaluation runner.",
         "Use only Read, Glob, and Grep. Do not invoke shell commands, edit files, create artifacts, or infer authority.",
-        "Inspect the checked-out repository and follow the invocation contract below exactly.",
+        "Inspect the checked-out repository directly. Do not rely on globally installed Skills; read the named SKILL.md files and their referenced source files from this checkout.",
         "For candidate runs, dual lifecycle authority is explicit. For baseline runs, preserve legacy routing.",
         "Report only selected IDs and actual required/artifact kinds. Do not claim tests, approvals, reviews, or security completion.",
         "Return only the required JSON object, without a Markdown code fence.",
@@ -223,7 +223,6 @@ def run_once(
     try:
         _git(repo, "worktree", "add", "--detach", str(worktree), source_commit)
         command = _build_command(model=selected_model, max_budget_usd=max_budget_usd, prompt=_prompt(request))
-        command.extend(["--plugin-dir", str(worktree)])
         completed = subprocess.run(
             command,
             cwd=worktree,
