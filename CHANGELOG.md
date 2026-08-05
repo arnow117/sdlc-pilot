@@ -2,6 +2,18 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.20.0] — 2026-08-05
+
+### Added
+- 新增双生命周期运行时：`sdlc-product-design` 负责 BDD 与战略 DDD 的产品定义/产品契约；`sdlc-software-delivery` 负责 SDD、TDD、工程规格、交付计划与交付。
+- 新增结构化的 `ProductDefinition`、`ProductContract`、`EngineeringSpec`、`DeliveryPlan`、`Evidence`、`ReviewRecord` 与 `ChangeRequest`，以不可变内容寻址记录、权限配置和账本追溯衔接生命周期。
+- 新增 policy compiler、context/obligation manifest、交付计划编译器、证据执行器和评审证明；TDD 命令须由已批准 Delivery Plan 固定并生成可核验回执。
+- 新增 preview 与 `dual-lifecycle-v1` 显式启用路径；产品侧维护需求树和产品契约，研发侧维护 Feature、Task、证据、评审与发布状态。
+
+### Changed
+- `/sdlc` 改为兼容路由器：普通入口维持 `0.19.2` 既有行为；新产品设计和研发交付流程按需加载，避免一次加载整套流程上下文。
+- legacy 流程改为从 `0.19.2` 已固定 Git 对象读取并校验字节摘要；旧流程兼容性与新流程行为评估均纳入回归测试。
+
 ## [0.19.2] — 2026-08-04
 
 ### Fixed

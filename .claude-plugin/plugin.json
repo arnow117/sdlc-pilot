@@ -1,7 +1,7 @@
 {
   "name": "sdlc-pilot",
-  "version": "0.19.2",
-  "description": "可移植 SDLC 技能族：双入口需求/交付、sdlc-control 执行账本、Feature/Task 分支绑定、不可变验证证据、8 流程 skill 与 Codex adapter。",
+  "version": "0.20.0",
+  "description": "可移植 SDLC 技能族：产品设计与软件交付双生命周期、兼容 legacy 路由、不可变契约/证据账本与 Codex adapter。",
   "author": {
     "name": "arnow117"
   },
