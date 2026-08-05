@@ -141,6 +141,8 @@ def _prompt(request: Mapping[str, object], context_pack: str) -> str:
         "Return only a JSON object with exactly these top-level keys: case_id, route, modules, roles, obligations, artifacts, actions, transition.",
         "Do not add reasoning, notes, explanations, confidence, metadata, or any other key. actions must be an empty array because no tool may run.",
         "transition must contain exactly decision ('route' or 'reject') and route. Do not use a Markdown code fence.",
+        "case_id is a string. route, modules, roles, obligations, artifacts, actions, and transition.route are arrays of strings, never a comma-separated string or object.",
+        "The required JSON shape is: {\"case_id\":\"...\",\"route\":[\"...\"],\"modules\":[\"...\"],\"roles\":[\"...\"],\"obligations\":[\"...\"],\"artifacts\":[\"...\"],\"actions\":[],\"transition\":{\"decision\":\"route\",\"route\":[\"...\"]}}.",
         "Context pack:",
         context_pack,
         "Invocation contract:",

@@ -72,6 +72,7 @@ class ClaudeSkillRunnerTest(unittest.TestCase):
         self.assertIn("exactly these top-level keys", prompt)
         self.assertIn("Do not add reasoning", prompt)
         self.assertIn("actions must be an empty array", prompt)
+        self.assertIn("arrays of strings", prompt)
 
     def test_claude_timeout_terminates_the_process_group(self) -> None:
         command = [
