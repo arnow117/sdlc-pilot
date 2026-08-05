@@ -60,6 +60,12 @@ class ClaudeSkillRunnerTest(unittest.TestCase):
         with self.assertRaisesRegex(claude_skill_runner.ClaudeSkillRunnerError, "missing-model"):
             claude_skill_runner._resolve_model({}, "configured")
 
+    def test_failure_diagnostics_are_classified_without_returning_raw_stderr(self) -> None:
+        self.assertEqual(claude_skill_runner._safe_failure_class(b"unknown model 'sonnet'"), "model")
+        self.assertEqual(claude_skill_runner._safe_failure_class(b"401 unauthorized token=secret"), "authentication")
+        self.assertEqual(claude_skill_runner._safe_failure_class(b"failed to load plugin"), "plugin")
+        self.assertEqual(claude_skill_runner._safe_failure_class(b"unrecognized failure"), "opaque")
+
 
 if __name__ == "__main__":
     unittest.main()

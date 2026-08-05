@@ -142,6 +142,24 @@ def _build_command(*, model: str, max_budget_usd: float, prompt: str) -> list[st
     ]
 
 
+def _safe_failure_class(stderr: bytes) -> str:
+    """Classify a CLI failure without retaining provider endpoints or secrets."""
+    text = stderr.decode("utf-8", errors="replace").lower()
+    if any(token in text for token in ("model_not_found", "model not found", "invalid model", "unknown model")):
+        return "model"
+    if any(token in text for token in ("401", "403", "authentication", "unauthorized", "api key")):
+        return "authentication"
+    if any(token in text for token in ("plugin", "marketplace", "manifest")):
+        return "plugin"
+    if any(token in text for token in ("unknown tool", "invalid tool", "--tools")):
+        return "tool-config"
+    if any(token in text for token in ("permission-mode", "permission mode")):
+        return "permission-mode"
+    if any(token in text for token in ("connection", "connect", "timeout", "econn", "network")):
+        return "provider-connection"
+    return "opaque"
+
+
 def _structured_output(value: Mapping[str, object]) -> dict[str, object]:
     raw = value.get("structured_output")
     if raw is None:
@@ -197,10 +215,8 @@ def run_once(
             timeout=timeout_seconds,
         )
         if completed.returncode != 0:
-            # stderr is deliberately not surfaced because a provider or CLI may
-            # include connection details.  The numeric result is sufficient for
-            # the harness record and is safe to retain.
-            raise ClaudeSkillRunnerError(f"claude-runner-failed:{completed.returncode}")
+            raise ClaudeSkillRunnerError(
+                f"claude-runner-failed:{_safe_failure_class(completed.stderr)}:{completed.returncode}")
         response = _strict_object(completed.stdout, "claude-result")
         output = _structured_output(response)
         total_cost = response.get("total_cost_usd", 0)
