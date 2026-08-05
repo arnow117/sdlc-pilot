@@ -152,6 +152,15 @@ class FixtureEvaluationTest(unittest.TestCase):
                 self.assertFalse(assertion["passed"])
                 self.assertEqual(report["summary"]["failed"], 1)
 
+    def test_live_output_keeps_empty_selections_for_mechanical_scoring(self) -> None:
+        output = eval_skill_behavior._normalize_live_output({
+            "case_id": "live-empty", "route": [], "modules": [], "roles": [], "obligations": [],
+            "artifacts": [], "actions": [], "transition": {"decision": "route", "route": []},
+        })
+        self.assertEqual(output["modules"], [])
+        with self.assertRaisesRegex(eval_skill_behavior.EvaluationError, "invalid-fixture-output-route"):
+            eval_skill_behavior._normalize_output(output)
+
     def test_contract_drift_and_remote_execution_are_refused(self) -> None:
         bad_hash = self.candidate_fixture()
         bad_hash["dataset_contract"]["sha256"] = "0" * 64

@@ -374,20 +374,41 @@ def _normalize_transition(value: object, label: str) -> dict[str, object]:
     }
 
 
-def _normalize_output(value: object) -> dict[str, object]:
+def _normalize_response_output(value: object, *, require_nonempty: bool) -> dict[str, object]:
     if not isinstance(value, dict) or set(value) != _OUTPUT_KEYS:
         raise EvaluationError("invalid-fixture-output-keys")
     case_id = _require_text(value["case_id"], "fixture-output-case-id")
+    transition = value["transition"]
+    if not isinstance(transition, dict) or set(transition) != _TRANSITION_KEYS:
+        raise EvaluationError(f"invalid-fixture-output:{case_id}-transition")
+    if transition["decision"] not in {"route", "reject"}:
+        raise EvaluationError(f"invalid-fixture-output:{case_id}-transition-decision")
     return {
         "case_id": case_id,
-        "route": _string_list(value["route"], f"fixture-output-route:{case_id}"),
-        "modules": _string_list(value["modules"], f"fixture-output-modules:{case_id}"),
-        "roles": _string_list(value["roles"], f"fixture-output-roles:{case_id}"),
-        "obligations": _string_list(value["obligations"], f"fixture-output-obligations:{case_id}"),
-        "artifacts": _string_list(value["artifacts"], f"fixture-output-artifacts:{case_id}"),
+        "route": _string_list(value["route"], f"fixture-output-route:{case_id}", nonempty=require_nonempty),
+        "modules": _string_list(value["modules"], f"fixture-output-modules:{case_id}", nonempty=require_nonempty),
+        "roles": _string_list(value["roles"], f"fixture-output-roles:{case_id}", nonempty=require_nonempty),
+        "obligations": _string_list(value["obligations"], f"fixture-output-obligations:{case_id}", nonempty=require_nonempty),
+        "artifacts": _string_list(value["artifacts"], f"fixture-output-artifacts:{case_id}", nonempty=require_nonempty),
         "actions": _string_list(value["actions"], f"fixture-output-actions:{case_id}", nonempty=False),
-        "transition": _normalize_transition(value["transition"], f"fixture-output:{case_id}"),
+        "transition": {
+            "decision": transition["decision"],
+            "route": _string_list(
+                transition["route"],
+                f"fixture-output:{case_id}-transition-route", nonempty=require_nonempty,
+            ),
+        },
     }
+
+
+def _normalize_output(value: object) -> dict[str, object]:
+    """Strict fixture parser: committed deterministic outputs cannot be empty."""
+    return _normalize_response_output(value, require_nonempty=True)
+
+
+def _normalize_live_output(value: object) -> dict[str, object]:
+    """Live model output keeps the exact shape but lets assertions score empty selections."""
+    return _normalize_response_output(value, require_nonempty=False)
 
 
 def _load_fixture(

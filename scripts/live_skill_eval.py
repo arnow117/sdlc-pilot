@@ -199,7 +199,7 @@ def _normalize_runner_result(value: Mapping[str, object], *, expected_runs: int)
     if set(value) != RUNNER_RESULT_KEYS:
         raise LiveEvaluationError("invalid-runner-result-keys")
     try:
-        output = fixture_eval._normalize_output(value["output"])
+        output = fixture_eval._normalize_live_output(value["output"])
     except fixture_eval.EvaluationError as exc:
         raise LiveEvaluationError(f"invalid-runner-output:{exc}") from exc
     tool_events = value["tool_events"]

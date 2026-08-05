@@ -250,7 +250,7 @@ def _structured_output(value: Mapping[str, object]) -> dict[str, object]:
     if not isinstance(raw, dict):
         raise ClaudeSkillRunnerError("claude-missing-structured-output")
     try:
-        return behavior_eval._normalize_output(raw)
+        return behavior_eval._normalize_live_output(raw)
     except behavior_eval.EvaluationError as exc:
         raise ClaudeSkillRunnerError(f"invalid-structured-skill-output:{exc}") from exc
 
