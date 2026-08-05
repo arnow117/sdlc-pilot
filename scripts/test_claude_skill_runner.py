@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import sqlite3
 import sys
@@ -62,6 +63,16 @@ class ClaudeSkillRunnerTest(unittest.TestCase):
             self.assertEqual(pack, "### skills/sdlc-product-design/SKILL.md\n\n# product source")
             with self.assertRaisesRegex(claude_skill_runner.ClaudeSkillRunnerError, "invalid-invocation-skill"):
                 claude_skill_runner._context_pack(checkout, {"invocation": {"steps": [{"skill": "../escape"}]}})
+
+    def test_claude_timeout_terminates_the_process_group(self) -> None:
+        command = [
+            sys.executable, "-c",
+            "import subprocess, sys, time; subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)']); time.sleep(30)",
+        ]
+        with self.assertRaisesRegex(claude_skill_runner.ClaudeSkillRunnerError, "claude-runner-timeout"):
+            claude_skill_runner._run_claude(
+                command, cwd=Path.cwd(), environment=os.environ, timeout_seconds=1,
+            )
 
     def test_configured_model_uses_the_provider_mapping(self) -> None:
         self.assertEqual(

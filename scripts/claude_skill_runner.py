@@ -14,6 +14,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import signal
 import sqlite3
 import subprocess
 import sys
@@ -158,6 +159,29 @@ def _build_command(*, model: str, max_budget_usd: float, prompt: str) -> list[st
     ]
 
 
+def _run_claude(command: Sequence[str], *, cwd: Path, environment: Mapping[str, str],
+                timeout_seconds: int) -> subprocess.CompletedProcess[bytes]:
+    """Run Claude in its own process group so an expired call cannot strand children."""
+    process = subprocess.Popen(
+        command,
+        cwd=cwd,
+        env=dict(environment),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        start_new_session=True,
+    )
+    try:
+        stdout, stderr = process.communicate(timeout=timeout_seconds)
+    except subprocess.TimeoutExpired as exc:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        process.communicate()
+        raise ClaudeSkillRunnerError("claude-runner-timeout") from exc
+    return subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
+
+
 def _safe_failure_class(stderr: bytes, stdout: bytes = b"") -> str:
     """Classify a CLI failure without retaining provider endpoints or secrets.
 
@@ -252,13 +276,8 @@ def run_once(
             model=selected_model, max_budget_usd=max_budget_usd,
             prompt=_prompt(request, context_pack),
         )
-        completed = subprocess.run(
-            command,
-            cwd=worktree,
-            env=environment,
-            check=False,
-            capture_output=True,
-            timeout=timeout_seconds,
+        completed = _run_claude(
+            command, cwd=worktree, environment=environment, timeout_seconds=timeout_seconds,
         )
         if completed.returncode != 0:
             raise ClaudeSkillRunnerError(
@@ -289,8 +308,6 @@ def run_once(
                 "variant_runs": request.get("planned_runs"),
             },
         }
-    except subprocess.TimeoutExpired as exc:
-        raise ClaudeSkillRunnerError("claude-runner-timeout") from exc
     finally:
         if worktree.exists():
             subprocess.run(["git", "-C", str(repo), "worktree", "remove", "--force", str(worktree)],
