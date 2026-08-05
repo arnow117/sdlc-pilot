@@ -123,7 +123,7 @@ def _prompt(request: Mapping[str, object]) -> str:
         "Inspect the checked-out repository and follow the invocation contract below exactly.",
         "For candidate runs, dual lifecycle authority is explicit. For baseline runs, preserve legacy routing.",
         "Report only selected IDs and actual required/artifact kinds. Do not claim tests, approvals, reviews, or security completion.",
-        "Return only the required JSON object.",
+        "Return only the required JSON object, without a Markdown code fence.",
         "Invocation contract:",
         _canonical_bytes(invocation).decode("utf-8").strip(),
     ])
@@ -133,7 +133,6 @@ def _build_command(*, model: str, max_budget_usd: float, prompt: str) -> list[st
     return [
         "claude", "-p", prompt,
         "--output-format", "json",
-        "--json-schema", json.dumps(RUNNER_OUTPUT_SCHEMA, ensure_ascii=False, separators=(",", ":")),
         "--model", model,
         "--max-budget-usd", str(max_budget_usd),
         "--tools", "Read,Glob,Grep",

@@ -40,6 +40,7 @@ class ClaudeSkillRunnerTest(unittest.TestCase):
         command = claude_skill_runner._build_command(model="sonnet", max_budget_usd=0.5, prompt="test")
         self.assertIn("Read,Glob,Grep", command)
         self.assertNotIn("Bash", command)
+        self.assertNotIn("--json-schema", command)
         result = claude_skill_runner._structured_output({"structured_output": {
             "case_id": "small-feature", "route": ["sdlc-product-design"], "modules": ["mod.product.core"],
             "roles": ["role.product-owner"], "obligations": ["obl.product.discover.problem-frame"],
