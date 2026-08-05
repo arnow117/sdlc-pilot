@@ -21,6 +21,9 @@ PolicyManifest / PhaseContract 决定；本 skill 不维护第二份规则。
 - preview 的 Context、Obligation、attestation 和 phase intent 都不能供 control、validate、review 或 ship 消费。
 - legacy spec 只能作为观察输入；它不是 `ProductContract`，更不能被转换为 `EngineeringSpec` 或 dual approval。
 - `unknown` / `needs_classification` 只形成待澄清项，不能改变 legacy 路由、退出状态或权威写入。
+- 在飞 preview 若必须采用新 PolicyManifest，只能调用
+  `migrate-preview-policy(expected_head, old_policy_manifest_ref, new_context_manifest, new_policy_manifest, actor, reason_ref)`：
+  runtime 以 expected-head CAS 写入迁移审计，并按新 policy 重新生成未完成义务。任何 policy ref 不匹配都停止执行。
 
 既有 `/sdlc spec` 仍是 Phase 1 的 canonical 路径。本 skill 不主动从 driver 接管它；只有 runtime 的显式
 shadow 调用才可以并行生成 preview 诊断。

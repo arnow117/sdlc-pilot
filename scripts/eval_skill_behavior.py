@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
-"""Offline, deterministic evaluator for the dual-lifecycle skill behavior set.
+"""Evaluate dual-lifecycle Skill behavior in deterministic or live mode.
 
-The evaluator consumes a candidate *fixture*, not an LLM response.  It never
-opens a network connection, invokes a provider CLI, or executes a model.  The
-fixture is bound to the checked-in dataset and immutable legacy baseline before
-its route/module/obligation/artifact/transition assertions are compared.
+``fixture`` is an offline contract test.  ``live`` delegates to the repeated,
+provider-neutral harness and requires explicit runner/evaluator commands; this
+module itself never chooses a provider or launches one implicitly.
 """
 from __future__ import annotations
 
@@ -464,10 +463,14 @@ def _route_assertion(expected: Sequence[str], actual: Sequence[str]) -> dict[str
 
 def _transition_assertion(case: Mapping[str, object], actual: Mapping[str, object]) -> dict[str, object]:
     route = list(case["expected_route"])
-    expected = {
-        "decision": "reject" if route == ["reject-transition"] else "route",
-        "route": route,
-    }
+    explicit = case.get("expected_transition")
+    if explicit is None:
+        expected = {
+            "decision": "reject" if route == ["reject-transition"] else "route",
+            "route": route,
+        }
+    else:
+        expected = _normalize_transition(explicit, "expected-transition")
     normalized_actual = {"decision": actual["decision"], "route": list(actual["route"])}
     return {
         "name": "transition",
@@ -617,29 +620,61 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser.add_argument("--repo", default=".", help="repository containing the checked-in baseline")
     parser.add_argument("--dataset", default=DEFAULT_DATASET)
     parser.add_argument("--baseline", default=DEFAULT_BASELINE)
-    parser.add_argument("--fixture", required=True, help="offline candidate fixture JSON")
+    parser.add_argument("--fixture", help="offline candidate fixture JSON (required for fixture mode)")
     parser.add_argument("--out", help="optional report JSON path")
     parser.add_argument(
         "--mode",
         default="fixture",
-        help="only 'fixture' is supported; model/remote modes are explicitly refused",
+        help="'fixture' for offline contract tests or 'live' for an explicit provider runner",
     )
+    parser.add_argument("--runner-cmd", help="JSON stdin/stdout runner command for live mode")
+    parser.add_argument("--evaluator-cmd", help="JSON stdin/stdout evaluator command for live mode")
+    parser.add_argument("--runs", type=int, default=5, help="per-variant live runs (default: 5)")
+    parser.add_argument("--mechanical-only", action="store_true", help="skip live semantic evaluation")
+    parser.add_argument("--calibration-report", help="human-calibrated evaluator report required for live semantic mode")
+    parser.add_argument("--timeout-seconds", type=int, default=600, help="per live runner/evaluator timeout")
     return parser.parse_args(argv)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parse_args(argv)
     try:
-        report = evaluate_fixture(
-            args.repo,
-            dataset_path=args.dataset,
-            baseline_path=args.baseline,
-            fixture_path=args.fixture,
-            mode=args.mode,
-        )
-        if args.out:
-            write_report(args.out, report)
-    except EvaluationError as exc:
+        if args.mode == "fixture":
+            if not args.fixture:
+                raise EvaluationError("fixture-required-for-fixture-mode")
+            report = evaluate_fixture(
+                args.repo,
+                dataset_path=args.dataset,
+                baseline_path=args.baseline,
+                fixture_path=args.fixture,
+                mode="fixture",
+            )
+            if args.out:
+                write_report(args.out, report)
+        elif args.mode == "live":
+            if not args.runner_cmd:
+                raise EvaluationError("runner-command-required-for-live-mode")
+            if not args.out:
+                raise EvaluationError("report-output-required-for-live-mode")
+            # Lazy import avoids the live harness' dependency on this module's
+            # deterministic assertion helpers during fixture-only runs.
+            import live_skill_eval
+
+            report = live_skill_eval.evaluate_live(
+                args.repo,
+                dataset_path=args.dataset,
+                baseline_path=args.baseline,
+                runner_cmd=args.runner_cmd,
+                evaluator_cmd=args.evaluator_cmd,
+                runs=args.runs,
+                mechanical_only=args.mechanical_only,
+                timeout_seconds=args.timeout_seconds,
+                calibration_path=args.calibration_report,
+            )
+            live_skill_eval.write_report(args.out, report)
+        else:
+            raise EvaluationError("remote-model-mode-is-not-supported")
+    except (EvaluationError, RuntimeError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
     sys.stdout.buffer.write(canonical_bytes(report))

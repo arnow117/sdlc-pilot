@@ -1123,7 +1123,7 @@ class LifecycleReducerTest(unittest.TestCase):
         self.assertEqual(change_request["status"], "applied")
         self.assertEqual(change_request["resolution"]["engineering_spec_ref"], replacement["engineering_spec_id"])
 
-    def test_accepted_blocking_change_request_stops_task_evidence_validation_and_review(self) -> None:
+    def test_open_blocking_change_request_stops_task_evidence_validation_and_review(self) -> None:
         state, _, _, _, _ = active_delivery_state()
         delivery_plan_ref = state["features"]["FEAT-001"]["delivery_plan_ref"]  # type: ignore[index]
         state = lifecycle.open_change_request(
@@ -1136,20 +1136,17 @@ class LifecycleReducerTest(unittest.TestCase):
             reported_by="qa",
             at=TIME,
         )
-        state = lifecycle.accept_change_request(
-            state, change_request_id="CR-BLOCK-001", accepted_by="architect", at=TIME,
-        )
         fence = lifecycle.current_fence(state, feature_id="FEAT-001")
         before = deepcopy(state)
-        with self.assertRaisesRegex(lifecycle.ReducerError, "accepted-blocking-change-request"):
+        with self.assertRaisesRegex(lifecycle.ReducerError, "active-blocking-change-request"):
             lifecycle.transition_task(
                 state, feature_id="FEAT-001", task_id="TASK-001", action="claim", fence=fence, at=TIME,
             )
-        with self.assertRaisesRegex(lifecycle.ReducerError, "accepted-blocking-change-request"):
+        with self.assertRaisesRegex(lifecycle.ReducerError, "active-blocking-change-request"):
             record_task_evidence(state, fence=fence)
-        with self.assertRaisesRegex(lifecycle.ReducerError, "accepted-blocking-change-request"):
+        with self.assertRaisesRegex(lifecycle.ReducerError, "active-blocking-change-request"):
             lifecycle.validate_feature(state, feature_id="FEAT-001", fence=fence, at=TIME)
-        with self.assertRaisesRegex(lifecycle.ReducerError, "accepted-blocking-change-request"):
+        with self.assertRaisesRegex(lifecycle.ReducerError, "active-blocking-change-request"):
             lifecycle.review_feature(
                 state, feature_id="FEAT-001", fence=fence,
                 attestation=feature_review_attestation(state, evidence_refs=["a" * 64]), at=TIME,

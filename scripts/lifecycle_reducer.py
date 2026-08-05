@@ -1104,21 +1104,28 @@ def _current_task(snapshot: Mapping[str, object], feature: Mapping[str, object],
     return matches[0]
 
 
-def _require_no_accepted_blocking_change_request(
+def _require_no_active_blocking_change_request(
     snapshot: Mapping[str, object], feature: Mapping[str, object],
 ) -> None:
-    """Stop delivery writes while an accepted blocking CR is unresolved."""
+    """Stop delivery writes as soon as a blocking ChangeRequest is opened.
+
+    An open discrepancy means the current Feature tuple is already known to be
+    incomplete.  Deferring the stop until acceptance left a window where an
+    old Task could be claimed, evidenced, validated, or reviewed.  Rejecting
+    or cancelling a ChangeRequest deliberately re-enables its current tuple;
+    applying one advances generation and makes that tuple stale.
+    """
     feature_id = feature.get("feature_id")
     blocking_ids = sorted(
         str(change_request_id)
         for change_request_id, raw_change_request in _collection(snapshot, "change_requests").items()
         if isinstance(raw_change_request, Mapping)
         and raw_change_request.get("feature_id") == feature_id
-        and raw_change_request.get("status") == "accepted"
+        and raw_change_request.get("status") in {"open", "triaged", "accepted"}
         and raw_change_request.get("blocking") is True
     )
     if blocking_ids:
-        raise ReducerError("accepted-blocking-change-request:" + ",".join(blocking_ids))
+        raise ReducerError("active-blocking-change-request:" + ",".join(blocking_ids))
 
 
 def _require_no_blocking_change_request(snapshot: Mapping[str, object], feature: Mapping[str, object]) -> None:
@@ -1325,7 +1332,7 @@ def transition_task(
     """Apply a runtime Task transition only against the Feature's current fence."""
     result = _working(snapshot)
     feature = _require_fence(result, feature_id=feature_id, fence=fence, require_delivery=True)
-    _require_no_accepted_blocking_change_request(result, feature)
+    _require_no_active_blocking_change_request(result, feature)
     task = _current_task(result, feature, task_id)
     if task.get("status") not in _TASK_STATUSES:
         raise ReducerError("invalid-task-status")
@@ -1366,7 +1373,7 @@ def record_evidence(
     feature_id = _id(feature_id, "evidence-feature-id")
     task_id = _id(task_id, "evidence-task-id")
     feature = _require_fence(result, feature_id=feature_id, fence=fence, require_delivery=True)
-    _require_no_accepted_blocking_change_request(result, feature)
+    _require_no_active_blocking_change_request(result, feature)
     task = _current_task(result, feature, task_id)
     if task["status"] in _TASK_TERMINAL:
         raise ReducerError("cannot-attach-evidence-to-terminal-task")
@@ -1411,7 +1418,7 @@ def validate_feature(
     """Mark a Feature validated only from current, verified task/evidence tuples."""
     result = _working(snapshot)
     feature = _require_fence(result, feature_id=feature_id, fence=fence, require_delivery=True)
-    _require_no_accepted_blocking_change_request(result, feature)
+    _require_no_active_blocking_change_request(result, feature)
     tasks = _current_tasks(result, feature)
     if not tasks or any(task.get("status") != "verified" for task in tasks):
         raise ReducerError("feature-tasks-not-verified")
@@ -1447,7 +1454,7 @@ def review_feature(
     """Record one immutable, authority-bound semantic review outcome."""
     result = _working(snapshot)
     feature = _require_fence(result, feature_id=feature_id, fence=fence, require_delivery=True)
-    _require_no_accepted_blocking_change_request(result, feature)
+    _require_no_active_blocking_change_request(result, feature)
     if feature["status"] != "validated" or feature["validation_status"] != "passed":
         raise ReducerError("review-requires-validated-feature")
     reviewed_at = _text(at, "feature-reviewed-at")

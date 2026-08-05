@@ -5,12 +5,9 @@
 
 ## Phase 1 preview 约束
 
-所有结果只写 `.sdlc/preview/<run-id>/` 并带 `scope=preview`。不得写 `.sdlc-control/`、legacy STATE、legacy
-spec/plan 或业务代码；preview ref 不能作为 control、validate、review、ship 的输入。缺产品/工程契约、
-policy 或语义意图时返回诊断或 `needs_classification`，不要猜测。
-
-若 runtime 提供 argv-only 的安全 Evidence runner，可以运行明确的诊断性测试并保存 preview Evidence；它不注册
-control Evidence、不修改实现、不执行部署/发布/回滚副作用。
+结果只写 `.sdlc/preview/<run-id>/` 并带 `scope=preview`；不得写 control、legacy STATE/spec/plan 或业务代码。
+preview ref 不能作为后续 canonical 输入。缺契约、policy 或语义意图时返回诊断或 `needs_classification`。安全
+runner 仅可运行明确的诊断命令并保存不可消费的 preview Evidence。
 
 <!-- playbook-anchor: delivery.engineering-spec -->
 <!-- playbook-anchor: delivery.module.core-sdd -->
@@ -19,10 +16,9 @@ control Evidence、不修改实现、不执行部署/发布/回滚副作用。
 
 Obligation refs: `obl.delivery.engineering-spec.trace`, `obl.delivery.engineering-spec.design`.
 
-1. Canonical 输入是获批 ProductContract revision、PROFILE snapshot 和 repository base SHA。逐条把产品 criterion
-   映射到 `ARCH-*`、`API-*`、`DATA-*`、`REL-*`、`SEC-*`、`TEST-*` 工程 criterion。
-2. 明确目标 surface、接口兼容性、数据/迁移、可靠性、安全、可观测性、回滚和测试策略；每个取舍都连到上游
-   criterion 或风险。
+1. 输入是获批 ProductContract revision、PROFILE snapshot 和 base SHA；逐条映射到 `ARCH-*`、`API-*`、
+   `DATA-*`、`REL-*`、`SEC-*`、`TEST-*` criterion。
+2. 明确接口、数据/迁移、可靠性、安全、观测、回滚和测试策略，并连到上游 criterion 或风险。
 3. legacy `.sdlc/spec.md` 只能作为兼容观察，不是 EngineeringSpec。Phase 1 可以生成工程规格诊断候选，
    但不能创建 EngineeringSpec record、批准或下游输入。
 
@@ -49,6 +45,14 @@ Obligation ref: `obl.delivery.reliability.design`.
 
 仅在 `NFR-*`、资金/一致性风险或 `availability_critical` 存在时加载。选择 timeout、retry、幂等、隔离、
 降级、容量、观测、恢复和演练机制，并把每项映射到 NFR 与 failure evidence。
+
+<!-- playbook-anchor: delivery.module.eval-harness -->
+### eval-harness（条件模块）
+
+Obligation ref: `obl.delivery.eval-harness.bench`.
+
+当 ProductContract 包含 `EVAL-*` 时，固定数据集、rubric、阈值、版本、命令和 tested SHA，由 runner 记录
+可复现 EvalEvidence；单例、模型自评或调用方通过标记无效。
 
 <!-- playbook-anchor: delivery.plan -->
 <!-- playbook-anchor: delivery.module.planning -->
@@ -97,7 +101,8 @@ Obligation ref: `obl.delivery.debugging.hypothesis-loop`.
 <!-- playbook-anchor: delivery.module.validation-review -->
 ## validate
 
-Obligation refs: `obl.delivery.validate.mechanical-evidence`, `obl.delivery.validate.trace-freshness`.
+Obligation refs: `obl.delivery.validate.mechanical-evidence`, `obl.delivery.validate.trace-freshness`,
+`obl.delivery.eval-harness.bench`.
 
 1. 在当前 integration SHA 上运行适用的 correctness、contract、E2E、reliability 或 eval 检查，并记录 runner
    产生的 exit code、输出摘要、工具版本和 tested SHA。
@@ -110,11 +115,17 @@ Phase 1 只可形成 preview evidence diagnostic，不能更新 Feature evidence
 <!-- playbook-anchor: delivery.review -->
 ## review
 
-Obligation ref: `obl.delivery.review.independent-verdict`.
+Obligation refs: `obl.delivery.review.independent-verdict`, `obl.delivery.security.review`.
 
 独立 reviewer 针对当前 diff、合同、计划、Evidence 和风险作出语义判断，输出可定位 finding、风险接受或
 需要返工的原因。review 不修正实现，也不把自报结论升级为通过结果。Phase 1 的任何 review 结论仅为 preview
 attestation，不能写 review status。
+
+<!-- playbook-anchor: delivery.module.security -->
+### security（条件模块）
+
+存在 `SEC-*`、敏感数据、信任边界或合规风险时，security reviewer 独立检查认证授权、数据暴露、秘密、依赖和
+操作路径；结论必须引用当前 diff、criterion 和 runner Evidence。
 
 <!-- playbook-anchor: delivery.release-candidate -->
 ## release-candidate

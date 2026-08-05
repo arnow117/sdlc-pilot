@@ -154,7 +154,7 @@
       "stage": "experience-design",
       "entry_predicate_rule_ids": ["rule.phase.product.experience-design"],
       "input_contracts": [
-        {"id": "input.product.experience.domain", "kind": "DomainModelPreview", "state": "current"}
+        {"id": "input.product.experience.behavior", "kind": "BehaviorContractPreview", "state": "current"}
       ],
       "method_module_ids": ["mod.product.experience-design"],
       "output_contracts": [
@@ -203,7 +203,7 @@
       "stage": "quality-design",
       "entry_predicate_rule_ids": ["rule.phase.product.quality-design"],
       "input_contracts": [
-        {"id": "input.product.quality.experience", "kind": "ExperienceContractPreview", "state": "current"}
+        {"id": "input.product.quality.behavior", "kind": "BehaviorContractPreview", "state": "current"}
       ],
       "method_module_ids": ["mod.product.product-eval", "mod.product.quality"],
       "output_contracts": [
@@ -555,7 +555,7 @@
         {"id": "input.delivery.validate.engineering-spec", "kind": "EngineeringSpec", "state": "approved"},
         {"id": "input.delivery.validate.repository", "kind": "RepositoryRevision", "state": "current"}
       ],
-      "method_module_ids": ["mod.delivery.validation-review"],
+      "method_module_ids": ["mod.delivery.validation-review", "mod.delivery.eval-harness"],
       "output_contracts": [
         {"id": "output.delivery.validate.diagnostic", "kind": "ValidationDiagnostic", "scope": "preview"}
       ],
@@ -589,6 +589,19 @@
           "playbook_ref": {"module_id": "mod.delivery.validation-review", "anchor": "`obl.delivery.validate.trace-freshness`"},
           "completion_assertion_ids": ["assert.delivery.validate.runner"],
           "skip_policy": {"mode": "forbidden", "allowed_when_rule_id": null, "override_policy": "none"}
+        },
+        {
+          "id": "obl.delivery.eval-harness.bench",
+          "role_id": "role.qa",
+          "responsibility": "responsible",
+          "participation": "conditional",
+          "required_when_rule_id": "rule.module.delivery.eval-harness",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": ["constraint.qa.independent-from-server-dev"],
+          "playbook_ref": {"module_id": "mod.delivery.eval-harness", "anchor": "`obl.delivery.eval-harness.bench`"},
+          "completion_assertion_ids": ["assert.delivery.validate.runner"],
+          "skip_policy": {"mode": "selector_false_or_typed_override", "allowed_when_rule_id": "rule.module.delivery.eval-harness", "override_policy": "typed-override-v1"}
         }
       ],
       "transition_intent": {"kind": "advance", "target_phase_id": "phase.delivery.review", "scope": "preview"},
@@ -605,7 +618,7 @@
         {"id": "input.delivery.review.evidence", "kind": "EvidenceSet", "state": "current"},
         {"id": "input.delivery.review.repository", "kind": "RepositoryRevision", "state": "current"}
       ],
-      "method_module_ids": ["mod.delivery.independent-review"],
+      "method_module_ids": ["mod.delivery.independent-review", "mod.delivery.security"],
       "output_contracts": [
         {"id": "output.delivery.review.diagnostic", "kind": "ReviewAttestationDiagnostic", "scope": "preview"}
       ],
@@ -626,6 +639,19 @@
           "playbook_ref": {"module_id": "mod.delivery.independent-review", "anchor": "`obl.delivery.review.independent-verdict`"},
           "completion_assertion_ids": ["assert.delivery.review.semantic"],
           "skip_policy": {"mode": "forbidden", "allowed_when_rule_id": null, "override_policy": "none"}
+        },
+        {
+          "id": "obl.delivery.security.review",
+          "role_id": "role.security",
+          "responsibility": "reviewer",
+          "participation": "conditional",
+          "required_when_rule_id": "rule.module.delivery.security",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": ["constraint.security.independent-from-server-dev"],
+          "playbook_ref": {"module_id": "mod.delivery.security", "anchor": "`obl.delivery.security.review`"},
+          "completion_assertion_ids": ["assert.delivery.review.semantic"],
+          "skip_policy": {"mode": "selector_false_or_typed_override", "allowed_when_rule_id": "rule.module.delivery.security", "override_policy": "typed-override-v1"}
         }
       ],
       "transition_intent": {"kind": "advance", "target_phase_id": "phase.delivery.release-candidate", "scope": "preview"},

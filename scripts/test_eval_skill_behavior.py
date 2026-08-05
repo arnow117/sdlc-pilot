@@ -185,6 +185,27 @@ class FixtureEvaluationTest(unittest.TestCase):
         self.assertEqual(refused.returncode, 2)
         self.assertIn("remote-model-mode-is-not-supported", refused.stderr)
 
+    def test_cli_live_mode_uses_the_explicit_harness_contract(self) -> None:
+        output = self.temp / "live-report.json"
+        runner = f"{sys.executable} {HERE / 'fixtures' / 'fake_skill_runner.py'}"
+        command = [
+            sys.executable,
+            str(HERE / "eval_skill_behavior.py"),
+            "--repo", str(ROOT),
+            "--dataset", "evals/dual-lifecycle-skill-v1.jsonl",
+            "--baseline", "evals/baselines/legacy-0.19.2.json",
+            "--mode", "live",
+            "--runner-cmd", runner,
+            "--runs", "1",
+            "--mechanical-only",
+            "--out", str(output),
+        ]
+        completed = subprocess.run(command, check=True, capture_output=True, text=True)
+        report = json.loads(output.read_text(encoding="utf-8"))
+        self.assertEqual(report["report_format"], "sdlc-skill-behavior-live-report-v1")
+        self.assertEqual(report["summary"]["verdict"], "PASS")
+        self.assertEqual(json.loads(completed.stdout)["run_id"], report["run_id"])
+
 
 if __name__ == "__main__":
     unittest.main()

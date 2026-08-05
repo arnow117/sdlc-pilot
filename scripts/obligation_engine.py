@@ -81,6 +81,7 @@ _MANIFEST_KEYS = frozenset({
     "obligation_templates",
     "obligations",
     "legacy_approval_observations",
+    "policy_migrations",
 })
 _HEAD_KEYS = frozenset({
     "schema_version",
@@ -152,6 +153,16 @@ _OVERRIDE_KEYS = frozenset({
     "authorization_ref",
 })
 _LEGACY_OBSERVATION_KEYS = frozenset({"kind", "scope", "legacy_spec_sha256"})
+_POLICY_MIGRATION_KEYS = frozenset({
+    "migration_format",
+    "scope",
+    "old_policy_manifest_ref",
+    "new_policy_manifest_ref",
+    "actor",
+    "reason_ref",
+    "migrated_at",
+})
+POLICY_MIGRATION_FORMAT = "sdlc-preview-policy-migration-v1"
 
 
 class ObligationError(RuntimeError):
@@ -635,6 +646,7 @@ def create_obligation_manifest(
         "obligation_templates": templates,
         "obligations": items,
         "legacy_approval_observations": [],
+        "policy_migrations": [],
     })
     return validate_manifest(manifest)
 
@@ -894,6 +906,28 @@ def _validate_legacy_observation(value: object) -> dict[str, object]:
     }
 
 
+def _validate_policy_migration(value: object) -> dict[str, object]:
+    """Validate an immutable audit event for an explicit preview policy change."""
+    _assert_no_self_report(value)
+    migration = _require_exact_mapping(value, _POLICY_MIGRATION_KEYS, "preview-policy-migration")
+    if migration["migration_format"] != POLICY_MIGRATION_FORMAT or migration["scope"] != PREVIEW_SCOPE:
+        raise ObligationError("invalid-preview-policy-migration")
+    old_ref = _require_sha256(migration["old_policy_manifest_ref"], "migration-old-policy-ref")
+    new_ref = _require_sha256(migration["new_policy_manifest_ref"], "migration-new-policy-ref")
+    if old_ref == new_ref:
+        raise ObligationError("preview-policy-migration-must-change-policy")
+    _parse_timestamp(migration["migrated_at"], "preview-policy-migrated-at")
+    return {
+        "migration_format": POLICY_MIGRATION_FORMAT,
+        "scope": PREVIEW_SCOPE,
+        "old_policy_manifest_ref": old_ref,
+        "new_policy_manifest_ref": new_ref,
+        "actor": _require_ref(migration["actor"], "preview-policy-migration-actor"),
+        "reason_ref": _require_ref(migration["reason_ref"], "preview-policy-migration-reason-ref"),
+        "migrated_at": _require_text(migration["migrated_at"], "preview-policy-migrated-at"),
+    }
+
+
 def validate_manifest(manifest: Mapping[str, object]) -> dict[str, object]:
     """Validate and canonicalize an immutable Phase 1 ObligationManifest."""
     source = _require_exact_mapping(manifest, _MANIFEST_KEYS, "obligation-manifest")
@@ -940,6 +974,17 @@ def validate_manifest(manifest: Mapping[str, object]) -> dict[str, object]:
     observations.sort(key=lambda item: str(item["legacy_spec_sha256"]))
     if len({item["legacy_spec_sha256"] for item in observations}) != len(observations):
         raise ObligationError("duplicate-legacy-approval-observation")
+    migrations_source = source["policy_migrations"]
+    if not isinstance(migrations_source, list):
+        raise ObligationError("invalid-preview-policy-migrations")
+    migrations = [_validate_policy_migration(item) for item in migrations_source]
+    if migrations and migrations[-1]["new_policy_manifest_ref"] != source["policy_manifest_ref"]:
+        raise ObligationError("preview-policy-migration-head-mismatch")
+    if any(
+        migrations[index]["new_policy_manifest_ref"] != migrations[index + 1]["old_policy_manifest_ref"]
+        for index in range(len(migrations) - 1)
+    ):
+        raise ObligationError("preview-policy-migration-chain-mismatch")
     normalized: dict[str, object] = {
         "schema_version": OBLIGATION_MANIFEST_SCHEMA,
         "scope": PREVIEW_SCOPE,
@@ -960,6 +1005,7 @@ def validate_manifest(manifest: Mapping[str, object]) -> dict[str, object]:
         "obligation_templates": templates,
         "obligations": items,
         "legacy_approval_observations": observations,
+        "policy_migrations": migrations,
     }
     expected = sha256_bytes(canonical_bytes(normalized))
     if manifest_id != expected:
@@ -1228,6 +1274,96 @@ def reconcile(
         freshness_binding_sha256=binding_sha,
         obligations=merged,
     )
+
+
+def _migrate_policy_manifest(
+    current_manifest: Mapping[str, object],
+    new_context_manifest: Mapping[str, object],
+    new_policy_manifest: Mapping[str, object],
+    *,
+    old_policy_manifest_ref: str,
+    actor: str,
+    reason_ref: str,
+    migrated_at: str,
+) -> dict[str, object]:
+    """Create the next immutable revision for an explicit policy migration.
+
+    This intentionally starts from the newly compiled phase template instead
+    of inheriting completion.  A policy change can add or strengthen an
+    obligation, so even matching IDs are returned to ``selected``.  The old
+    immutable revision remains reachable through ``previous_ref``.
+    """
+    current = validate_manifest(current_manifest)
+    context = _validate_context(new_context_manifest)
+    old_ref = _require_sha256(old_policy_manifest_ref, "migration-expected-old-policy-ref")
+    if old_ref != current["policy_manifest_ref"]:
+        raise ObligationError("preview-policy-migration-old-policy-mismatch")
+    if context["policy_manifest_id"] == old_ref:
+        raise ObligationError("preview-policy-migration-must-change-policy")
+    if (context["lifecycle_run_id"] != current["lifecycle_run_id"]
+            or context["lifecycle"] != current["lifecycle"]
+            or context["operation"] != current["operation"]):
+        raise ObligationError("preview-policy-migration-context-identity-mismatch")
+    initial = create_obligation_manifest(new_context_manifest, new_policy_manifest)
+    migration = _validate_policy_migration({
+        "migration_format": POLICY_MIGRATION_FORMAT,
+        "scope": PREVIEW_SCOPE,
+        "old_policy_manifest_ref": old_ref,
+        "new_policy_manifest_ref": initial["policy_manifest_ref"],
+        "actor": actor,
+        "reason_ref": reason_ref,
+        "migrated_at": migrated_at,
+    })
+    migrations = _clone(current["policy_migrations"])
+    assert isinstance(migrations, list)
+    migrations.append(migration)
+    value = _manifest_preimage(initial)
+    value.update({
+        "revision": int(current["revision"]) + 1,
+        "previous_ref": current["obligation_manifest_id"],
+        "legacy_approval_observations": _clone(current["legacy_approval_observations"]),
+        "policy_migrations": migrations,
+    })
+    return validate_manifest(_seal_manifest(value))
+
+
+def migrate_preview_policy(
+    repo_root: str | os.PathLike[str],
+    *,
+    lifecycle_run_id: str,
+    expected_head: str,
+    old_policy_manifest_ref: str,
+    new_context_manifest: Mapping[str, object],
+    new_policy_manifest: Mapping[str, object],
+    actor: str,
+    reason_ref: str,
+    migrated_at: str,
+) -> tuple[dict[str, object], dict[str, object]]:
+    """CAS-migrate one preview run to a new PolicyManifest.
+
+    The caller supplies both policy identities, an actor and an immutable
+    reason reference.  The operation re-resolves the new context beforehand;
+    it never replaces a policy in place or carries old completion into the new
+    obligation set.
+    """
+    run_id = _require_id(lifecycle_run_id, "migration-lifecycle-run-id")
+    expected = _require_sha256(expected_head, "migration-expected-head")
+    head_path = preview_head_path(repo_root, run_id)
+    head = read_head(head_path)
+    if head["head_ref"] != expected:
+        raise ObligationConflict(f"expected-head-mismatch:{expected}:{head['head_ref']}")
+    current = load_manifest(repo_root, run_id, expected)
+    migrated = _migrate_policy_manifest(
+        current,
+        new_context_manifest,
+        new_policy_manifest,
+        old_policy_manifest_ref=old_policy_manifest_ref,
+        actor=actor,
+        reason_ref=reason_ref,
+        migrated_at=migrated_at,
+    )
+    updated = update_head(head_path, expected=expected, manifest=migrated, updated_at=migrated_at)
+    return migrated, updated
 
 
 def require_transition_ready(manifest: Mapping[str, object], *, now: str | None = None) -> dict[str, object]:

@@ -455,6 +455,73 @@ class ObligationEngineTest(unittest.TestCase):
                 manifest=next_one,
             )
 
+    def test_policy_migration_uses_expected_head_records_audit_and_resets_completion(self) -> None:
+        initial, head = obligation_engine.start_preview_run(
+            self.fixture.repo_root, self.fixture.context(), self.fixture.policy,
+        )
+        completed = obligation_engine.complete_obligation(
+            initial,
+            "obl.required",
+            actor="actor.owner",
+            actor_role_bindings=self.fixture.roles(),
+            evidence_refs=["evidence:preview:001"],
+            attestation=self.fixture.attestation(initial, "obl.required", "actor.owner"),
+        )
+        head = obligation_engine.update_head(
+            obligation_engine.preview_head_path(self.fixture.repo_root, self.fixture.run_id),
+            expected=head["head_ref"], manifest=completed,
+        )
+        new_policy = copy.deepcopy(self.fixture.policy)
+        new_policy_id = "e" * 64
+        new_policy["policy_manifest_id"] = new_policy_id
+        for phase in new_policy["phases"]:
+            phase["phase_contract_ref"] = f"{new_policy_id}#{phase['id']}"
+        new_context = self.fixture.context()
+        new_context.update({
+            "policy_manifest_id": new_policy_id,
+            "phase_contract_ref": f"{new_policy_id}#{self.fixture.phase_id}",
+            "context_manifest_id": "d" * 64,
+            "context_input_sha256": "c" * 64,
+        })
+
+        migrated, migrated_head = obligation_engine.migrate_preview_policy(
+            self.fixture.repo_root,
+            lifecycle_run_id=self.fixture.run_id,
+            expected_head=head["head_ref"],
+            old_policy_manifest_ref=self.fixture.policy_id,
+            new_context_manifest=new_context,
+            new_policy_manifest=new_policy,
+            actor="actor.skill-maintainer",
+            reason_ref="reason:policy:001",
+            migrated_at="2026-08-05T00:00:00Z",
+        )
+
+        self.assertEqual(migrated["previous_ref"], completed["obligation_manifest_id"])
+        self.assertEqual(migrated["policy_manifest_ref"], new_policy_id)
+        self.assertEqual(self.item(migrated, "obl.required")["status"], "selected")
+        self.assertEqual(migrated["policy_migrations"], [{
+            "migration_format": "sdlc-preview-policy-migration-v1",
+            "scope": "preview",
+            "old_policy_manifest_ref": self.fixture.policy_id,
+            "new_policy_manifest_ref": new_policy_id,
+            "actor": "actor.skill-maintainer",
+            "reason_ref": "reason:policy:001",
+            "migrated_at": "2026-08-05T00:00:00Z",
+        }])
+        self.assertEqual(migrated_head["head_ref"], migrated["obligation_manifest_id"])
+        with self.assertRaisesRegex(obligation_engine.ObligationConflict, "expected-head-mismatch"):
+            obligation_engine.migrate_preview_policy(
+                self.fixture.repo_root,
+                lifecycle_run_id=self.fixture.run_id,
+                expected_head=head["head_ref"],
+                old_policy_manifest_ref=self.fixture.policy_id,
+                new_context_manifest=new_context,
+                new_policy_manifest=new_policy,
+                actor="actor.skill-maintainer",
+                reason_ref="reason:policy:001",
+                migrated_at="2026-08-05T00:00:00Z",
+            )
+
     def test_two_processes_contending_for_one_expected_head_have_exactly_one_success(self) -> None:
         initial = obligation_engine.create_obligation_manifest(self.fixture.context(), self.fixture.policy)
         head_path = obligation_engine.preview_head_path(self.fixture.repo_root, self.fixture.run_id)

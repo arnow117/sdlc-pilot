@@ -70,6 +70,7 @@ Obligation refs: `obl.product.quality.nfr-contract`, `obl.product.quality.eval-c
 1. 对用户可观察质量目标定义 `NFR-*`：SLO、容量、合规、数据完整性、恢复目标和不可接受结果。
 2. 对 AI 或非确定性输出定义 `EVAL-*`：任务边界、数据集来源、rubric、阈值、失败样本和人工复核要求。
 3. 只定义产品结果与风险接受范围；冗余、重试、降级、容量实现和观测设计属于软件交付侧。
+4. 标记敏感数据、信任边界或合规风险时，建立可追溯的 `SEC-*` 风险与验收 criterion；交付侧必须把它们落实为独立的安全 review 和 runner Evidence，而不是把安全当成可选备注。
 
 没有质量或 AI 风险信号时不要补造模块；有信号但阈值未知时保持 `needs_classification`。
 

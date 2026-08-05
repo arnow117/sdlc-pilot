@@ -66,6 +66,18 @@
       "responsibility_types": ["responsible", "reviewer"],
       "eligibility_rule_ids": ["rule.role.big-data"],
       "independence_constraints": []
+    },
+    {
+      "id": "role.security",
+      "responsibility_types": ["reviewer"],
+      "eligibility_rule_ids": ["rule.role.security"],
+      "independence_constraints": [
+        {
+          "id": "constraint.security.independent-from-server-dev",
+          "mode": "distinct_actor",
+          "against_role_ids": ["role.server-dev"]
+        }
+      ]
     }
   ]
 }
