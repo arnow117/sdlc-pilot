@@ -142,9 +142,26 @@ def _build_command(*, model: str, max_budget_usd: float, prompt: str) -> list[st
     ]
 
 
-def _safe_failure_class(stderr: bytes) -> str:
-    """Classify a CLI failure without retaining provider endpoints or secrets."""
-    text = stderr.decode("utf-8", errors="replace").lower()
+def _safe_failure_class(stderr: bytes, stdout: bytes = b"") -> str:
+    """Classify a CLI failure without retaining provider endpoints or secrets.
+
+    Claude CLI reports some runtime failures as a JSON result on stdout rather
+    than stderr.  Inspect only its bounded diagnostic fields in memory and
+    return a fixed category; callers never receive the provider text itself.
+    """
+    diagnostics = [stderr.decode("utf-8", errors="replace")]
+    try:
+        result = json.loads(stdout.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError):
+        result = None
+    if isinstance(result, dict):
+        subtype = result.get("subtype")
+        if isinstance(subtype, str):
+            diagnostics.append(subtype)
+        errors = result.get("errors")
+        if isinstance(errors, list):
+            diagnostics.extend(item for item in errors if isinstance(item, str))
+    text = "\n".join(diagnostics).lower()
     if any(token in text for token in ("model_not_found", "model not found", "invalid model", "unknown model")):
         return "model"
     if any(token in text for token in ("401", "403", "authentication", "unauthorized", "api key")):
@@ -157,6 +174,8 @@ def _safe_failure_class(stderr: bytes) -> str:
         return "permission-mode"
     if any(token in text for token in ("connection", "connect", "timeout", "econn", "network")):
         return "provider-connection"
+    if "error_during_execution" in text:
+        return "client-execution"
     return "opaque"
 
 
@@ -216,7 +235,7 @@ def run_once(
         )
         if completed.returncode != 0:
             raise ClaudeSkillRunnerError(
-                f"claude-runner-failed:{_safe_failure_class(completed.stderr)}:{completed.returncode}")
+                f"claude-runner-failed:{_safe_failure_class(completed.stderr, completed.stdout)}:{completed.returncode}")
         response = _strict_object(completed.stdout, "claude-result")
         output = _structured_output(response)
         total_cost = response.get("total_cost_usd", 0)

@@ -64,6 +64,18 @@ class ClaudeSkillRunnerTest(unittest.TestCase):
         self.assertEqual(claude_skill_runner._safe_failure_class(b"unknown model 'sonnet'"), "model")
         self.assertEqual(claude_skill_runner._safe_failure_class(b"401 unauthorized token=secret"), "authentication")
         self.assertEqual(claude_skill_runner._safe_failure_class(b"failed to load plugin"), "plugin")
+        self.assertEqual(
+            claude_skill_runner._safe_failure_class(
+                b"", b'{"is_error":true,"subtype":"error_during_execution","errors":["[ede_diagnostic] aborted"]}',
+            ),
+            "client-execution",
+        )
+        self.assertEqual(
+            claude_skill_runner._safe_failure_class(
+                b"", b'{"is_error":true,"errors":["401 unauthorized token=secret"]}',
+            ),
+            "authentication",
+        )
         self.assertEqual(claude_skill_runner._safe_failure_class(b"unrecognized failure"), "opaque")
 
 
