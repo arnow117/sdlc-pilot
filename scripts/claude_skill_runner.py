@@ -25,6 +25,7 @@ import eval_skill_behavior as behavior_eval
 
 
 DEFAULT_CC_SWITCH_DB = Path.home() / ".cc-switch" / "cc-switch.db"
+MAX_AGENT_TURNS = 6
 RUNNER_OUTPUT_SCHEMA: dict[str, object] = {
     "type": "object",
     "additionalProperties": False,
@@ -121,6 +122,7 @@ def _prompt(request: Mapping[str, object]) -> str:
         "You are a read-only SDLC Skill behavior evaluation runner.",
         "Use only Read, Glob, and Grep. Do not invoke shell commands, edit files, create artifacts, or infer authority.",
         "Inspect the checked-out repository directly. Do not rely on globally installed Skills; read the named SKILL.md files and their referenced source files from this checkout.",
+        "Read only the source files necessary to answer this invocation; then return the JSON response immediately.",
         "For candidate runs, dual lifecycle authority is explicit. For baseline runs, preserve legacy routing.",
         "Report only selected IDs and actual required/artifact kinds. Do not claim tests, approvals, reviews, or security completion.",
         "Return only the required JSON object, without a Markdown code fence.",
@@ -135,6 +137,7 @@ def _build_command(*, model: str, max_budget_usd: float, prompt: str) -> list[st
         "--output-format", "json",
         "--model", model,
         "--max-budget-usd", str(max_budget_usd),
+        "--max-turns", str(MAX_AGENT_TURNS),
         "--tools", "Read,Glob,Grep",
         "--permission-mode", "dontAsk",
         "--no-session-persistence",

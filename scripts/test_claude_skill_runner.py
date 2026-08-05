@@ -42,6 +42,7 @@ class ClaudeSkillRunnerTest(unittest.TestCase):
         self.assertNotIn("Bash", command)
         self.assertNotIn("--json-schema", command)
         self.assertNotIn("--plugin-dir", command)
+        self.assertEqual(command[command.index("--max-turns") + 1], "6")
         result = claude_skill_runner._structured_output({"structured_output": {
             "case_id": "small-feature", "route": ["sdlc-product-design"], "modules": ["mod.product.core"],
             "roles": ["role.product-owner"], "obligations": ["obl.product.discover.problem-frame"],
