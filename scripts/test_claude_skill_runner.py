@@ -43,6 +43,7 @@ class ClaudeSkillRunnerTest(unittest.TestCase):
         self.assertNotIn("Bash", command)
         self.assertNotIn("--json-schema", command)
         self.assertNotIn("--plugin-dir", command)
+        self.assertIn("--safe-mode", command)
         self.assertEqual(command[command.index("--max-turns") + 1], "1")
         result = claude_skill_runner._structured_output({"structured_output": {
             "case_id": "small-feature", "route": ["sdlc-product-design"], "modules": ["mod.product.core"],
@@ -106,7 +107,13 @@ class ClaudeSkillRunnerTest(unittest.TestCase):
             ),
             "authentication",
         )
-        self.assertEqual(claude_skill_runner._safe_failure_class(b"unrecognized failure"), "opaque")
+        self.assertEqual(claude_skill_runner._safe_failure_class(b"unrecognized failure"), "claude-cli-stderr")
+        self.assertEqual(claude_skill_runner._safe_failure_class(b"", b"not JSON"), "claude-non-json-output")
+        self.assertEqual(
+            claude_skill_runner._safe_failure_class(b"", b'{"is_error":true,"errors":["unclassified"]}'),
+            "claude-error-result",
+        )
+        self.assertEqual(claude_skill_runner._safe_failure_class(b""), "claude-empty-failure")
 
 
 if __name__ == "__main__":

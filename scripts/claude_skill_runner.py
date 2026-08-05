@@ -150,6 +150,7 @@ def _build_command(*, model: str, max_budget_usd: float, prompt: str) -> list[st
     return [
         "claude", "-p", prompt,
         "--output-format", "json",
+        "--safe-mode",
         "--model", model,
         "--max-budget-usd", str(max_budget_usd),
         "--max-turns", str(MAX_AGENT_TURNS),
@@ -224,7 +225,13 @@ def _safe_failure_class(stderr: bytes, stdout: bytes = b"") -> str:
         return "provider-connection"
     if "error_during_execution" in text:
         return "client-execution"
-    return "opaque"
+    if isinstance(result, dict) and result.get("is_error") is True:
+        return "claude-error-result"
+    if stdout:
+        return "claude-non-json-output"
+    if stderr:
+        return "claude-cli-stderr"
+    return "claude-empty-failure"
 
 
 def _structured_output(value: Mapping[str, object]) -> dict[str, object]:
