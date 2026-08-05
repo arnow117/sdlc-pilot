@@ -100,6 +100,19 @@ def _provider_environment(database: Path, provider_name: str) -> dict[str, str]:
     return selected
 
 
+def _resolve_model(provider_environment: Mapping[str, str], requested_model: str) -> str:
+    """Use CC Switch's configured provider model unless an override is explicit."""
+    if not isinstance(requested_model, str) or not requested_model:
+        raise ClaudeSkillRunnerError("invalid-model")
+    if requested_model != "configured":
+        return requested_model
+    for key in ("ANTHROPIC_MODEL", "ANTHROPIC_DEFAULT_SONNET_MODEL"):
+        model = provider_environment.get(key)
+        if isinstance(model, str) and model:
+            return model
+    raise ClaudeSkillRunnerError("cc-switch-provider-missing-model")
+
+
 def _prompt(request: Mapping[str, object]) -> str:
     invocation = request.get("invocation")
     if not isinstance(invocation, Mapping):
@@ -164,14 +177,16 @@ def run_once(
     if not isinstance(source_ref, str) or not source_ref:
         raise ClaudeSkillRunnerError("invalid-source-ref")
     source_commit = _git(repo, "rev-parse", "--verify", f"{source_ref}^{{commit}}")
+    provider_environment = _provider_environment(database, provider_name)
+    selected_model = _resolve_model(provider_environment, model)
     environment = os.environ.copy()
-    environment.update(_provider_environment(database, provider_name))
+    environment.update(provider_environment)
     temporary = Path(tempfile.mkdtemp(prefix="sdlc-skill-eval-"))
     worktree = temporary / "source"
     started = time.monotonic()
     try:
         _git(repo, "worktree", "add", "--detach", str(worktree), source_commit)
-        command = _build_command(model=model, max_budget_usd=max_budget_usd, prompt=_prompt(request))
+        command = _build_command(model=selected_model, max_budget_usd=max_budget_usd, prompt=_prompt(request))
         command.extend(["--plugin-dir", str(worktree)])
         completed = subprocess.run(
             command,
@@ -202,8 +217,8 @@ def run_once(
             "cost": {"usd": cost},
             "execution": {
                 "provider": provider_name,
-                "model": model,
-                "model_version": str(response.get("model", model)),
+                "model": selected_model,
+                "model_version": str(response.get("model", selected_model)),
                 "temperature": "provider-default",
                 "max_tokens": "provider-default",
                 "tool_versions": {"claude": _claude_version()},
@@ -230,7 +245,7 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--repo", default=".")
     parser.add_argument("--provider", default="Zhipu GLM")
-    parser.add_argument("--model", default="sonnet")
+    parser.add_argument("--model", default="configured", help="CC Switch model or 'configured' (default)")
     parser.add_argument("--max-budget-usd", type=float, required=True)
     parser.add_argument("--timeout-seconds", type=int, default=600)
     parser.add_argument("--cc-switch-db", default=str(DEFAULT_CC_SWITCH_DB))

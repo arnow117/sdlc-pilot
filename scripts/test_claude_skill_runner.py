@@ -48,6 +48,18 @@ class ClaudeSkillRunnerTest(unittest.TestCase):
         }})
         self.assertEqual(result["case_id"], "small-feature")
 
+    def test_configured_model_uses_the_provider_mapping(self) -> None:
+        self.assertEqual(
+            claude_skill_runner._resolve_model({"ANTHROPIC_MODEL": "glm-5.2"}, "configured"),
+            "glm-5.2",
+        )
+        self.assertEqual(
+            claude_skill_runner._resolve_model({"ANTHROPIC_MODEL": "glm-5.2"}, "explicit-model"),
+            "explicit-model",
+        )
+        with self.assertRaisesRegex(claude_skill_runner.ClaudeSkillRunnerError, "missing-model"):
+            claude_skill_runner._resolve_model({}, "configured")
+
 
 if __name__ == "__main__":
     unittest.main()

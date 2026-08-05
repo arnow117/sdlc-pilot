@@ -153,10 +153,12 @@ def run_once(
     planned_runs = _planned_runs(request)
     environment = os.environ.copy()
     try:
-        environment.update(claude_skill_runner._provider_environment(database, provider_name))
+        provider_environment = claude_skill_runner._provider_environment(database, provider_name)
+        selected_model = claude_skill_runner._resolve_model(provider_environment, model)
+        environment.update(provider_environment)
     except claude_skill_runner.ClaudeSkillRunnerError as exc:
         raise ClaudeSkillEvaluatorError(str(exc)) from exc
-    command = _build_command(model=model, max_budget_usd=max_budget_usd, prompt=_prompt(request))
+    command = _build_command(model=selected_model, max_budget_usd=max_budget_usd, prompt=_prompt(request))
     try:
         completed = subprocess.run(
             command,
@@ -177,12 +179,12 @@ def run_once(
         **output,
         "execution": {
             "provider": provider_name,
-            "model": model,
-            "model_version": str(response.get("model", model)),
+            "model": selected_model,
+            "model_version": str(response.get("model", selected_model)),
             "temperature": "provider-default",
             "max_tokens": "provider-default",
             "tool_versions": {"claude": claude_skill_runner._claude_version(), "tools": "none"},
-            "evaluator_model": model,
+            "evaluator_model": selected_model,
             "evaluator_version": evaluator_version,
             "variant_runs": planned_runs,
         },
@@ -192,7 +194,7 @@ def run_once(
 def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--provider", default="Zhipu GLM")
-    parser.add_argument("--model", default="sonnet")
+    parser.add_argument("--model", default="configured", help="CC Switch model or 'configured' (default)")
     parser.add_argument("--max-budget-usd", type=float, required=True)
     parser.add_argument("--timeout-seconds", type=int, default=600)
     parser.add_argument("--cc-switch-db", default=str(claude_skill_runner.DEFAULT_CC_SWITCH_DB))
