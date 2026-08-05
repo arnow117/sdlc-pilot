@@ -40,12 +40,13 @@ class ClaudeSkillRunnerTest(unittest.TestCase):
     def test_command_and_structured_output_are_read_only_and_normalized(self) -> None:
         command = claude_skill_runner._build_command(model="sonnet", max_budget_usd=0.5, prompt="test")
         self.assertIn("Read,Glob,Grep", command)
+        self.assertEqual(command[command.index("--disallowed-tools") + 1], "Read,Glob,Grep")
         self.assertNotIn("Bash", command)
         self.assertNotIn("--json-schema", command)
         self.assertNotIn("--plugin-dir", command)
         self.assertIn("--safe-mode", command)
         self.assertEqual(command[command.index("--effort") + 1], "low")
-        self.assertEqual(command[command.index("--max-turns") + 1], "1")
+        self.assertEqual(command[command.index("--max-turns") + 1], "2")
         result = claude_skill_runner._structured_output({"structured_output": {
             "case_id": "small-feature", "route": ["sdlc-product-design"], "modules": ["mod.product.core"],
             "roles": ["role.product-owner"], "obligations": ["obl.product.discover.problem-frame"],

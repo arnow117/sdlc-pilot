@@ -26,7 +26,7 @@ import eval_skill_behavior as behavior_eval
 
 
 DEFAULT_CC_SWITCH_DB = Path.home() / ".cc-switch" / "cc-switch.db"
-MAX_AGENT_TURNS = 1
+MAX_AGENT_TURNS = 2
 MAX_CONTEXT_PACK_BYTES = 64 * 1024
 MAX_SKILL_SOURCE_CHARS = 6_000
 
@@ -165,6 +165,7 @@ def _build_command(*, model: str, max_budget_usd: float, prompt: str) -> list[st
         "--effort", "low",
         "--max-turns", str(MAX_AGENT_TURNS),
         "--tools", "Read,Glob,Grep",
+        "--disallowed-tools", "Read,Glob,Grep",
         "--permission-mode", "dontAsk",
         "--no-session-persistence",
     ]
