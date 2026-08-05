@@ -182,8 +182,16 @@ def _safe_failure_class(stderr: bytes, stdout: bytes = b"") -> str:
         return "model"
     if any(token in text for token in ("401", "403", "authentication", "unauthorized", "api key")):
         return "authentication"
+    if any(token in text for token in ("max budget", "budget", "cost limit", "spend limit")):
+        return "budget"
+    if any(token in text for token in ("context length", "context window", "prompt too long", "input is too long")):
+        return "context-length"
+    if any(token in text for token in ("max turns", "turn limit", "max_turns")):
+        return "turn-limit"
     if any(token in text for token in ("plugin", "marketplace", "manifest")):
         return "plugin"
+    if any(token in text for token in ("tool use", "tool_use", "tool call")):
+        return "tool-execution"
     if any(token in text for token in ("unknown tool", "invalid tool", "--tools")):
         return "tool-config"
     if any(token in text for token in ("permission-mode", "permission mode")):

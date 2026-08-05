@@ -78,6 +78,10 @@ class ClaudeSkillRunnerTest(unittest.TestCase):
     def test_failure_diagnostics_are_classified_without_returning_raw_stderr(self) -> None:
         self.assertEqual(claude_skill_runner._safe_failure_class(b"unknown model 'sonnet'"), "model")
         self.assertEqual(claude_skill_runner._safe_failure_class(b"401 unauthorized token=secret"), "authentication")
+        self.assertEqual(claude_skill_runner._safe_failure_class(b"max budget would be exceeded"), "budget")
+        self.assertEqual(claude_skill_runner._safe_failure_class(b"prompt too long for context window"), "context-length")
+        self.assertEqual(claude_skill_runner._safe_failure_class(b"maximum turn limit reached"), "turn-limit")
+        self.assertEqual(claude_skill_runner._safe_failure_class(b"invalid tool use response"), "tool-execution")
         self.assertEqual(claude_skill_runner._safe_failure_class(b"failed to load plugin"), "plugin")
         self.assertEqual(
             claude_skill_runner._safe_failure_class(
