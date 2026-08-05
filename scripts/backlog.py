@@ -91,7 +91,61 @@ def load_leaves(root):
     return leaves
 
 
-def cmd_readyqueue(root):
+def _dual_readyqueue(root, ledger_repo):
+    """Render readiness from the explicit dual-lifecycle ledger.
+
+    Requirement Markdown still supplies presentation metadata such as title and
+    priority.  It is deliberately not consulted for authority: the reducer's
+    product definition, effective approval and dependency checks decide
+    whether a leaf is ready.
+    """
+    try:
+        from dual_ledger import DualLifecycleLedger, LedgerError
+        from lifecycle_reducer import ReducerError, product_readiness
+        snapshot = DualLifecycleLedger(ledger_repo).snapshot()
+    except (ImportError, LedgerError) as exc:
+        print(f"dual-ledger-error: {exc}", file=sys.stderr)
+        return 2
+
+    metadata = {leaf.get("id"): leaf for leaf in load_leaves(root) if leaf.get("id")}
+    product_definitions = snapshot.get("product_definitions", {})
+    requirements = snapshot.get("requirements", {})
+    if not isinstance(product_definitions, dict) or not isinstance(requirements, dict):
+        print("dual-ledger-error: invalid-lifecycle-snapshot", file=sys.stderr)
+        return 2
+
+    ready = []
+    for leaf_id in sorted(set(product_definitions) | set(requirements)):
+        if not isinstance(leaf_id, str):
+            continue
+        try:
+            readiness = product_readiness(snapshot, leaf_id=leaf_id)
+        except ReducerError as exc:
+            print(f"dual-ledger-error: {exc}", file=sys.stderr)
+            return 2
+        if not readiness["ready"]:
+            continue
+        leaf = metadata.get(leaf_id, {})
+        ready.append({
+            "leaf_id": leaf_id,
+            "title": leaf.get("title", "(dual product definition)"),
+            "priority": leaf.get("priority", "P3"),
+            "deps_resolved": True,
+            "old_system_ref": leaf.get("old_system_ref"),
+            "risk_level": leaf.get("risk_level", "medium"),
+            "status": "approved",
+            "authority": "dual-lifecycle-v1",
+            "product_contract_ref": readiness["product_contract_ref"],
+            "product_contract_approval_ref": readiness["product_contract_approval_ref"],
+        })
+    ready.sort(key=lambda leaf: (PRIORITY_ORDER.get(leaf["priority"], 99), leaf["leaf_id"]))
+    print(json.dumps(ready, ensure_ascii=False, indent=2))
+    return 0
+
+
+def cmd_readyqueue(root, dual_ledger_repo=None):
+    if dual_ledger_repo:
+        return _dual_readyqueue(root, dual_ledger_repo)
     leaves = load_leaves(root)
     by_id = {lf.get("id"): lf for lf in leaves}
     ready = []
@@ -425,6 +479,9 @@ def main(argv=None):
     for name in ("readyqueue", "coverage", "lint", "tree"):
         p = sub.add_parser(name)
         p.add_argument("--root", required=True, help=".sdlc/requirements 目录")
+        if name == "readyqueue":
+            p.add_argument("--dual-ledger-repo", dest="dual_ledger_repo",
+                           help="显式读取该仓库的 dual-lifecycle ledger；未提供时保持 legacy ready queue")
     pr = sub.add_parser("retire", help="特性退场:归档 + 标叶 shipped + 回流 + 清栈")
     pr.add_argument("--sdlc", required=True, help=".sdlc 目录")
     pr.add_argument("--slug", required=True, help="特性 slug(归档目录名用)")
@@ -444,6 +501,8 @@ def main(argv=None):
                     help="只读 sdlc-control ref 的 Git 仓库路径；缺省保持 legacy")
     pb.add_argument("--control-ref", dest="control_ref", default="sdlc-control",
                     help="控制记录 ref（默认 sdlc-control；缺失时降级 legacy）")
+    pb.add_argument("--dual-ledger-repo", dest="dual_ledger_repo",
+                    help="显式读取该仓库的 dual-lifecycle ledger；不能与 --control-repo 同用")
     pwt = sub.add_parser("write-tree", help="tree JSON → 叶文件(机械落盘;生成器#6 用)")
     pwt.add_argument("--root", required=True, help=".sdlc/requirements 目录")
     pwt.add_argument("--from", dest="from_", required=True, help="merged tree JSON 路径")
@@ -466,8 +525,9 @@ def main(argv=None):
         return cmd_write_tree(args)
     if args.cmd == "set-status":
         return cmd_set_status(args)
-    return {"readyqueue": cmd_readyqueue, "coverage": cmd_coverage,
-            "lint": cmd_lint, "tree": cmd_tree}[args.cmd](args.root)
+    if args.cmd == "readyqueue":
+        return cmd_readyqueue(args.root, getattr(args, "dual_ledger_repo", None))
+    return {"coverage": cmd_coverage, "lint": cmd_lint, "tree": cmd_tree}[args.cmd](args.root)
 
 
 if __name__ == "__main__":

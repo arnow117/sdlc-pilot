@@ -99,8 +99,13 @@
 | `architect` | `roles/architect.md` | **全链路**数据结构对齐 / 跨边界契约一致 / 单一事实源 / blast-radius（改动跨 ≥2 面时由 R8 加载） |
 | `ai-readiness` | `roles/ai-readiness.md` | **面向 AI 的友好度/可维护性**:CLAUDE.md 级联 / scoped 命令 / 噪声 / 类型 / 测试 / LSP 就绪（onboard 只读体检 + 改造 feature + 改 AI-上下文/构建配置文件时加载，见 R9） |
 | `skill-maintainer` | `roles/skill-maintainer.md` | **唯一作用于工具自身**:防臃肿 / additive 合并 / 防孤儿 / 溯源 / 可移植 / semver / 自我修改安全（改 sdlc-pilot 技能体系自身时由 R10 加载;`/sdlc evolve` 全程透镜） |
+| `product-owner` | `roles/product-owner.md` | 产品问题、结果、范围、行为与质量取舍；**lifecycle-only**，只由 product PhaseContract 选择，不加入 legacy diff/glob 路由 |
+| `domain-expert` | `roles/domain-expert.md` | 统一语言、规则、不变量、bounded context 与 ownership；**lifecycle-only**，只由 product/delivery PhaseContract 选择，不加入 legacy diff/glob 路由 |
 
 > `security` 在 v1 **不是独立角色卡**：敏感面命中时，由 `server-dev`/`qa` 卡内的 security 子节 + `sdlc-review` 的安全 10 域承载。后续蒸馏循环可升格为独立卡。
+
+`product-owner` 和 `domain-expert` 已在取值字典中，但 Phase 1 不得由 legacy diff/glob 自动选中；它们只在显式
+lifecycle preview 的 PhaseContract 解析结果中出现。
 
 ---
 

@@ -1,0 +1,4 @@
+interface:
+  display_name: "SDLC Product Design"
+  short_description: "Preview product design lifecycle"
+  default_prompt: "Run the product design lifecycle in explicit preview mode."

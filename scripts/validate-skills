@@ -34,9 +34,10 @@ echo "== 4. validate 模式:文件 ↔ role-routing ↔ sdlc-validate =="
 for mf in "$REF"/validate-modes/*.md; do
   m="$(basename "$mf" .md)"
   grep -q "$m" "$REF/role-routing.md" || err "模式 '$m' 未在 role-routing.md"
-  grep -q "$m" "$ROOT/sdlc-validate/SKILL.md" || err "模式 '$m' 未被 sdlc-validate 引用"
+  python3 scripts/legacy_runbook.py --repo-root . show --stage validate | grep -Fq -- "$m" \
+    || err "模式 '$m' 未被固定 legacy validate runbook 引用"
 done
-ok "validate 模式交叉引用检查完成($(ls "$REF"/validate-modes/*.md | wc -l | tr -d ' ') 个)"
+ok "validate 模式交叉引用检查完成($(ls "$REF"/validate-modes/*.md | wc -l | tr -d ' ') 个；正文按需由 adapter 加载)"
 
 echo "== 5. 可移植自检:流程 skill 不得硬依赖 Claude 专属工具 =="
 for f in "$ROOT"/*/SKILL.md; do
@@ -81,11 +82,16 @@ grep -q "docs/adr/0001-sdlc-control-branch.md" "$REF/control-plane.md" \
   || err "control-plane.md 未引用 control ADR"
 grep -q "/sdlc intake" "$ROOT/sdlc/SKILL.md" || err "driver 缺 /sdlc intake"
 grep -q "/sdlc deliver" "$ROOT/sdlc/SKILL.md" || err "driver 缺 /sdlc deliver"
-grep -q "depends_on_tasks" "$ROOT/sdlc-plan/SKILL.md" || err "sdlc-plan 缺 Task 依赖字段"
-grep -q "write_set" "$ROOT/sdlc-plan/SKILL.md" || err "sdlc-plan 缺 Task write_set 字段"
-grep -q "TASK.md" "$ROOT/sdlc-build/SKILL.md" || err "sdlc-build 未接入 TASK identity"
-grep -q "integration_sha" "$ROOT/sdlc-build/SKILL.md" || err "sdlc-build 未引用 integration_sha"
-grep -q "tested_sha" "$ROOT/sdlc-validate/SKILL.md" || err "sdlc-validate 未引用 tested_sha evidence"
+python3 scripts/legacy_runbook.py --repo-root . show --stage plan | grep -Fq "depends_on_tasks" \
+  || err "固定 legacy plan runbook 缺 Task 依赖字段"
+python3 scripts/legacy_runbook.py --repo-root . show --stage plan | grep -Fq "write_set" \
+  || err "固定 legacy plan runbook 缺 Task write_set 字段"
+python3 scripts/legacy_runbook.py --repo-root . show --stage build | grep -Fq "TASK.md" \
+  || err "固定 legacy build runbook 未接入 TASK identity"
+python3 scripts/legacy_runbook.py --repo-root . show --stage build | grep -Fq "integration_sha" \
+  || err "固定 legacy build runbook 未引用 integration_sha"
+python3 scripts/legacy_runbook.py --repo-root . show --stage validate | grep -Fq "tested_sha" \
+  || err "固定 legacy validate runbook 未引用 tested_sha evidence"
 
 echo "== 8. 强门禁脚本 sdlc-guard 随技能自包含且可执行 =="
 GUARD="$ROOT/sdlc/scripts/sdlc-guard"
@@ -100,6 +106,34 @@ fi
 for f in "$GUARD" "$REF"/templates/hooks/pre-commit "$REF"/templates/hooks/pre-push "$REF"/templates/hooks/post-checkout; do
   sh -n "$f" || err "$f shell syntax 无效"
 done
+
+echo "== 9. 双生命周期 Policy / Playbook 闭包 =="
+POLICY_ROOT="$REF/policies"
+for f in "$POLICY_ROOT/modules.json" "$POLICY_ROOT/phases.json" "$POLICY_ROOT/roles.json" \
+         "$ROOT/sdlc-product-design/SKILL.md" "$ROOT/sdlc-software-delivery/SKILL.md" \
+         "$REF/lifecycles/product-design.md" "$REF/lifecycles/software-delivery.md"; do
+  [ -f "$f" ] && ok "$f" || err "缺失:$f"
+done
+python3 scripts/policy_compiler.py check --policy-root "$POLICY_ROOT" --skill-root "$ROOT" --engine-version 1.0.0 \
+  && ok "双生命周期 Policy compiler 检查通过" || err "双生命周期 Policy compiler 检查失败"
+grep -q "scope=preview" "$ROOT/sdlc-product-design/SKILL.md" \
+  || err "sdlc-product-design 未声明 preview scope"
+grep -q "scope=preview" "$ROOT/sdlc-software-delivery/SKILL.md" \
+  || err "sdlc-software-delivery 未声明 preview scope"
+grep -q "legacy-composite-v1" "$ROOT/sdlc-software-delivery/SKILL.md" \
+  || err "sdlc-software-delivery 未声明 legacy bridge"
+
+echo "== 10. 兼容 adapter / pinned legacy runbook =="
+for f in "$ROOT/sdlc/SKILL.md" "$ROOT/sdlc-spec/SKILL.md" "$ROOT/sdlc-plan/SKILL.md" \
+         "$ROOT/sdlc-build/SKILL.md" "$ROOT/sdlc-validate/SKILL.md" "$ROOT/sdlc-review/SKILL.md"; do
+  grep -q "legacy_runbook.py" "$f" || err "$f 未声明固定 legacy runbook loader"
+  lines=$(wc -l < "$f" | tr -d ' ')
+  [ "$lines" -lt 180 ] && ok "$f($lines lines)" || err "$f 达 $lines 行,adapter 应保持精简(<180)"
+done
+python3 scripts/legacy_runbook.py --repo-root . verify \
+  && ok "固定 legacy runbook 全量字节校验通过" || err "固定 legacy runbook 校验失败"
+grep -q "/sdlc preview" "$ROOT/sdlc/SKILL.md" \
+  && ok "driver 声明 explicit preview 路由" || err "driver 缺 explicit preview 路由"
 
 echo
 if [ $fail -eq 0 ]; then echo "RESULT: PASS ✅"; exit 0

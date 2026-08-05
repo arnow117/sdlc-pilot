@@ -52,24 +52,24 @@ sdlc-gate: <未设置>   # sdlc-review 全过(verdict=PASS)时写 `PASS reviewed
         STATE，stage 从 spec 起跑。backlog 与单特性 STATE 解耦，互不覆盖（由 sdlc-backlog 维护）。
   - status：
       in-progress = 阶段进行中
-      gated       = 卡在某个 exit gate（等待批准/等待修复后重测）
+      gated       = 未满足某项退出条件（等待批准/等待修复后重测）
       blocked     = 被外部依赖/缺口阻塞，无法推进（在 Decisions log 记原因）
   - updated：调用方传入的时间戳，skill 不自造时间。
   - validate-modes：本轮 diff 解析出的验证模式子集。可能值见 validate-modes/ 目录：
       correctness（总是跑）/ e2e（用户可见面变更）/ eval-bench（AI/模型/策略变更）。
   - work-type（流程画像 / 中央旋钮）：由 spec/onboard 在流程开始时定；各阶段入口读它来自适应"走多重"。
-      · feature（默认）：完整 spec→plan→build→validate→review，按 L1-L4 + 各门控正常自适应。
+      · feature（默认）：完整 spec→plan→build→validate→review，按 L1-L4 + 各项强制校验正常自适应。
       · remediation（遗留改造 / AI-readiness 整改）：spec 一段话、eval/design 契约通常 N/A、plan 默认 L1、
-        build 文档/配置改动走 Skip-TDD；**走轻,但 review/verify 门不短**(改的是全仓结构,更该审)。
-      · hotfix（紧急修)：直奔 build 调试子循环 + 最小验证;**仍过 review 与 push 门**,事后补 spec/plan 记录。
-    原则:work-type 只**偏置默认granularity**,不取消任何硬门(覆盖率/安全 open=0/review)。
+        build 文档/配置改动走 Skip-TDD；**路径更轻，但 review/verify 检查不减少**(改的是全仓结构,更该审)。
+      · hotfix（紧急修)：直奔 build 调试子循环 + 最小验证;**仍需完成 review 与 push 前检查**,事后补 spec/plan 记录。
+    原则:work-type 只**偏置默认 granularity**,不取消任何强制条件(覆盖率/安全 open=0/review)。
 -->
 
 
-## Gates passed
+## Required checks passed
 
 <!--
-  exit gate 清单。每个阶段 skill 完成自己的出口条件后勾选对应项。
+  退出条件清单。每个阶段 skill 完成自己的出口条件后勾选对应项。
   下面是覆盖完整主线的默认清单；按 feature 实际经过的阶段保留/删减。
   [x] = 已通过，[ ] = 未通过/未到。
 -->
@@ -80,13 +80,13 @@ sdlc-gate: <未设置>   # sdlc-review 全过(verdict=PASS)时写 `PASS reviewed
 - [ ] plan：静态 plan 已注册，plan-revision 已固定，Task 记录已创建
 - [ ] build：tests written (red) — 测试先行且确认失败
 - [ ] build：implementation (green) — 实现使测试通过
-- [ ] validate：correctness 通过（套件 + 覆盖率门控）
+- [ ] validate：correctness 通过（套件 + 覆盖率阈值校验）
 - [ ] validate：e2e 通过（用户旅程，若有可见面变更）
 - [ ] validate：eval-bench 通过（达 rubric/阈值，若有 AI 变更）
 - [ ] review：多角色评审无 CRITICAL/未决项
 - [ ] verify：完成前核验通过
 
-## Active roles (from last diff scan)
+## Active roles (from last diff scan / lifecycle preview)
 
 <!--
   上一次 git diff 解析出的活跃角色卡（见 role-routing.md）。
@@ -94,7 +94,8 @@ sdlc-gate: <未设置>   # sdlc-review 全过(verdict=PASS)时写 `PASS reviewed
   取值字典：qa, client-dev, server-dev, design, big-data, architect（改动跨 ≥2 面/全链路时，
   看接缝:全链路数据结构对齐/跨边界契约/blast-radius）, ai-readiness（动 AI-上下文/构建配置，
   或 onboard 体检/遗留改造时:面向 AI 友好度/可维护性）, skill-maintainer（改技能体系自身时，
-  R10:防臃肿/additive/防孤儿/溯源/可移植/semver/自我修改安全）；security（敏感面触及时，
+  R10:防臃肿/additive/防孤儿/溯源/可移植/semver/自我修改安全）, product-owner、domain-expert
+  （仅由 lifecycle PhaseContract 解析；不得由 legacy diff/glob 自动选中）；security（敏感面触及时，
   为视角叠加标签，无独立 roles/security.md，由 server-dev/qa 卡的 security 子节承载）。
 -->
 

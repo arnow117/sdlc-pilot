@@ -1,0 +1,4 @@
+interface:
+  display_name: "SDLC Software Delivery"
+  short_description: "Preview software delivery lifecycle"
+  default_prompt: "Run the software delivery lifecycle in explicit preview mode."

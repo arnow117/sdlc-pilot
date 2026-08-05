@@ -16,6 +16,8 @@ import tarfile
 import tempfile
 from typing import Any, Callable
 
+import preview_scope
+
 
 SCHEMA_VERSION = 1
 CONTROL_DIR = ".sdlc-control"
@@ -733,6 +735,7 @@ class GitControlStore:
         """Publish immutable plan commit A, then revision-bound records commit B."""
         import control
 
+        preview_scope.reject_preview(plan_text, field="plan_text", error_cls=SchemaError)
         tasks = control.parse_plan_tasks(plan_text)
         if supplied_tasks is not None and supplied_tasks != tasks:
             raise SchemaError("tasks manifest does not exactly match approved plan")

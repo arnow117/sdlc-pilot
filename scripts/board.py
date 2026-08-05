@@ -5,6 +5,7 @@ import html
 import json
 import os
 import re
+import sys
 from collections.abc import Mapping
 from dataclasses import asdict, is_dataclass
 
@@ -516,7 +517,7 @@ def _build_tracking_map(leaves, snapshot):
     return tracking, warnings
 
 
-def _leaf_detail_map(leaves, tracking=None):
+def _leaf_detail_map(leaves, tracking=None, dual_views=None):
     """{id: {字段... + body}} —— 供聊天面板"叶详情"显示(选叶后看清需求内容)。"""
     detail = {}
     for lf in leaves:
@@ -527,6 +528,8 @@ def _leaf_detail_map(leaves, tracking=None):
         d["body"] = lf.get("_body", "")
         if tracking and lid in tracking:
             d["tracking"] = tracking[lid]
+        if dual_views and lid in dual_views:
+            d["dual_lifecycle"] = dual_views[lid]
         detail[lid] = d
     return detail
 
@@ -553,21 +556,29 @@ def _read_state_overlay(req_root):
     return {"leaf": leaf, "stage": stage, "status": to} if to else None
 
 
-def render_board(tree, leaves, title="Backlog 需求树看板", live=None, control=None):
+def render_board(tree, leaves, title="Backlog 需求树看板", live=None, control=None,
+                 dual_views=None, dual_ledger_sha=None):
     """整树 → 自包含 HTML 看板(左折叠树 + 右聊天面板 + 叶详情 + Live 回路)。只读渲染。
-    live={leaf,stage,status}: legacy 在飞特性叠加；control:可选 ControlSnapshot。"""
+    live={leaf,stage,status}: legacy 在飞特性叠加；control:可选 ControlSnapshot。
+    dual_views 是显式 dual ledger 的只读产品/交付投影，不能用于写入。"""
     esc = html.escape
     summ = tree["summary"]
     tracking, control_warnings = _build_tracking_map(leaves, control)
     control_data = _as_dict(control)
     control_mode = str(control_data.get("mode") or "")
     control_active = bool(control_data) and control_mode != "legacy"
+    dual_active = dual_views is not None
     ready_count = summ["ready_count"]
     if control_active:
         from control import readyqueue_from_snapshot
         ready_count = len(readyqueue_from_snapshot(control_data))
+    elif dual_active:
+        ready_count = sum(
+            1 for view in dual_views.values()
+            if isinstance(view, Mapping) and _as_dict(view.get("readiness")).get("ready") is True
+        )
     # 叶详情数据嵌入：统一隔离 HTML/script 上下文。
-    leaf_data_json = _safe_json_for_html(_leaf_detail_map(leaves, tracking))
+    leaf_data_json = _safe_json_for_html(_leaf_detail_map(leaves, tracking, dual_views))
     # 痛点① 图例(6 状态色 + 含义,可点过滤)
     legend_meaning = {"captured": "已收集", "spec'd": "已出spec", "planned": "已拆任务",
                       "built": "已实现", "validated": "已验证", "shipped": "已交付"}
@@ -608,6 +619,13 @@ def render_board(tree, leaves, title="Backlog 需求树看板", live=None, contr
                         + "".join(f'<div class="control-warning">{esc(item)}</div>'
                                   for item in control_warnings)
                         + "</div>")
+    dual_notice = ""
+    if dual_active:
+        identity = f" · ledger {esc(str(dual_ledger_sha))}" if dual_ledger_sha else ""
+        dual_notice = (
+            '<div class="control-warnings" role="status"><b>dual-lifecycle-v1</b>'
+            f' · 产品就绪来自权威账本，交付信息为只读投影{identity}</div>'
+        )
 
     if not tree["domains"]:
         body = '<p class="empty">暂无需求（.sdlc/requirements/ 为空）</p>'
@@ -640,6 +658,16 @@ def render_board(tree, leaves, title="Backlog 需求树看板", live=None, contr
                         summary = (f'{feature_id} · task {verified}/{len(tasks)}'
                                    if feature_id else f'task {verified}/{len(tasks)}')
                         tracking_html = f'<span class="tracking-summary">{esc(summary)}</span>'
+                    dual_html = ""
+                    dual_view = dual_views.get(raw_id) if dual_active else None
+                    if isinstance(dual_view, Mapping):
+                        readiness = _as_dict(dual_view.get("readiness"))
+                        delivery = _as_dict(dual_view.get("delivery"))
+                        if readiness.get("ready") is True:
+                            dual_label = "dual: product ready"
+                        else:
+                            dual_label = "dual: " + str(delivery.get("delivery_state") or "not_ready")
+                        dual_html = f'<span class="tracking-summary">{esc(dual_label)}</span>'
                     title_txt = lf.get("title") or ""
                     crumb = f'{d["domain"]} › {sub["subdomain"]}'
                     lvs.append(
@@ -652,6 +680,7 @@ def render_board(tree, leaves, title="Backlog 需求树看板", live=None, contr
                         f'<span class="badge status-{_css_safe(st)}">{esc(st)}</span>'
                         f'{live_html}'
                         f'{tracking_html}'
+                        f'{dual_html}'
                         f'<span class="prio prio-{pr}">{pr}</span>'
                         f'<span class="dot risk-{_css_safe(risk)}" title="risk: {esc(risk)}"></span>'
                         f'{deps_html}</div></section>')
@@ -688,6 +717,7 @@ def render_board(tree, leaves, title="Backlog 需求树看板", live=None, contr
         f'<div class="sub">共 {summ["total"]} 条需求 · ready {ready_count} 条'
         f'{(" · control " + esc(control_mode)) if control_active else ""}</div>'
         f'{warning_html}'
+        f'{dual_notice}'
         f'{cov_html}'
         f'<div class="toolbar"><input id="tree-search" type="search" '
         f'placeholder="🔍 搜索 id / 标题…" aria-label="搜索需求叶"></div>'
@@ -701,6 +731,10 @@ def cmd_board(args):
     out = args.out or os.path.join(args.root, "_board.html")
     snapshot = None
     control_repo = getattr(args, "control_repo", None)
+    dual_ledger_repo = getattr(args, "dual_ledger_repo", None)
+    if control_repo and dual_ledger_repo:
+        print("board-error: --control-repo 与 --dual-ledger-repo 不能同时使用", file=sys.stderr)
+        return 2
     if control_repo:
         # 延迟 import：legacy board 不依赖 control 模块，也不触发任何 Git 操作。
         from control import load_snapshot_from_ref
@@ -712,8 +746,50 @@ def cmd_board(args):
             legacy_requirements_root=args.root,
             local_state_path=state_path,
         )
+    dual_views = None
+    dual_ledger_sha = None
     mode = str(_as_dict(snapshot).get("mode") or "legacy")
-    if mode == "legacy":
+    if dual_ledger_repo:
+        try:
+            from dual_ledger import DualLifecycleLedger, LedgerError
+            from lifecycle_reducer import ReducerError, product_readiness, project_delivery_status
+            ledger_status = DualLifecycleLedger(dual_ledger_repo).status()
+            if ledger_status.snapshot is None:
+                raise LedgerError("dual-lifecycle-ledger-is-not-initialized")
+            dual_snapshot = ledger_status.snapshot
+            definitions = dual_snapshot.get("product_definitions", {})
+            if not isinstance(definitions, dict):
+                raise LedgerError("invalid-lifecycle-snapshot")
+            legacy_leaves = load_leaves(args.root)
+            by_id = {leaf.get("id"): leaf for leaf in legacy_leaves if leaf.get("id")}
+            leaves = list(legacy_leaves)
+            for leaf_id, definition in sorted(definitions.items(), key=lambda item: str(item[0])):
+                if not isinstance(leaf_id, str) or not isinstance(definition, Mapping):
+                    raise LedgerError("invalid-product-definition-record")
+                if leaf_id not in by_id:
+                    parts = leaf_id.split(".")
+                    domain_path = "/".join(parts[:2]) if len(parts) >= 2 else "dual/ledger"
+                    leaf = {
+                        "id": leaf_id, "title": "(dual product definition)", "domain_path": domain_path,
+                        "status": "captured", "priority": "P3", "risk_level": "medium",
+                        "depends_on": [], "old_system_ref": "", "new_domain_path": domain_path,
+                        "cross_link": [], "_body": "",
+                    }
+                    leaves.append(leaf)
+                    by_id[leaf_id] = leaf
+            dual_views = {}
+            for leaf_id in sorted(by_id):
+                if leaf_id not in definitions:
+                    continue
+                readiness = product_readiness(dual_snapshot, leaf_id=leaf_id)
+                delivery = project_delivery_status(dual_snapshot, leaf_id=leaf_id)
+                dual_views[leaf_id] = {"readiness": readiness, "delivery": delivery}
+            dual_ledger_sha = ledger_status.snapshot_sha256
+            mode = "dual-lifecycle-v1"
+        except (ImportError, LedgerError, ReducerError) as exc:
+            print(f"dual-ledger-error: {exc}", file=sys.stderr)
+            return 2
+    elif mode == "legacy":
         leaves = load_leaves(args.root)
     else:
         requirements = _as_dict(_as_dict(snapshot).get("requirements_by_id"))
@@ -725,7 +801,10 @@ def cmd_board(args):
     tree = build_tree(leaves)
     live = _read_state_overlay(args.root) if mode == "legacy" else None
     with open(out, "w", encoding="utf-8") as f:
-        f.write(render_board(tree, leaves, live=live, control=snapshot))
+        f.write(render_board(
+            tree, leaves, live=live, control=snapshot, dual_views=dual_views,
+            dual_ledger_sha=dual_ledger_sha,
+        ))
     print(json.dumps({"board": out, "domains": len(tree["domains"]),
                       "total": tree["summary"]["total"]}, ensure_ascii=False))
     return 0

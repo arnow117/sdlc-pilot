@@ -15,6 +15,7 @@ import subprocess
 from typing import Any
 
 import control_store
+import preview_scope
 from control_model import (
     atomic_write_record, derive_task_readiness, find_cycle as _find_cycle,
     load_control_snapshot_from_files, parse_plan_tasks, render_control_record,
@@ -408,6 +409,8 @@ def plan_content_id(plan_text: str) -> str:
 
 def store_plan_artifact(control_root: str | os.PathLike[str], *, feature_id: str,
                         plan_ref: str, plan_text: str) -> dict[str, Any]:
+    preview_scope.reject_preview(plan_ref, field="plan_ref", error_cls=SchemaError)
+    preview_scope.reject_preview(plan_text, field="plan_text", error_cls=SchemaError)
     control_store.validate_id(feature_id, field="feature_id")
     expected = f"features/{feature_id}/plans/{plan_content_id(plan_text)}.md"
     if plan_ref != expected:
@@ -421,6 +424,8 @@ def register_plan(control_root: str | os.PathLike[str], *, feature_id: str,
                   plan_ref: str, plan_revision: str, plan_text: str,
                   tasks: list[dict[str, Any]], at: str,
                   require_git_revision: bool = False) -> dict[str, Any]:
+    preview_scope.reject_preview(plan_ref, field="plan_ref", error_cls=SchemaError)
+    preview_scope.reject_preview(plan_text, field="plan_text", error_cls=SchemaError)
     _require_sha(plan_revision, field="plan_revision")
     expected_ref = f"features/{feature_id}/plans/{plan_content_id(plan_text)}.md"
     if plan_ref != expected_ref:
@@ -560,6 +565,7 @@ def task_eligibility(control_root: str | os.PathLike[str], *, feature_id: str,
 
 
 def _load_evidence_ref(control_root: str | os.PathLike[str], evidence_ref: str) -> dict[str, Any]:
+    preview_scope.reject_preview(evidence_ref, field="evidence_ref", error_cls=SchemaError)
     parts = PurePosixPath(evidence_ref).parts
     if not parts or parts[0] != "evidence" or any(part in ("", ".", "..") for part in parts):
         raise SchemaError(f"invalid evidence_ref: {evidence_ref}")
@@ -577,6 +583,7 @@ def task_event(control_root: str | os.PathLike[str], *, feature_id: str, task_id
                branch_base_sha: str | None = None, branch_head_sha: str | None = None,
                feature_head_sha: str | None = None, evidence_ref: str | None = None,
                reason: str | None = None) -> dict[str, Any]:
+    preview_scope.reject_preview(evidence_ref, field="evidence_ref", error_cls=SchemaError)
     snapshot = load_control_snapshot(control_root)
     tasks = _tasks_by_id(snapshot, feature_id)
     item = tasks.get(task_id)
@@ -804,6 +811,7 @@ def validate_feature(control_root: str | os.PathLike[str], *, feature_id: str,
                      current_head_sha: str, evidence_ref: str, at: str,
                      repo_root: str | os.PathLike[str] | None = None) -> dict[str, Any]:
     _require_sha(current_head_sha, field="current_head_sha")
+    preview_scope.reject_preview(evidence_ref, field="evidence_ref", error_cls=SchemaError)
     snapshot = load_control_snapshot(control_root)
     feature = snapshot["features_by_id"].get(feature_id)
     if not feature:
@@ -849,6 +857,7 @@ def record_review(control_root: str | os.PathLike[str], *, feature_id: str,
     if not isinstance(report_refs, list) or not all(
             isinstance(ref, str) and ref and "\n" not in ref for ref in report_refs):
         raise SchemaError("report_refs must be a list of non-empty one-line paths")
+    preview_scope.reject_preview(report_refs, field="report_refs", error_cls=SchemaError)
     snapshot = load_control_snapshot(control_root)
     feature = snapshot["features_by_id"].get(feature_id)
     if not feature:
@@ -872,6 +881,7 @@ def retire(control_root: str | os.PathLike[str], *, feature_id: str,
            evidence_ref: str | None, at: str,
            release_reason: str = "shipped", current_head_sha: str | None = None,
            repo_root: str | os.PathLike[str] | None = None) -> dict[str, Any]:
+    preview_scope.reject_preview(evidence_ref, field="evidence_ref", error_cls=SchemaError)
     snapshot = load_control_snapshot(control_root)
     feature = snapshot["features_by_id"].get(feature_id)
     if not feature:

@@ -1,0 +1,190 @@
+#!/usr/bin/env python3
+"""Contract tests for the offline dual-lifecycle skill behavior evaluator."""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+import subprocess
+import sys
+import tempfile
+import unittest
+
+
+HERE = Path(__file__).resolve().parent
+ROOT = HERE.parent
+sys.path.insert(0, str(HERE))
+
+import eval_skill_behavior  # noqa: E402
+
+
+DATASET = ROOT / "evals" / "dual-lifecycle-skill-v1.jsonl"
+BASELINE = ROOT / "evals" / "baselines" / "legacy-0.19.2.json"
+
+
+class FixtureEvaluationTest(unittest.TestCase):
+    def setUp(self) -> None:
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tempdir.cleanup)
+        self.temp = Path(self.tempdir.name)
+
+    def candidate_fixture(self) -> dict[str, object]:
+        cases, dataset_bytes = eval_skill_behavior.load_dataset(DATASET)
+        policy_bindings = sorted(
+            {
+                (str(case["policy_input"]["policy_id"]), str(case["policy_input"]["sha256"]))
+                for case in cases
+            }
+        )
+        outputs: list[dict[str, object]] = []
+        for case in cases:
+            route = list(case["expected_route"])
+            outputs.append({
+                "case_id": case["case_id"],
+                "route": route,
+                "modules": list(case["expected_modules"]),
+                "roles": list(case["expected_roles"]),
+                "obligations": list(case["expected_obligations"]),
+                "artifacts": list(case["required_artifacts"]),
+                "actions": [],
+                "transition": {
+                    "decision": "reject" if route == ["reject-transition"] else "route",
+                    "route": route,
+                },
+            })
+        source_config = dict(cases[0]["model_run_config"])
+        return {
+            "fixture_format": eval_skill_behavior.FIXTURE_FORMAT,
+            "mode": "fixture",
+            "dataset_contract": {
+                "path": "evals/dual-lifecycle-skill-v1.jsonl",
+                "sha256": eval_skill_behavior.sha256_bytes(dataset_bytes),
+            },
+            "baseline_contract": {
+                "path": "evals/baselines/legacy-0.19.2.json",
+                "sha256": eval_skill_behavior.sha256_bytes(BASELINE.read_bytes()),
+            },
+            "policy_bindings": [
+                {"policy_id": policy_id, "sha256": digest}
+                for policy_id, digest in policy_bindings
+            ],
+            "run_config": {
+                "source_model_run_config": source_config,
+                "execution": {
+                    "provider": "fixture",
+                    "model": "none",
+                    "model_version": "none",
+                    "temperature": 0,
+                    "max_tokens": 0,
+                    "tool_versions": {"eval_skill_behavior": "v1"},
+                    "evaluator_model": "deterministic-fixture",
+                    "evaluator_version": "v1",
+                    "variant_runs": 0,
+                },
+            },
+            "outputs": outputs,
+        }
+
+    def write_fixture(self, value: dict[str, object]) -> Path:
+        path = self.temp / "candidate.json"
+        path.write_bytes(eval_skill_behavior.canonical_bytes(value))
+        return path
+
+    def evaluate(self, fixture: Path) -> dict[str, object]:
+        return eval_skill_behavior.evaluate_fixture(
+            ROOT,
+            dataset_path=DATASET,
+            baseline_path=BASELINE,
+            fixture_path=fixture,
+        )
+
+    def test_fixture_mode_is_deterministic_and_covers_every_assertion_kind(self) -> None:
+        fixture = self.write_fixture(self.candidate_fixture())
+        first = self.evaluate(fixture)
+        second = self.evaluate(fixture)
+
+        self.assertEqual(first, second)
+        self.assertEqual(first["mode"], "fixture")
+        self.assertEqual(first["summary"], {"case_count": 12, "failed": 0, "passed": 12, "verdict": "PASS"})
+        self.assertEqual(first["run_id"], eval_skill_behavior.report_id(first))
+        assertion_names = {
+            assertion["name"]
+            for result in first["cases"]
+            for assertion in result["assertions"]
+        }
+        self.assertEqual(
+            assertion_names,
+            {"actions", "artifacts", "modules", "obligations", "roles", "route", "transition"},
+        )
+
+    def test_candidate_mismatches_and_forbidden_actions_are_reported_without_stopping_other_cases(self) -> None:
+        candidate = self.candidate_fixture()
+        outputs = candidate["outputs"]
+        self.assertIsInstance(outputs, list)
+        outputs[0]["actions"] = ["treat-unknown-as-false"]
+        outputs[1]["modules"] = ["product-core"]
+        report = self.evaluate(self.write_fixture(candidate))
+
+        self.assertEqual(report["summary"], {"case_count": 12, "failed": 2, "passed": 10, "verdict": "FAIL"})
+        first = report["cases"][0]
+        second = report["cases"][1]
+        self.assertEqual(first["verdict"], "FAIL")
+        self.assertEqual(second["verdict"], "FAIL")
+        first_actions = next(assertion for assertion in first["assertions"] if assertion["name"] == "actions")
+        self.assertEqual(first_actions["violations"], ["treat-unknown-as-false"])
+        second_modules = next(assertion for assertion in second["assertions"] if assertion["name"] == "modules")
+        self.assertEqual(second_modules["missing"], ["behavior-bdd", "engineering-spec", "implementation-tdd", "planning"])
+
+    def test_route_obligation_artifact_and_transition_assertions_fail_independently(self) -> None:
+        changes: dict[str, object] = {
+            "route": ["unexpected-route"],
+            "obligations": ["unexpected-obligation"],
+            "artifacts": ["UnexpectedArtifact"],
+            "transition": {"decision": "reject", "route": ["sdlc-product-design", "discover", "behavior-design"]},
+        }
+        for field, replacement in changes.items():
+            with self.subTest(field=field):
+                candidate = json.loads(json.dumps(self.candidate_fixture()))
+                candidate["outputs"][0][field] = replacement
+                report = self.evaluate(self.write_fixture(candidate))
+                assertion = next(
+                    item for item in report["cases"][0]["assertions"] if item["name"] == field
+                )
+                self.assertFalse(assertion["passed"])
+                self.assertEqual(report["summary"]["failed"], 1)
+
+    def test_contract_drift_and_remote_execution_are_refused(self) -> None:
+        bad_hash = self.candidate_fixture()
+        bad_hash["dataset_contract"]["sha256"] = "0" * 64
+        with self.assertRaisesRegex(eval_skill_behavior.EvaluationError, "dataset-contract-hash-mismatch"):
+            self.evaluate(self.write_fixture(bad_hash))
+
+        remote = self.candidate_fixture()
+        remote["run_config"]["execution"]["provider"] = "remote-provider"
+        with self.assertRaisesRegex(eval_skill_behavior.EvaluationError, "remote-model-mode-is-not-supported"):
+            self.evaluate(self.write_fixture(remote))
+
+    def test_cli_writes_a_canonical_content_addressed_report_and_refuses_model_mode(self) -> None:
+        fixture = self.write_fixture(self.candidate_fixture())
+        output = self.temp / "report.json"
+        command = [
+            sys.executable,
+            str(HERE / "eval_skill_behavior.py"),
+            "--repo", str(ROOT),
+            "--dataset", "evals/dual-lifecycle-skill-v1.jsonl",
+            "--baseline", "evals/baselines/legacy-0.19.2.json",
+            "--fixture", str(fixture),
+            "--out", str(output),
+        ]
+        completed = subprocess.run(command, check=True, capture_output=True, text=True)
+        report = json.loads(output.read_text(encoding="utf-8"))
+        self.assertEqual(output.read_bytes(), eval_skill_behavior.canonical_bytes(report))
+        self.assertEqual(json.loads(completed.stdout), report)
+        self.assertEqual(report["run_id"], eval_skill_behavior.report_id(report))
+
+        refused = subprocess.run([*command, "--mode", "model"], capture_output=True, text=True)
+        self.assertEqual(refused.returncode, 2)
+        self.assertIn("remote-model-mode-is-not-supported", refused.stderr)
+
+
+if __name__ == "__main__":
+    unittest.main()

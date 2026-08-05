@@ -18,6 +18,25 @@
 - **改动代码驱动路由** —— 每个流程阶段先跑 `git diff`,按改动的文件路径自动决定**加载哪些角色视角**、**跑哪些验证模式**,无需手动选。
 - **跨会话状态持久化** —— 进度落在目标仓库的 `.sdlc/STATE.md`(短期 feature 交接)与 `.sdlc/PROFILE.md`(长期项目记忆),`/clear` 或隔天换 session 也能无缝续接。
 
+## 双生命周期（显式启用）
+
+默认入口仍保持 legacy 行为。需要拆开产品与研发上下文时，显式使用：
+
+```text
+/sdlc product-design --authority dual-lifecycle-v1
+/sdlc software-delivery --authority dual-lifecycle-v1
+```
+
+产品设计生命周期以 BDD + 战略 DDD 形成 Requirement 级 `ProductContract`；软件交付生命周期以 SDD + TDD
+消费固定版本，形成 `EngineeringSpec → DeliveryPlan → Task/Evidence`。产品只读取交付投影，研发不能直接改写
+ProductDefinition。二者通过不可变合同、显式 ChangeRequest 和 current fence 关联。
+
+canonical 状态单独保存在目标仓库 `.sdlc-control/dual-lifecycle/ledger.json`：状态转换使用 CAS、幂等 key 与可重放
+event history；合同组件、runner receipt 与 release receipt 都必须被代码复验。审批不从调用参数取 principal 或 policy，
+而是由同目录的 `authority.json` 配置解析。Task 的 canonical TDD 命令与工作目录由 DeliveryPlan 固定；评审通过
+authority-derived attestation 绑定当前 fence 与真实 Evidence。完整操作顺序与配置结构见
+[`dual-lifecycle-runtime.md`](skills/sdlc/references/dual-lifecycle-runtime.md)。
+
 ## 两轴模型:Roles(视角卡) × Skills(流程)
 
 一句话:**Roles 是"从这个专业视角看什么重要"的知识卡(被流程加载引用,本身不做动作);Skills 是"这一步我们做什么"的可执行阶段。** 验证类过程(E2E、eval/bench)既不是角色也不是独立技能,而是 validate 技能的**可插拔模式(厚 playbook 数据)**。
@@ -47,7 +66,7 @@ sdlc-pilot/                          # 未来独立 GitHub repo 的根
 │   │       ├── receiving-feedback.md #   接收意见并修复的纪律(防过度修复)
 │   │       ├── templates/           #    PROFILE / STATE / 报告 schema + hooks/pre-push
 │   │       ├── distillation-loop.md #    新技能如何被折叠进来(时用时新)
-│   │       └── web-review/          #    可选复核 gate:md→划词批注网页(build/annotate/server)+ §6 Live(curl /wait 实时双向,跨引擎)
+│   │       └── web-review/          #    可选复核检查:md→划词批注网页(build/annotate/server)+ §6 Live(curl /wait 实时双向,跨引擎)
 │   │       # 注:各阶段 playbook 内联在对应 sdlc-*/SKILL.md;stages/ 为未来拆分预留
 │   ├── sdlc-onboard/SKILL.md        # ⓪ brownfield 入口:扫描仓库 → PROFILE.md + surface map
 │   ├── sdlc-backlog/SKILL.md        # ⓪′ 项目级 pre-spec:散点需求 → 递归 domain-subdomain 需求树 + ready-queue
@@ -134,14 +153,34 @@ for d in "$SDLC_SRC"/*/; do ln -sfn "$d" "$HOME/.codex/skills/$(basename "$d")";
 > evolve 探源同时认 `~/.claude/skills/sdlc` 与 `~/.codex/skills/sdlc`,两引擎共用一份可写源。
 
 > 软链 vs 拷贝:软链"边改边用"始终指向同一份源;要固定快照就改成 `cp -R`。
-> 强门禁脚本 `skills/sdlc/scripts/sdlc-guard` 随 sdlc 技能自包含(插件/软链/Codex 三种装法路径都一致);`sdlc-onboard` 会在目标项目装 hook 时把它拷到该项目的 `.sdlc/bin/` 兜底。
+> 强制校验脚本 `skills/sdlc/scripts/sdlc-guard` 随 sdlc 技能自包含(插件/软链/Codex 三种装法路径都一致);`sdlc-onboard` 会在目标项目装 hook 时把它拷到该项目的 `.sdlc/bin/` 兜底。
 
 ## 测试与 dogfooding
 
-skill 是 markdown playbook,**没法单测**,两层测试:
+测试分为离线、可重复的五层；每条状态规则既有成功路径，也有伪造、stale、并发或失败路径。
 
-- **结构 lint(可重复回归,commit 前必跑)**:`bash scripts/validate-skills` —— 角色/模式名↔文件↔字典一致、frontmatter、可移植自检。
-- **行为 dogfood**:把流程 skill 真跑在一个项目上,对照判据查产出(如 onboard 产的 surface-map 是否过 Phase C 三条自检)。**真实/内部项目的产物不入库**(`docs/dogfood/` 已 gitignore,本地跑);产出样例见 [`examples/onboard-output-sample.md`](examples/onboard-output-sample.md)。
+| 层 | 断言 | 代表测试 |
+|---|---|---|
+| 数据与合同 | bundle、审批、Policy、Context、Obligation、trace 的 identity 与严格 schema | `test_contract_bundle.py`、`test_approval.py`、`test_policy.py`、`test_trace_lint.py` |
+| 生命周期 | ProductContract → EngineeringSpec → DeliveryPlan → Task/Evidence 的纯状态转换与 invalidation | `test_lifecycle_reducer.py`、`test_plan_compiler.py` |
+| 执行与发布 | 实际 argv、工作区 fingerprint、receipt、journal、CAS、幂等与 replay | `test_evidence_runner.py`、`test_dual_artifact_store.py`、`test_dual_ledger.py` |
+| 端到端与兼容 | 临时 Git 仓的完整 public intent 流程；legacy 与 preview 不互相写入 | `test_dual_lifecycle_operational.py`、`test_compatibility.py`、`test_legacy_runbook.py` |
+| Skill 行为 | 固定 fixture 断言 route、obligation、artifact 与 transition；结构和引用一致 | `test_eval_skill_behavior.py`、`test_skill_baseline.py`、`bash scripts/validate-skills` |
+
+统一回归命令：
+
+```sh
+PYTHONDONTWRITEBYTECODE=1 python3 -m unittest discover -s scripts -p 'test_*.py'
+bash scripts/validate-skills
+git diff --check
+```
+
+BDD 在当前版本表现为 `SCN-* → EngineeringSpec criterion → Task → Evidence` 的可追溯协议；实际行为由
+DeliveryPlan 固定的 TDD 命令执行。产品价值、领域判断和评审质量仍需具名 typed attestation，测试验证其身份、
+版本、Evidence 和状态绑定，不把语义结论伪装成自动判定。
+
+当前测试不触发远程模型评测或真实生产发布：行为评估使用离线 fixture，真实 baseline/candidate 或部署目标需要单独授权。
+真实/内部 dogfood 产物不入库（`docs/dogfood/` 已 gitignore），可继续按判据核对实际项目产出。
 
 v1 语言范围 = **Python + Web(TS)**。如何迭代本项目见仓库根 **`CLAUDE.md`**(agent 自动读的维护契约)。
 
@@ -186,20 +225,20 @@ v1 语言范围 = **Python + Web(TS)**。如何迭代本项目见仓库根 **`CL
 | `sdlc`(driver) | handoff(跨会话交接)· gsd 编排(分支路由,去运行时)· gsd-map(Task-or-sequential 降级)· **resolve 路由/surface-map = 净新建** |
 | `sdlc-onboard` | gsd-map-codebase(4-focus 采证 + 降级 + secret + 下游契约)· arch-aifriendly-doctor(纯 bash 采证脚本 + P13 域路由 + P23 模块命令)· explorer-repo-report(type-detection + P0/P1/P2)· startup-claude-md-init(PROFILE schema 带"原因")· agency:codebase-onboarding-engineer(只读纪律/入口发现)· **surface-map 表 + R7 配置型识别 = 净新建** |
 | `sdlc-backlog` | kb-manage(递归 domain-subdomain 树 + Ingest 归类 + Lint 防孤儿/去重)· tb-loop-driver(导演/编排模式)· loop-engineering 文章(需求树作 loop 的 work-source)· **递归需求树 + 6 操作(Seed/Ingest/Coverage/Ready-queue/Lint/Retire)+ ready-queue A/B 契约 + 特性退场闭环 = 净新建** |
-| `sdlc-spec` | brainstorming(HARD-GATE + 一次一问 + 分节获批 + 双 gate)· hp-feature-dev(文档矩阵 + 怎么算 done 前置)· gsd-discuss(gray-area 具体化 + canonical_refs + scope-guard)· gsd-research(unknown-unknowns + Don't-Hand-Roll)· gsd-plant-seed(结构化 Deferred)· adhd(发散 §2.4)· plan-ceo-review(范围塑造 §2.4b)· ai-evals + gsd-eval-review(eval 前置 §5)· gsd-ui-phase + design-quality + agency:ux-architect(设计契约 §2.6b)· **eval/design 契约前置 = 净新建** |
+| `sdlc-spec` | brainstorming(强制检查 + 一次一问 + 分节获批 + 双重检查)· hp-feature-dev(文档矩阵 + 怎么算 done 前置)· gsd-discuss(gray-area 具体化 + canonical_refs + scope-guard)· gsd-research(unknown-unknowns + Don't-Hand-Roll)· gsd-plant-seed(结构化 Deferred)· adhd(发散 §2.4)· plan-ceo-review(范围塑造 §2.4b)· ai-evals + gsd-eval-review(eval 前置 §5)· gsd-ui-phase + design-quality + agency:ux-architect(设计契约 §2.6b)· **eval/design 契约前置 = 净新建** |
 | `sdlc-plan` | gsd-new-project(五准则)· gsd-plan-phase(Anti-Shallow 三字段 + depends_on/wave + must_haves + Source Audit/Coverage Gate)· planner-breakdown-sdlc(L1-L4 分级)· writing-plans(TDD 五步 + No-Placeholder + 自查三扫) |
 | `sdlc-build` | test-driven-development(RGR 五拍 + Iron Law + 两个强制 Verify)· systematic-debugging(四阶段根因)· investigate(模式签名表 + Scope Lock + blast-radius + DEBUG REPORT)· hp-bugfix(bug 三分类)· subagent-driven-development(两阶段自检,去 subagent)· gsd-execute-phase(wave 模型:并行 fan-out + 串行降级)· receiving-code-review(受评纪律)· **TDD↔调试统一状态机 = 净新建** |
 | `sdlc-validate` | verify(验证手段优先级阶梯)· verification-before-completion(无新鲜证据不声称通过)· 各模式见下 |
-| `sdlc-review` | gstack:review(scope-drift + plan-completion + confidence 校准表 + fix-first + 对抗 pass)· gsd-code-review(深度分层 + 语言 pitfall 表 + REVIEW.md)· security-review(安全 10 域)· gsd-secure-phase(verify-mitigation + disposition + open=0 硬门)· plan-eng-review(15 认知模式)· devex-review(验证声明防幻觉)· codex(对抗外脑,可选) |
-| `sdlc-ship` | deploy-aliyun(可移植子集:密钥纪律 + 多环境坐标 + preflight 门)· **环境晋级流水线 dev→staging→canary→full + deploy-targets 适配器(static-site/container/vps)+ 回滚 = 净新建** |
+| `sdlc-review` | gstack:review(scope-drift + plan-completion + confidence 校准表 + fix-first + 对抗 pass)· gsd-code-review(深度分层 + 语言 pitfall 表 + REVIEW.md)· security-review(安全 10 域)· gsd-secure-phase(verify-mitigation + disposition + open=0 强制条件)· plan-eng-review(15 认知模式)· devex-review(验证声明防幻觉)· codex(对抗外脑,可选) |
+| `sdlc-ship` | deploy-aliyun(可移植子集:密钥纪律 + 多环境坐标 + preflight 检查)· **环境晋级流水线 dev→staging→canary→full + deploy-targets 适配器(static-site/container/vps)+ 回滚 = 净新建** |
 
 ### validate 模式
 
 | 模式 | 源 → 吸纳的部分 |
 |---|---|
-| `correctness` | gsd-add-tests(TDD/E2E/Skip 三分类 + No-skip 铁律 + text_mode)· qa(framework bootstrap + 回归测试三步)· gsd-validate-phase(requirement-completeness 三态)· **数字化覆盖率门 = 净新建** |
+| `correctness` | gsd-add-tests(TDD/E2E/Skip 三分类 + No-skip 铁律 + text_mode)· qa(framework bootstrap + 回归测试三步)· gsd-validate-phase(requirement-completeness 三态)· **数字化覆盖率阈值 = 净新建** |
 | `e2e` | Playwright MCP(Web 底座)· design-review(fix loop 8a-8f + 三联截图)· devex-review(证据等级 + Scope Declaration)· web-api-reverse-engineering(端点用例 + 只读约束)· **App 模态 / 旅程推导 / 多模态编排 = 净新建** |
-| `eval-bench` | ai-evals.md(三测量法 + 10 维度 + rubric 1/3/5 + reference dataset + guardrail/flywheel)· gsd-eval-review(加权阈值 verdict)· benchmark(baseline-diff 双阈值)· benchmark-models(多对象同输入 + LLM judge)· tb-run-analyzer(有效性甄别)· tb-task-operator(oracle/nop 自检门 + pass@k) |
+| `eval-bench` | ai-evals.md(三测量法 + 10 维度 + rubric 1/3/5 + reference dataset + guardrail/flywheel)· gsd-eval-review(加权阈值 verdict)· benchmark(baseline-diff 双阈值)· benchmark-models(多对象同输入 + LLM judge)· tb-run-analyzer(有效性甄别)· tb-task-operator(oracle/nop 自检条件 + pass@k) |
 
 ### 角色卡
 
@@ -216,11 +255,11 @@ v1 语言范围 = **Python + Web(TS)**。如何迭代本项目见仓库根 **`CL
 
 | 文件 | 源 → 吸纳的部分 |
 |---|---|
-| `divergence-frames.md` | adhd(两阶段发散/聚焦 + 框架表 + 陷阱标记 + pre-flight 门) |
+| `divergence-frames.md` | adhd(两阶段发散/聚焦 + 框架表 + 陷阱标记 + pre-flight 检查) |
 | `receiving-feedback.md` | receiving-code-review(先核实再改 / 一次一项 / 技术反驳 / YAGNI / 禁表演式同意) |
 | `role-routing.md` | arch-doctor 的 P13/P23 机制原型;**R1-R8 表本身 = 净新建** |
 | `templates/hooks/pre-push` | **自建**(纯 shell,读 STATE 的 sdlc-gate;OneRedOak CI 思路本地化) |
-| `web-review/` | **自建**:spec/plan 可选复核 gate——md→划词批注页 + localhost 回收 feedback;§6 Live mode = `curl /wait` 长轮询实时双向回流(跨引擎,不依赖 harness 特性) |
+| `web-review/` | **自建**:spec/plan 可选复核检查——md→划词批注页 + localhost 回收 feedback;§6 Live mode = `curl /wait` 长轮询实时双向回流(跨引擎,不依赖 harness 特性) |
 | `collaboration-discipline.md` | 源码协作纪律:分支模型两类(trunk-based · Fowler branch-by-abstraction)· worktree 按需 + 并行(Anthropic/OpenAI worktree 实践)· 多 agent 前置合约(上下文对齐)· 收敛安全网(Not-Rocket-Science / merge queue);**由 sdlc driver(§1.1)跨阶段加载,build 用于提交/波内执行** |
 
 ## 出处与致谢
@@ -237,7 +276,7 @@ v1 语言范围 = **Python + Web(TS)**。如何迭代本项目见仓库根 **`CL
 | **用户自有技能** | 本工作区 | hp-feature-dev · hp-bugfix · explorer-repo-report · startup-claude-md-init · tb-run-analyzer · tb-task-operator · web-api-reverse-engineering · `web/` 设计与编码规则 |
 | **Playwright MCP** | claude-plugins-official | e2e Web 模态底座 |
 
-> 致谢这些上游作者。**净新建**(无外部源)的部分:surface-map + 改动代码路由(R1-R8)、eval 标准前置、设计契约前置、数字化覆盖率门、App E2E 模态、TDD↔调试统一状态机、本地 pre-push SDLC 检查。
+> 致谢这些上游作者。**净新建**(无外部源)的部分:surface-map + 改动代码路由(R1-R8)、eval 标准前置、设计契约前置、数字化覆盖率阈值、App E2E 模态、TDD↔调试统一状态机、本地 pre-push SDLC 检查。
 
 ## 兼容性铁律(load-bearing)
 

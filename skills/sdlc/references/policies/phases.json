@@ -1,0 +1,710 @@
+{
+  "schema_version": "sdlc-policy-phases-v1",
+  "phases": [
+    {
+      "id": "phase.product.discover",
+      "lifecycle": "product-design",
+      "stage": "discover",
+      "entry_predicate_rule_ids": ["rule.phase.product.discover"],
+      "input_contracts": [
+        {"id": "input.product.discover.request", "kind": "Request", "state": "received"}
+      ],
+      "method_module_ids": ["mod.product.core"],
+      "output_contracts": [
+        {"id": "output.product.discover.definition", "kind": "ProductDefinitionPreview", "scope": "preview"}
+      ],
+      "completion_assertions": [
+        {"id": "assert.product.discover.structure", "kind": "mechanical", "source": "canonical_state", "evidence_type": "product-structure-report"},
+        {"id": "assert.product.discover.semantic", "kind": "semantic", "source": "typed_attestation", "evidence_type": "product-problem-framed-v1"}
+      ],
+      "semantic_attestation_types": ["product-problem-framed-v1"],
+      "obligations": [
+        {
+          "id": "obl.product.discover.problem-frame",
+          "role_id": "role.product-owner",
+          "responsibility": "accountable",
+          "participation": "required",
+          "required_when_rule_id": "rule.module.product.core",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.product.core", "anchor": "`obl.product.discover.problem-frame`"},
+          "completion_assertion_ids": ["assert.product.discover.semantic"],
+          "skip_policy": {"mode": "forbidden", "allowed_when_rule_id": null, "override_policy": "none"}
+        },
+        {
+          "id": "obl.product.discover.preservation",
+          "role_id": "role.big-data",
+          "responsibility": "reviewer",
+          "participation": "conditional",
+          "required_when_rule_id": "rule.condition.product.preservation",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.product.core", "anchor": "`obl.product.discover.preservation`"},
+          "completion_assertion_ids": ["assert.product.discover.structure"],
+          "skip_policy": {"mode": "selector_false_or_typed_override", "allowed_when_rule_id": "rule.condition.product.preservation", "override_policy": "typed-override-v1"}
+        }
+      ],
+      "transition_intent": {"kind": "advance", "target_phase_id": "phase.product.behavior-design", "scope": "preview"},
+      "rollback_intent": null,
+      "compatibility_adapter": null
+    },
+    {
+      "id": "phase.product.behavior-design",
+      "lifecycle": "product-design",
+      "stage": "behavior-design",
+      "entry_predicate_rule_ids": ["rule.phase.product.behavior-design"],
+      "input_contracts": [
+        {"id": "input.product.behavior.definition", "kind": "ProductDefinitionPreview", "state": "current"}
+      ],
+      "method_module_ids": ["mod.product.behavior-contract", "mod.product.behavior-bdd"],
+      "output_contracts": [
+        {"id": "output.product.behavior.contract", "kind": "BehaviorContractPreview", "scope": "preview"}
+      ],
+      "completion_assertions": [
+        {"id": "assert.product.behavior.structure", "kind": "mechanical", "source": "canonical_state", "evidence_type": "scenario-structure-report"},
+        {"id": "assert.product.behavior.semantic", "kind": "semantic", "source": "typed_attestation", "evidence_type": "behavior-contract-sufficient-v1"}
+      ],
+      "semantic_attestation_types": ["behavior-contract-sufficient-v1"],
+      "obligations": [
+        {
+          "id": "obl.product.behavior.scenario-contract",
+          "role_id": "role.product-owner",
+          "responsibility": "responsible",
+          "participation": "required",
+          "required_when_rule_id": "rule.module.product.behavior-contract",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.product.behavior-contract", "anchor": "`obl.product.behavior.scenario-contract`"},
+          "completion_assertion_ids": ["assert.product.behavior.structure"],
+          "skip_policy": {"mode": "forbidden", "allowed_when_rule_id": null, "override_policy": "none"}
+        },
+        {
+          "id": "obl.product.behavior.example-mapping",
+          "role_id": "role.qa",
+          "responsibility": "responsible",
+          "participation": "conditional",
+          "required_when_rule_id": "rule.module.product.behavior-bdd",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.product.behavior-bdd", "anchor": "`obl.product.behavior.example-mapping`"},
+          "completion_assertion_ids": ["assert.product.behavior.semantic"],
+          "skip_policy": {"mode": "selector_false_or_typed_override", "allowed_when_rule_id": "rule.module.product.behavior-bdd", "override_policy": "typed-override-v1"}
+        }
+      ],
+      "transition_intent": {"kind": "advance", "target_phase_id": "phase.product.domain-design", "scope": "preview"},
+      "rollback_intent": null,
+      "compatibility_adapter": null
+    },
+    {
+      "id": "phase.product.domain-design",
+      "lifecycle": "product-design",
+      "stage": "domain-design",
+      "entry_predicate_rule_ids": ["rule.phase.product.domain-design"],
+      "input_contracts": [
+        {"id": "input.product.domain.behavior", "kind": "BehaviorContractPreview", "state": "current"}
+      ],
+      "method_module_ids": ["mod.product.domain-ddd"],
+      "output_contracts": [
+        {"id": "output.product.domain.model", "kind": "DomainModelPreview", "scope": "preview"}
+      ],
+      "completion_assertions": [
+        {"id": "assert.product.domain.structure", "kind": "mechanical", "source": "canonical_state", "evidence_type": "domain-model-structure-report"},
+        {"id": "assert.product.domain.semantic", "kind": "semantic", "source": "typed_attestation", "evidence_type": "domain-model-sufficient"}
+      ],
+      "semantic_attestation_types": ["domain-model-sufficient"],
+      "obligations": [
+        {
+          "id": "obl.product.domain.model",
+          "role_id": "role.domain-expert",
+          "responsibility": "responsible",
+          "participation": "conditional",
+          "required_when_rule_id": "rule.module.product.domain-ddd",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.product.domain-ddd", "anchor": "`obl.product.domain.model`"},
+          "completion_assertion_ids": ["assert.product.domain.structure"],
+          "skip_policy": {"mode": "selector_false_or_typed_override", "allowed_when_rule_id": "rule.module.product.domain-ddd", "override_policy": "typed-override-v1"}
+        },
+        {
+          "id": "obl.product.domain.sufficiency-attestation",
+          "role_id": "role.domain-expert",
+          "responsibility": "reviewer",
+          "participation": "conditional",
+          "required_when_rule_id": "rule.module.product.domain-ddd",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": ["constraint.domain-expert.independent-from-product-owner"],
+          "playbook_ref": {"module_id": "mod.product.domain-ddd", "anchor": "`obl.product.domain.sufficiency-attestation`"},
+          "completion_assertion_ids": ["assert.product.domain.semantic"],
+          "skip_policy": {"mode": "selector_false_or_typed_override", "allowed_when_rule_id": "rule.module.product.domain-ddd", "override_policy": "typed-override-v1"}
+        }
+      ],
+      "transition_intent": {"kind": "advance", "target_phase_id": "phase.product.experience-design", "scope": "preview"},
+      "rollback_intent": null,
+      "compatibility_adapter": null
+    },
+    {
+      "id": "phase.product.experience-design",
+      "lifecycle": "product-design",
+      "stage": "experience-design",
+      "entry_predicate_rule_ids": ["rule.phase.product.experience-design"],
+      "input_contracts": [
+        {"id": "input.product.experience.domain", "kind": "DomainModelPreview", "state": "current"}
+      ],
+      "method_module_ids": ["mod.product.experience-design"],
+      "output_contracts": [
+        {"id": "output.product.experience.contract", "kind": "ExperienceContractPreview", "scope": "preview"}
+      ],
+      "completion_assertions": [
+        {"id": "assert.product.experience.structure", "kind": "mechanical", "source": "canonical_state", "evidence_type": "experience-structure-report"},
+        {"id": "assert.product.experience.semantic", "kind": "semantic", "source": "typed_attestation", "evidence_type": "experience-sufficient-v1"}
+      ],
+      "semantic_attestation_types": ["experience-sufficient-v1"],
+      "obligations": [
+        {
+          "id": "obl.product.experience.constraints",
+          "role_id": "role.design",
+          "responsibility": "responsible",
+          "participation": "conditional",
+          "required_when_rule_id": "rule.module.product.experience-design",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.product.experience-design", "anchor": "`obl.product.experience.constraints`"},
+          "completion_assertion_ids": ["assert.product.experience.structure"],
+          "skip_policy": {"mode": "selector_false_or_typed_override", "allowed_when_rule_id": "rule.module.product.experience-design", "override_policy": "typed-override-v1"}
+        },
+        {
+          "id": "obl.product.experience.sufficiency-attestation",
+          "role_id": "role.client-dev",
+          "responsibility": "responsible",
+          "participation": "conditional",
+          "required_when_rule_id": "rule.module.product.experience-design",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.product.experience-design", "anchor": "`obl.product.experience.sufficiency-attestation`"},
+          "completion_assertion_ids": ["assert.product.experience.semantic"],
+          "skip_policy": {"mode": "selector_false_or_typed_override", "allowed_when_rule_id": "rule.module.product.experience-design", "override_policy": "typed-override-v1"}
+        }
+      ],
+      "transition_intent": {"kind": "advance", "target_phase_id": "phase.product.quality-design", "scope": "preview"},
+      "rollback_intent": null,
+      "compatibility_adapter": null
+    },
+    {
+      "id": "phase.product.quality-design",
+      "lifecycle": "product-design",
+      "stage": "quality-design",
+      "entry_predicate_rule_ids": ["rule.phase.product.quality-design"],
+      "input_contracts": [
+        {"id": "input.product.quality.experience", "kind": "ExperienceContractPreview", "state": "current"}
+      ],
+      "method_module_ids": ["mod.product.product-eval", "mod.product.quality"],
+      "output_contracts": [
+        {"id": "output.product.quality.contract", "kind": "QualityContractPreview", "scope": "preview"}
+      ],
+      "completion_assertions": [
+        {"id": "assert.product.quality.structure", "kind": "mechanical", "source": "canonical_state", "evidence_type": "quality-contract-structure-report"},
+        {"id": "assert.product.quality.semantic", "kind": "semantic", "source": "typed_attestation", "evidence_type": "quality-contract-sufficient-v1"}
+      ],
+      "semantic_attestation_types": ["quality-contract-sufficient-v1"],
+      "obligations": [
+        {
+          "id": "obl.product.quality.nfr-contract",
+          "role_id": "role.product-owner",
+          "responsibility": "accountable",
+          "participation": "conditional",
+          "required_when_rule_id": "rule.module.product.quality",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.product.quality", "anchor": "`obl.product.quality.nfr-contract`"},
+          "completion_assertion_ids": ["assert.product.quality.structure"],
+          "skip_policy": {"mode": "selector_false_or_typed_override", "allowed_when_rule_id": "rule.module.product.quality", "override_policy": "typed-override-v1"}
+        },
+        {
+          "id": "obl.product.quality.eval-contract",
+          "role_id": "role.qa",
+          "responsibility": "responsible",
+          "participation": "conditional",
+          "required_when_rule_id": "rule.module.product.product-eval",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.product.product-eval", "anchor": "`obl.product.quality.eval-contract`"},
+          "completion_assertion_ids": ["assert.product.quality.semantic"],
+          "skip_policy": {"mode": "selector_false_or_typed_override", "allowed_when_rule_id": "rule.module.product.product-eval", "override_policy": "typed-override-v1"}
+        }
+      ],
+      "transition_intent": {"kind": "advance", "target_phase_id": "phase.product.product-validation", "scope": "preview"},
+      "rollback_intent": null,
+      "compatibility_adapter": null
+    },
+    {
+      "id": "phase.product.product-validation",
+      "lifecycle": "product-design",
+      "stage": "product-validation",
+      "entry_predicate_rule_ids": ["rule.phase.product.product-validation"],
+      "input_contracts": [
+        {"id": "input.product.validation.quality", "kind": "QualityContractPreview", "state": "current"}
+      ],
+      "method_module_ids": ["mod.product.product-validation"],
+      "output_contracts": [
+        {"id": "output.product.validation.report", "kind": "ProductValidationPreview", "scope": "preview"}
+      ],
+      "completion_assertions": [
+        {"id": "assert.product.validation.structure", "kind": "mechanical", "source": "canonical_state", "evidence_type": "product-trace-report"},
+        {"id": "assert.product.validation.semantic", "kind": "semantic", "source": "typed_attestation", "evidence_type": "product-semantic-pass"}
+      ],
+      "semantic_attestation_types": ["product-semantic-pass"],
+      "obligations": [
+        {
+          "id": "obl.product.validation.structural-check",
+          "role_id": "role.qa",
+          "responsibility": "responsible",
+          "participation": "required",
+          "required_when_rule_id": "rule.module.product.product-validation",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.product.product-validation", "anchor": "`obl.product.validation.structural-check`"},
+          "completion_assertion_ids": ["assert.product.validation.structure"],
+          "skip_policy": {"mode": "forbidden", "allowed_when_rule_id": null, "override_policy": "none"}
+        },
+        {
+          "id": "obl.product.validation.semantic-attestation",
+          "role_id": "role.product-owner",
+          "responsibility": "approver",
+          "participation": "required",
+          "required_when_rule_id": "rule.module.product.product-validation",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.product.product-validation", "anchor": "`obl.product.validation.semantic-attestation`"},
+          "completion_assertion_ids": ["assert.product.validation.semantic"],
+          "skip_policy": {"mode": "forbidden", "allowed_when_rule_id": null, "override_policy": "none"}
+        }
+      ],
+      "transition_intent": {"kind": "advance", "target_phase_id": "phase.product.product-approval", "scope": "preview"},
+      "rollback_intent": null,
+      "compatibility_adapter": null
+    },
+    {
+      "id": "phase.product.product-approval",
+      "lifecycle": "product-design",
+      "stage": "product-approval",
+      "entry_predicate_rule_ids": ["rule.phase.product.product-approval"],
+      "input_contracts": [
+        {"id": "input.product.approval.validation", "kind": "ProductValidationPreview", "state": "current"}
+      ],
+      "method_module_ids": ["mod.product.approval"],
+      "output_contracts": [
+        {"id": "output.product.approval.diagnostic", "kind": "ProductApprovalDiagnostic", "scope": "preview"}
+      ],
+      "completion_assertions": [
+        {"id": "assert.product.approval.structure", "kind": "mechanical", "source": "canonical_state", "evidence_type": "approval-diagnostic-structure-report"},
+        {"id": "assert.product.approval.semantic", "kind": "semantic", "source": "typed_attestation", "evidence_type": "preview-approval-diagnostic-v1"}
+      ],
+      "semantic_attestation_types": ["preview-approval-diagnostic-v1"],
+      "obligations": [
+        {
+          "id": "obl.product.approval.decision",
+          "role_id": "role.product-owner",
+          "responsibility": "approver",
+          "participation": "required",
+          "required_when_rule_id": "rule.module.product.approval",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.product.approval", "anchor": "`obl.product.approval.decision`"},
+          "completion_assertion_ids": ["assert.product.approval.semantic"],
+          "skip_policy": {"mode": "forbidden", "allowed_when_rule_id": null, "override_policy": "none"}
+        }
+      ],
+      "transition_intent": {"kind": "complete", "target_phase_id": null, "scope": "preview"},
+      "rollback_intent": null,
+      "compatibility_adapter": null
+    },
+    {
+      "id": "phase.delivery.engineering-spec",
+      "lifecycle": "software-delivery",
+      "stage": "engineering-spec",
+      "entry_predicate_rule_ids": ["rule.phase.delivery.engineering-spec"],
+      "input_contracts": [
+        {"id": "input.delivery.engineering-spec.product-contract", "kind": "ProductContract", "state": "approved"},
+        {"id": "input.delivery.engineering-spec.profile", "kind": "ProfileSnapshot", "state": "current"},
+        {"id": "input.delivery.engineering-spec.repository", "kind": "RepositoryRevision", "state": "current"}
+      ],
+      "method_module_ids": ["mod.delivery.architecture", "mod.delivery.core-sdd", "mod.delivery.engineering-spec", "mod.delivery.reliability", "mod.delivery.tactical-ddd"],
+      "output_contracts": [
+        {"id": "output.delivery.engineering-spec.diagnostic", "kind": "EngineeringSpecDiagnostic", "scope": "preview"}
+      ],
+      "completion_assertions": [
+        {"id": "assert.delivery.engineering-spec.structure", "kind": "mechanical", "source": "canonical_state", "evidence_type": "engineering-trace-report"},
+        {"id": "assert.delivery.engineering-spec.semantic", "kind": "semantic", "source": "typed_attestation", "evidence_type": "engineering-spec-sufficient-v1"}
+      ],
+      "semantic_attestation_types": ["engineering-spec-sufficient-v1"],
+      "obligations": [
+        {
+          "id": "obl.delivery.engineering-spec.trace",
+          "role_id": "role.architect",
+          "responsibility": "responsible",
+          "participation": "required",
+          "required_when_rule_id": "rule.module.delivery.core-sdd",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.delivery.core-sdd", "anchor": "`obl.delivery.engineering-spec.trace`"},
+          "completion_assertion_ids": ["assert.delivery.engineering-spec.structure"],
+          "skip_policy": {"mode": "forbidden", "allowed_when_rule_id": null, "override_policy": "none"}
+        },
+        {
+          "id": "obl.delivery.engineering-spec.design",
+          "role_id": "role.architect",
+          "responsibility": "responsible",
+          "participation": "required",
+          "required_when_rule_id": "rule.module.delivery.engineering-spec",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.delivery.engineering-spec", "anchor": "`obl.delivery.engineering-spec.design`"},
+          "completion_assertion_ids": ["assert.delivery.engineering-spec.semantic"],
+          "skip_policy": {"mode": "forbidden", "allowed_when_rule_id": null, "override_policy": "none"}
+        },
+        {
+          "id": "obl.delivery.architecture.design",
+          "role_id": "role.architect",
+          "responsibility": "responsible",
+          "participation": "conditional",
+          "required_when_rule_id": "rule.module.delivery.architecture",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.delivery.architecture", "anchor": "`obl.delivery.architecture.design`"},
+          "completion_assertion_ids": ["assert.delivery.engineering-spec.semantic"],
+          "skip_policy": {"mode": "selector_false_or_typed_override", "allowed_when_rule_id": "rule.module.delivery.architecture", "override_policy": "typed-override-v1"}
+        },
+        {
+          "id": "obl.delivery.tactical-ddd.mapping",
+          "role_id": "role.domain-expert",
+          "responsibility": "consulted",
+          "participation": "conditional",
+          "required_when_rule_id": "rule.module.delivery.tactical-ddd",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.delivery.tactical-ddd", "anchor": "`obl.delivery.tactical-ddd.mapping`"},
+          "completion_assertion_ids": ["assert.delivery.engineering-spec.semantic"],
+          "skip_policy": {"mode": "selector_false_or_typed_override", "allowed_when_rule_id": "rule.module.delivery.tactical-ddd", "override_policy": "typed-override-v1"}
+        },
+        {
+          "id": "obl.delivery.reliability.design",
+          "role_id": "role.qa",
+          "responsibility": "reviewer",
+          "participation": "conditional",
+          "required_when_rule_id": "rule.module.delivery.reliability",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.delivery.reliability", "anchor": "`obl.delivery.reliability.design`"},
+          "completion_assertion_ids": ["assert.delivery.engineering-spec.semantic"],
+          "skip_policy": {"mode": "selector_false_or_typed_override", "allowed_when_rule_id": "rule.module.delivery.reliability", "override_policy": "typed-override-v1"}
+        }
+      ],
+      "transition_intent": {"kind": "advance", "target_phase_id": "phase.delivery.plan", "scope": "preview"},
+      "rollback_intent": null,
+      "compatibility_adapter": null
+    },
+    {
+      "id": "phase.delivery.plan",
+      "lifecycle": "software-delivery",
+      "stage": "plan",
+      "entry_predicate_rule_ids": ["rule.phase.delivery.plan"],
+      "input_contracts": [
+        {"id": "input.delivery.plan.engineering-spec", "kind": "EngineeringSpec", "state": "approved"}
+      ],
+      "method_module_ids": ["mod.delivery.planning"],
+      "output_contracts": [
+        {"id": "output.delivery.plan.diagnostic", "kind": "DeliveryPlanDiagnostic", "scope": "preview"}
+      ],
+      "completion_assertions": [
+        {"id": "assert.delivery.plan.structure", "kind": "mechanical", "source": "canonical_state", "evidence_type": "delivery-plan-structure-report"},
+        {"id": "assert.delivery.plan.semantic", "kind": "semantic", "source": "typed_attestation", "evidence_type": "delivery-plan-sufficient-v1"}
+      ],
+      "semantic_attestation_types": ["delivery-plan-sufficient-v1"],
+      "obligations": [
+        {
+          "id": "obl.delivery.plan.delivery-plan",
+          "role_id": "role.architect",
+          "responsibility": "responsible",
+          "participation": "required",
+          "required_when_rule_id": "rule.module.delivery.planning",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.delivery.planning", "anchor": "`obl.delivery.plan.delivery-plan`"},
+          "completion_assertion_ids": ["assert.delivery.plan.semantic"],
+          "skip_policy": {"mode": "forbidden", "allowed_when_rule_id": null, "override_policy": "none"}
+        }
+      ],
+      "transition_intent": {"kind": "advance", "target_phase_id": "phase.delivery.implement", "scope": "preview"},
+      "rollback_intent": null,
+      "compatibility_adapter": null
+    },
+    {
+      "id": "phase.delivery.implement",
+      "lifecycle": "software-delivery",
+      "stage": "implement",
+      "entry_predicate_rule_ids": ["rule.phase.delivery.implement"],
+      "input_contracts": [
+        {"id": "input.delivery.implement.delivery-plan", "kind": "DeliveryPlan", "state": "approved"},
+        {"id": "input.delivery.implement.repository", "kind": "RepositoryRevision", "state": "current"}
+      ],
+      "method_module_ids": ["mod.delivery.contract-check", "mod.delivery.debugging", "mod.delivery.implementation-tdd", "mod.delivery.static-check", "mod.delivery.visual-regression"],
+      "output_contracts": [
+        {"id": "output.delivery.implement.evidence", "kind": "ImplementationEvidenceDiagnostic", "scope": "preview"}
+      ],
+      "completion_assertions": [
+        {"id": "assert.delivery.implement.runner", "kind": "mechanical", "source": "runner_evidence", "evidence_type": "implementation-runner-evidence"}
+      ],
+      "semantic_attestation_types": [],
+      "obligations": [
+        {
+          "id": "obl.delivery.implement.tdd",
+          "role_id": "role.server-dev",
+          "responsibility": "responsible",
+          "participation": "required",
+          "required_when_rule_id": "rule.module.delivery.implementation-tdd",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.delivery.implementation-tdd", "anchor": "`obl.delivery.implement.tdd`"},
+          "completion_assertion_ids": ["assert.delivery.implement.runner"],
+          "skip_policy": {"mode": "forbidden", "allowed_when_rule_id": null, "override_policy": "none"}
+        },
+        {
+          "id": "obl.delivery.implement.static-check",
+          "role_id": "role.qa",
+          "responsibility": "responsible",
+          "participation": "conditional",
+          "required_when_rule_id": "rule.module.delivery.static-check",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.delivery.static-check", "anchor": "`obl.delivery.implement.static-check`"},
+          "completion_assertion_ids": ["assert.delivery.implement.runner"],
+          "skip_policy": {"mode": "selector_false_or_typed_override", "allowed_when_rule_id": "rule.module.delivery.static-check", "override_policy": "typed-override-v1"}
+        },
+        {
+          "id": "obl.delivery.implement.contract-check",
+          "role_id": "role.qa",
+          "responsibility": "responsible",
+          "participation": "conditional",
+          "required_when_rule_id": "rule.module.delivery.contract-check",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.delivery.contract-check", "anchor": "`obl.delivery.implement.contract-check`"},
+          "completion_assertion_ids": ["assert.delivery.implement.runner"],
+          "skip_policy": {"mode": "selector_false_or_typed_override", "allowed_when_rule_id": "rule.module.delivery.contract-check", "override_policy": "typed-override-v1"}
+        },
+        {
+          "id": "obl.delivery.implement.visual-regression",
+          "role_id": "role.design",
+          "responsibility": "reviewer",
+          "participation": "conditional",
+          "required_when_rule_id": "rule.module.delivery.visual-regression",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.delivery.visual-regression", "anchor": "`obl.delivery.implement.visual-regression`"},
+          "completion_assertion_ids": ["assert.delivery.implement.runner"],
+          "skip_policy": {"mode": "selector_false_or_typed_override", "allowed_when_rule_id": "rule.module.delivery.visual-regression", "override_policy": "typed-override-v1"}
+        },
+        {
+          "id": "obl.delivery.debugging.hypothesis-loop",
+          "role_id": "role.server-dev",
+          "responsibility": "responsible",
+          "participation": "conditional",
+          "required_when_rule_id": "rule.module.delivery.debugging",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.delivery.debugging", "anchor": "`obl.delivery.debugging.hypothesis-loop`"},
+          "completion_assertion_ids": ["assert.delivery.implement.runner"],
+          "skip_policy": {"mode": "selector_false_or_typed_override", "allowed_when_rule_id": "rule.module.delivery.debugging", "override_policy": "typed-override-v1"}
+        }
+      ],
+      "transition_intent": {"kind": "advance", "target_phase_id": "phase.delivery.validate", "scope": "preview"},
+      "rollback_intent": null,
+      "compatibility_adapter": null
+    },
+    {
+      "id": "phase.delivery.validate",
+      "lifecycle": "software-delivery",
+      "stage": "validate",
+      "entry_predicate_rule_ids": ["rule.phase.delivery.validate"],
+      "input_contracts": [
+        {"id": "input.delivery.validate.delivery-plan", "kind": "DeliveryPlan", "state": "approved"},
+        {"id": "input.delivery.validate.engineering-spec", "kind": "EngineeringSpec", "state": "approved"},
+        {"id": "input.delivery.validate.repository", "kind": "RepositoryRevision", "state": "current"}
+      ],
+      "method_module_ids": ["mod.delivery.validation-review"],
+      "output_contracts": [
+        {"id": "output.delivery.validate.diagnostic", "kind": "ValidationDiagnostic", "scope": "preview"}
+      ],
+      "completion_assertions": [
+        {"id": "assert.delivery.validate.runner", "kind": "mechanical", "source": "runner_evidence", "evidence_type": "validation-runner-evidence"}
+      ],
+      "semantic_attestation_types": [],
+      "obligations": [
+        {
+          "id": "obl.delivery.validate.mechanical-evidence",
+          "role_id": "role.qa",
+          "responsibility": "responsible",
+          "participation": "required",
+          "required_when_rule_id": "rule.module.delivery.validation-review",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.delivery.validation-review", "anchor": "`obl.delivery.validate.mechanical-evidence`"},
+          "completion_assertion_ids": ["assert.delivery.validate.runner"],
+          "skip_policy": {"mode": "forbidden", "allowed_when_rule_id": null, "override_policy": "none"}
+        },
+        {
+          "id": "obl.delivery.validate.trace-freshness",
+          "role_id": "role.architect",
+          "responsibility": "reviewer",
+          "participation": "required",
+          "required_when_rule_id": "rule.module.delivery.validation-review",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": ["constraint.architect.independent-from-server-dev"],
+          "playbook_ref": {"module_id": "mod.delivery.validation-review", "anchor": "`obl.delivery.validate.trace-freshness`"},
+          "completion_assertion_ids": ["assert.delivery.validate.runner"],
+          "skip_policy": {"mode": "forbidden", "allowed_when_rule_id": null, "override_policy": "none"}
+        }
+      ],
+      "transition_intent": {"kind": "advance", "target_phase_id": "phase.delivery.review", "scope": "preview"},
+      "rollback_intent": null,
+      "compatibility_adapter": null
+    },
+    {
+      "id": "phase.delivery.review",
+      "lifecycle": "software-delivery",
+      "stage": "review",
+      "entry_predicate_rule_ids": ["rule.phase.delivery.review"],
+      "input_contracts": [
+        {"id": "input.delivery.review.delivery-plan", "kind": "DeliveryPlan", "state": "approved"},
+        {"id": "input.delivery.review.evidence", "kind": "EvidenceSet", "state": "current"},
+        {"id": "input.delivery.review.repository", "kind": "RepositoryRevision", "state": "current"}
+      ],
+      "method_module_ids": ["mod.delivery.independent-review"],
+      "output_contracts": [
+        {"id": "output.delivery.review.diagnostic", "kind": "ReviewAttestationDiagnostic", "scope": "preview"}
+      ],
+      "completion_assertions": [
+        {"id": "assert.delivery.review.semantic", "kind": "semantic", "source": "typed_attestation", "evidence_type": "independent-review-verdict-v1"}
+      ],
+      "semantic_attestation_types": ["independent-review-verdict-v1"],
+      "obligations": [
+        {
+          "id": "obl.delivery.review.independent-verdict",
+          "role_id": "role.qa",
+          "responsibility": "reviewer",
+          "participation": "required",
+          "required_when_rule_id": "rule.module.delivery.independent-review",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": ["constraint.qa.independent-from-server-dev"],
+          "playbook_ref": {"module_id": "mod.delivery.independent-review", "anchor": "`obl.delivery.review.independent-verdict`"},
+          "completion_assertion_ids": ["assert.delivery.review.semantic"],
+          "skip_policy": {"mode": "forbidden", "allowed_when_rule_id": null, "override_policy": "none"}
+        }
+      ],
+      "transition_intent": {"kind": "advance", "target_phase_id": "phase.delivery.release-candidate", "scope": "preview"},
+      "rollback_intent": null,
+      "compatibility_adapter": null
+    },
+    {
+      "id": "phase.delivery.release-candidate",
+      "lifecycle": "software-delivery",
+      "stage": "release-candidate",
+      "entry_predicate_rule_ids": ["rule.phase.delivery.release-candidate"],
+      "input_contracts": [
+        {"id": "input.delivery.release-candidate.delivery-plan", "kind": "DeliveryPlan", "state": "approved"},
+        {"id": "input.delivery.release-candidate.evidence", "kind": "EvidenceSet", "state": "current"},
+        {"id": "input.delivery.release-candidate.review", "kind": "ReviewRecord", "state": "current"}
+      ],
+      "method_module_ids": ["mod.delivery.release-candidate"],
+      "output_contracts": [
+        {"id": "output.delivery.release-candidate.diagnostic", "kind": "ReleaseReadinessDiagnostic", "scope": "preview"}
+      ],
+      "completion_assertions": [
+        {"id": "assert.delivery.release-candidate.structure", "kind": "mechanical", "source": "canonical_state", "evidence_type": "release-readiness-structure-report"},
+        {"id": "assert.delivery.release-candidate.semantic", "kind": "semantic", "source": "typed_attestation", "evidence_type": "release-readiness-sufficient-v1"}
+      ],
+      "semantic_attestation_types": ["release-readiness-sufficient-v1"],
+      "obligations": [
+        {
+          "id": "obl.delivery.release-candidate.readiness",
+          "role_id": "role.architect",
+          "responsibility": "accountable",
+          "participation": "required",
+          "required_when_rule_id": "rule.module.delivery.release-candidate",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.delivery.release-candidate", "anchor": "`obl.delivery.release-candidate.readiness`"},
+          "completion_assertion_ids": ["assert.delivery.release-candidate.semantic"],
+          "skip_policy": {"mode": "forbidden", "allowed_when_rule_id": null, "override_policy": "none"}
+        }
+      ],
+      "transition_intent": {"kind": "complete", "target_phase_id": null, "scope": "preview"},
+      "rollback_intent": null,
+      "compatibility_adapter": null
+    },
+    {
+      "id": "phase.compatibility.legacy-composite-v1",
+      "lifecycle": "compatibility",
+      "stage": "legacy-composite-v1",
+      "entry_predicate_rule_ids": ["rule.phase.compatibility.legacy-composite-v1"],
+      "input_contracts": [
+        {"id": "input.compatibility.legacy-spec", "kind": "LegacySpec", "state": "approved"},
+        {"id": "input.compatibility.legacy-approval-observation", "kind": "LegacyApprovalObservation", "state": "observed"}
+      ],
+      "method_module_ids": ["mod.delivery.legacy-composite"],
+      "output_contracts": [
+        {"id": "output.compatibility.legacy-plan", "kind": "LegacyPlan", "scope": "preview"}
+      ],
+      "completion_assertions": [
+        {"id": "assert.compatibility.legacy-composite.structure", "kind": "mechanical", "source": "canonical_state", "evidence_type": "legacy-parity-diagnostic"}
+      ],
+      "semantic_attestation_types": [],
+      "obligations": [
+        {
+          "id": "obl.delivery.compatibility.legacy-composite",
+          "role_id": "role.architect",
+          "responsibility": "responsible",
+          "participation": "required",
+          "required_when_rule_id": "rule.module.delivery.legacy-composite",
+          "min_actors": 1,
+          "max_actors": 1,
+          "independence_constraint_ids": [],
+          "playbook_ref": {"module_id": "mod.delivery.legacy-composite", "anchor": "`obl.delivery.compatibility.legacy-composite`"},
+          "completion_assertion_ids": ["assert.compatibility.legacy-composite.structure"],
+          "skip_policy": {"mode": "forbidden", "allowed_when_rule_id": null, "override_policy": "none"}
+        }
+      ],
+      "transition_intent": {"kind": "complete", "target_phase_id": null, "scope": "preview"},
+      "rollback_intent": null,
+      "compatibility_adapter": "legacy-composite-v1"
+    }
+  ]
+}

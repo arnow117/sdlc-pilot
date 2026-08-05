@@ -20,6 +20,7 @@ sys.path.insert(0, str(HERE))
 
 import control  # noqa: E402
 import control_store  # noqa: E402
+import preview_scope  # noqa: E402
 
 
 SHA_A = "a" * 40
@@ -926,6 +927,84 @@ class GitControlRaceTest(GitControlStoreTest):
             finally:
                 tx_a.close()
                 tx_b.close()
+
+
+class PreviewIsolationTest(unittest.TestCase):
+    def test_preview_detector_covers_scope_paths_and_shadow_plan_format(self):
+        for value in (
+                ".sdlc/preview/run-1/evidence.json",
+                r".sdlc\preview\run-1\evidence.json",
+                "evidence.json?scope=preview",
+                {"scope": "preview"},
+                {"artifact_ref": {"path": ".sdlc/preview/run-1/evidence.json"}},
+                "plan_format: shadow-delivery-plan-v1",
+                {"plan_format": "shadow-delivery-plan-v1"},
+                ["review.md", "scope: preview"],
+                Path(".sdlc/preview/run-1/evidence.json"),
+        ):
+            with self.subTest(value=value):
+                self.assertTrue(preview_scope.is_preview(value))
+        self.assertFalse(preview_scope.is_preview("evidence/feat-a/T1/result.md"))
+
+    def test_control_apis_reject_preview_before_reading_or_writing_control(self):
+        shadow_plan = "# Plan\nplan_format: shadow-delivery-plan-v1\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp, "missing-control")
+            plan_ref = f"features/feat-a/plans/{control.plan_content_id(shadow_plan)}.md"
+            with self.assertRaises(control_store.SchemaError):
+                control.store_plan_artifact(
+                    root, feature_id="feat-a", plan_ref=plan_ref, plan_text=shadow_plan)
+            with self.assertRaises(control_store.SchemaError):
+                control.store_plan_artifact(
+                    root, feature_id="feat-a", plan_ref=".sdlc/preview/run-1/plan.md",
+                    plan_text="# Plan\n")
+            with self.assertRaises(control_store.SchemaError):
+                control.register_plan(
+                    root, feature_id="feat-a", plan_ref=plan_ref, plan_revision=SHA_A,
+                    plan_text=shadow_plan, tasks=[], at="2026-08-05T10:00:00+08:00")
+            with self.assertRaises(control_store.SchemaError):
+                control.record_evidence(
+                    root, feature_id="feat-a", task_id="T1", scope="preview", result="pass",
+                    tested_sha=SHA_A, command="test", output="ok", producer="runner",
+                    at="2026-08-05T10:00:00+08:00")
+            with self.assertRaises(control_store.SchemaError):
+                control.task_event(
+                    root, feature_id="feat-a", task_id="T1", event="verify",
+                    evidence_ref=".sdlc/preview/run-1/evidence.md", at="2026-08-05T10:00:00+08:00")
+            with self.assertRaises(control_store.SchemaError):
+                control.validate_feature(
+                    root, feature_id="feat-a", current_head_sha=SHA_A,
+                    evidence_ref="evidence.md?scope=preview", at="2026-08-05T10:00:00+08:00")
+            with self.assertRaises(control_store.SchemaError):
+                control.record_review(
+                    root, feature_id="feat-a", reviewed_sha=SHA_A, verdict="pass",
+                    report_refs=[".sdlc/preview/run-1/review.md"], reviewer="reviewer",
+                    at="2026-08-05T10:00:00+08:00")
+            with self.assertRaises(control_store.SchemaError):
+                control.retire(
+                    root, feature_id="feat-a", evidence_ref="shadow-delivery-plan-v1",
+                    at="2026-08-05T10:00:00+08:00")
+            self.assertFalse(root.exists())
+
+    def test_git_store_and_cli_reject_preview_plan_before_control_transaction(self):
+        shadow_plan = "# Plan\nplan_format: shadow-delivery-plan-v1\n"
+        with tempfile.TemporaryDirectory() as tmp:
+            subprocess.run(["git", "init", "-q", tmp], check=True)
+            store = control_store.GitControlStore(tmp, mode="local-serial")
+            with self.assertRaises(control_store.SchemaError):
+                store.register_plan(
+                    feature_id="feat-a", plan_text=shadow_plan, expected_control_sha=SHA_A,
+                    at="2026-08-05T10:00:00+08:00")
+            self.assertIsNone(store.current_sha(refresh=False))
+            preview_path = Path(tmp, ".sdlc", "preview", "run-1", "plan.md")
+            proc = subprocess.run([
+                sys.executable, str(HERE / "control.py"), "register-plan",
+                "--repo-root", tmp, "--mode", "local-serial",
+                "--expected-control-sha", SHA_A, "--feature-id", "feat-a",
+                "--plan-file", str(preview_path), "--at", "2026-08-05T10:00:00+08:00",
+            ], capture_output=True, text=True)
+            self.assertEqual(proc.returncode, 1, proc.stderr)
+            self.assertIn("preview", proc.stderr)
 
 
 class CliSmokeTest(unittest.TestCase):

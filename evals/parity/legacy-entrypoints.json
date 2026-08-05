@@ -1,0 +1,1 @@
+{"schema_version":"legacy-parity-v1","entrypoints":["sdlc-spec","sdlc-plan","sdlc-build","sdlc-validate","sdlc-review","sdlc-intake","sdlc-deliver","sdlc-onboard","sdlc-ship"],"required_snapshot_fields":["entrypoint","route","exit_status","artifacts","handoff","state","control_tree"],"preview_observation":{"kind":"legacy_approval_observation","scope":"preview"}}

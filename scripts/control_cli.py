@@ -10,6 +10,7 @@ from typing import Any
 
 import control
 import control_store
+import preview_scope
 from control_store import ConflictError, ControlError, MissingRecordError, SchemaError
 
 
@@ -212,6 +213,7 @@ def main(argv: list[str] | None = None) -> int:
             if args.tasks_json:
                 tasks_data = _read_json(args.tasks_json)
                 supplied = tasks_data.get("tasks", []) if isinstance(tasks_data, dict) else tasks_data
+            preview_scope.reject_preview(args.plan_file, field="plan_file", error_cls=SchemaError)
             store = control_store.GitControlStore(
                 args.repo_root, remote=args.remote, mode=args.mode)
             value = store.register_plan(

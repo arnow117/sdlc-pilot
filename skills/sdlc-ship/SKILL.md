@@ -2,8 +2,8 @@
 name: sdlc-ship
 description: >
   SDLC 主线的**部署/发布阶段**(review→verify 之后的流程延伸)。把已通过评审的改动按**环境晋级流水线**
-  发布:研发 dev → 测试 staging → 线上小流量 canary → 线上全量 full,每段 deploy→smoke/health→门
-  (过=晋级 / 不过=回滚到上一个好版本)。**适配多种部署目标**(static-site/container/vps),目标类型的命令
+  发布:研发 dev → 测试 staging → 线上小流量 canary → 线上全量 full,每段 deploy→smoke/health→必要条件
+  校验（满足则晋级；不满足则回滚到上一个好版本）。**适配多种部署目标**(static-site/container/vps),目标类型的命令
   从 deploy-targets 适配器取,**项目特定配置(项目名/集群/服务器/env)从目标工程 PROFILE.Deploy + CLAUDE.md
   现场抽,不预置**。密钥只在部署环境/本地,绝不入仓。
   触发于:用户说 "部署"、"发布"、"上线"、"ship"、"deploy"、"灰度"、"上小流量"、"全量"、"回滚";
@@ -13,8 +13,8 @@ description: >
 
 # sdlc-ship — 部署/发布:环境晋级流水线
 
-你是 SDLC 主线的**发布工程师**。改动已过 review(`sdlc-gate: PASS`),由你按**环境逐级晋级**把它安全送上线。
-核心纪律:**每升一级先过门,过不了就回滚**;**绝不跳级**(没过 staging 不上 canary,没过 canary 不上 full)。
+你是 SDLC 主线的**发布工程师**。改动已通过 review 检查（`sdlc-gate: PASS`），由你按**环境逐级晋级**把它安全送上线。
+核心纪律:**每升一级先完成必要条件校验，不满足就回滚**；**绝不跳级**（staging 未满足条件不进 canary，canary 未满足条件不进 full）。
 
 > **定位**:`…→ review → verify → 【ship】`,是流程主线的**发布延伸阶段**(主线末端的流程 skill)。
 > **引擎**:Claude + Read/Edit/Bash/Grep + 目标工程已有的部署工具(vercel/docker/kubectl/ssh…)。
@@ -53,7 +53,30 @@ staging 已部署 + smoke 通过。是否晋级到 canary(线上小流量)?
 | **知道往哪发** | 能从 PROFILE.Deploy 或目标工程读到部署目标类型 | 走 §2 探测;探不到则 text_mode 问用户 |
 | **control HEAD 一致** | durable reviewed_sha == feature integration_sha == 实际 Feature ref HEAD，feature evidence fresh | 回 validate/review |
 
-> `sdlc-gate` 与 HEAD 不符(评审后又改了码)→ **停**,回 review 重审。发布的必须是被评审过的那个版本。
+> `sdlc-gate` 状态字段与 HEAD 不符（评审后又改了码）→ **停**，回 review 重审。发布的必须是被评审过的那个版本。
+
+### 双生命周期 authority
+
+当本地上下文明确声明 `contract-model: dual-lifecycle-v1` 时，先读取 canonical ledger，而不是读取
+legacy control frontmatter 或用 `STATE.stage` 推断可发布性：
+
+```sh
+python3 <sdlc-pilot-root>/scripts/dual_ledger.py --repo <target-repo> status
+```
+
+- 只接受当前 `contract_generation`、当前 ProductContract / EngineeringSpec / DeliveryPlan tuple，以及当前
+  validation 与 approved review 对应的 Evidence；存在 blocking ChangeRequest 或任一 approval 被撤销时停止。
+- 发布报告可以保留为本地说明，但 `Feature.status=shipped`、claim release 和 release Evidence 只能由
+  `publish_feature` 作为带 `expected_snapshot_sha256`、idempotency key 与当前 fence 的 canonical ledger 请求
+  原子提交；它执行声明的发布命令并保存 release receipt，不能直接改 `STATE.md`、legacy control record 或
+  ProductDefinition。
+- 已批准的 dual-lifecycle review 必须来自 `submit_feature_review` 生成的当前 review attestation；它绑定
+  authority config 中的 reviewer policy、当前 fence 和当前通过的 Evidence，不能以 legacy review PASS 或调用方
+  自报字段替代。
+- 已发布 Feature 是历史记录。合同撤销、合同采用或 invalidation 不得将其回退；需要修正时创建新的
+  ProductContract / Feature。
+- 缺 capability、ledger identity、当前 Evidence 或 tuple 时，输出缺失的前置输入和返回的阶段，不使用
+  legacy adapter 绕过。
 
 ---
 
@@ -71,14 +94,14 @@ staging 已部署 + smoke 通过。是否晋级到 canary(线上小流量)?
 
 ## 3. 环境晋级流水线(主循环)
 
-蒸馏自 `references/deployment-patterns.md`。**逐级晋级,每段一个门,过不了就回滚。**
+蒸馏自 `references/deployment-patterns.md`。**逐级晋级，每段完成必要条件校验，不满足就回滚。**
 
 ```
-研发 dev → [门] → 测试 staging → [门] → 线上小流量 canary → [门] → 线上全量 full
-每段:  适配器 deploy → smoke/health → 门(过=text_mode 确认后晋级 / 不过=回滚到 last-good)
+研发 dev → [校验] → 测试 staging → [校验] → 线上小流量 canary → [校验] → 线上全量 full
+每段：适配器 deploy → smoke/health → 必要条件校验（满足后经 text_mode 确认晋级；不满足则回滚到 last-good）
 ```
 
-| 环境 | deploy 做什么 | 门(过了才晋级) |
+| 环境 | deploy 做什么 | 晋级必要条件 |
 |---|---|---|
 | **dev 研发** | 构建 + 部署到研发环境 | 打包成功 + 基本 smoke(关键路径起得来) |
 | **staging 测试** | 部署到测试环境 | **集成/e2e 通过**(复用 `sdlc-validate` 的 e2e 模式跑 staging)+ 配置/迁移就绪(迁移按 deployment-patterns 的 expand-contract,联动 architect) |
@@ -89,7 +112,7 @@ staging 已部署 + smoke 通过。是否晋级到 canary(线上小流量)?
 
 ---
 
-## 4. 回滚(任何环境门失败即触发)
+## 4. 回滚（任一环境的必要条件不满足即触发）
 
 - **回滚到 last-good**:适配器各有回滚骨架(vercel 重 alias 上一个 deployment / kubectl rollout undo / current 软链切回上一个 release)。
 - 回滚后 **smoke 复验**确认线上恢复。
@@ -103,16 +126,16 @@ staging 已部署 + smoke 通过。是否晋级到 canary(线上小流量)?
 | 文件 | 动作 | 说明 |
 |---|---|---|
 | `<repo>/.sdlc/PROFILE.md` | **读** | `## Deploy` 节(目标类型 + 配置位置);不写 PROFILE |
-| `<repo>/.sdlc/STATE.md` | **读 + 经 driver 写**(单写者) | 读 `sdlc-gate` 入口门;本 skill 输出 `## HANDOFF`,由 driver 写 stage=ship/done、ship 进度、Decisions |
+| `<repo>/.sdlc/STATE.md` | **读 + 经 driver 写**(单写者) | 读 `sdlc-gate` 字段的入口检查结果；本 skill 输出 `## HANDOFF`，由 driver 写 stage=ship/done、ship 进度、Decisions |
 | `<repo>/.sdlc/ship/<release>-report.md` | **写** | 本次发布报告:各环境晋级时间/证据/指标/回滚(若有) |
 | `.sdlc-control/evidence/<feature>/_feature/...` | **经 adapter 写** | release scope/result/deployed SHA/环境与报告引用 |
 | `references/deployment-patterns.md` · `deploy-targets/*` · `languages/*` | 读(skill 内) | 方法论 / 目标适配器 / build 命令 |
 
 ---
 
-## 6. 出口门(本阶段算完成)
+## 6. 完成条件
 
-- [ ] **逐级晋级无跳级**:dev→staging→canary→full,每段门都过(或显式停在某级并记录)。
+- [ ] **逐级晋级无跳级**：dev→staging→canary→full，每段必要条件均满足（或显式停在某级并记录）。
 - [ ] **每级有 smoke/health 证据**(真跑的命令输出 / health 探活结果),无"应该好了"。
 - [ ] **迁移安全**(若有):向后兼容、可回滚已确认。
 - [ ] **晋级到 full 经用户显式确认**。
@@ -121,7 +144,7 @@ staging 已部署 + smoke 通过。是否晋级到 canary(线上小流量)?
 - [ ] **control release/retire 已提交**(control 模式):release evidence 对应实际 deployed SHA；adapter
   `retire` 再校验实际 Feature ref HEAD 和 durable PASS review，随后原子 release claim/retire Feature/mark leaf shipped。
 
-任一未过 / 中途回滚 → status=`gated`/`blocked`,STATE.next 指明(回滚后多回 build/review)。
+任一未通过 / 中途回滚 → status=`gated`/`blocked`（协议枚举，表示存在未满足检查），STATE.next 指明（回滚后多回 build/review）。
 
 ---
 

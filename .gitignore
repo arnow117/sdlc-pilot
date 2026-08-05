@@ -3,6 +3,10 @@
 !.sdlc/archive/
 !.sdlc/EVOLUTION.md
 !.sdlc/PROFILE.md
+
+# dual-lifecycle-v1 local-serial ledger, lock and authority adapter configuration
+# are runtime state; they are never source artifacts in this repository.
+.sdlc-control/dual-lifecycle/
 .DS_Store
 node_modules/
 .superpowers/

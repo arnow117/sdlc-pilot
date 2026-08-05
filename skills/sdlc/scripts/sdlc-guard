@@ -14,6 +14,7 @@
 repo_root=$(git rev-parse --show-toplevel 2>/dev/null) || exit 0
 STATE="$repo_root/.sdlc/STATE.md"
 TASK="$repo_root/.sdlc/TASK.md"
+DUAL_LEDGER="$repo_root/.sdlc-control/dual-lifecycle/ledger.json"
 
 if [ -f "$STATE" ] && [ -f "$TASK" ]; then
   echo "✗ sdlc-guard: .sdlc/STATE.md 与 .sdlc/TASK.md 同时存在。"
@@ -48,6 +49,53 @@ is_full_sha(){
   return 0
 }
 
+is_full_sha256(){
+  candidate=$1
+  [ "${#candidate}" -eq 64 ] || return 1
+  case "$candidate" in
+    *[!0-9a-fA-F]*) return 1 ;;
+  esac
+  return 0
+}
+
+check_contract_model(){
+  context_file=$1
+  context_name=$2
+  model=$(field "$context_file" contract-model)
+  ledger_sha=$(field "$context_file" dual-ledger-sha)
+
+  # Both fields are optional for historical contexts.  Once either is present,
+  # require an explicit, internally consistent authority selection.
+  if [ -z "$model" ] && [ -z "$ledger_sha" ]; then
+    return 0
+  fi
+  if [ -z "$model" ] || [ -z "$ledger_sha" ]; then
+    echo "✗ sdlc-guard: $context_name 的 contract-model 与 dual-ledger-sha 必须同时提供。"
+    viol=1
+    return 1
+  fi
+  case "$model" in
+    dual-lifecycle-v1)
+      if ! is_full_sha256 "$ledger_sha"; then
+        echo "✗ sdlc-guard: $context_name 的 dual-ledger-sha 必须是完整 64 位 SHA-256。"
+        viol=1
+      fi
+      if [ ! -f "$DUAL_LEDGER" ]; then
+        echo "✗ sdlc-guard: $context_name 声明 dual-lifecycle-v1，但缺少 $DUAL_LEDGER。"
+        viol=1
+      fi
+      ;;
+    legacy)
+      echo "✗ sdlc-guard: $context_name 使用 legacy contract-model 时不得同时声明 dual-ledger-sha。"
+      viol=1
+      ;;
+    *)
+      echo "✗ sdlc-guard: $context_name 的 contract-model 必须是 dual-lifecycle-v1；未声明时按既有 legacy 协议处理。"
+      viol=1
+      ;;
+  esac
+}
+
 viol=0
 
 if [ -f "$TASK" ]; then
@@ -69,6 +117,8 @@ if [ -f "$TASK" ]; then
   plan_revision=$(field "$TASK" plan-revision)
   control_head=$(field "$TASK" control-head)
   control_base=$(field "$TASK" control-base-sha)
+
+  check_contract_model "$TASK" "TASK"
 
   case "$task_mode" in
     shared-control|local-serial) ;;
@@ -109,6 +159,8 @@ st_worktree=$(field "$STATE" worktree | tr -d '[:space:]')
 st_stage=$(field "$STATE" stage | tr -d '[:space:]')
 st_status=$(field "$STATE" status | tr -d '[:space:]')
 st_feature=$(grep -iE '^# SDLC State:' "$STATE" 2>/dev/null | head -1 | sed 's/^# SDLC State: *//')
+
+check_contract_model "$STATE" "STATE"
 
 if [ -n "$st_branch" ] && [ "$st_branch" != "$cur_branch" ]; then
   echo "✗ sdlc-guard: 当前 STATE 属于分支 '$st_branch',你现在在 '$cur_branch'。"
