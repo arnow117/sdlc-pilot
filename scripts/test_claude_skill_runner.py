@@ -65,6 +65,14 @@ class ClaudeSkillRunnerTest(unittest.TestCase):
             with self.assertRaisesRegex(claude_skill_runner.ClaudeSkillRunnerError, "invalid-invocation-skill"):
                 claude_skill_runner._context_pack(checkout, {"invocation": {"steps": [{"skill": "../escape"}]}})
 
+    def test_prompt_requires_the_exact_result_object_shape(self) -> None:
+        prompt = claude_skill_runner._prompt(
+            {"invocation": {"case_id": "case", "steps": [{"skill": "sdlc"}]}}, "# context",
+        )
+        self.assertIn("exactly these top-level keys", prompt)
+        self.assertIn("Do not add reasoning", prompt)
+        self.assertIn("actions must be an empty array", prompt)
+
     def test_claude_timeout_terminates_the_process_group(self) -> None:
         command = [
             sys.executable, "-c",
