@@ -14,6 +14,7 @@ from collections import defaultdict
 import json
 import os
 from pathlib import Path
+import re
 import shlex
 import subprocess
 import sys
@@ -27,6 +28,7 @@ import skill_eval_adapter
 RUN_FORMAT = "sdlc-skill-behavior-run-v1"
 REPORT_FORMAT = "sdlc-skill-behavior-live-report-v1"
 CALIBRATION_FORMAT = "sdlc-skill-evaluator-calibration-v1"
+FAILURE_REPORT_FORMAT = "sdlc-skill-behavior-failure-v1"
 RUNNER_RESULT_KEYS = frozenset({"output", "tool_events", "manifests", "cost", "execution"})
 EVALUATOR_RESULT_KEYS = frozenset({"scores", "passed", "critical_failures", "notes", "execution"})
 SCORE_KEYS = (
@@ -45,6 +47,7 @@ REQUIRED_EXECUTION_FIELDS = frozenset({
     "provider", "model", "model_version", "temperature", "max_tokens",
     "tool_versions", "evaluator_model", "evaluator_version",
 })
+_SAFE_RUNNER_ERROR_RE = re.compile(r"^ERROR:\s*([a-z][a-z0-9:-]{0,199})$")
 CALIBRATION_KEYS = frozenset({
     "calibration_format", "evaluator", "double_human_review_count", "pass_fail_agreement", "review_record_refs",
 })
@@ -98,7 +101,9 @@ def _run_command(command: str, payload: Mapping[str, object], *, timeout_seconds
         raise LiveEvaluationError(f"{label}-timeout") from exc
     if completed.returncode != 0:
         detail = completed.stderr.decode("utf-8", errors="replace").strip()
-        raise LiveEvaluationError(f"{label}-failed:{completed.returncode}:{detail}")
+        match = _SAFE_RUNNER_ERROR_RE.fullmatch(detail)
+        error_code = match.group(1) if match else "unclassified-runner-error"
+        raise LiveEvaluationError(f"{label}-failed:{completed.returncode}:{error_code}")
     return _strict_json(completed.stdout, label)
 
 
@@ -511,6 +516,19 @@ def write_report(path: str | os.PathLike[str], report: Mapping[str, object]) -> 
     if report["run_id"] != _sha256(_canonical_bytes(preimage)):
         raise LiveEvaluationError("report-content-address-mismatch")
     fixture_eval.write_report(path, report)
+
+
+def failure_report(error: BaseException) -> dict[str, object]:
+    """Create a content-addressed, secret-free live-evaluation failure record."""
+    code = str(error)
+    if not re.fullmatch(r"[a-z][a-z0-9:-]{0,199}", code):
+        code = "unclassified-live-evaluation-error"
+    preimage: dict[str, object] = {
+        "report_format": FAILURE_REPORT_FORMAT,
+        "status": "ERROR",
+        "error": code,
+    }
+    return {**preimage, "run_id": _sha256(_canonical_bytes(preimage))}
 
 
 def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:

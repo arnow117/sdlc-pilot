@@ -622,6 +622,7 @@ def _parse_args(argv: Sequence[str] | None) -> argparse.Namespace:
     parser.add_argument("--baseline", default=DEFAULT_BASELINE)
     parser.add_argument("--fixture", help="offline candidate fixture JSON (required for fixture mode)")
     parser.add_argument("--out", help="optional report JSON path")
+    parser.add_argument("--failure-out", help="optional secret-free failure evidence JSON path")
     parser.add_argument(
         "--mode",
         default="fixture",
@@ -675,6 +676,13 @@ def main(argv: Sequence[str] | None = None) -> int:
         else:
             raise EvaluationError("remote-model-mode-is-not-supported")
     except (EvaluationError, RuntimeError) as exc:
+        if args.failure_out:
+            try:
+                import live_skill_eval
+                failure = live_skill_eval.failure_report(exc)
+                live_skill_eval.write_report(args.failure_out, failure)
+            except (EvaluationError, RuntimeError):
+                print("ERROR: cannot-write-failure-evidence", file=sys.stderr)
         print(f"ERROR: {exc}", file=sys.stderr)
         return 2
     sys.stdout.buffer.write(canonical_bytes(report))

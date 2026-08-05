@@ -130,6 +130,23 @@ class LiveSkillEvaluationTest(unittest.TestCase):
         self.assertEqual(report["summary"]["verdict"], "FAIL")
         self.assertIn("mechanical-assertion-failed", report["summary"]["reasons"])
 
+    def test_runner_errors_are_reduced_to_a_safe_code(self) -> None:
+        command = f'{sys.executable} -c "import sys; print(\'ERROR: claude-runner-failed:authentication:2\', file=sys.stderr); raise SystemExit(2)"'
+        with self.assertRaisesRegex(
+            live_skill_eval.LiveEvaluationError,
+            r"runner-failed:2:claude-runner-failed:authentication:2$",
+        ):
+            live_skill_eval._run_command(command, {}, timeout_seconds=10, label="runner")
+
+    def test_failure_report_is_content_addressed_and_does_not_retain_raw_text(self) -> None:
+        report = live_skill_eval.failure_report(RuntimeError("runner-failed:2:claude-runner-failed:model:2"))
+        self.assertEqual(report["error"], "runner-failed:2:claude-runner-failed:model:2")
+        self.assertEqual(report["run_id"], live_skill_eval._sha256(live_skill_eval._canonical_bytes({
+            key: value for key, value in report.items() if key != "run_id"
+        })))
+        redacted = live_skill_eval.failure_report(RuntimeError("token=must-not-be-retained"))
+        self.assertEqual(redacted["error"], "unclassified-live-evaluation-error")
+
 
 if __name__ == "__main__":
     unittest.main()

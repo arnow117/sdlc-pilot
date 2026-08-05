@@ -206,6 +206,26 @@ class FixtureEvaluationTest(unittest.TestCase):
         self.assertEqual(report["summary"]["verdict"], "PASS")
         self.assertEqual(json.loads(completed.stdout)["run_id"], report["run_id"])
 
+    def test_cli_live_failure_writes_secret_free_content_addressed_evidence(self) -> None:
+        failure = self.temp / "live-failure.json"
+        runner = (
+            f'{sys.executable} -c "import sys; '
+            "print('ERROR: claude-runner-failed:model:2', file=sys.stderr); raise SystemExit(2)\""
+        )
+        completed = subprocess.run([
+            sys.executable, str(HERE / "eval_skill_behavior.py"),
+            "--repo", str(ROOT), "--mode", "live", "--runner-cmd", runner,
+            "--runs", "1", "--mechanical-only", "--out", str(self.temp / "unused.json"),
+            "--failure-out", str(failure),
+        ], capture_output=True, text=True)
+        self.assertEqual(completed.returncode, 2)
+        report = json.loads(failure.read_text(encoding="utf-8"))
+        self.assertEqual(report["report_format"], "sdlc-skill-behavior-failure-v1")
+        self.assertEqual(report["error"], "runner-failed:2:claude-runner-failed:model:2")
+        self.assertEqual(report["run_id"], eval_skill_behavior.sha256_bytes(
+            eval_skill_behavior.canonical_bytes({key: value for key, value in report.items() if key != "run_id"})
+        ))
+
 
 if __name__ == "__main__":
     unittest.main()
