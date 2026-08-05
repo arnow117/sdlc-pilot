@@ -25,30 +25,8 @@ import eval_skill_behavior as behavior_eval
 
 
 DEFAULT_CC_SWITCH_DB = Path.home() / ".cc-switch" / "cc-switch.db"
-MAX_AGENT_TURNS = 6
-RUNNER_OUTPUT_SCHEMA: dict[str, object] = {
-    "type": "object",
-    "additionalProperties": False,
-    "required": ["case_id", "route", "modules", "roles", "obligations", "artifacts", "actions", "transition"],
-    "properties": {
-        "case_id": {"type": "string"},
-        "route": {"type": "array", "items": {"type": "string"}},
-        "modules": {"type": "array", "items": {"type": "string"}},
-        "roles": {"type": "array", "items": {"type": "string"}},
-        "obligations": {"type": "array", "items": {"type": "string"}},
-        "artifacts": {"type": "array", "items": {"type": "string"}},
-        "actions": {"type": "array", "items": {"type": "string"}},
-        "transition": {
-            "type": "object",
-            "additionalProperties": False,
-            "required": ["decision", "route"],
-            "properties": {
-                "decision": {"type": "string", "enum": ["route", "reject"]},
-                "route": {"type": "array", "items": {"type": "string"}},
-            },
-        },
-    },
-}
+MAX_AGENT_TURNS = 1
+MAX_CONTEXT_PACK_BYTES = 64 * 1024
 
 
 class ClaudeSkillRunnerError(RuntimeError):
@@ -114,18 +92,54 @@ def _resolve_model(provider_environment: Mapping[str, str], requested_model: str
     raise ClaudeSkillRunnerError("cc-switch-provider-missing-model")
 
 
-def _prompt(request: Mapping[str, object]) -> str:
+def _context_pack(checkout: Path, request: Mapping[str, object]) -> str:
+    """Read the selected Skill source locally so the provider need not use tools."""
+    invocation = request.get("invocation")
+    if not isinstance(invocation, Mapping):
+        raise ClaudeSkillRunnerError("missing-explicit-invocation-contract")
+    steps = invocation.get("steps")
+    if not isinstance(steps, list) or not steps:
+        raise ClaudeSkillRunnerError("missing-invocation-steps")
+    names: list[str] = []
+    for step in steps:
+        skill = step.get("skill") if isinstance(step, Mapping) else None
+        if not isinstance(skill, str) or not skill or not skill.replace("-", "").isalnum():
+            raise ClaudeSkillRunnerError("invalid-invocation-skill")
+        if skill not in names:
+            names.append(skill)
+    parts: list[str] = []
+    total = 0
+    for skill in names:
+        source = checkout / "skills" / skill / "SKILL.md"
+        try:
+            payload = source.read_bytes()
+        except OSError as exc:
+            raise ClaudeSkillRunnerError("missing-invocation-skill-source") from exc
+        total += len(payload)
+        if total > MAX_CONTEXT_PACK_BYTES:
+            raise ClaudeSkillRunnerError("skill-context-pack-too-large")
+        try:
+            text = payload.decode("utf-8")
+        except UnicodeDecodeError as exc:
+            raise ClaudeSkillRunnerError("invalid-invocation-skill-source") from exc
+        parts.extend((f"### skills/{skill}/SKILL.md", text.rstrip()))
+    return "\n\n".join(parts)
+
+
+def _prompt(request: Mapping[str, object], context_pack: str) -> str:
     invocation = request.get("invocation")
     if not isinstance(invocation, Mapping):
         raise ClaudeSkillRunnerError("missing-explicit-invocation-contract")
     return "\n".join([
         "You are a read-only SDLC Skill behavior evaluation runner.",
-        "Use only Read, Glob, and Grep. Do not invoke shell commands, edit files, create artifacts, or infer authority.",
-        "Inspect the checked-out repository directly. Do not rely on globally installed Skills; read the named SKILL.md files and their referenced source files from this checkout.",
+        "Do not invoke any tool. Do not rely on globally installed Skills or infer authority.",
+        "The context pack below is the selected source for this invocation.",
         "Read only the source files necessary to answer this invocation; then return the JSON response immediately.",
         "For candidate runs, dual lifecycle authority is explicit. For baseline runs, preserve legacy routing.",
         "Report only selected IDs and actual required/artifact kinds. Do not claim tests, approvals, reviews, or security completion.",
         "Return only the required JSON object, without a Markdown code fence.",
+        "Context pack:",
+        context_pack,
         "Invocation contract:",
         _canonical_bytes(invocation).decode("utf-8").strip(),
     ])
@@ -225,7 +239,11 @@ def run_once(
     started = time.monotonic()
     try:
         _git(repo, "worktree", "add", "--detach", str(worktree), source_commit)
-        command = _build_command(model=selected_model, max_budget_usd=max_budget_usd, prompt=_prompt(request))
+        context_pack = _context_pack(worktree, request)
+        command = _build_command(
+            model=selected_model, max_budget_usd=max_budget_usd,
+            prompt=_prompt(request, context_pack),
+        )
         completed = subprocess.run(
             command,
             cwd=worktree,

@@ -42,7 +42,7 @@ class ClaudeSkillRunnerTest(unittest.TestCase):
         self.assertNotIn("Bash", command)
         self.assertNotIn("--json-schema", command)
         self.assertNotIn("--plugin-dir", command)
-        self.assertEqual(command[command.index("--max-turns") + 1], "6")
+        self.assertEqual(command[command.index("--max-turns") + 1], "1")
         result = claude_skill_runner._structured_output({"structured_output": {
             "case_id": "small-feature", "route": ["sdlc-product-design"], "modules": ["mod.product.core"],
             "roles": ["role.product-owner"], "obligations": ["obl.product.discover.problem-frame"],
@@ -50,6 +50,18 @@ class ClaudeSkillRunnerTest(unittest.TestCase):
             "transition": {"decision": "route", "route": ["sdlc-product-design"]},
         }})
         self.assertEqual(result["case_id"], "small-feature")
+
+    def test_context_pack_reads_only_selected_checkout_skills(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            checkout = Path(temporary)
+            source = checkout / "skills" / "sdlc-product-design"
+            source.mkdir(parents=True)
+            (source / "SKILL.md").write_text("# product source\n", encoding="utf-8")
+            request = {"invocation": {"steps": [{"skill": "sdlc-product-design"}]}}
+            pack = claude_skill_runner._context_pack(checkout, request)
+            self.assertEqual(pack, "### skills/sdlc-product-design/SKILL.md\n\n# product source")
+            with self.assertRaisesRegex(claude_skill_runner.ClaudeSkillRunnerError, "invalid-invocation-skill"):
+                claude_skill_runner._context_pack(checkout, {"invocation": {"steps": [{"skill": "../escape"}]}})
 
     def test_configured_model_uses_the_provider_mapping(self) -> None:
         self.assertEqual(
