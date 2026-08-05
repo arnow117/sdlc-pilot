@@ -28,6 +28,7 @@ import eval_skill_behavior as behavior_eval
 DEFAULT_CC_SWITCH_DB = Path.home() / ".cc-switch" / "cc-switch.db"
 MAX_AGENT_TURNS = 1
 MAX_CONTEXT_PACK_BYTES = 64 * 1024
+MAX_SKILL_SOURCE_CHARS = 6_000
 
 
 class ClaudeSkillRunnerError(RuntimeError):
@@ -116,14 +117,18 @@ def _context_pack(checkout: Path, request: Mapping[str, object]) -> str:
             payload = source.read_bytes()
         except OSError as exc:
             raise ClaudeSkillRunnerError("missing-invocation-skill-source") from exc
-        total += len(payload)
-        if total > MAX_CONTEXT_PACK_BYTES:
-            raise ClaudeSkillRunnerError("skill-context-pack-too-large")
         try:
             text = payload.decode("utf-8")
         except UnicodeDecodeError as exc:
             raise ClaudeSkillRunnerError("invalid-invocation-skill-source") from exc
-        parts.extend((f"### skills/{skill}/SKILL.md", text.rstrip()))
+        truncated = len(text) > MAX_SKILL_SOURCE_CHARS
+        excerpt = text[:MAX_SKILL_SOURCE_CHARS].rstrip()
+        if truncated:
+            excerpt += "\n\n[Source excerpt truncated locally for the bounded evaluation context.]"
+        total += len(excerpt.encode("utf-8"))
+        if total > MAX_CONTEXT_PACK_BYTES:
+            raise ClaudeSkillRunnerError("skill-context-pack-too-large")
+        parts.extend((f"### skills/{skill}/SKILL.md", excerpt))
     return "\n\n".join(parts)
 
 
@@ -157,6 +162,7 @@ def _build_command(*, model: str, max_budget_usd: float, prompt: str) -> list[st
         "--safe-mode",
         "--model", model,
         "--max-budget-usd", str(max_budget_usd),
+        "--effort", "low",
         "--max-turns", str(MAX_AGENT_TURNS),
         "--tools", "Read,Glob,Grep",
         "--permission-mode", "dontAsk",

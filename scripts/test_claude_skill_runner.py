@@ -44,6 +44,7 @@ class ClaudeSkillRunnerTest(unittest.TestCase):
         self.assertNotIn("--json-schema", command)
         self.assertNotIn("--plugin-dir", command)
         self.assertIn("--safe-mode", command)
+        self.assertEqual(command[command.index("--effort") + 1], "low")
         self.assertEqual(command[command.index("--max-turns") + 1], "1")
         result = claude_skill_runner._structured_output({"structured_output": {
             "case_id": "small-feature", "route": ["sdlc-product-design"], "modules": ["mod.product.core"],
@@ -62,6 +63,8 @@ class ClaudeSkillRunnerTest(unittest.TestCase):
             request = {"invocation": {"steps": [{"skill": "sdlc-product-design"}]}}
             pack = claude_skill_runner._context_pack(checkout, request)
             self.assertEqual(pack, "### skills/sdlc-product-design/SKILL.md\n\n# product source")
+            (source / "SKILL.md").write_text("x" * (claude_skill_runner.MAX_SKILL_SOURCE_CHARS + 1), encoding="utf-8")
+            self.assertIn("Source excerpt truncated locally", claude_skill_runner._context_pack(checkout, request))
             with self.assertRaisesRegex(claude_skill_runner.ClaudeSkillRunnerError, "invalid-invocation-skill"):
                 claude_skill_runner._context_pack(checkout, {"invocation": {"steps": [{"skill": "../escape"}]}})
 
