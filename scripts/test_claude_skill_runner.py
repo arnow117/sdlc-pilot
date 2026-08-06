@@ -54,6 +54,12 @@ class ClaudeSkillRunnerTest(unittest.TestCase):
             "transition": {"decision": "route", "route": ["sdlc-product-design"]},
         }})
         self.assertEqual(result["case_id"], "small-feature")
+        invalid = claude_skill_runner._invalid_live_output({"case": {"case_id": "small-feature"}})
+        self.assertEqual(invalid["case_id"], "small-feature")
+        self.assertEqual(invalid["route"], [])
+        self.assertEqual(invalid["transition"], {"decision": "reject", "route": []})
+        with self.assertRaisesRegex(claude_skill_runner.ClaudeSkillRunnerError, "missing-case-id"):
+            claude_skill_runner._invalid_live_output({"case": {}})
 
     def test_context_pack_reads_only_selected_checkout_skills(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

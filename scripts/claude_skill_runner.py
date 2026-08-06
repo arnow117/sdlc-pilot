@@ -262,6 +262,29 @@ def _structured_output(value: Mapping[str, object]) -> dict[str, object]:
         raise ClaudeSkillRunnerError(f"invalid-structured-skill-output:{exc}") from exc
 
 
+def _invalid_live_output(request: Mapping[str, object]) -> dict[str, object]:
+    """Represent an unparseable provider response as a scoreable model failure.
+
+    A provider/runner outage invalidates a run; a model response that violates
+    the requested JSON protocol is observed behavior.  Return a neutral,
+    mechanically failing output for the latter so the batch can continue.
+    """
+    case = request.get("case")
+    case_id = case.get("case_id") if isinstance(case, Mapping) else None
+    if not isinstance(case_id, str) or not case_id:
+        raise ClaudeSkillRunnerError("missing-case-id-for-invalid-live-output")
+    return {
+        "case_id": case_id,
+        "route": [],
+        "modules": [],
+        "roles": [],
+        "obligations": [],
+        "artifacts": [],
+        "actions": [],
+        "transition": {"decision": "reject", "route": []},
+    }
+
+
 def _git(repo: Path, *args: str) -> str:
     completed = subprocess.run(
         ["git", "-C", str(repo), *args], check=False, capture_output=True, text=True,
@@ -300,9 +323,17 @@ def run_once(
         if completed.returncode != 0:
             raise ClaudeSkillRunnerError(
                 f"claude-runner-failed:{_safe_failure_class(completed.stderr, completed.stdout)}:{completed.returncode}")
-        response = _strict_object(completed.stdout, "claude-result")
-        output = _structured_output(response)
-        total_cost = response.get("total_cost_usd", 0)
+        response_type = "invalid"
+        output_validity = "invalid-structured-output"
+        total_cost: object = 0
+        try:
+            response = _strict_object(completed.stdout, "claude-result")
+            output = _structured_output(response)
+            total_cost = response.get("total_cost_usd", 0)
+            response_type = str(response.get("type", "unknown"))
+            output_validity = "valid"
+        except ClaudeSkillRunnerError:
+            output = _invalid_live_output(request)
         cost = float(total_cost) if isinstance(total_cost, (int, float)) and total_cost >= 0 else 0.0
         duration_ms = int((time.monotonic() - started) * 1000)
         return {
@@ -311,7 +342,8 @@ def run_once(
             "manifests": {
                 "source_commit": source_commit,
                 "invocation": request["invocation"],
-                "response_type": response.get("type", "unknown"),
+                "response_type": response_type,
+                "output_validity": output_validity,
             },
             "cost": {"usd": cost},
             "execution": {
