@@ -120,6 +120,8 @@ class SkillEvaluationAdapterTest(unittest.TestCase):
             "mod.delivery.independent-review", "mod.delivery.planning", "mod.delivery.release-candidate",
             "mod.delivery.validation-review",
         ])
+        self.assertEqual(skill_eval_adapter.expected_case(
+            hotfix, variant="candidate")["expected_transition"]["decision"], "route")
         self.assertIn("sdlc-software-delivery:plan", skill_eval_adapter.expected_case(
             hotfix, variant="candidate")["expected_route"])
 
