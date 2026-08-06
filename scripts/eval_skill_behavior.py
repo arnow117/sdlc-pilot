@@ -373,7 +373,8 @@ def _normalize_transition(value: object, label: str) -> dict[str, object]:
         raise EvaluationError(f"invalid-{label}-transition-decision")
     return {
         "decision": decision,
-        "route": _string_list(value["route"], f"{label}-transition-route"),
+        "route": _string_list(
+            value["route"], f"{label}-transition-route", nonempty=decision == "route"),
     }
 
 
@@ -399,7 +400,7 @@ def _normalize_response_output(value: object, *, require_nonempty: bool,
             "decision": transition["decision"],
             "route": _string_list(
                 transition["route"], f"fixture-output:{case_id}-transition-route",
-                nonempty=require_nonempty, deduplicate=deduplicate,
+                nonempty=require_nonempty and transition["decision"] == "route", deduplicate=deduplicate,
             ),
         },
     }

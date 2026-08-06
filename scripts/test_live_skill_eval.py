@@ -16,6 +16,8 @@ ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
 
 import live_skill_eval  # noqa: E402
+import eval_skill_behavior  # noqa: E402
+import skill_eval_adapter  # noqa: E402
 
 
 RUNNER = f"{sys.executable} {HERE / 'fixtures' / 'fake_skill_runner.py'}"
@@ -130,6 +132,16 @@ class LiveSkillEvaluationTest(unittest.TestCase):
         )
         self.assertEqual(report["summary"]["verdict"], "FAIL")
         self.assertIn("mechanical-assertion-failed", report["summary"]["reasons"])
+
+    def test_candidate_requires_reviewed_identifiers_but_allows_extra_valid_detail(self) -> None:
+        cases, _ = eval_skill_behavior.load_dataset(ROOT / "evals/dual-lifecycle-skill-v1.jsonl")
+        case = next(item for item in cases if item["case_id"] == "ambiguous-feature")
+        output = skill_eval_adapter.expected_output(case, variant="candidate")
+        output["artifacts"].append("ProductStructureReport")
+        result = live_skill_eval._mechanical(case, output, variant="candidate")
+        self.assertEqual(result["verdict"], "PASS")
+        artifacts = next(item for item in result["assertions"] if item["name"] == "artifacts")
+        self.assertEqual(artifacts["unexpected"], ["ProductStructureReport"])
 
     def test_runner_errors_are_reduced_to_a_safe_code(self) -> None:
         command = f'{sys.executable} -c "import sys; print(\'ERROR: claude-runner-failed:authentication:2\', file=sys.stderr); raise SystemExit(2)"'

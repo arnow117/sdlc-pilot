@@ -12,6 +12,7 @@ import unittest
 
 
 HERE = Path(__file__).resolve().parent
+ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
 
 import claude_skill_runner  # noqa: E402
@@ -75,6 +76,20 @@ class ClaudeSkillRunnerTest(unittest.TestCase):
             with self.assertRaisesRegex(claude_skill_runner.ClaudeSkillRunnerError, "invalid-invocation-skill"):
                 claude_skill_runner._context_pack(checkout, {"invocation": {"steps": [{"skill": "../escape"}]}})
 
+    def test_context_pack_includes_only_the_selected_policy_surface(self) -> None:
+        request = {"invocation": {"steps": [
+            {"skill": "sdlc-product-design", "phase": "behavior-design", "operation": "behavior-design"},
+            {"skill": "sdlc-software-delivery", "phase": "engineering-spec", "operation": "engineering-spec"},
+        ]}}
+        pack = claude_skill_runner._context_pack(ROOT, request)
+        self.assertIn("SDLC evaluation policy surface", pack)
+        self.assertIn('"route_format":"<skill>:<phase>"', pack)
+        self.assertIn('"id":"phase.product.behavior-design"', pack)
+        self.assertIn('"id":"phase.delivery.engineering-spec"', pack)
+        self.assertIn('"id":"mod.product.behavior-bdd"', pack)
+        self.assertIn('"id":"mod.delivery.engineering-spec"', pack)
+        self.assertLessEqual(len(pack.encode("utf-8")), claude_skill_runner.MAX_CONTEXT_PACK_BYTES)
+
     def test_prompt_requires_the_exact_result_object_shape(self) -> None:
         prompt = claude_skill_runner._prompt(
             {"invocation": {"case_id": "case", "steps": [{"skill": "sdlc"}]}}, "# context",
@@ -83,6 +98,8 @@ class ClaudeSkillRunnerTest(unittest.TestCase):
         self.assertIn("Do not add reasoning", prompt)
         self.assertIn("actions must be an empty array", prompt)
         self.assertIn("arrays of strings", prompt)
+        self.assertIn("<skill>:<phase>", prompt)
+        self.assertIn("transitive depends_on closure", prompt)
 
     def test_claude_timeout_terminates_the_process_group(self) -> None:
         command = [

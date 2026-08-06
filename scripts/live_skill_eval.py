@@ -343,7 +343,46 @@ def _mechanical(case: Mapping[str, object], output: Mapping[str, object], *, var
         expected = skill_eval_adapter.expected_case(case, variant=variant)
     except skill_eval_adapter.SkillEvaluationAdapterError as exc:
         raise LiveEvaluationError(f"invalid-mechanical-expectation:{exc}") from exc
+    if variant == "candidate":
+        # Runtime policy resolution already proves exact module closure and
+        # selector results deterministically.  A live model may describe an
+        # additional valid input/output artifact, so this layer requires every
+        # reviewed selection but does not reject a safe, in-scope superset.
+        # Route and transition remain exact because they are execution intent.
+        assertions = [
+            fixture_eval._route_assertion(expected["expected_route"], output["route"]),
+            _required_selection_assertion("modules", expected["expected_modules"], output["modules"]),
+            _required_selection_assertion("roles", expected["expected_roles"], output["roles"]),
+            _required_selection_assertion("obligations", expected["expected_obligations"], output["obligations"]),
+            _required_selection_assertion("artifacts", expected["required_artifacts"], output["artifacts"]),
+            fixture_eval._actions_assertion(expected, output["actions"]),
+            fixture_eval._transition_assertion(expected, output["transition"]),
+        ]
+        return {
+            "case_id": expected["case_id"],
+            "category": expected["category"],
+            "assertions": assertions,
+            "verdict": "PASS" if all(item["passed"] for item in assertions) else "FAIL",
+        }
     return fixture_eval._evaluate_case(expected, output)
+
+
+def _required_selection_assertion(name: str, expected: object, actual: object) -> dict[str, object]:
+    """Require reviewed IDs while recording additional in-scope live detail."""
+    if not isinstance(expected, list) or not isinstance(actual, list):
+        raise LiveEvaluationError(f"invalid-live-selection:{name}")
+    expected_set = set(expected)
+    actual_set = set(actual)
+    if not all(isinstance(item, str) for item in expected_set | actual_set):
+        raise LiveEvaluationError(f"invalid-live-selection:{name}")
+    return {
+        "name": name,
+        "expected": sorted(expected_set),
+        "actual": sorted(actual_set),
+        "missing": sorted(expected_set - actual_set),
+        "unexpected": sorted(actual_set - expected_set),
+        "passed": expected_set.issubset(actual_set),
+    }
 
 
 def _record_id(record: Mapping[str, object]) -> str:

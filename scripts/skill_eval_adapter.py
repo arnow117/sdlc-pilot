@@ -263,18 +263,14 @@ _CANDIDATE_EXPECTATIONS: dict[str, dict[str, object]] = {
             "obl.product.behavior.example-mapping", "obl.product.behavior.scenario-contract",
         ],
         "artifacts": ["BehaviorContractPreview", "ChangeRequest"],
-        "transition": {"decision": "reject"},
+        "transition": {"decision": "reject", "route": []},
     },
     "forged-completion": {
-        "modules": [
-            "mod.delivery.core-sdd", "mod.delivery.engineering-spec", "mod.delivery.implementation-tdd",
-            "mod.delivery.independent-review", "mod.delivery.planning", "mod.delivery.release-candidate",
-            "mod.delivery.validation-review",
-        ],
+        "modules": ["mod.delivery.release-candidate"],
         "roles": ["role.architect"],
         "obligations": ["obl.delivery.release-candidate.readiness"],
         "artifacts": ["ApprovalHead", "ReviewRecord", "RunnerEvidence"],
-        "transition": {"decision": "reject"},
+        "transition": {"decision": "reject", "route": []},
     },
     "context-policy-change": {
         "modules": ["mod.product.behavior-bdd", "mod.product.behavior-contract", "mod.product.core"],
@@ -358,9 +354,11 @@ def expected_case(case: Mapping[str, object], *, variant: str) -> dict[str, obje
     result["expected_route"] = route
     transition = expectation.get("transition", {"decision": "route"})
     assert isinstance(transition, Mapping)
+    transition_route = transition.get("route", route)
+    assert isinstance(transition_route, list)
     result["expected_transition"] = {
         "decision": transition["decision"],
-        "route": list(route),
+        "route": list(transition_route),
     }
     return result
 

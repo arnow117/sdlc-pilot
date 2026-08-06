@@ -161,6 +161,24 @@ class FixtureEvaluationTest(unittest.TestCase):
         with self.assertRaisesRegex(eval_skill_behavior.EvaluationError, "invalid-fixture-output-route"):
             eval_skill_behavior._normalize_output(output)
 
+    def test_rejected_transition_may_be_empty_but_routed_transition_may_not(self) -> None:
+        output = {
+            "case_id": "rejected-transition",
+            "route": ["sdlc-software-delivery:review"],
+            "modules": ["mod.delivery.release-candidate"],
+            "roles": ["role.release-manager"],
+            "obligations": ["obl.delivery.release-approval"],
+            "artifacts": ["ApprovalHead"],
+            "actions": [],
+            "transition": {"decision": "reject", "route": []},
+        }
+        normalized = eval_skill_behavior._normalize_output(output)
+        self.assertEqual(normalized["transition"], {"decision": "reject", "route": []})
+
+        output["transition"] = {"decision": "route", "route": []}
+        with self.assertRaisesRegex(eval_skill_behavior.EvaluationError, "transition-route"):
+            eval_skill_behavior._normalize_output(output)
+
     def test_live_output_deduplicates_repeated_selected_identifiers(self) -> None:
         raw = {
             "case_id": "hotfix",

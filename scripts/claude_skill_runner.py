@@ -29,6 +29,11 @@ DEFAULT_CC_SWITCH_DB = Path.home() / ".cc-switch" / "cc-switch.db"
 MAX_AGENT_TURNS = 2
 MAX_CONTEXT_PACK_BYTES = 64 * 1024
 MAX_SKILL_SOURCE_CHARS = 6_000
+_POLICY_ROOT = Path("skills/sdlc/references/policies")
+_POLICY_PHASE_PREFIXES = {
+    "sdlc-product-design": "phase.product.",
+    "sdlc-software-delivery": "phase.delivery.",
+}
 
 
 class ClaudeSkillRunnerError(RuntimeError):
@@ -94,6 +99,128 @@ def _resolve_model(provider_environment: Mapping[str, str], requested_model: str
     raise ClaudeSkillRunnerError("cc-switch-provider-missing-model")
 
 
+def _read_policy_document(path: Path, label: str) -> dict[str, object]:
+    try:
+        value = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise ClaudeSkillRunnerError(f"cannot-read-evaluation-policy-{label}") from exc
+    if not isinstance(value, dict):
+        raise ClaudeSkillRunnerError(f"invalid-evaluation-policy-{label}")
+    return value
+
+
+def _evaluation_policy_surface(checkout: Path, invocation: Mapping[str, object]) -> str | None:
+    """Return the bounded policy data a selected dual-lifecycle step actually needs.
+
+    The live evaluator asks the provider for executable IDs, not prose labels.
+    A normal runtime resolves those IDs through the policy documents; providing
+    only SKILL.md made that contract impossible for the read-only runner to
+    satisfy.  This surface contains the selected phase contracts and their
+    possible module/role/obligation inputs, never the case's expected output.
+    """
+    raw_steps = invocation.get("steps")
+    if not isinstance(raw_steps, list):
+        raise ClaudeSkillRunnerError("missing-invocation-steps")
+    phase_requests: list[dict[str, str]] = []
+    for item in raw_steps:
+        if not isinstance(item, Mapping):
+            raise ClaudeSkillRunnerError("invalid-invocation-step")
+        skill = item.get("skill")
+        phase = item.get("phase")
+        prefix = _POLICY_PHASE_PREFIXES.get(skill) if isinstance(skill, str) else None
+        if prefix is None:
+            continue
+        if not isinstance(phase, str) or not phase:
+            continue
+        phase_requests.append({"skill": skill, "phase": phase, "phase_id": f"{prefix}{phase}"})
+    if not phase_requests:
+        return None
+
+    root = checkout / _POLICY_ROOT
+    modules_document = _read_policy_document(root / "modules.json", "modules")
+    phases_document = _read_policy_document(root / "phases.json", "phases")
+    roles_document = _read_policy_document(root / "roles.json", "roles")
+    raw_modules = modules_document.get("modules")
+    raw_rules = modules_document.get("rules")
+    raw_phases = phases_document.get("phases")
+    raw_roles = roles_document.get("roles")
+    if not all(isinstance(value, list) for value in (raw_modules, raw_rules, raw_phases, raw_roles)):
+        raise ClaudeSkillRunnerError("invalid-evaluation-policy-collections")
+    modules = {item.get("id"): item for item in raw_modules if isinstance(item, dict) and isinstance(item.get("id"), str)}
+    phases = {item.get("id"): item for item in raw_phases if isinstance(item, dict) and isinstance(item.get("id"), str)}
+    roles = {item.get("id"): item for item in raw_roles if isinstance(item, dict) and isinstance(item.get("id"), str)}
+    rules = {item.get("id"): item for item in raw_rules if isinstance(item, dict) and isinstance(item.get("id"), str)}
+
+    selected_phases: list[dict[str, object]] = []
+    for request in phase_requests:
+        phase = phases.get(request["phase_id"])
+        if phase is None:
+            raise ClaudeSkillRunnerError(f"unknown-evaluation-policy-phase:{request['phase_id']}")
+        selected_phases.append(phase)
+
+    module_ids: set[str] = set()
+    role_ids: set[str] = set()
+    rule_ids: set[str] = set()
+    for phase in selected_phases:
+        for rule_id in phase.get("entry_predicate_rule_ids", []):
+            if isinstance(rule_id, str):
+                rule_ids.add(rule_id)
+        for module_id in phase.get("method_module_ids", []):
+            if isinstance(module_id, str):
+                module_ids.add(module_id)
+        obligations = phase.get("obligations", [])
+        if not isinstance(obligations, list):
+            raise ClaudeSkillRunnerError("invalid-evaluation-policy-obligations")
+        for obligation in obligations:
+            if not isinstance(obligation, dict):
+                raise ClaudeSkillRunnerError("invalid-evaluation-policy-obligation")
+            role_id = obligation.get("role_id")
+            rule_id = obligation.get("required_when_rule_id")
+            playbook_ref = obligation.get("playbook_ref")
+            if isinstance(role_id, str):
+                role_ids.add(role_id)
+            if isinstance(rule_id, str):
+                rule_ids.add(rule_id)
+            if isinstance(playbook_ref, dict) and isinstance(playbook_ref.get("module_id"), str):
+                module_ids.add(playbook_ref["module_id"])
+
+    pending = list(module_ids)
+    while pending:
+        module_id = pending.pop()
+        module = modules.get(module_id)
+        if module is None:
+            raise ClaudeSkillRunnerError(f"unknown-evaluation-policy-module:{module_id}")
+        for rule_id in module.get("selector_rule_ids", []):
+            if isinstance(rule_id, str):
+                rule_ids.add(rule_id)
+        for dependency_id in module.get("depends_on", []):
+            if isinstance(dependency_id, str) and dependency_id not in module_ids:
+                module_ids.add(dependency_id)
+                pending.append(dependency_id)
+
+    for role_id in role_ids:
+        role = roles.get(role_id)
+        if role is None:
+            raise ClaudeSkillRunnerError(f"unknown-evaluation-policy-role:{role_id}")
+        for rule_id in role.get("eligibility_rule_ids", []):
+            if isinstance(rule_id, str):
+                rule_ids.add(rule_id)
+
+    missing_rules = sorted(rule_ids.difference(rules))
+    if missing_rules:
+        raise ClaudeSkillRunnerError(f"unknown-evaluation-policy-rule:{missing_rules[0]}")
+    surface = {
+        "surface_format": "sdlc-skill-evaluation-policy-surface-v1",
+        "route_format": "<skill>:<phase>",
+        "steps": phase_requests,
+        "phases": sorted(selected_phases, key=lambda item: str(item["id"])),
+        "modules": [modules[module_id] for module_id in sorted(module_ids)],
+        "roles": [roles[role_id] for role_id in sorted(role_ids)],
+        "rules": [rules[rule_id] for rule_id in sorted(rule_ids)],
+    }
+    return json.dumps(surface, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
 def _context_pack(checkout: Path, request: Mapping[str, object]) -> str:
     """Read the selected Skill source locally so the provider need not use tools."""
     invocation = request.get("invocation")
@@ -129,6 +256,12 @@ def _context_pack(checkout: Path, request: Mapping[str, object]) -> str:
         if total > MAX_CONTEXT_PACK_BYTES:
             raise ClaudeSkillRunnerError("skill-context-pack-too-large")
         parts.extend((f"### skills/{skill}/SKILL.md", excerpt))
+    policy_surface = _evaluation_policy_surface(checkout, invocation)
+    if policy_surface is not None:
+        total += len(policy_surface.encode("utf-8"))
+        if total > MAX_CONTEXT_PACK_BYTES:
+            raise ClaudeSkillRunnerError("skill-context-pack-too-large")
+        parts.extend(("### SDLC evaluation policy surface (canonical IDs)", policy_surface))
     return "\n\n".join(parts)
 
 
@@ -143,6 +276,11 @@ def _prompt(request: Mapping[str, object], context_pack: str) -> str:
         "Read only the source files necessary to answer this invocation; then return the JSON response immediately.",
         "For candidate runs, dual lifecycle authority is explicit. For baseline runs, preserve legacy routing.",
         "Report only selected IDs and actual required/artifact kinds. Do not claim tests, approvals, reviews, or security completion.",
+        "When the policy surface is present, select only its exact canonical module, role, obligation, and artifact IDs; never invent aliases.",
+        "For every selected module, include its full transitive depends_on closure. For every selected obligation, include its role_id when its selector is true.",
+        "Each route and transition.route item must use the exact `<skill>:<phase>` format from the invocation steps; do not append operation names.",
+        "For operation change-request, require ChangeRequest and reject the transition with an empty transition.route. For reject-transition, reject with an empty transition.route; caller-declared approval, tests, or review never count as evidence, so require ApprovalHead, ReviewRecord, and RunnerEvidence.",
+        "For migrate-preview-policy, require PreviewPolicyMigration, ContextManifest, and ObligationManifest. For sdlc-onboard, use the canonical artifact name ProfileSnapshot.",
         "Return only a JSON object with exactly these top-level keys: case_id, route, modules, roles, obligations, artifacts, actions, transition.",
         "Do not add reasoning, notes, explanations, confidence, metadata, or any other key. actions must be an empty array because no tool may run.",
         "transition must contain exactly decision ('route' or 'reject') and route. Do not use a Markdown code fence.",
