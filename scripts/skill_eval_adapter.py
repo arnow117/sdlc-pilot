@@ -266,7 +266,11 @@ _CANDIDATE_EXPECTATIONS: dict[str, dict[str, object]] = {
         "transition": {"decision": "reject", "route": []},
     },
     "forged-completion": {
-        "modules": ["mod.delivery.release-candidate"],
+        "modules": [
+            "mod.delivery.core-sdd", "mod.delivery.engineering-spec", "mod.delivery.implementation-tdd",
+            "mod.delivery.independent-review", "mod.delivery.planning", "mod.delivery.release-candidate",
+            "mod.delivery.validation-review",
+        ],
         "roles": ["role.architect"],
         "obligations": ["obl.delivery.release-candidate.readiness"],
         "artifacts": ["ApprovalHead", "ReviewRecord", "RunnerEvidence"],

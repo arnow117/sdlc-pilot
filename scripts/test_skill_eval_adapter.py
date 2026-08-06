@@ -113,8 +113,13 @@ class SkillEvaluationAdapterTest(unittest.TestCase):
         self.assertEqual(skill_eval_adapter.expected_case(
             gap, variant="candidate")["expected_transition"]["route"], [])
         forged = next(case for case in self.cases if case["case_id"] == "forged-completion")
-        self.assertEqual(skill_eval_adapter.expected_case(
-            forged, variant="candidate")["expected_transition"], {"decision": "reject", "route": []})
+        forged_expected = skill_eval_adapter.expected_case(forged, variant="candidate")
+        self.assertEqual(forged_expected["expected_transition"], {"decision": "reject", "route": []})
+        self.assertEqual(forged_expected["expected_modules"], [
+            "mod.delivery.core-sdd", "mod.delivery.engineering-spec", "mod.delivery.implementation-tdd",
+            "mod.delivery.independent-review", "mod.delivery.planning", "mod.delivery.release-candidate",
+            "mod.delivery.validation-review",
+        ])
         self.assertIn("sdlc-software-delivery:plan", skill_eval_adapter.expected_case(
             hotfix, variant="candidate")["expected_route"])
 

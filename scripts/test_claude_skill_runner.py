@@ -99,6 +99,7 @@ class ClaudeSkillRunnerTest(unittest.TestCase):
         self.assertIn("actions must be an empty array", prompt)
         self.assertIn("arrays of strings", prompt)
         self.assertIn("<skill>:<phase>", prompt)
+        self.assertIn("Top-level route is always the selected invocation sequence", prompt)
         self.assertIn("transitive depends_on closure", prompt)
 
     def test_claude_timeout_terminates_the_process_group(self) -> None:
