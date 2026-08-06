@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 import sys
 import tempfile
+import time
 import unittest
 
 
@@ -137,6 +138,17 @@ class LiveSkillEvaluationTest(unittest.TestCase):
             r"runner-failed:2:claude-runner-failed:authentication:2$",
         ):
             live_skill_eval._run_command(command, {}, timeout_seconds=10, label="runner")
+
+    def test_runner_timeout_terminates_its_process_group(self) -> None:
+        command = (
+            f'{sys.executable} -c "import subprocess, sys, time; '
+            "subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(30)']); "
+            "time.sleep(30)\""
+        )
+        started = time.monotonic()
+        with self.assertRaisesRegex(live_skill_eval.LiveEvaluationError, r"runner-timeout$"):
+            live_skill_eval._run_command(command, {}, timeout_seconds=1, label="runner")
+        self.assertLess(time.monotonic() - started, 5)
 
     def test_failure_report_is_content_addressed_and_does_not_retain_raw_text(self) -> None:
         report = live_skill_eval.failure_report(RuntimeError("runner-failed:2:claude-runner-failed:model:2"))

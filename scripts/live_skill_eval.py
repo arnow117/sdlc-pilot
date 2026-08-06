@@ -16,6 +16,7 @@ import os
 from pathlib import Path
 import re
 import shlex
+import signal
 import subprocess
 import sys
 from typing import Any, Mapping, Sequence
@@ -87,18 +88,30 @@ def _run_command(command: str, payload: Mapping[str, object], *, timeout_seconds
     if not argv:
         raise LiveEvaluationError(f"missing-{label}-command")
     try:
-        completed = subprocess.run(
+        # The runner can itself launch a model CLI.  Give the whole runner
+        # invocation its own process group so the evaluation deadline cannot
+        # leave a provider child consuming resources after the harness exits.
+        process = subprocess.Popen(
             argv,
-            input=_canonical_bytes(dict(payload)),
+            stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            timeout=timeout_seconds,
-            check=False,
+            start_new_session=True,
         )
     except OSError as exc:
         raise LiveEvaluationError(f"cannot-start-{label}") from exc
+    try:
+        stdout, stderr = process.communicate(
+            input=_canonical_bytes(dict(payload)), timeout=timeout_seconds,
+        )
     except subprocess.TimeoutExpired as exc:
+        try:
+            os.killpg(process.pid, signal.SIGKILL)
+        except ProcessLookupError:
+            pass
+        process.communicate()
         raise LiveEvaluationError(f"{label}-timeout") from exc
+    completed = subprocess.CompletedProcess(argv, process.returncode, stdout, stderr)
     if completed.returncode != 0:
         detail = completed.stderr.decode("utf-8", errors="replace").strip()
         match = _SAFE_RUNNER_ERROR_RE.fullmatch(detail)
