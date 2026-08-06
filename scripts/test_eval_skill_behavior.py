@@ -161,6 +161,23 @@ class FixtureEvaluationTest(unittest.TestCase):
         with self.assertRaisesRegex(eval_skill_behavior.EvaluationError, "invalid-fixture-output-route"):
             eval_skill_behavior._normalize_output(output)
 
+    def test_live_output_deduplicates_repeated_selected_identifiers(self) -> None:
+        raw = {
+            "case_id": "hotfix",
+            "route": ["sdlc-product-design", "patch-contract", "patch-contract"],
+            "modules": ["patch-contract", "patch-contract"],
+            "roles": ["server-dev", "server-dev"],
+            "obligations": ["delivery.hotfix.reproduction", "delivery.hotfix.reproduction"],
+            "artifacts": ["PatchContract", "PatchContract"],
+            "actions": [],
+            "transition": {"decision": "route", "route": ["patch-contract", "patch-contract"]},
+        }
+        output = eval_skill_behavior._normalize_live_output(raw)
+        self.assertEqual(output["route"], ["sdlc-product-design", "patch-contract"])
+        self.assertEqual(output["transition"]["route"], ["patch-contract"])
+        with self.assertRaisesRegex(eval_skill_behavior.EvaluationError, "duplicate-fixture-output-route"):
+            eval_skill_behavior._normalize_output(raw)
+
     def test_contract_drift_and_remote_execution_are_refused(self) -> None:
         bad_hash = self.candidate_fixture()
         bad_hash["dataset_contract"]["sha256"] = "0" * 64

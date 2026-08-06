@@ -114,13 +114,16 @@ def _require_sha256(value: object, label: str) -> str:
     return value
 
 
-def _string_list(value: object, label: str, *, nonempty: bool = True) -> list[str]:
+def _string_list(value: object, label: str, *, nonempty: bool = True,
+                 deduplicate: bool = False) -> list[str]:
     if isinstance(value, (str, bytes)) or not isinstance(value, list) or (nonempty and not value):
         raise EvaluationError(f"invalid-{label}")
     if any(not isinstance(item, str) or not item for item in value):
         raise EvaluationError(f"invalid-{label}")
     if len(set(value)) != len(value):
-        raise EvaluationError(f"duplicate-{label}")
+        if not deduplicate:
+            raise EvaluationError(f"duplicate-{label}")
+        return list(dict.fromkeys(value))
     return list(value)
 
 
@@ -374,7 +377,8 @@ def _normalize_transition(value: object, label: str) -> dict[str, object]:
     }
 
 
-def _normalize_response_output(value: object, *, require_nonempty: bool) -> dict[str, object]:
+def _normalize_response_output(value: object, *, require_nonempty: bool,
+                               deduplicate: bool = False) -> dict[str, object]:
     if not isinstance(value, dict) or set(value) != _OUTPUT_KEYS:
         raise EvaluationError("invalid-fixture-output-keys")
     case_id = _require_text(value["case_id"], "fixture-output-case-id")
@@ -385,17 +389,17 @@ def _normalize_response_output(value: object, *, require_nonempty: bool) -> dict
         raise EvaluationError(f"invalid-fixture-output:{case_id}-transition-decision")
     return {
         "case_id": case_id,
-        "route": _string_list(value["route"], f"fixture-output-route:{case_id}", nonempty=require_nonempty),
-        "modules": _string_list(value["modules"], f"fixture-output-modules:{case_id}", nonempty=require_nonempty),
-        "roles": _string_list(value["roles"], f"fixture-output-roles:{case_id}", nonempty=require_nonempty),
-        "obligations": _string_list(value["obligations"], f"fixture-output-obligations:{case_id}", nonempty=require_nonempty),
-        "artifacts": _string_list(value["artifacts"], f"fixture-output-artifacts:{case_id}", nonempty=require_nonempty),
-        "actions": _string_list(value["actions"], f"fixture-output-actions:{case_id}", nonempty=False),
+        "route": _string_list(value["route"], f"fixture-output-route:{case_id}", nonempty=require_nonempty, deduplicate=deduplicate),
+        "modules": _string_list(value["modules"], f"fixture-output-modules:{case_id}", nonempty=require_nonempty, deduplicate=deduplicate),
+        "roles": _string_list(value["roles"], f"fixture-output-roles:{case_id}", nonempty=require_nonempty, deduplicate=deduplicate),
+        "obligations": _string_list(value["obligations"], f"fixture-output-obligations:{case_id}", nonempty=require_nonempty, deduplicate=deduplicate),
+        "artifacts": _string_list(value["artifacts"], f"fixture-output-artifacts:{case_id}", nonempty=require_nonempty, deduplicate=deduplicate),
+        "actions": _string_list(value["actions"], f"fixture-output-actions:{case_id}", nonempty=False, deduplicate=deduplicate),
         "transition": {
             "decision": transition["decision"],
             "route": _string_list(
-                transition["route"],
-                f"fixture-output:{case_id}-transition-route", nonempty=require_nonempty,
+                transition["route"], f"fixture-output:{case_id}-transition-route",
+                nonempty=require_nonempty, deduplicate=deduplicate,
             ),
         },
     }
@@ -407,8 +411,14 @@ def _normalize_output(value: object) -> dict[str, object]:
 
 
 def _normalize_live_output(value: object) -> dict[str, object]:
-    """Live model output keeps the exact shape but lets assertions score empty selections."""
-    return _normalize_response_output(value, require_nonempty=False)
+    """Normalize harmless live formatting variance before mechanical assertions.
+
+    A repeated identifier does not select additional work.  Deterministic
+    fixtures remain strict, while live selections are de-duplicated in
+    first-seen order and then assessed against the same mechanical contract.
+    Empty selections still reach that assertion layer and fail there.
+    """
+    return _normalize_response_output(value, require_nonempty=False, deduplicate=True)
 
 
 def _load_fixture(
