@@ -463,6 +463,7 @@ def run_once(
         if completed.returncode != 0:
             raise ClaudeSkillRunnerError(
                 f"claude-runner-failed:{_safe_failure_class(completed.stderr, completed.stdout)}:{completed.returncode}")
+        response: dict[str, object] = {}
         response_type = "invalid"
         output_validity = "invalid-structured-output"
         total_cost: object = 0

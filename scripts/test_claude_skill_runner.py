@@ -6,9 +6,11 @@ import json
 import os
 from pathlib import Path
 import sqlite3
+import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 
 HERE = Path(__file__).resolve().parent
@@ -153,6 +155,31 @@ class ClaudeSkillRunnerTest(unittest.TestCase):
             "claude-error-result",
         )
         self.assertEqual(claude_skill_runner._safe_failure_class(b""), "claude-empty-failure")
+
+    def test_unparseable_provider_success_becomes_a_scoreable_invalid_output(self) -> None:
+        request = {
+            "source_ref": "a" * 40,
+            "planned_runs": 1,
+            "case": {"case_id": "small-feature"},
+            "invocation": {"steps": [{"skill": "sdlc"}]},
+        }
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            with mock.patch.object(claude_skill_runner, "_git", return_value="a" * 40), \
+                    mock.patch.object(claude_skill_runner, "_provider_environment", return_value={}), \
+                    mock.patch.object(claude_skill_runner, "_resolve_model", return_value="glm-5.2"), \
+                    mock.patch.object(claude_skill_runner.tempfile, "mkdtemp", return_value=str(workspace)), \
+                    mock.patch.object(claude_skill_runner, "_context_pack", return_value="context"), \
+                    mock.patch.object(claude_skill_runner, "_run_claude", return_value=subprocess.CompletedProcess([], 0, b"not-json", b"")), \
+                    mock.patch.object(claude_skill_runner, "_claude_version", return_value="fixture"):
+                result = claude_skill_runner.run_once(
+                    request, repo=ROOT, provider_name="GLM", model="configured", max_budget_usd=0.2,
+                    database=workspace / "unused.db", timeout_seconds=1,
+                    evaluator_model="unconfigured", evaluator_version="unconfigured",
+                )
+        self.assertEqual(result["manifests"]["output_validity"], "invalid-structured-output")
+        self.assertEqual(result["output"]["case_id"], "small-feature")
+        self.assertEqual(result["execution"]["model_version"], "glm-5.2")
 
 
 if __name__ == "__main__":
