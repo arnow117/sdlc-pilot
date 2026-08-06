@@ -133,13 +133,20 @@ class LiveSkillEvaluationTest(unittest.TestCase):
         self.assertEqual(report["summary"]["verdict"], "FAIL")
         self.assertIn("mechanical-assertion-failed", report["summary"]["reasons"])
 
-    def test_candidate_requires_reviewed_identifiers_but_allows_extra_valid_detail(self) -> None:
+    def test_candidate_live_evaluation_delegates_policy_selection_to_runtime_code(self) -> None:
         cases, _ = eval_skill_behavior.load_dataset(ROOT / "evals/dual-lifecycle-skill-v1.jsonl")
         case = next(item for item in cases if item["case_id"] == "ambiguous-feature")
         output = skill_eval_adapter.expected_output(case, variant="candidate")
+        output["modules"] = []
+        output["roles"] = []
+        output["obligations"] = []
         output["artifacts"].append("ProductStructureReport")
         result = live_skill_eval._mechanical(case, output, variant="candidate")
         self.assertEqual(result["verdict"], "PASS")
+        self.assertEqual(
+            {item["name"] for item in result["assertions"]},
+            {"actions", "artifacts", "route", "transition"},
+        )
         artifacts = next(item for item in result["assertions"] if item["name"] == "artifacts")
         self.assertEqual(artifacts["unexpected"], ["ProductStructureReport"])
 

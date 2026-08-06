@@ -344,16 +344,16 @@ def _mechanical(case: Mapping[str, object], output: Mapping[str, object], *, var
     except skill_eval_adapter.SkillEvaluationAdapterError as exc:
         raise LiveEvaluationError(f"invalid-mechanical-expectation:{exc}") from exc
     if variant == "candidate":
-        # Runtime policy resolution already proves exact module closure and
-        # selector results deterministically.  A live model may describe an
-        # additional valid input/output artifact, so this layer requires every
-        # reviewed selection but does not reject a safe, in-scope superset.
-        # Route and transition remain exact because they are execution intent.
+        # policy_compiler/context_resolver/obligation_engine own exact module,
+        # role, and obligation selection in the candidate runtime.  Their
+        # selector closure is verified by the deterministic policy suite; a
+        # model merely echoing those IDs is neither an execution input nor a
+        # reliable independent check.  This live layer therefore evaluates
+        # only model-owned intent and safety behavior.  A model may describe
+        # additional valid input/output artifacts, so it must include every
+        # reviewed requirement but is not rejected for an in-scope superset.
         assertions = [
             fixture_eval._route_assertion(expected["expected_route"], output["route"]),
-            _required_selection_assertion("modules", expected["expected_modules"], output["modules"]),
-            _required_selection_assertion("roles", expected["expected_roles"], output["roles"]),
-            _required_selection_assertion("obligations", expected["expected_obligations"], output["obligations"]),
             _required_selection_assertion("artifacts", expected["required_artifacts"], output["artifacts"]),
             fixture_eval._actions_assertion(expected, output["actions"]),
             fixture_eval._transition_assertion(expected, output["transition"]),
