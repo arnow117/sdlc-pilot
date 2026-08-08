@@ -2,8 +2,8 @@
 name: sdlc-software-delivery
 description: >
   软件交付生命周期：以 SDD、TDD 和按需的架构、领域、可靠性方法处理 EngineeringSpec、DeliveryPlan、实现、验证、评审和发布准备度。
-  默认显式调用是 Phase 1 preview；只有携带 --authority dual-lifecycle-v1 的调用才写 canonical ledger。
-  不替代既有 sdlc-plan、sdlc-build、sdlc-validate 或 sdlc-review 的默认 legacy 路由。
+  默认显式调用是 Phase 1 preview；携带 --authority dual-lifecycle-v1 或由已固定 dual profile 路由的调用才写
+  canonical ledger。不改写 legacy artifact。
 ---
 
 # sdlc-software-delivery
@@ -50,7 +50,12 @@ Approval 或 Task，也不覆盖 legacy plan。
 
 ## Canonical authority 模式
 
-只有调用者明确给出 `--authority dual-lifecycle-v1` 时进入此模式。先读取
+先读取 `sdlc/references/lifecycle-profile.md`。这是 canonical 写入的共同前置条件，优先于任何调用参数；
+`migration-required` 时停止且不创建 Feature、Task、Evidence、Review 或 release 状态。
+
+直接调用时只有明确给出 `--authority dual-lifecycle-v1` 才进入此模式；经 façade 调用时，已固定的
+`.sdlc/lifecycle.json` 选择 `dual-lifecycle-v1` 也可进入。不能从 preview、legacy artifact、文件路径、旧 STATE
+或仅有 ledger 猜出。先读取
 [`dual-lifecycle-runtime.md`](../sdlc/references/dual-lifecycle-runtime.md)，再用 `feature-projection` 取得当前
 Feature fence、Task 摘要和 ChangeRequest refs；只在需要注册新 artifact 时读取相应的不可变输入。缺任一项时返回缺失前置输入。
 
@@ -70,8 +75,8 @@ ChangeRequest、CAS 冲突或 stale generation 会停止当前动作，不能退
 preview Evidence 或未绑定 trace 的记录均不能推进状态。工程侧发现产品规则缺口时创建 ChangeRequest，不能静默
 改写 ProductContract。产品投影是只读输出，交付状态不会写回 ProductDefinition。
 
-canonical runner 当前只支持 DeliveryPlan 中完整声明的 `tdd` strategy，并要求请求的 `argv` 与 `cwd` 完全匹配
-Task 已固化的值；`static-check`、`contract-check`、`visual-regression` 和 typed attestation 仍可用于 preview
-诊断，不能临时替换为一条 canonical 命令。review 使用 `submit_feature_review`：ledger 从 authority config 解析
+canonical runner 支持 DeliveryPlan 中完整声明的 `tdd`、`static-check`、`contract-check` 与 `visual-regression`
+strategy，并要求请求的 `argv` 与 `cwd` 完全匹配 Task 已固化的值；typed attestation 仍是语义结论，不能替代
+runner receipt 或临时替换为一条 canonical 命令。review 使用 `submit_feature_review`：ledger 从 authority config 解析
 reviewer 与 policy，attestation 必须引用当前 Feature 全部通过的 Evidence；调用方不能直接提交内部
 `review_feature`、review ref 或 reviewer identity。

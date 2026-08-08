@@ -84,6 +84,74 @@ class ContractBundleTest(unittest.TestCase):
             contract_bundle.verify_bundle(product_a, product_components()), product_a["product_contract_id"],
         )
 
+    def test_product_contract_binds_decisions_deferred_items_and_experience_to_components(self) -> None:
+        components = {
+            **product_components(),
+            "decisions.json": {"DEC-001": {"decision": "use saved filters"}},
+            "deferred.json": {"DEF-001": {"reason": "needs usability study"}},
+            "experience.md": "# EXP-001\nKeyboard-only users can edit a saved filter.\n",
+        }
+        product = contract_bundle.build_product_contract(product_input(
+            components=components,
+            decision_ids=["DEC-001"],
+            deferred_ids=["DEF-001"],
+            experience_ids=["EXP-001"],
+            decision_log_component="decisions.json",
+            deferred_items_component="deferred.json",
+            experience_contract_component="experience.md",
+        ))
+        self.assertEqual(product["decision_ids"], ["DEC-001"])
+        self.assertEqual(product["deferred_ids"], ["DEF-001"])
+        self.assertEqual(product["experience_contract_ref"]["path"], "experience.md")
+        self.assertEqual(
+            contract_bundle.verify_bundle(product, components), product["product_contract_id"],
+        )
+
+        changed = contract_bundle.build_product_contract(product_input(
+            components={**components, "decisions.json": {"DEC-001": {"decision": "do not save filters"}}},
+            decision_ids=["DEC-001"],
+            deferred_ids=["DEF-001"],
+            experience_ids=["EXP-001"],
+            decision_log_component="decisions.json",
+            deferred_items_component="deferred.json",
+            experience_contract_component="experience.md",
+        ))
+        self.assertNotEqual(product["product_contract_id"], changed["product_contract_id"])
+        with self.assertRaisesRegex(contract_bundle.BundleError, "decision-log-component-required"):
+            contract_bundle.build_product_contract(product_input(
+                components=components, decision_ids=["DEC-001"],
+            ))
+        with self.assertRaisesRegex(contract_bundle.BundleError, "experience-contract-component-required"):
+            contract_bundle.build_product_contract(product_input(
+                components=components, experience_ids=["EXP-001"],
+            ))
+        with self.assertRaisesRegex(contract_bundle.BundleError, "unknown-decision-log-component"):
+            contract_bundle.build_product_contract(product_input(
+                components=components, decision_ids=["DEC-001"], decision_log_component="missing.json",
+            ))
+
+        tampered = deepcopy(product)
+        tampered["decision_log_ref"] = {"path": "missing.json", "sha256": SHA_A}
+        with self.assertRaisesRegex(contract_bundle.BundleError, "decision-log-ref-not-in-components"):
+            contract_bundle.verify_bundle(tampered, components)
+        profile = profile_snapshot()
+        with self.assertRaisesRegex(contract_bundle.BundleError, "unknown-product-criterion"):
+            contract_bundle.build_engineering_spec(
+                engineering_input(implements_product_ids=["DEC-001"]), product, profile,
+            )
+
+    def test_product_contract_v1_without_new_optional_sections_remains_verifiable(self) -> None:
+        legacy = contract_bundle.build_product_contract(product_input())
+        del legacy["decision_ids"]
+        del legacy["deferred_ids"]
+        _, _, metadata = contract_bundle._bundle_metadata(legacy)
+        legacy_id = contract_bundle.sha256_bytes(contract_bundle.canonical_bytes({
+            "metadata": metadata, "components": legacy["components"],
+        }))
+        legacy["product_contract_id"] = legacy_id
+        legacy["bundle_sha256"] = legacy_id
+        self.assertEqual(contract_bundle.verify_bundle(legacy, product_components()), legacy_id)
+
     def test_profile_and_engineering_bundle_pin_all_upstream_tuples(self) -> None:
         product = contract_bundle.build_product_contract(product_input())
         profile = profile_snapshot()

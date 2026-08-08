@@ -2,8 +2,8 @@
 name: sdlc-product-design
 description: >
   产品设计生命周期：用 BDD 与战略 DDD 澄清问题、行为、领域、体验和产品质量。
-  默认显式调用是 Phase 1 preview；只有携带 --authority dual-lifecycle-v1 的调用才写 canonical ProductDefinition/
-  ProductContract/Approval ledger。两者都不替代既有 sdlc-spec 的默认 legacy 路由。
+  默认显式调用是 Phase 1 preview；携带 --authority dual-lifecycle-v1 或由已固定 dual profile 路由的调用才写
+  canonical ProductDefinition/ProductContract/Approval ledger。两者都不改写 legacy artifact。
 ---
 
 # sdlc-product-design
@@ -49,8 +49,12 @@ compatibility 比较，不能完成 approval obligation。
 
 ## Canonical authority 模式
 
-只有调用者明确给出 `--authority dual-lifecycle-v1` 时进入此模式；它不能从 preview、legacy spec、文件路径
-或旧 STATE 猜出。先读取
+先读取 `sdlc/references/lifecycle-profile.md`。这是 canonical 写入的共同前置条件，优先于任何调用参数；
+`migration-required` 时停止且不创建 ProductDefinition、ProductContract 或 Approval。
+
+直接调用时只有明确给出 `--authority dual-lifecycle-v1` 才进入此模式；经 façade 调用时，已固定的
+`.sdlc/lifecycle.json` 选择 `dual-lifecycle-v1` 也可进入。它不能从 preview、legacy spec、文件路径、旧 STATE
+或仅有 ledger 猜出。先读取
 [`dual-lifecycle-runtime.md`](../sdlc/references/dual-lifecycle-runtime.md)，并以 ledger `status` 的 exact snapshot
 SHA 作为这次 intent 的比较对象。
 
@@ -61,3 +65,7 @@ adopt_product_contract` 顺序提交独立、可重试的 intent。每个 intent
 成功采用后，ProductDefinition 的 current tuple 才可供未来 `claim_feature` 使用。新合同不会自动修改在途 Feature；
 要采用它必须通过 Feature 级 accepted ChangeRequest 和 `adopt_feature_product_contract`。产品侧只读取交付投影，
 不能直接变更 Task、Evidence、validation、review 或 release。
+
+ProductContract 中的 `DEC-*`（已作出的产品判断）与 `DEF-*`（明确暂缓项）各自必须指向同一不可变 bundle
+内的哈希组件；`EXP-*` 存在时也必须指向体验定义组件。它们定义产品上下文，不可作为 EngineeringSpec 的
+`implements_product_ids`；交付侧只实现 `OUT/SCN/RULE/EXP/NFR/EVAL` 这六类 criterion。

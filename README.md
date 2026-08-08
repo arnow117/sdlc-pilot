@@ -18,9 +18,25 @@
 - **改动代码驱动路由** —— 每个流程阶段先跑 `git diff`,按改动的文件路径自动决定**加载哪些角色视角**、**跑哪些验证模式**,无需手动选。
 - **跨会话状态持久化** —— 进度落在目标仓库的 `.sdlc/STATE.md`(短期 feature 交接)与 `.sdlc/PROFILE.md`(长期项目记忆),`/clear` 或隔天换 session 也能无缝续接。
 
-## 双生命周期（显式启用）
+## 双生命周期（新项目默认）
 
-默认入口仍保持 legacy 行为。需要拆开产品与研发上下文时，显式使用：
+首次在**没有任何 SDLC artifact** 的项目中调用普通 `/sdlc` 时，driver 会先固定
+`.sdlc/lifecycle.json`，然后默认进入产品设计 + 软件交付双生命周期。该 profile 应与项目一起提交：
+
+```text
+{
+  "profile_format": "sdlc-lifecycle-profile-v1",
+  "selection": "new-project-default-v1",
+  "mode": "dual-lifecycle-v1"
+}
+```
+
+若项目的 `.gitignore` 忽略 `.sdlc/*`，需补一条 `!.sdlc/lifecycle.json`，使生命周期选择可跨 clone 保持一致。
+
+已有 `STATE.md`、legacy control、preview 或 dual ledger 的项目不会被猜测或自动转换。先执行
+`/sdlc migrate --mode legacy-0.19.2` 保持旧路径，或在确认隔离旧 artifact 后执行
+`/sdlc migrate --mode dual-lifecycle-v1 --allow-existing-artifacts` 选择 canonical 路径。迁移只写 profile，
+不重写历史状态、合同或证据。直接调用 lifecycle 时仍可明确使用：
 
 ```text
 /sdlc product-design --authority dual-lifecycle-v1
@@ -99,6 +115,7 @@ driver 提供两个显式操作和一个智能续接入口:
 
 ```
 <target-repo>/.sdlc/
+├── lifecycle.json # 项目固定的 lifecycle 选择；建议纳入 Git
 ├── PROFILE.md     # 项目记忆(长期):技术栈 / 约定 / surface map(模块→glob→默认角色+模式)/ 测试命令
 ├── STATE.md       # feature 交接(短期):阶段 / 状态 / gates / 活跃角色 / 改动快照 / 决策 / 下一步
 ├── spec.md        # sdlc-spec 产出(含 AI 工作的 eval 标准)
@@ -190,7 +207,8 @@ v1 语言范围 = **Python + Web(TS)**。如何迭代本项目见仓库根 **`CL
 
 | 场景 | 怎么走 |
 |---|---|
-| **首次进一个已有项目** | `/sdlc` → 无 PROFILE → 自动 `onboard` → 产出 `.sdlc/PROFILE.md` + surface map(agentic-config-demo 这类"配置型工程"也认得,R7) |
+| **新项目第一次进入** | `/sdlc` → 固定 dual profile → product-design，从 ProductDefinition / ProductContract 开始 |
+| **首次进一个已有项目** | `/sdlc` → 发现已有 SDLC artifact → 报告 `migration-required`；选定 legacy 后按原路径 onboard，选定 dual 后先由产品设计建立 canonical contract |
 | **新增/继续拆需求** | `/sdlc intake <需求>` → 保存 request 原文并拆/更新 requirement leaf；可在另一个 Feature 开发期间持续进行 |
 | **开始交付一条需求** | `/sdlc deliver [leaf-id]` → ready 检查 → claim 竞争 → 绑定 Feature branch → spec；claim 失败不会创建分支 |
 | **每做一个 feature** | **spec** → **静态 plan + Task records** → **build**(Task 依赖/写集/接口/环境满足时最多 3 个 task branches，否则串行)→ **validate**(当前 integration HEAD evidence)→ **review**→ **ship/retire** |

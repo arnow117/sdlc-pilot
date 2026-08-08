@@ -77,6 +77,7 @@ FENCE_FIELDS = (
     "engineering_spec_approval_ref",
     "delivery_plan_ref",
 )
+_CANONICAL_RUNNABLE_STRATEGIES = frozenset({"tdd", "static-check", "visual-regression", "contract-check"})
 
 _ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 _SHA256 = re.compile(r"^[0-9a-f]{64}$")
@@ -1202,10 +1203,10 @@ def activate_delivery_plan(
         if not isinstance(plan_task, Mapping):
             raise ReducerError("invalid-delivery-plan-task")
         strategy = plan_task.get("evidence_strategy")
-        if not isinstance(strategy, Mapping) or strategy.get("kind") != "tdd":
-            # This canonical runner presently executes only a fully declared
-            # argv-based TDD strategy.  Other plan modes must not silently
-            # accept an arbitrary caller command as substitute evidence.
+        if not isinstance(strategy, Mapping) or strategy.get("kind") not in _CANONICAL_RUNNABLE_STRATEGIES:
+            # A canonical receipt must be bound to a command fixed in the
+            # immutable DeliveryPlan. Typed attestations remain semantic input,
+            # not runner evidence.
             raise ReducerError("canonical-execution-strategy-not-supported")
         task_id = _id(plan_task.get("id"), "delivery-plan-task-id")
         dependencies = _string_list(plan_task.get("depends_on"), "delivery-plan-task-dependencies")

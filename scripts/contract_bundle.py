@@ -26,6 +26,10 @@ _PRODUCT_PREFIXES = {
     "nfr_ids": "NFR-",
     "eval_ids": "EVAL-",
 }
+_PRODUCT_AUXILIARY_PREFIXES = {
+    "decision_ids": "DEC-",
+    "deferred_ids": "DEF-",
+}
 _ENGINEERING_PREFIXES = ("ARCH-", "API-", "DATA-", "REL-", "SEC-", "TEST-")
 
 
@@ -172,6 +176,42 @@ def normalize_components(value: object) -> tuple[dict[str, bytes], list[dict[str
     return components, descriptors
 
 
+def _component_ref_from_path(value: object, *, label: str, descriptors: list[dict[str, str]]) -> dict[str, str]:
+    """Bind a semantic contract section to one hash-addressed component."""
+    path = _safe_component_path(value)
+    matches = [item for item in descriptors if item["path"] == path]
+    if len(matches) != 1:
+        raise BundleError(f"unknown-{label}-component")
+    return dict(matches[0])
+
+
+def _component_ref_from_bundle(
+    value: object, *, label: str, descriptors: list[dict[str, str]],
+) -> dict[str, str]:
+    source = _mapping(value, f"{label}-ref")
+    if set(source) != {"path", "sha256"}:
+        raise BundleError(f"invalid-{label}-ref")
+    candidate = {
+        "path": _safe_component_path(source["path"]),
+        "sha256": _sha256(source["sha256"], f"{label}-component-sha"),
+    }
+    if candidate not in descriptors:
+        raise BundleError(f"{label}-ref-not-in-components")
+    return candidate
+
+
+def _required_component_ref(
+    value: object, *, label: str, criterion_ids: list[str], descriptors: list[dict[str, str]],
+) -> dict[str, str] | None:
+    if not criterion_ids:
+        if value is not None:
+            raise BundleError(f"{label}-component-without-criteria")
+        return None
+    if value is None:
+        raise BundleError(f"{label}-component-required")
+    return _component_ref_from_path(value, label=label, descriptors=descriptors)
+
+
 def closure_sha256(metadata: Mapping[str, object], components: Mapping[str, object]) -> str:
     """Calculate the full closure hash without relying on a mutable filesystem."""
     _, descriptors = normalize_components(components)
@@ -214,10 +254,12 @@ def _behavior_kinds(value: object, behavior_ids: list[str], contract_kind: str) 
 def _product_metadata(
     *, contract_kind: str, leaf_id: str, source_request: str, outcome_ids: list[str],
     behavior_ids: list[str], behavior_kinds: Mapping[str, str], domain_rule_ids: list[str],
-    experience_ids: list[str], nfr_ids: list[str], eval_ids: list[str], intent_flags: object,
-    supersedes_ref: str | None,
+    experience_ids: list[str], nfr_ids: list[str], eval_ids: list[str], decision_ids: list[str] | None,
+    deferred_ids: list[str] | None, decision_log_ref: Mapping[str, str] | None,
+    deferred_items_ref: Mapping[str, str] | None, experience_contract_ref: Mapping[str, str] | None,
+    intent_flags: object, supersedes_ref: str | None,
 ) -> dict[str, object]:
-    return {
+    metadata: dict[str, object] = {
         "contract_format": "product-contract-v1",
         "contract_kind": contract_kind,
         "leaf_id": leaf_id,
@@ -232,6 +274,17 @@ def _product_metadata(
         "intent_flags": intent_flags,
         "supersedes_ref": supersedes_ref,
     }
+    if decision_ids is not None:
+        metadata["decision_ids"] = decision_ids
+    if deferred_ids is not None:
+        metadata["deferred_ids"] = deferred_ids
+    if decision_log_ref is not None:
+        metadata["decision_log_ref"] = dict(decision_log_ref)
+    if deferred_items_ref is not None:
+        metadata["deferred_items_ref"] = dict(deferred_items_ref)
+    if experience_contract_ref is not None:
+        metadata["experience_contract_ref"] = dict(experience_contract_ref)
+    return metadata
 
 
 def build_product_contract(value: Mapping[str, object]) -> dict[str, object]:
@@ -240,6 +293,8 @@ def build_product_contract(value: Mapping[str, object]) -> dict[str, object]:
     allowed = {
         "contract_kind", "leaf_id", "source_request", "components", "outcome_ids", "behavior_ids",
         "behavior_kinds", "domain_rule_ids", "experience_ids", "nfr_ids", "eval_ids", "intent_flags",
+        "decision_ids", "deferred_ids", "decision_log_component", "deferred_items_component",
+        "experience_contract_component",
         "supersedes", "created_by", "created_at",
     }
     if not set(source).issubset(allowed):
@@ -256,16 +311,33 @@ def build_product_contract(value: Mapping[str, object]) -> dict[str, object]:
     experience_ids = _string_list(source.get("experience_ids", []), "experience-ids", prefix="EXP-")
     nfr_ids = _string_list(source.get("nfr_ids", []), "nfr-ids", prefix="NFR-")
     eval_ids = _string_list(source.get("eval_ids", []), "eval-ids", prefix="EVAL-")
+    decision_ids = _string_list(source.get("decision_ids", []), "decision-ids", prefix="DEC-")
+    deferred_ids = _string_list(source.get("deferred_ids", []), "deferred-ids", prefix="DEF-")
     intent_flags = _intent_flags(source.get("intent_flags"))
     supersedes_ref = _supersedes(source.get("supersedes"), subject_key="leaf_id", subject_id=leaf_id)
     created_by = _id(source.get("created_by"), "created-by")
     created_at = _text(source.get("created_at"), "created-at")
     components, descriptors = normalize_components(source.get("components"))
+    decision_log_ref = _required_component_ref(
+        source.get("decision_log_component"), label="decision-log", criterion_ids=decision_ids,
+        descriptors=descriptors,
+    )
+    deferred_items_ref = _required_component_ref(
+        source.get("deferred_items_component"), label="deferred-items", criterion_ids=deferred_ids,
+        descriptors=descriptors,
+    )
+    experience_contract_ref = _required_component_ref(
+        source.get("experience_contract_component"), label="experience-contract", criterion_ids=experience_ids,
+        descriptors=descriptors,
+    )
     metadata = _product_metadata(
         contract_kind=contract_kind, leaf_id=leaf_id, source_request=source_request,
         outcome_ids=outcome_ids, behavior_ids=behavior_ids, behavior_kinds=behavior_kinds,
         domain_rule_ids=domain_rule_ids, experience_ids=experience_ids, nfr_ids=nfr_ids,
-        eval_ids=eval_ids, intent_flags=intent_flags, supersedes_ref=supersedes_ref,
+        eval_ids=eval_ids, decision_ids=decision_ids, deferred_ids=deferred_ids,
+        decision_log_ref=decision_log_ref, deferred_items_ref=deferred_items_ref,
+        experience_contract_ref=experience_contract_ref, intent_flags=intent_flags,
+        supersedes_ref=supersedes_ref,
     )
     bundle_sha256 = sha256_bytes(canonical_bytes({"metadata": metadata, "components": descriptors}))
     return {
@@ -347,8 +419,38 @@ def _product_projection(value: object) -> Mapping[str, object]:
     _sha256(product.get("bundle_sha256"), "upstream-product-contract-sha")
     if product["product_contract_id"] != product["bundle_sha256"]:
         raise BundleError("upstream-product-contract-id-mismatch")
+    product_criteria: dict[str, list[str]] = {}
     for field, prefix in _PRODUCT_PREFIXES.items():
-        _string_list(product.get(field), f"upstream-{field}", prefix=prefix, nonempty=field in {"outcome_ids", "behavior_ids"})
+        product_criteria[field] = _string_list(
+            product.get(field), f"upstream-{field}", prefix=prefix,
+            nonempty=field in {"outcome_ids", "behavior_ids"},
+        )
+    descriptors = _descriptors_from_bundle(product)
+    auxiliary_criteria: dict[str, list[str] | None] = {}
+    for field, prefix in _PRODUCT_AUXILIARY_PREFIXES.items():
+        auxiliary_criteria[field] = (
+            _string_list(product.get(field), f"upstream-{field}", prefix=prefix)
+            if field in product else None
+        )
+    component_refs: dict[str, dict[str, str] | None] = {}
+    for field, label in (
+        ("decision_log_ref", "decision-log"),
+        ("deferred_items_ref", "deferred-items"),
+        ("experience_contract_ref", "experience-contract"),
+    ):
+        component_refs[field] = (
+            _component_ref_from_bundle(product[field], label=label, descriptors=descriptors)
+            if field in product else None
+        )
+    for ids_field, ref_field, label in (
+        ("decision_ids", "decision_log_ref", "decision-log"),
+        ("deferred_ids", "deferred_items_ref", "deferred-items"),
+    ):
+        criterion_ids = auxiliary_criteria[ids_field]
+        if criterion_ids is not None and bool(criterion_ids) != bool(component_refs[ref_field]):
+            raise BundleError(f"{label}-criteria-and-component-must-match")
+    if component_refs["experience_contract_ref"] is not None and not product_criteria["experience_ids"]:
+        raise BundleError("experience-contract-component-without-criteria")
     return product
 
 
@@ -469,6 +571,35 @@ def _bundle_metadata(bundle: Mapping[str, object]) -> tuple[str, str, dict[str, 
         if contract_kind not in {"feature", "patch", "remediation"}:
             raise BundleError("invalid-contract-kind")
         leaf_id = _id(bundle.get("leaf_id"), "leaf-id")
+        descriptors = _descriptors_from_bundle(bundle)
+        decision_ids = (
+            None if "decision_ids" not in bundle
+            else _string_list(bundle.get("decision_ids"), "decision-ids", prefix="DEC-")
+        )
+        deferred_ids = (
+            None if "deferred_ids" not in bundle
+            else _string_list(bundle.get("deferred_ids"), "deferred-ids", prefix="DEF-")
+        )
+        decision_log_ref = (
+            None if "decision_log_ref" not in bundle
+            else _component_ref_from_bundle(bundle["decision_log_ref"], label="decision-log", descriptors=descriptors)
+        )
+        deferred_items_ref = (
+            None if "deferred_items_ref" not in bundle
+            else _component_ref_from_bundle(bundle["deferred_items_ref"], label="deferred-items", descriptors=descriptors)
+        )
+        experience_contract_ref = (
+            None if "experience_contract_ref" not in bundle
+            else _component_ref_from_bundle(bundle["experience_contract_ref"], label="experience-contract", descriptors=descriptors)
+        )
+        for criterion_ids, component_ref, label in (
+            (decision_ids, decision_log_ref, "decision-log"),
+            (deferred_ids, deferred_items_ref, "deferred-items"),
+        ):
+            if criterion_ids is not None and bool(criterion_ids) != bool(component_ref):
+                raise BundleError(f"{label}-criteria-and-component-must-match")
+        if experience_contract_ref is not None and not bundle.get("experience_ids"):
+            raise BundleError("experience-contract-component-without-criteria")
         metadata = _product_metadata(
             contract_kind=str(contract_kind), leaf_id=leaf_id,
             source_request=_id(bundle.get("source_request"), "source-request"),
@@ -479,6 +610,11 @@ def _bundle_metadata(bundle: Mapping[str, object]) -> tuple[str, str, dict[str, 
             experience_ids=_string_list(bundle.get("experience_ids"), "experience-ids", prefix="EXP-"),
             nfr_ids=_string_list(bundle.get("nfr_ids"), "nfr-ids", prefix="NFR-"),
             eval_ids=_string_list(bundle.get("eval_ids"), "eval-ids", prefix="EVAL-"),
+            decision_ids=decision_ids,
+            deferred_ids=deferred_ids,
+            decision_log_ref=decision_log_ref,
+            deferred_items_ref=deferred_items_ref,
+            experience_contract_ref=experience_contract_ref,
             intent_flags=_intent_flags(bundle.get("intent_flags")),
             supersedes_ref=None if bundle.get("supersedes_ref") is None else _sha256(bundle.get("supersedes_ref"), "supersedes-ref"),
         )

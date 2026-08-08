@@ -480,7 +480,7 @@
       "playbook": {
         "path": "sdlc/references/lifecycles/product-design.md",
         "anchor": "<!-- playbook-anchor: product.module.core -->",
-        "sha256": "d18e2e21b466ffbc8ba8446adf7a38658ac5ae018a33f3f5dab63b619d36eacb"
+        "sha256": "f03ae71cd3a025a0dc5a342061057cb48bf249aba97ea494e053bed4788edbcf"
       },
       "max_bytes": 8192,
       "fallback": {"kind": "needs_classification"}
@@ -494,7 +494,7 @@
       "playbook": {
         "path": "sdlc/references/lifecycles/product-design.md",
         "anchor": "<!-- playbook-anchor: product.module.behavior-contract -->",
-        "sha256": "d18e2e21b466ffbc8ba8446adf7a38658ac5ae018a33f3f5dab63b619d36eacb"
+        "sha256": "f03ae71cd3a025a0dc5a342061057cb48bf249aba97ea494e053bed4788edbcf"
       },
       "max_bytes": 8192,
       "fallback": {"kind": "needs_classification"}
@@ -508,7 +508,7 @@
       "playbook": {
         "path": "sdlc/references/lifecycles/product-design.md",
         "anchor": "<!-- playbook-anchor: product.module.behavior-bdd -->",
-        "sha256": "d18e2e21b466ffbc8ba8446adf7a38658ac5ae018a33f3f5dab63b619d36eacb"
+        "sha256": "f03ae71cd3a025a0dc5a342061057cb48bf249aba97ea494e053bed4788edbcf"
       },
       "max_bytes": 8192,
       "fallback": {"kind": "needs_classification"}
@@ -522,7 +522,7 @@
       "playbook": {
         "path": "sdlc/references/lifecycles/product-design.md",
         "anchor": "<!-- playbook-anchor: product.module.domain-ddd -->",
-        "sha256": "d18e2e21b466ffbc8ba8446adf7a38658ac5ae018a33f3f5dab63b619d36eacb"
+        "sha256": "f03ae71cd3a025a0dc5a342061057cb48bf249aba97ea494e053bed4788edbcf"
       },
       "max_bytes": 8192,
       "fallback": {"kind": "needs_classification"}
@@ -536,7 +536,7 @@
       "playbook": {
         "path": "sdlc/references/lifecycles/product-design.md",
         "anchor": "<!-- playbook-anchor: product.module.experience-design -->",
-        "sha256": "d18e2e21b466ffbc8ba8446adf7a38658ac5ae018a33f3f5dab63b619d36eacb"
+        "sha256": "f03ae71cd3a025a0dc5a342061057cb48bf249aba97ea494e053bed4788edbcf"
       },
       "max_bytes": 8192,
       "fallback": {"kind": "needs_classification"}
@@ -550,7 +550,7 @@
       "playbook": {
         "path": "sdlc/references/lifecycles/product-design.md",
         "anchor": "<!-- playbook-anchor: product.module.product-eval -->",
-        "sha256": "d18e2e21b466ffbc8ba8446adf7a38658ac5ae018a33f3f5dab63b619d36eacb"
+        "sha256": "f03ae71cd3a025a0dc5a342061057cb48bf249aba97ea494e053bed4788edbcf"
       },
       "max_bytes": 8192,
       "fallback": {"kind": "needs_classification"}
@@ -564,7 +564,7 @@
       "playbook": {
         "path": "sdlc/references/lifecycles/product-design.md",
         "anchor": "<!-- playbook-anchor: product.module.quality -->",
-        "sha256": "d18e2e21b466ffbc8ba8446adf7a38658ac5ae018a33f3f5dab63b619d36eacb"
+        "sha256": "f03ae71cd3a025a0dc5a342061057cb48bf249aba97ea494e053bed4788edbcf"
       },
       "max_bytes": 8192,
       "fallback": {"kind": "needs_classification"}
@@ -578,7 +578,7 @@
       "playbook": {
         "path": "sdlc/references/lifecycles/product-design.md",
         "anchor": "<!-- playbook-anchor: product.module.product-validation -->",
-        "sha256": "d18e2e21b466ffbc8ba8446adf7a38658ac5ae018a33f3f5dab63b619d36eacb"
+        "sha256": "f03ae71cd3a025a0dc5a342061057cb48bf249aba97ea494e053bed4788edbcf"
       },
       "max_bytes": 8192,
       "fallback": {"kind": "needs_classification"}
@@ -592,7 +592,7 @@
       "playbook": {
         "path": "sdlc/references/lifecycles/product-design.md",
         "anchor": "<!-- playbook-anchor: product.module.approval -->",
-        "sha256": "d18e2e21b466ffbc8ba8446adf7a38658ac5ae018a33f3f5dab63b619d36eacb"
+        "sha256": "f03ae71cd3a025a0dc5a342061057cb48bf249aba97ea494e053bed4788edbcf"
       },
       "max_bytes": 8192,
       "fallback": {"kind": "needs_classification"}

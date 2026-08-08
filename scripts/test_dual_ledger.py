@@ -120,7 +120,7 @@ def engineering_spec(
 
 def delivery_plan(
     product: dict[str, object], engineering: dict[str, object], effective_approval: dict[str, object], *,
-    evidence_argv: list[str],
+    evidence_argv: list[str], evidence_kind: str = "tdd",
 ) -> dict[str, object]:
     return plan_compiler.compile_delivery_plan(
         dict(engineering, contract_generation=0),
@@ -133,8 +133,8 @@ def delivery_plan(
             "mutual_exclusion_with": [],
             "interface_owner": None,
             "interface_consumes": [],
-            "execution_mode": "tdd",
-            "evidence_strategy": {"kind": "tdd", "argv": evidence_argv},
+            "execution_mode": evidence_kind,
+            "evidence_strategy": {"kind": evidence_kind, "argv": evidence_argv},
             "trace_refs": [
                 f"PC:{product['product_contract_id']}#SCN-001",
                 f"ES:{engineering['engineering_spec_id']}#API-001",
@@ -205,7 +205,9 @@ class DualLifecycleLedgerTest(unittest.TestCase):
             timestamp=TIME,
         )
 
-    def prepare_active_feature(self, *, evidence_argv: list[str] | None = None) -> None:
+    def prepare_active_feature(
+        self, *, evidence_argv: list[str] | None = None, evidence_kind: str = "tdd",
+    ) -> None:
         """Build a real approved Feature/Task through the public ledger path."""
         self.planned_argv = list(evidence_argv or [sys.executable, "-c", "print('ok')"])
         self.apply_current(create_definition_intent(), "setup-definition")
@@ -288,6 +290,7 @@ class DualLifecycleLedgerTest(unittest.TestCase):
             "feature_id": "FEAT-001",
             "delivery_plan": delivery_plan(
                 product, engineering, effective_approval, evidence_argv=self.planned_argv,
+                evidence_kind=evidence_kind,
             ),
             "expected_generation": 0,
             "at": TIME,
@@ -663,6 +666,7 @@ class DualLifecycleLedgerTest(unittest.TestCase):
         self.assertEqual(canonical["tested_sha"], canonical["runner_record"]["code_sha"])  # type: ignore[index]
         self.assertEqual(canonical["runner_record"]["timeout_seconds"], 0.02)  # type: ignore[index]
         self.assertTrue(marker.exists())
+
         self.assertFalse(self.ledger.execution_journal_path.exists())
         self.assertEqual(len(applied.snapshot["runner_receipts"]), 1)  # type: ignore[arg-type]
         evidence = next(iter(applied.snapshot["evidence"].values()))  # type: ignore[union-attr]
@@ -705,6 +709,21 @@ class DualLifecycleLedgerTest(unittest.TestCase):
                 idempotency_key="escaped-cwd", timestamp=TIME,
             )
         self.assertTrue(marker.exists())
+
+    def test_declared_static_check_runs_as_canonical_evidence(self) -> None:
+        marker = Path(self.observations.name, "static-check-count.txt")
+        argv = ["/usr/bin/touch", str(marker)]
+        self.prepare_active_feature(evidence_argv=argv, evidence_kind="static-check")
+        applied = self.ledger.apply(
+            intent=self.execution_request(argv=argv),
+            expected_snapshot_sha256=self.ledger.status().snapshot_sha256,
+            idempotency_key="canonical-static-check", timestamp=TIME,
+        )
+        self.assertTrue(marker.exists())
+        task = next(iter(applied.snapshot["tasks"].values()))  # type: ignore[union-attr]
+        self.assertEqual(task["evidence_strategy"]["kind"], "static-check")
+        evidence = next(iter(applied.snapshot["evidence"].values()))  # type: ignore[union-attr]
+        self.assertEqual(evidence["result"], "pass")
 
     def test_failed_task_runner_is_durable_observed_evidence_and_clears_journal(self) -> None:
         argv = [sys.executable, "-c", "raise SystemExit(7)"]

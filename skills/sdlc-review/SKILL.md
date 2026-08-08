@@ -1,13 +1,16 @@
 ---
 name: sdlc-review
 description: >
-  兼容适配器：保留 /sdlc review 的精确 0.19.2 多角色评审流程。
-  新评审 preview 只有通过显式 sdlc-software-delivery 调用才可运行，不能改变 legacy review 或 ship 状态。
+  兼容适配器：在 legacy profile 下保留 /sdlc review 的精确 0.19.2 多角色评审流程；
+  façade 已固定 dual profile 时转交软件交付 canonical 生命周期，不能改变 legacy review 状态。
 ---
 
 # sdlc-review — legacy compatibility adapter
 
-默认 /sdlc review 先加载固定且校验过的 legacy runbook：
+先读取 `sdlc/references/lifecycle-profile.md`；`migration-required` 时停止且不写 legacy review。
+
+façade 已固定 `.sdlc/lifecycle.json=dual-lifecycle-v1` 时，`/sdlc review` 进入 software-delivery 的
+canonical review 阶段。直接调用本 skill 或 legacy profile 下的 `/sdlc review` 先加载固定且校验过的 legacy runbook：
 
     python3 <sdlc-pilot-root>/scripts/legacy_runbook.py \
       --repo-root <sdlc-pilot-root> show --stage review
@@ -16,7 +19,8 @@ description: >
 [control-plane.md](../sdlc/references/control-plane.md) 语义。固定对象不存在时明确失败；不能在普通 review
 中隐式运行新的 reducer、批准或变更请求。
 
-显式 `/sdlc software-delivery --phase review --authority dual-lifecycle-v1` 才能对已验证的当前 tuple 记录
+显式 `/sdlc software-delivery --phase review --authority dual-lifecycle-v1` 或 façade 已固定 dual profile 才能对
+已验证的当前 tuple 记录
 canonical review。公开请求只能是 `submit_feature_review`：由 authority config 的 `feature_review/feature` policy
 解析 reviewer，且 attestation 必须绑定当前 fence 与全部通过的 Evidence；不能直接提交内部 `review_feature` 或
 caller 自报的 reviewer identity。`/sdlc preview delivery --phase phase.delivery.review …` 仍只能做

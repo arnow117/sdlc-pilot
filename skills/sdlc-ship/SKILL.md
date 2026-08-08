@@ -57,8 +57,12 @@ staging 已部署 + smoke 通过。是否晋级到 canary(线上小流量)?
 
 ### 双生命周期 authority
 
-当本地上下文明确声明 `contract-model: dual-lifecycle-v1` 时，先读取 canonical ledger，而不是读取
-legacy control frontmatter 或用 `STATE.stage` 推断可发布性：
+先读取 `sdlc/references/lifecycle-profile.md`。`migration-required` 时停止，不能通过 ship 写 release evidence
+或改 legacy STATE。
+
+当 façade 已从 `.sdlc/lifecycle.json` 明确选择 `dual-lifecycle-v1`（并在本地上下文声明
+`contract-model: dual-lifecycle-v1`）时，先读取 canonical ledger，而不是读取 legacy control frontmatter
+或用 `STATE.stage` 推断可发布性。仅有 ledger 不能替代 profile：
 
 ```sh
 python3 <sdlc-pilot-root>/scripts/dual_ledger.py --repo <target-repo> status

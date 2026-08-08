@@ -56,7 +56,7 @@ Obligation refs: `obl.product.experience.constraints`, `obl.product.experience.s
 
 1. 仅在 IA、journey、交互、可访问性或 design-system 约束变化时加载本段。
 2. 写出 `EXP-*`：入口、关键步骤、成功/失败/空态、恢复路径、辅助技术和不可接受体验。
-3. 让体验约束引用相关 `SCN-*`，避免把视觉偏好伪装成无来源的工程任务。
+3. 让体验约束引用相关 `SCN-*`，并在 ProductContract 中以 `experience_contract_ref` 指向固定的体验定义组件；避免把视觉偏好伪装成无来源的工程任务。
 
 体验充分性是语义判断，使用具名 attestation，并保留其依据与适用范围。
 
@@ -80,7 +80,7 @@ Obligation refs: `obl.product.quality.nfr-contract`, `obl.product.quality.eval-c
 
 Obligation refs: `obl.product.validation.structural-check`, `obl.product.validation.semantic-attestation`.
 
-1. 检查所有选择的 `SCN-*`、`TERM-*`、`RULE-*`、`EXP-*`、`NFR-*`、`EVAL-*` 是否唯一、可追溯且没有悬空引用。
+1. 检查所有选择的 `SCN-*`、`TERM-*`、`RULE-*`、`EXP-*`、`NFR-*`、`EVAL-*`、`DEC-*`、`DEF-*` 是否唯一、可追溯且没有悬空引用；`DEC/DEF/EXP` 的 bundle component ref 必须指向对应哈希组件。
 2. 区分机械结构检查和语义判断。机械检查只报告 ID、引用、覆盖和输入完整性；产品充分性由具名角色提交
    `product-semantic-pass` 或相应 typed attestation。
 3. 把开放问题、风险、缺失证据和不适用模块明确列出。不要用“未发现问题”替代结论依据。

@@ -108,6 +108,28 @@ class PlanCompilerTest(unittest.TestCase):
             plan["delivery_plan_id"],
         )
 
+    def test_declared_non_tdd_commands_compile_as_canonical_evidence_strategies(self) -> None:
+        product, _, engineering, approval = contract_fixture()
+        for kind in ("static-check", "contract-check", "visual-regression"):
+            with self.subTest(kind=kind):
+                definitions = tasks(engineering, product)
+                definitions[0]["execution_mode"] = kind
+                definitions[0]["evidence_strategy"] = {
+                    "kind": kind, "argv": ["python3", "-c", "pass"], "cwd": ".",
+                }
+                plan = plan_compiler.compile_delivery_plan(engineering, approval, definitions)
+                self.assertEqual(plan["tasks"][0]["evidence_strategy"], {
+                    "kind": kind, "argv": ["python3", "-c", "pass"], "cwd": ".",
+                })
+
+    def test_non_tdd_check_ref_cannot_be_compiled_as_runnable_canonical_evidence(self) -> None:
+        product, _, engineering, approval = contract_fixture()
+        definitions = tasks(engineering, product)
+        definitions[0]["execution_mode"] = "static-check"
+        definitions[0]["evidence_strategy"] = {"kind": "static-check", "check_ref": "ruff"}
+        with self.assertRaisesRegex(plan_compiler.PlanError, "invalid-static-check-evidence-strategy"):
+            plan_compiler.compile_delivery_plan(engineering, approval, definitions)
+
     def test_not_a_boolean_or_self_report_can_establish_effective_approval(self) -> None:
         product, _, engineering, approval = contract_fixture()
         rejected = dict(approval, decision="reject", head_decision="reject")
