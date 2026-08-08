@@ -1454,7 +1454,10 @@ class DualLifecycleLedger:
         if matches[0].get("status") in {"verified", "abandoned", "superseded"}:
             raise LedgerTransitionError("cannot-attach-evidence-to-terminal-task")
         strategy = matches[0].get("evidence_strategy")
-        if not isinstance(strategy, Mapping) or strategy.get("kind") != "tdd":
+        if (
+            not isinstance(strategy, Mapping)
+            or strategy.get("kind") not in {"tdd", "static-check", "visual-regression", "contract-check"}
+        ):
             raise LedgerTransitionError("canonical-execution-strategy-not-supported")
         planned_argv = strategy.get("argv")
         planned_cwd = strategy.get("cwd")

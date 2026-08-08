@@ -11,7 +11,7 @@ err(){ echo "  ✗ $1"; fail=$((fail+1)); }
 ok(){ echo "  ✓ $1"; }
 
 echo "== 1. 关键共享文件/目录 =="
-for p in "$REF/role-routing.md" "$REF/distillation-loop.md" "$REF/control-plane.md" "$REF/runtime-adapters/codex.md" "$REF/roles" "$REF/validate-modes" "$REF/templates/STATE.md" "$REF/templates/TASK.md" "$REF/templates/PROFILE.md"; do
+for p in "$REF/role-routing.md" "$REF/distillation-loop.md" "$REF/control-plane.md" "$REF/lifecycle-profile.md" "$REF/runtime-adapters/codex.md" "$REF/roles" "$REF/validate-modes" "$REF/templates/STATE.md" "$REF/templates/TASK.md" "$REF/templates/PROFILE.md"; do
   [ -e "$p" ] && ok "$p" || err "缺失:$p"
 done
 
@@ -62,6 +62,11 @@ echo "== 7. control 协议跨流程引用与行为测试 =="
 for f in "$ROOT/sdlc/SKILL.md" "$ROOT/sdlc-backlog/SKILL.md" "$ROOT/sdlc-onboard/SKILL.md" "$ROOT/sdlc-plan/SKILL.md" "$ROOT/sdlc-build/SKILL.md" "$ROOT/sdlc-spec/SKILL.md" "$ROOT/sdlc-validate/SKILL.md" "$ROOT/sdlc-review/SKILL.md" "$ROOT/sdlc-ship/SKILL.md"; do
   grep -q "control-plane.md" "$f" || err "$f 未引用 control-plane.md"
 done
+[ -f scripts/lifecycle_profile.py ] && ok "scripts/lifecycle_profile.py" || err "缺失 scripts/lifecycle_profile.py"
+for f in "$ROOT/sdlc/SKILL.md" "$ROOT/sdlc-product-design/SKILL.md" "$ROOT/sdlc-software-delivery/SKILL.md" "$ROOT/sdlc-onboard/SKILL.md" "$ROOT/sdlc-backlog/SKILL.md" "$ROOT/sdlc-plan/SKILL.md" "$ROOT/sdlc-build/SKILL.md" "$ROOT/sdlc-spec/SKILL.md" "$ROOT/sdlc-validate/SKILL.md" "$ROOT/sdlc-review/SKILL.md" "$ROOT/sdlc-ship/SKILL.md"; do
+  grep -q "lifecycle-profile.md" "$f" || err "$f 未声明 lifecycle profile 前置条件"
+  grep -q "migration-required" "$f" || err "$f 未声明 migration-required 停止语义"
+done
 for f in scripts/test_control.py scripts/test_control_intake.py scripts/test_hooks.py; do
   [ -f "$f" ] && ok "$f" || err "缺失:$f"
 done
@@ -82,6 +87,8 @@ grep -q "docs/adr/0001-sdlc-control-branch.md" "$REF/control-plane.md" \
   || err "control-plane.md 未引用 control ADR"
 grep -q "/sdlc intake" "$ROOT/sdlc/SKILL.md" || err "driver 缺 /sdlc intake"
 grep -q "/sdlc deliver" "$ROOT/sdlc/SKILL.md" || err "driver 缺 /sdlc deliver"
+grep -q "lifecycle_profile.py" "$ROOT/sdlc/SKILL.md" || err "driver 缺 lifecycle profile 路由"
+grep -q "/sdlc migrate" "$ROOT/sdlc/SKILL.md" || err "driver 缺显式 lifecycle migration"
 python3 scripts/legacy_runbook.py --repo-root . show --stage plan | grep -Fq "depends_on_tasks" \
   || err "固定 legacy plan runbook 缺 Task 依赖字段"
 python3 scripts/legacy_runbook.py --repo-root . show --stage plan | grep -Fq "write_set" \

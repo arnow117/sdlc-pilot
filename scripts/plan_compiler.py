@@ -16,6 +16,7 @@ _SHA256 = re.compile(r"^[0-9a-f]{64}$")
 _GIT_SHA = re.compile(r"^[0-9a-f]{40}(?:[0-9a-f]{24})?$")
 _TASK_ID = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
 _EXECUTION_MODES = frozenset({"tdd", "static-check", "visual-regression", "contract-check", "typed-attestation"})
+_CANONICAL_RUNNABLE_MODES = frozenset({"tdd", "static-check", "visual-regression", "contract-check"})
 _FORBIDDEN_RUNTIME_FIELDS = frozenset({
     "status", "owner", "evidence_refs", "tests_passed", "approved", "review_complete", "result", "passed",
 })
@@ -135,9 +136,9 @@ def _evidence_strategy(value: object, execution_mode: str) -> dict[str, object]:
         raise PlanError("invalid-evidence-strategy-kind")
     if kind != execution_mode:
         raise PlanError("evidence-strategy-does-not-match-execution-mode")
-    if kind == "tdd":
+    if kind in _CANONICAL_RUNNABLE_MODES:
         if set(source) not in ({"kind", "argv"}, {"kind", "argv", "cwd"}):
-            raise PlanError("invalid-tdd-evidence-strategy")
+            raise PlanError(f"invalid-{kind}-evidence-strategy")
         argv = _ordered_string_list(source["argv"], "evidence-argv", allow_empty=False)
         return {"kind": kind, "argv": argv, "cwd": _execution_cwd(source.get("cwd", "."))}
     if kind == "typed-attestation":

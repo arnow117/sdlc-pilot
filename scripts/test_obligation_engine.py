@@ -598,7 +598,10 @@ class ObligationEngineTest(unittest.TestCase):
                 "staged": False,
                 "untracked": False,
             },
-            "intent_flags": {},
+            # This fixture asserts that the conditional preservation obligation
+            # is skipped.  An omitted selector is intentionally `unknown`, not
+            # false, so make the benchmark fact explicit.
+            "intent_flags": {"preservation_required": False},
             "runtime_event": {"type": "preview-request"},
             "engine_version": "1.0.0",
             "modes": ["bdd"],

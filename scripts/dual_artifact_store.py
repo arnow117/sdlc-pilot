@@ -40,6 +40,9 @@ _PRODUCT_BUNDLE_FIELDS = frozenset({
     "eval_ids", "intent_flags", "supersedes_ref", "product_contract_id", "bundle_sha256",
     "components", "created_by", "created_at",
 })
+_PRODUCT_BUNDLE_OPTIONAL_FIELDS = frozenset({
+    "decision_ids", "deferred_ids", "decision_log_ref", "deferred_items_ref", "experience_contract_ref",
+})
 _PROFILE_BUNDLE_FIELDS = frozenset({
     "profile_format", "feature_id", "profile_bytes_sha256", "source_repository_sha",
     "source_path", "profile_revision", "profile_snapshot_id", "components", "created_at",
@@ -178,7 +181,11 @@ def _git_sha(value: object, label: str) -> str:
 def _normalize_bundle(bundle: object) -> tuple[dict[str, object], str, str]:
     source = _mapping(bundle, "bundle")
     if "contract_format" in source:
-        source = _exact_fields(source, _PRODUCT_BUNDLE_FIELDS, "bundle")
+        # product-contract-v1 predates its decision/deferred/experience
+        # section pointers. Existing records remain valid; new optional
+        # sections are accepted only from this closed extension set.
+        expected = _PRODUCT_BUNDLE_FIELDS | (set(source) & _PRODUCT_BUNDLE_OPTIONAL_FIELDS)
+        source = _exact_fields(source, expected, "bundle")
         if source["contract_format"] != "product-contract-v1":
             raise ArtifactStoreError("unsupported-bundle-format")
         kind = "product_contract"

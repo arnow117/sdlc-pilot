@@ -32,6 +32,9 @@ description: >
 > request + requirement leaf + `source_request`；已有活跃 Feature 不改变这个入口。无 control 数据时
 > 保持 legacy 行为且不自动创建或迁移 `.sdlc-control/`。
 >
+> 所有 backlog 写入前先读 `sdlc/references/lifecycle-profile.md`。`migration-required` 时停止且不创建
+> request、requirement 或 claim；profile 已选择 dual 时，需求树只作为产品侧输入，canonical 状态只经 dual ledger 写入。
+>
 > distilled-from: `session:loop-engineering-article(Addy Osmani)` · `kb-manage`(递归 domain-subdomain + Ingest) · `tb-loop-driver`(导演/编排模式) · `session:sdlc-backlog-build-2026-06-15` · `session:sdlc-feature-retirement-2026-06-16`(Retire op / 特性退场闭环) · `session:sdlc-backlog-board-2026-06-16`(Tree/Board/Move op + 聊天看板 + Live 对话模式) · `session:sdlc-evolution-leaf-attach-2026-06-16`(Retire 标 shipped 时把 evolution entry 也写进源叶 `## sdlc 记录`) · `session:sdlc-tree-generator-2026-06-16`(Generate op:分析代码→capability/user-story 树 + 4 交叉字段 + write-tree + 多 agent 两阶段) · `session:sdlc-leaf-lifecycle-board-2026-06-23`(set-status op + 叶生命周期状态同步 C 混合写回[post-checkout 钩子+driver reconcile]+ 看板重构 4 痛点 + lint bad-status)
 
 ---

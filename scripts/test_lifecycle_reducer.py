@@ -611,17 +611,38 @@ class LifecycleReducerTest(unittest.TestCase):
             "kind": "tdd", "argv": ["python3", "-m", "pytest"], "cwd": ".",
         })
 
-    def test_activation_rejects_an_execution_strategy_without_a_canonical_runner(self) -> None:
+    def test_activation_accepts_declared_non_tdd_canonical_strategies(self) -> None:
+        for kind in ("static-check", "contract-check", "visual-regression"):
+            with self.subTest(kind=kind):
+                state, product, _, engineering, _, effective = approved_engineering_state()
+                tasks = plan_tasks(product, engineering)
+                tasks[0].update({
+                    "execution_mode": kind,
+                    "evidence_strategy": {"kind": kind, "argv": ["python3", "-c", "pass"]},
+                })
+                plan = plan_compiler.compile_delivery_plan(
+                    dict(engineering, contract_generation=0), effective, tasks,
+                )
+                state = lifecycle.activate_delivery_plan(
+                    state,
+                    feature_id="FEAT-001",
+                    delivery_plan=plan,
+                    expected_generation=0,
+                    at=TIME,
+                )
+                task = next(iter(state["tasks"].values()))  # type: ignore[index,union-attr]
+                self.assertEqual(task["evidence_strategy"]["kind"], kind)
+
+    def test_activation_keeps_typed_attestation_out_of_the_canonical_runner(self) -> None:
         state, product, _, engineering, _, effective = approved_engineering_state()
         tasks = plan_tasks(product, engineering)
         tasks[0].update({
-            "execution_mode": "static-check",
-            "evidence_strategy": {"kind": "static-check", "check_ref": "ruff"},
+            "execution_mode": "typed-attestation",
+            "evidence_strategy": {"kind": "typed-attestation", "attestation_type": "manual-accessibility-review"},
         })
         plan = plan_compiler.compile_delivery_plan(
             dict(engineering, contract_generation=0), effective, tasks,
         )
-        before = deepcopy(state)
         with self.assertRaisesRegex(lifecycle.ReducerError, "canonical-execution-strategy-not-supported"):
             lifecycle.activate_delivery_plan(
                 state,
@@ -630,7 +651,6 @@ class LifecycleReducerTest(unittest.TestCase):
                 expected_generation=0,
                 at=TIME,
             )
-        self.assertEqual(state, before)
 
     def test_activation_rejects_hand_hashed_empty_plan_against_current_spec_and_approval(self) -> None:
         state, product, _, engineering, _, effective = approved_engineering_state()

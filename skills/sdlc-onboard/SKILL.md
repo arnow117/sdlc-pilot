@@ -20,6 +20,9 @@ description: >
 > **引擎**:Claude + Read/Edit/Bash/Grep。纯文件 + 纯 bash 采证,无 node 工具、无 `.planning/`、无外部 agent 人格依赖。
 > **只读纪律**(蒸馏自 agency codebase-onboarding-engineer):测绘阶段**只读源码、只陈述代码里能查证的事实**,不改代码、不提改进建议、不臆测意图。唯一写动作 = 在结尾写 `.sdlc/PROFILE.md`。
 
+在任何写入前先读取 `sdlc/references/lifecycle-profile.md`。`migration-required` 时停止，不能借 onboard
+创建 PROFILE 绕过 lifecycle 选择；新项目先固定 dual profile，已选择 legacy 或 dual 的项目再按各自协议 onboard。
+
 ---
 
 ## 0. 可移植前置(入口先做)

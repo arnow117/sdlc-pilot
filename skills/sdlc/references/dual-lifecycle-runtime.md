@@ -1,7 +1,8 @@
 # Canonical dual-lifecycle runtime
 
-只有调用者显式选择 `--authority dual-lifecycle-v1` 时加载本文件。没有该参数的旧命令继续使用固定
-legacy runbook；`preview` 继续只写 `.sdlc/preview/<run-id>/`。
+直接调用者显式选择 `--authority dual-lifecycle-v1`，或 façade 已读取并固定
+`.sdlc/lifecycle.json=dual-lifecycle-v1` 时加载本文件。legacy profile 下的旧命令继续使用固定 legacy runbook；
+没有 profile 的既有 artifact 必须先迁移，不能凭 ledger 存在性切换；`preview` 继续只写 `.sdlc/preview/<run-id>/`。
 
 ## Authority and transport
 
@@ -90,9 +91,9 @@ ChangeRequest 或过期 CAS 都会拒绝后续 Task、Evidence、验证、评审
 `activate_delivery_plan` 是唯一能同时绑定当前 EngineeringSpec 与完整 Task 集合的操作。`plan.md` 只是
 由 immutable DeliveryPlan 渲染的兼容视图；不能反向解析为 plan 输入，也不能靠编辑 checkbox 改状态。
 
-`activate_delivery_plan` 会把每个 Task 的 `execution_mode` 与 `evidence_strategy` 固定到当前 generation。当前
-canonical runner 只执行完整声明的 `tdd` strategy（`argv` 与仓库相对 `cwd`）；其他 strategy 仍可用于 preview
-诊断，不能由调用方临时换一个命令作为 canonical Evidence。`execute_task_evidence` 只接受与该 Task 完全一致的
+`activate_delivery_plan` 会把每个 Task 的 `execution_mode` 与 `evidence_strategy` 固定到当前 generation。canonical
+runner 执行完整声明的 `tdd`、`static-check`、`contract-check` 与 `visual-regression` strategy（`argv` 与仓库相对
+`cwd`）；typed attestation 仍是语义输入，不能由调用方临时换一个命令作为 canonical Evidence。`execute_task_evidence` 只接受与该 Task 完全一致的
 `argv` 和 `cwd`，从实际退出码与 timeout 派生结果，随后将完整 receipt、tuple 与 trace 原子写入。
 
 runner 启动前会记录当前工作区指纹，结束后再次计算。执行期间若变更 tracked 或非 ignored 的 untracked

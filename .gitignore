@@ -2,6 +2,7 @@
 .sdlc/*
 !.sdlc/archive/
 !.sdlc/EVOLUTION.md
+!.sdlc/lifecycle.json
 !.sdlc/PROFILE.md
 
 # dual-lifecycle-v1 local-serial ledger, lock and authority adapter configuration

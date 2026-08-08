@@ -38,8 +38,10 @@ spec approval observation 映射为 legacy plan rendering，绝不伪装为 Engi
 intent 的 legacy 调用只重放旧 diff/glob 技术路由，语义选择保持 advisory。
 
 每个 preview run 固定 PolicyManifest；中途变更只能经 CAS-protected、具名 actor/reason 的 preview policy
-migration 完成。旧 canonical entry 保持默认路径，直到 deterministic direct/driver/resume parity matrix 完成，且后续
-真实 baseline/candidate 行为 Eval 获得单独授权。
+migration 完成。自 0.21 起，没有任何 SDLC artifact 的新项目会先固定 `dual-lifecycle-v1` profile 并进入
+canonical 路径；已有 artifact 的项目仍保持原入口，直到用户显式选定 profile。任何旧 STATE、preview 或 ledger
+都不能自行决定 profile。未来若要移除 legacy adapter 或允许无 profile 的已有项目自动切换，仍须先完成
+deterministic direct/driver/resume parity matrix，并单独授权真实 baseline/candidate 行为 Eval。
 
 由于 Skill、Playbook 与 Context Pack 会改变 agent 的实际指令面，迁移不能只验证确定性 resolver。固定 reference dataset 必须对 legacy baseline 与 dual-lifecycle candidate 做多次行为回归：机械契约由代码断言，产品/领域/工程语义由经人工校准的独立 evaluator 判断；任何伪造完成、遗漏 required obligation、静默跨生命周期写入或 stale Evidence 均直接失败。
 
@@ -100,7 +102,7 @@ migration 完成。旧 canonical entry 保持默认路径，直到 deterministic
 - compatibility view 可能在迁移期继续加载较多上下文，必须明确其临时性质；
 - Policy 配置错误可能漏载模块或责任，必须用 compiler、唯一 rule ID、fail-closed selector、parity fixture 和 byte budget 共同约束；
 - typed attestation 只能提供可审计语义结论，不能被误当成可重放的客观 Evidence；
-- canonical runner 当前仅执行 DeliveryPlan 中完全固定的 TDD argv/cwd；其他 evidence strategy 先保留在 preview，后续需以同样的命令身份与 receipt 规则扩展；
+- canonical runner 执行 DeliveryPlan 中完全固定的 TDD、static-check、contract-check 与 visual-regression argv/cwd；typed attestation 仍是语义结论，不能替代 runner receipt；
 - ObligationHead、Context freshness 与 Policy migration 增加 run-level CAS/reconcile 测试要求；
 - baseline/candidate 多次运行和 evaluator 人工校准增加评测成本；
 - mixed-v1/v2 reader、approval reducer 与 contract generation 增加控制面复杂度，必须先证明旧客户端无法绕过；

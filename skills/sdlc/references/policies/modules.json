@@ -480,9 +480,9 @@
       "playbook": {
         "path": "sdlc/references/lifecycles/product-design.md",
         "anchor": "<!-- playbook-anchor: product.module.core -->",
-        "sha256": "97cb034aa3a7a6baeffa4c8ccb5c7e0d4a444c57f6beb9dd1eb2b14a82cf2603"
+        "sha256": "dd0d8d023c6b3927c78c8828f5b7c9486fa7b5e4e8fdb442b80d23c338f16407"
       },
-      "max_bytes": 8192,
+      "max_bytes": 9216,
       "fallback": {"kind": "needs_classification"}
     },
     {
@@ -494,9 +494,9 @@
       "playbook": {
         "path": "sdlc/references/lifecycles/product-design.md",
         "anchor": "<!-- playbook-anchor: product.module.behavior-contract -->",
-        "sha256": "97cb034aa3a7a6baeffa4c8ccb5c7e0d4a444c57f6beb9dd1eb2b14a82cf2603"
+        "sha256": "dd0d8d023c6b3927c78c8828f5b7c9486fa7b5e4e8fdb442b80d23c338f16407"
       },
-      "max_bytes": 8192,
+      "max_bytes": 9216,
       "fallback": {"kind": "needs_classification"}
     },
     {
@@ -508,9 +508,9 @@
       "playbook": {
         "path": "sdlc/references/lifecycles/product-design.md",
         "anchor": "<!-- playbook-anchor: product.module.behavior-bdd -->",
-        "sha256": "97cb034aa3a7a6baeffa4c8ccb5c7e0d4a444c57f6beb9dd1eb2b14a82cf2603"
+        "sha256": "dd0d8d023c6b3927c78c8828f5b7c9486fa7b5e4e8fdb442b80d23c338f16407"
       },
-      "max_bytes": 8192,
+      "max_bytes": 9216,
       "fallback": {"kind": "needs_classification"}
     },
     {
@@ -522,9 +522,9 @@
       "playbook": {
         "path": "sdlc/references/lifecycles/product-design.md",
         "anchor": "<!-- playbook-anchor: product.module.domain-ddd -->",
-        "sha256": "97cb034aa3a7a6baeffa4c8ccb5c7e0d4a444c57f6beb9dd1eb2b14a82cf2603"
+        "sha256": "dd0d8d023c6b3927c78c8828f5b7c9486fa7b5e4e8fdb442b80d23c338f16407"
       },
-      "max_bytes": 8192,
+      "max_bytes": 9216,
       "fallback": {"kind": "needs_classification"}
     },
     {
@@ -536,9 +536,9 @@
       "playbook": {
         "path": "sdlc/references/lifecycles/product-design.md",
         "anchor": "<!-- playbook-anchor: product.module.experience-design -->",
-        "sha256": "97cb034aa3a7a6baeffa4c8ccb5c7e0d4a444c57f6beb9dd1eb2b14a82cf2603"
+        "sha256": "dd0d8d023c6b3927c78c8828f5b7c9486fa7b5e4e8fdb442b80d23c338f16407"
       },
-      "max_bytes": 8192,
+      "max_bytes": 9216,
       "fallback": {"kind": "needs_classification"}
     },
     {
@@ -550,9 +550,9 @@
       "playbook": {
         "path": "sdlc/references/lifecycles/product-design.md",
         "anchor": "<!-- playbook-anchor: product.module.product-eval -->",
-        "sha256": "97cb034aa3a7a6baeffa4c8ccb5c7e0d4a444c57f6beb9dd1eb2b14a82cf2603"
+        "sha256": "dd0d8d023c6b3927c78c8828f5b7c9486fa7b5e4e8fdb442b80d23c338f16407"
       },
-      "max_bytes": 8192,
+      "max_bytes": 9216,
       "fallback": {"kind": "needs_classification"}
     },
     {
@@ -564,9 +564,9 @@
       "playbook": {
         "path": "sdlc/references/lifecycles/product-design.md",
         "anchor": "<!-- playbook-anchor: product.module.quality -->",
-        "sha256": "97cb034aa3a7a6baeffa4c8ccb5c7e0d4a444c57f6beb9dd1eb2b14a82cf2603"
+        "sha256": "dd0d8d023c6b3927c78c8828f5b7c9486fa7b5e4e8fdb442b80d23c338f16407"
       },
-      "max_bytes": 8192,
+      "max_bytes": 9216,
       "fallback": {"kind": "needs_classification"}
     },
     {
@@ -578,9 +578,9 @@
       "playbook": {
         "path": "sdlc/references/lifecycles/product-design.md",
         "anchor": "<!-- playbook-anchor: product.module.product-validation -->",
-        "sha256": "97cb034aa3a7a6baeffa4c8ccb5c7e0d4a444c57f6beb9dd1eb2b14a82cf2603"
+        "sha256": "dd0d8d023c6b3927c78c8828f5b7c9486fa7b5e4e8fdb442b80d23c338f16407"
       },
-      "max_bytes": 8192,
+      "max_bytes": 9216,
       "fallback": {"kind": "needs_classification"}
     },
     {
@@ -592,9 +592,9 @@
       "playbook": {
         "path": "sdlc/references/lifecycles/product-design.md",
         "anchor": "<!-- playbook-anchor: product.module.approval -->",
-        "sha256": "97cb034aa3a7a6baeffa4c8ccb5c7e0d4a444c57f6beb9dd1eb2b14a82cf2603"
+        "sha256": "dd0d8d023c6b3927c78c8828f5b7c9486fa7b5e4e8fdb442b80d23c338f16407"
       },
-      "max_bytes": 8192,
+      "max_bytes": 9216,
       "fallback": {"kind": "needs_classification"}
     },
     {

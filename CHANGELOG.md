@@ -2,6 +2,17 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [0.21.0] — 2026-08-08
+
+### Added
+- 新增项目级 `.sdlc/lifecycle.json`：新项目第一次进入 SDLC 时默认固定 `dual-lifecycle-v1`，并将普通入口路由到产品设计/软件交付 canonical 生命周期。
+- 新增 `scripts/lifecycle_profile.py` 与 `/sdlc migrate` 契约。历史项目必须显式选择 `legacy-0.19.2` 或 dual；选择 dual 覆盖既有 artifact 时需要额外确认，迁移不转换状态、合同或证据。
+- ProductContract 现可用内容寻址组件承载 `DEC-*` 产品判断、`DEF-*` 暂缓项和 `EXP-*` 体验定义；已存在的 v1 contract 仍可校验。
+
+### Changed
+- 普通 `/sdlc`、`intake`、`deliver`、`next` 及 legacy stage 入口现在以 lifecycle profile 为唯一选择依据；无 profile 的既有 legacy、preview、control 或 dual ledger artifact 一律返回 `migration-required`，不再通过文件存在性猜测运行时。
+- canonical Evidence runner 现支持 DeliveryPlan 固定的 TDD、static-check、contract-check 与 visual-regression 命令；typed attestation 仍不能替代可执行证据。
+
 ## [0.20.1] — 2026-08-08
 
 ### Fixed

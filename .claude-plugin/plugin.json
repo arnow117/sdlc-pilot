@@ -1,6 +1,6 @@
 {
   "name": "sdlc-pilot",
-  "version": "0.20.1",
+  "version": "0.21.0",
   "description": "可移植 SDLC 技能族：产品设计与软件交付双生命周期、兼容 legacy 路由、不可变契约/证据账本与 Codex adapter。",
   "author": {
     "name": "arnow117"

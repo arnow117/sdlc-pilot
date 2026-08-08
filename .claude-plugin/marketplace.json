@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "sdlc-pilot —— 自洽/可移植/时用时新的 SDLC 技能族",
-    "version": "0.20.1"
+    "version": "0.21.0"
   },
   "plugins": [
     {
       "name": "sdlc-pilot",
       "source": "./",
       "description": "产品设计/软件交付双生命周期 + legacy 兼容路由 + 契约、计划、证据账本 + Codex adapter。",
-      "version": "0.20.1",
+      "version": "0.21.0",
       "author": {
         "name": "arnow117"
       },
