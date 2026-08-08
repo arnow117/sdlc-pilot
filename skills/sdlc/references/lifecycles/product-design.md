@@ -1,7 +1,32 @@
 # Product design lifecycle playbook
 
+> distilled-from: session:happycompany-sdlc-retro-2026-08-08
+
 本文件保存产品设计方法，不定义阶段选择、角色基数、skip 语义或状态转换；这些规则只能来自
 `references/policies/{modules,phases,roles}.json` 的编译结果。每个 `playbook-anchor` 是 policy 可引用的稳定文本。
+
+## 对齐节奏与问题归属
+
+产品对齐分为澄清和收敛两种工作方式。
+
+1. 只有答案会改变产品定位、目标 outcome / actor、V1 范围、职责边界、不可逆决策或风险接受范围时，
+   才逐题澄清；先读取已有 request、decision 和候选内容，不重复询问已有答案。
+2. 核心边界稳定后，批量列出剩余问题、推荐默认值、依据、可逆性和归属，让用户只纠正例外。
+   连续两次出现同类选择时，提炼为通用规则，不继续逐项询问。
+3. 中间更新只报告新增、修改、延后和阻塞项；完整复述留到候选 ProductContract 生成时。
+4. 用户已接受紧接着描述的同一动作时，不重复确认。若范围扩大、产生不可逆外部影响或 policy 要求
+   正式 Approval，仍按授权和记录规则处理；自然语言认可不能替代 typed Approval。
+
+未决项按责任归属处理：
+
+| 内容 | 归属 |
+|------|------|
+| 用户结果、actor、外部可观察行为、领域不变量、V1 范围、用户可感知质量和风险接受范围 | ProductContract |
+| 单个企业、能力或场景特有的 rubric、样本构成、阈值、观察周期和重大纠正规则 | 项目定义的领域评估规格（例如 Capability EvalSpec）；平台 ProductContract 只保留通用约束 |
+| 存储结构、重试、隔离、幂等、容量实现和可观测性实现 | software delivery / EngineeringSpec |
+
+不影响 ProductContract 且下游已有 owner 的问题，记录推荐默认值和归属后继续，不提前要求产品 owner
+决定实现细节。
 
 ## Phase 1 preview 约束
 
