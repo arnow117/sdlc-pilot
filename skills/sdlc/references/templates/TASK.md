@@ -1,31 +1,43 @@
 <!--
-  TASK.md is local identity for a task worktree. It is read-only after creation.
-  A task worktree must not contain `.sdlc/STATE.md`; the feature orchestrator owns STATE.
+Optional task brief. Insert it into the Feature's
+.sdlc-v1/context/<feature-id>.engineering.md or pass it to a sub-agent.
+It is not a separate runtime file and does not hold progress.
 -->
 
-# SDLC Task Context: <task-id>
+## Task: <task-id> — <title>
 
-execution-mode: shared-control | local-serial
-feature-id: <feature-id>
-task-id: <task-id>
-feature-branch: <feature-branch>
-task-branch: <task-branch>
-worktree: <absolute-worktree-path>
-branch-base-sha: <feature-integration-head-at-creation>
-plan-revision: <control-plan-commit-sha>
-control-head: <control-sha-used-to-create-this-context>
-control-ref: <sdlc-control in shared-control; local ref/path in local-serial>
-control-base-sha: <expected control SHA for the Task assignment>
-owner: <agent-or-user>
+```yaml
+feature_id: <feature-id>
+task_id: <task-id>
+branch: <branch>
+depends_on: [<task-id>]
+write_scope: [<repository-relative paths>]
+```
 
-## Allowed write set
+### Product criteria
 
-- <repo-relative-file-or-directory-prefix>
+- <Criterion from the referenced product context>
 
-## Contract
+### Engineering intent
 
-- Read the immutable plan and this task's action/acceptance criteria before editing.
-- Edit only the allowed write set. If another file is required, stop and report it.
-- Run the task's RED/GREEN tests and report exact commands, output, and task branch HEAD.
-- Do not edit `.sdlc/STATE.md`, `.sdlc-control/**`, or another task record.
-- Do not merge, rebase onto a moving feature branch, or mark the task verified.
+<What this task changes and why.>
+
+### Completion conditions
+
+- <Observable code or behavior condition>
+- <Required test or check>
+
+### Constraints
+
+- Do not modify files outside `write_scope` without coordinating with the Feature owner.
+- Do not edit `.sdlc-v1/state.json` directly; the Feature owner updates Task status through `lifecycle_state.py`.
+- Record durable design decisions in the Feature engineering context.
+
+### Result
+
+```yaml
+changed_files: []
+commands_run: []
+result: <done | blocked>
+notes: <summary>
+```

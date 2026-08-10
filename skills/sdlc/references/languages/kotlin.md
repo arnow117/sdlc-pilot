@@ -66,20 +66,20 @@ Kotlin 特有易错点，code review / correctness 重点盯这些：
 - 数据驱动用 `withData`。
 - mock 在 `beforeTest { clearMocks(...) }` 复位。
 
-**Coverage（Kover）命令**——validate/correctness 的覆盖率门：
+**Coverage（Kover）命令**——validate/correctness 的覆盖率检查：
 
 ```bash
 # 生成 HTML 报告（顺带跑测试）
 ./gradlew koverHtmlReport
 
-# 覆盖率门：低于阈值则 build 失败（correctness 门用这条）
+# 覆盖率检查：低于阈值则 build 失败
 ./gradlew koverVerify
 
 # CI 用 XML 报告
 ./gradlew koverXmlReport
 ```
 
-Kover 阈值在 `build.gradle.kts` 配置（`kover { reports { verify { rule { minBound(80) } } } }`），默认门 80%。也可用 JaCoCo（任务名 `jacocoTestReport` / `jacocoTestCoverageVerification`），但新项目优先 Kover（原生支持 Kotlin、KMP）。
+Kover 阈值在 `build.gradle.kts` 配置（`kover { reports { verify { rule { minBound(80) } } } }`），默认 80%。也可用 JaCoCo（任务名 `jacocoTestReport` / `jacocoTestCoverageVerification`），但新项目优先 Kover（原生支持 Kotlin、KMP）。
 
 覆盖率目标：关键业务逻辑 100%，公开 API 90%+，一般代码 80%+，生成/配置代码排除。
 
@@ -88,7 +88,7 @@ Kover 阈值在 `build.gradle.kts` 配置（`kover { reports { verify { rule { m
 两套互补，建议都接：ktlint 管格式，detekt 管静态分析/复杂度/反模式。
 
 ```bash
-# ktlint：格式检查（CI 门）
+# ktlint：格式检查
 ./gradlew ktlintCheck
 # ktlint：自动修复格式
 ./gradlew ktlintFormat
@@ -129,5 +129,5 @@ Kover 阈值在 `build.gradle.kts` 配置（`kover { reports { verify { rule { m
 ## 接入 sdlc
 
 - **build / TDD 用的 test 命令**：纯 Kotlin/JVM/KMP 模块 `./gradlew test`；Android 模块 `./gradlew testDebugUnitTest`。RED/GREEN 循环以此为准；`--tests "<FQN>"` 跑单测，`--continuous` 监听。
-- **validate/correctness 的 coverage 门命令**：`./gradlew koverVerify`（阈值在 `build.gradle.kts`，默认 80%）；报告产出用 `./gradlew koverXmlReport`（CI）/ `koverHtmlReport`（本地）。lint 门：`./gradlew ktlintCheck detekt`。
-- **归哪个 role 卡**：主归 **client-dev**（Android 移动面：UI/ViewModel/Compose/生命周期）。当模块是 Ktor / KMP 共享后端逻辑时，对应部分归 **server-dev**（用 Ktor `testApplication` 测试约定 + 同样的 `./gradlew test` / `koverVerify` 门）。
+- **validate/correctness 的 coverage 命令**：`./gradlew koverVerify`（阈值在 `build.gradle.kts`，默认 80%）；报告产出用 `./gradlew koverXmlReport`（CI）/ `koverHtmlReport`（本地）。lint 检查：`./gradlew ktlintCheck detekt`。
+- **归哪个 role 卡**：主归 **client-dev**（Android 移动面：UI/ViewModel/Compose/生命周期）。当模块是 Ktor / KMP 共享后端逻辑时，对应部分归 **server-dev**（用 Ktor `testApplication` 测试约定 + 同样的 `./gradlew test` / `koverVerify` 检查）。

@@ -58,7 +58,7 @@ describe('calculateTotal', () => {
 })
 ```
 
-### Coverage（validate/correctness 覆盖率门用这条）
+### Coverage（validate/correctness 覆盖率检查）
 
 ```bash
 # vitest（需装 @vitest/coverage-v8，配置里设 coverage.thresholds）
@@ -71,9 +71,9 @@ npx jest --coverage
 npx nyc <test-command>
 ```
 
-门槛设在配置文件里更稳（避免 CLI flag 漂移）：vitest 在 `vitest.config.ts` 的
+阈值设在配置文件里更稳（避免 CLI flag 漂移）：vitest 在 `vitest.config.ts` 的
 `test.coverage.thresholds`（`lines/functions/branches/statements`）；jest 在
-`jest.config` 的 `coverageThreshold.global`。门槛达不到时进程非零退出，可直接当 gate。
+`jest.config` 的 `coverageThreshold.global`。低于阈值时进程非零退出，可直接作为失败结果。
 
 ### E2E：Playwright（client-dev / 关键用户流）
 
@@ -106,14 +106,14 @@ npx eslint . --fix
 `@typescript-eslint/no-floating-promises`、`@typescript-eslint/no-misused-promises`、
 `require-await`。`no-floating-promises` 需要 `parserOptions.project` 指向 tsconfig（类型感知）。
 
-## 类型检查（typecheck —— 独立于 lint 的 gate）
+## 类型检查（typecheck，独立于 lint）
 
 ```bash
 npx tsc --noEmit
 ```
 
 `tsconfig.json` 必开 `"strict": true`（含 `strictNullChecks`/`noImplicitAny`）。这是 TS 项目最强的
-correctness 门，build/validate 都应把它当硬关卡。
+correctness 检查，build/validate 都应运行。
 
 ## LSP（language server，供 ai-readiness 的"LSP 就绪"维度）
 
@@ -135,8 +135,8 @@ correctness 门，build/validate 都应把它当硬关卡。
 | 用途 | 命令 | 归属 role 卡 |
 |---|---|---|
 | build TDD 跑测 | `npx vitest run`（或 `npx jest`） | — |
-| validate/correctness 覆盖率门 | `npx vitest run --coverage`（或 `npx jest --coverage` / `npx nyc <cmd>`），门槛配在 config 里 | — |
-| 类型门（correctness 硬关） | `npx tsc --noEmit` | — |
-| lint 门 | `npx eslint .` | — |
+| validate/correctness 覆盖率检查 | `npx vitest run --coverage`（或 `npx jest --coverage` / `npx nyc <cmd>`），阈值配在 config 里 | — |
+| 类型检查 | `npx tsc --noEmit` | — |
+| lint 检查 | `npx eslint .` | — |
 | E2E（关键流验证） | `npx playwright test` | **client-dev** |
 | role 归属 | 后端 Node/Express/API → **server-dev**；前端 React/Next/浏览器 → **client-dev**（同仓两端则两张卡都加载本包） |

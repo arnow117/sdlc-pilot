@@ -14,7 +14,7 @@ distilled-from:
 
 ## 语言陷阱（常见 pitfall + 怎么防）
 
-Go 特有易错点，code review 与 correctness 门都应逐条核查：
+Go 特有易错点，code review 与 correctness 都应逐条核查：
 
 | Pitfall | 表现 | 怎么防 |
 |---------|------|--------|
@@ -46,7 +46,7 @@ Runner 是内置 `go test`，写法以**表驱动 + 子测试**为主（ECC gola
 # 全量测试（基线）
 go test ./...
 
-# 单测 + race（build TDD 的主门，强烈建议默认带 -race）
+# 单测 + race（build TDD 的主要检查，强烈建议默认带 -race）
 go test -race ./...
 
 # 单测 + race + 覆盖率（一条命令同时给 build 与 correctness 用）
@@ -72,7 +72,7 @@ go test -fuzz=FuzzParse -fuzztime=30s ./...
 主 linter：**golangci-lint**（聚合 errcheck / govet / staticcheck / ineffassign / gosimple 等，正好覆盖上面的「未检 error」等 pitfall）。外加内置 `go vet`、`gofmt`。
 
 ```bash
-# 格式：检查有无未格式化文件（CI 门，-l 只列差异文件，输出非空即失败）
+# 格式：检查有无未格式化文件（-l 只列差异文件，输出非空即失败）
 gofmt -l .
 # 自动修复格式 + 简化
 gofmt -s -w .
@@ -86,7 +86,7 @@ golangci-lint run ./...
 golangci-lint run --fix ./...
 ```
 
-> 安装：`go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest`（或 brew）。本机当前未装；`go vet` + `gofmt` 始终可用，可作为无 golangci-lint 时的降级 lint 门。
+> 安装：`go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest`（或 brew）。本机当前未装；`go vet` + `gofmt` 始终可用，可作为无 golangci-lint 时的降级 lint 检查。
 
 ## LSP（供 ai-readiness 的「LSP 就绪」维度）
 
@@ -109,7 +109,7 @@ golangci-lint run --fix ./...
 | 钩子 | 用哪条命令 |
 |------|-----------|
 | **build（TDD 绿灯）** | `go test -race ./...`（编译 + 测试 + 竞态一把过；race 是 Go 的强信号，默认开） |
-| **validate / correctness（覆盖率门）** | `go test -race -coverprofile=coverage.out ./...` 后 `go tool cover -func=coverage.out`；取 `total` 行百分比做门（general 80% / public API 90% / 关键逻辑 100%，见 ECC 覆盖表）。门脚本：`go tool cover -func=coverage.out \| grep total \| awk '{print $3}'` 解析比较 |
-| **lint 门** | `gofmt -l .`（非空即失败）+ `go vet ./...` + `golangci-lint run ./...`（装了则强制，未装则降级到前两条） |
+| **validate / correctness（覆盖率检查）** | `go test -race -coverprofile=coverage.out ./...` 后 `go tool cover -func=coverage.out`；取 `total` 行百分比与阈值比较（general 80% / public API 90% / 关键逻辑 100%，见 ECC 覆盖表）。解析命令：`go tool cover -func=coverage.out \| grep total \| awk '{print $3}'` |
+| **lint 检查** | `gofmt -l .`（非空即失败）+ `go vet ./...` + `golangci-lint run ./...`（装了则强制，未装则降级到前两条） |
 | **ai-readiness（LSP）** | `gopls version` 可用 ⇒ 就绪 |
 | **role 卡归属** | **server-dev**。Go 在本族主要承载后端/CLI/服务（net/http、gRPC、database/sql、并发服务）。无前端浏览器渲染面，不归 client-dev |

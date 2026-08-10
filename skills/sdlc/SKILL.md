@@ -1,76 +1,86 @@
 ---
 name: sdlc
 description: >
-  SDLC 总入口与兼容路由器。新项目的普通 /sdlc 默认进入产品设计/软件交付双生命周期；
-  已有项目由 .sdlc/lifecycle.json 明确选择 legacy 或 dual，缺少选择时必须先迁移。
-  preview/product-design/software-delivery 仍可显式调用。
-  它不执行产品设计、工程实现、验证或发布。
+  SDLC 总入口与流程路由器。读取 .sdlc-v1/state.json、project.md，以及当前 Requirement/Feature
+  引用的产品与研发 Markdown，根据进度和代码改动加载一个主阶段技能与必要角色卡。
+  它负责定位、路由和交接，不代替产品设计、实现、验证、评审或发布。
 ---
 
-# sdlc — façade / router
+# sdlc — router / handoff
 
-先解析用户命令。普通入口先读取目标仓库的 lifecycle profile；不要从文件、代码路径、旧 `STATE.md` 或 ledger
-猜测应切换到新生命周期。profile 是唯一持久化选择来源。
+`/sdlc` 只做四件事：读取、判断、加载、交接。实际工作由阶段技能完成。
 
-| 调用 / profile | 路由 | 权威状态 |
-| --- | --- | --- |
-| 普通调用 + `new-project-default` | 先固定 dual profile，再进入 canonical 产品/交付路由 | `.sdlc/lifecycle.json` + dual ledger |
-| 普通调用 + `dual-lifecycle-v1` | canonical `sdlc-product-design` / `sdlc-software-delivery` | `.sdlc/lifecycle.json` + dual ledger |
-| 普通调用 + `legacy-0.19.2` | 精确加载 legacy 0.19.2 driver | legacy 的 control / STATE 语义 |
-| 普通调用 + `migration-required` | 停止并报告需要选择；不得加载任一 lifecycle | 无写入 |
-| /sdlc preview product … 或 /sdlc product-design … | sdlc-product-design | .sdlc/preview/<run-id>/ |
-| /sdlc preview delivery … 或 /sdlc software-delivery … | sdlc-software-delivery | .sdlc/preview/<run-id>/ |
-| /sdlc preview compatibility --operation legacy-composite-v1 … | legacy-composite-v1 renderer + sdlc-software-delivery compatibility protocol | .sdlc/preview/<run-id>/plan.shadow.md |
-| /sdlc product-design --authority dual-lifecycle-v1 … | sdlc-product-design canonical contract flow | .sdlc-control/dual-lifecycle/ledger.json |
-| /sdlc software-delivery --authority dual-lifecycle-v1 … | sdlc-software-delivery canonical delivery flow | .sdlc-control/dual-lifecycle/ledger.json |
-| /sdlc onboard、/sdlc backlog、/sdlc ship | 对应正交 skill；dual profile 下 ship 读取 canonical ledger | 各自既有协议 |
+## 1. 唯一目录
 
-## 普通入口与 profile
+目标项目只使用以下结构：
 
-先读取 [`lifecycle-profile.md`](references/lifecycle-profile.md)，再以目标仓库为 `--repo` 调用
-`lifecycle_profile.py status`。此读取不改任何文件。
+```text
+.sdlc-v1/
+├── state.json
+├── project.md
+└── context/
+    ├── <requirement-id>.product.md
+    └── <feature-id>.engineering.md
+```
 
-- 返回 `new-project-default` 时，调用 `init` 固定 `.sdlc/lifecycle.json`，再按 dual 路由；在 profile 写入成功前不得创建 canonical intent。
-- 返回 `configured / dual-lifecycle-v1` 时，普通 `/sdlc`、`/sdlc intake`、`/sdlc deliver`、`/sdlc next` 及旧 `spec → plan → build → validate → review` 入口改为对应 canonical 生命周期：产品问题先进入 product-design，已有获批 ProductContract 的工程动作进入 software-delivery。`next` 只读取 dual projection/ledger 后恢复，不读取 legacy STATE 推断。
-- 返回 `configured / legacy-0.19.2` 时，普通调用严格执行本节 legacy runbook。
-- 返回 `migration-required` 时，报告检测到的 artifact 类型并要求用户显式选择 `/sdlc migrate --mode legacy-0.19.2` 或 `/sdlc migrate --mode dual-lifecycle-v1`。后者在已有 artifact 时必须获得用户确认后带 `--allow-existing-artifacts` 执行；迁移仅写 profile，不转换任何状态或证据。
+- `state.json`：Requirement、Feature、Task 的进度与上下文引用；只能通过 `lifecycle_state.py` 修改。
+- `project.md`：技术栈、入口、约定、测试命令、surface map、部署线索；由 `sdlc-onboard` 维护。
+- `context/*.product.md`：问题、用户场景、业务规则、范围、质量属性和验收条件；由产品侧维护。
+- `context/*.engineering.md`：设计、任务、代码位置、测试策略、风险和实施决策；由研发侧维护。
 
-profile-derived dual 是 façade 的 canonical authority：它只能来自已固定的 profile，不能由存在 ledger、preview 或
-legacy 文件替代。直接调用 product-design/software-delivery 仍须带 `--authority dual-lifecycle-v1`。
+Git 保存历史并负责跨 clone 同步。状态变化可以与相关文档或代码合并为一次正常提交；在交给另一位协作者或另一台机器前提交并推送。
 
-## 普通 legacy 调用
+## 2. 入口
 
-profile 已选择 `legacy-0.19.2` 的普通调用必须先读取精确、已校验的历史 runbook；它不能因为新模块存在而自动进入 preview：
+1. 确认目标仓库。
+2. 若 `.sdlc-v1/state.json` 不存在，执行 `lifecycle_state.py --repo <repo> init`。
+3. 若项目已有源码而 `.sdlc-v1/project.md` 不存在，进入 `sdlc-onboard`。
+4. 读取 `state.json`，再读取当前记录引用的上下文；不要扫描无关历史文件。
+5. `/sdlc next` 根据当前状态直接进入下一阶段。
 
-    python3 <sdlc-pilot-root>/scripts/legacy_runbook.py \
-      --repo-root <sdlc-pilot-root> show --stage driver
+## 3. 路由
 
-legacy_runbook.py 固定到 0.19.2 Git blob，并验证 SHA-256。历史对象缺失时明确报告
-legacy-runbook-error 并停止；不要以新生命周期代替旧行为。该历史 driver 仍以
-[control-plane.md](references/control-plane.md) 为普通 control 调用的权威协议。
+| 当前意图或状态 | 主技能 | 主要输入 |
+|---|---|---|
+| 首次理解已有工程 | `sdlc-onboard` | 仓库源码 |
+| 捕获、拆分、排序需求 | `sdlc-backlog` | 用户请求、产品上下文 |
+| Requirement 尚未 ready | `sdlc-spec` 或 `sdlc-product-design` | `product_context_ref` |
+| Requirement ready，尚无 Feature | `sdlc-plan` 或 `sdlc-software-delivery` | 产品上下文、项目上下文 |
+| Feature 有未完成 Task | `sdlc-build` | `engineering_context_ref`、代码 |
+| Task 全部完成，尚未验证 | `sdlc-validate` | 当前 Git commit、测试命令 |
+| Feature 已验证 | `sdlc-review` | validation commit、diff、角色卡 |
+| Feature 已评审 | `sdlc-ship` | 已验证 commit、部署配置 |
 
-## 显式 preview 调用
+产品阶段加载 `sdlc-product-design` 的方法；研发阶段加载 `sdlc-software-delivery` 的方法。每次只加载一个主技能。角色卡由
+[`role-routing.md`](references/role-routing.md) 根据 `project.md` 的 surface map、当前上下文和 Git diff 选择；只有明确相关时才补充角色。
 
-preview 必须带 lifecycle_run_id、固定 policy_manifest_ref、phase_contract_ref、operation 和
-输入 artifact identity。调用前用 policy_compiler.py 生成并固定 PolicyManifest；用
-context_resolver.py 得到 Context Manifest；用 obligation_engine.py 记录 selected/completed/
-explicitly-skipped obligation。缺字段或 selector 未知时返回 needs_classification。
+两个正交命令不改变阶段定义：
 
-- preview 只写 .sdlc/preview/<run-id>/，禁止改 .sdlc-control/、STATE.md、legacy spec.md 或 plan.md。
-- preview Context、Evidence、attestation、shadow plan 都不能作为 control、validate、review 或 ship 的输入。
-- legacy-composite-v1 只消费 approved legacy spec bytes 与 legacy_approval_observation，只生成
-  LegacyPlan shadow；它不产生 ProductContract、EngineeringSpec、Approval、Task 或 DeliveryPlan。
-- 产品侧与工程侧的 canonical artifact/reducer 代码只由显式 authority 或已固定的 dual profile 调用；普通
-  `/sdlc` 不会因为 ledger 存在而切换语义。
+- `/sdlc loop`：加载 [`build-loop.md`](references/build-loop.md)，串行消费 ready Requirement。
+- `/sdlc evolve`：加载 [`evolve-loop.md`](references/evolve-loop.md) 和 `skill-maintainer`，改进 SDLC 技能体系自身。
 
-## 显式 canonical 调用
+## 4. 状态写入
 
-`--authority dual-lifecycle-v1` 或 façade 已固定的 dual profile 表示本次请求使用已实现的 canonical ledger。先读取
-[`dual-lifecycle-runtime.md`](references/dual-lifecycle-runtime.md)，确认 capability、当前 snapshot SHA、
-Policy/Context/Obligation refs 与输入 artifact identity；再由对应 lifecycle 生成一个 structured intent。
+不要直接编辑 `state.json`。阶段技能调用以下命令完成状态变化：
 
-façade 不拼装或解释 intent，也不直接写 STATE/control。它只把 intent 交给 `dual_ledger.py`；CAS 冲突、
-缺 approval、旧 fence、blocking ChangeRequest 或不完整 Evidence 必须返回明确的缺失前置输入。产品与工程
-路径可以直接调用各自 lifecycle，不必先经过 façade。
+```text
+capture-requirement
+mark-requirement-ready
+start-feature
+add-task
+set-task-status
+record-validation
+record-review
+record-release
+```
 
-具体方法正文只在被路由到的 lifecycle skill 中加载；本 façade 不复制 BDD、DDD、SDD、TDD 或旧 stage 流程。
+产品或研发正文直接编辑其 Markdown；`state.json` 只保存 `product_context_ref`、`engineering_context_ref` 和进度字段。上下文路径必须是 `.sdlc-v1/context/*.md` 下的仓库相对路径。
+
+## 5. 恢复与交接
+
+- 恢复工作时先读 `status` 或具体 projection，再读它引用的上下文。
+- `record-validation` 记录测试时的业务代码 commit；评审和发布始终对应这个实现版本。
+- 验证后允许提交仅修改 `.sdlc-v1/**` 的状态、上下文和证据。若 validation commit 到当前 HEAD 在该目录之外有差异，或业务代码工作树不干净，则回到 build/validate。
+- 完成一次跨人或跨机器交接时，给出 Requirement、Feature、分支、当前阶段、下一动作和需要拉取的 Git ref。
+
+本路由器不复制 BDD、领域建模、SDD、TDD、验证或部署方法；这些正文只在对应阶段加载。

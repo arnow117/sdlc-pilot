@@ -44,7 +44,7 @@ mvn -T 4 test            # 并行
 ./gradlew test
 ```
 
-**Coverage 门（validate/correctness 跑这条）：** JaCoCo，绑定到 verify 阶段。
+**Coverage 检查（validate/correctness 运行）：** JaCoCo，绑定到 verify 阶段。
 ```bash
 # Maven —— verify 触发 jacoco prepare-agent + report，报告在 target/site/jacoco/
 mvn verify
@@ -52,7 +52,7 @@ mvn verify
 ./gradlew test jacocoTestReport
 ```
 报告位置：Maven `target/site/jacoco/index.html`；Gradle `build/reports/jacoco/test/html/index.html`。
-门禁阈值用 JaCoCo 的 `jacocoTestCoverageVerification`（Gradle）或 maven 插件 `check` goal 强制 80%+。
+覆盖率阈值用 JaCoCo 的 `jacocoTestCoverageVerification`（Gradle）或 Maven 插件 `check` goal 强制 80%+。
 
 ## Lint（linter + 确切命令）
 
@@ -61,7 +61,7 @@ mvn verify
 ```bash
 # Maven
 mvn checkstyle:check          # 风格违规则失败
-mvn com.github.spotbugs:spotbugs-maven-plugin:check   # 缺陷门禁
+mvn com.github.spotbugs:spotbugs-maven-plugin:check   # 缺陷检查
 # 或绑定到 verify 后：mvn verify 一并跑
 
 # Gradle（apply checkstyle / spotbugs 插件后）
@@ -100,7 +100,7 @@ Language server：**jdtls** = Eclipse JDT Language Server（`eclipse.jdt.ls`）�
 | 用途 | 命令 / 归属 |
 |------|-------------|
 | **build TDD 的 test 命令** | Maven `mvn test`（或 `mvn -T 4 test`）；Gradle `./gradlew test` |
-| **validate/correctness 的 coverage 门命令** | Maven `mvn verify`（JaCoCo 绑 verify，门禁用插件 `check` goal 卡 80%+）；Gradle `./gradlew test jacocoTestReport`（+ `jacocoTestCoverageVerification`） |
-| **lint 门** | `mvn checkstyle:check` + spotbugs `check`；Gradle `./gradlew check` |
+| **validate/correctness 的 coverage 命令** | Maven `mvn verify`（JaCoCo 绑 verify，插件 `check` goal 强制 80%+）；Gradle `./gradlew test jacocoTestReport`（+ `jacocoTestCoverageVerification`） |
+| **lint 检查** | `mvn checkstyle:check` + spotbugs `check`；Gradle `./gradlew check` |
 | **role 卡** | **server-dev** |
 | **ai-readiness LSP 维度** | jdtls（eclipse.jdt.ls），需 `pom.xml`/`build.gradle` + 一致的 package 结构 + 可发现 JDK |

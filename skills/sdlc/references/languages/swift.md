@@ -65,7 +65,7 @@ swift test
 # 带 coverage
 swift test --enable-code-coverage
 
-# 拿到 coverage profdata 路径（喂给 llvm-cov 出报告 / 算门槛）
+# 拿到 coverage profdata 路径（喂给 llvm-cov 出报告 / 算阈值）
 swift test --show-code-coverage-path
 
 # 单测过滤（正则匹配测试名）
@@ -89,7 +89,7 @@ xcodebuild test \
 # 用 workspace 时把 -project/-scheme 换成 -workspace MyApp.xcworkspace -scheme MyApp
 ```
 coverage 从 result bundle 读：`xcrun xccov view --report --json ./TestResults.xcresult`
-（`xccov view --report` 给人读，加 `--json` 给脚本算门槛）。
+（`xccov view --report` 给人读，加 `--json` 给脚本计算阈值）。
 
 ### Swift Testing 写法（首选）
 ```swift
@@ -118,7 +118,7 @@ swiftlint
 # 显式
 swiftlint lint
 
-# CI 门槛：把 warning 升级为 error（任何违规即非零退出）
+# CI 阈值：把 warning 升级为 error（任何违规即非零退出）
 swiftlint lint --strict
 
 # 自动修正可修的违规
@@ -161,10 +161,10 @@ ai-readiness 的 "LSP 就绪" 维度判断要点：
 | 环节 | SwiftPM 包 | Xcode 工程 |
 |------|-----------|-----------|
 | **build（TDD 跑测试）** | `swift test`（迭代）/ `swift test --filter <name>`（聚焦） | `xcodebuild test -scheme <S> -destination '<dest>'` |
-| **validate/correctness（coverage 门）** | `swift test --enable-code-coverage` → `swift test --show-code-coverage-path` 取 profdata → `xcrun llvm-cov report` 算覆盖率 | `xcodebuild test ... -enableCodeCoverage YES -resultBundlePath <p>` → `xcrun xccov view --report --json <p>` 算覆盖率 |
-| **lint 门** | `swiftlint lint --strict`（违规即非零退出） | 同左 |
+| **validate/correctness（coverage 检查）** | `swift test --enable-code-coverage` → `swift test --show-code-coverage-path` 取 profdata → `xcrun llvm-cov report` 算覆盖率 | `xcodebuild test ... -enableCodeCoverage YES -resultBundlePath <p>` → `xcrun xccov view --report --json <p>` 算覆盖率 |
+| **lint 检查** | `swiftlint lint --strict`（违规即非零退出） | 同左 |
 | **role 卡** | **client-dev**（iOS / 移动端面） | **client-dev** |
 
 build 阶段默认用 `swift test`（SPM）或 `xcodebuild test`（Xcode 工程，需 scheme + destination）。
-validate/correctness 的覆盖率门：SPM 走 `llvm-cov`，Xcode 走 `xccov --json`。
-lint 门统一用 `swiftlint lint --strict`。
+validate/correctness 的覆盖率检查：SPM 走 `llvm-cov`，Xcode 走 `xccov --json`。
+lint 检查统一用 `swiftlint lint --strict`。

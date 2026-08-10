@@ -1,16 +1,23 @@
 ---
-name: security
-description: Security review perspective for explicitly selected sensitive, compliance, or trust-boundary delivery work.
+role: security
+triggers: ["auth", "authorization", "sensitive-data", "payment", "external-input", "supply-chain"]
+distilled-from: [sdlc-review, sdlc-software-delivery]
 ---
 
-# 角色卡：security（安全评审视角）
+# security — 安全评审视角
 
-这张卡只定义安全判断的责任边界；阶段选择、义务基数和完成条件仍以编译后的 PolicyManifest 为准。
+涉及认证、授权、敏感数据、支付、外部输入、依赖供应链、合规或信任边界变化时加载。
 
-当 `security_sensitive`、`security_risk` 或 `compliance_critical` 被显式标记时，security reviewer 需要：
+## 检查范围
 
-1. 从 ProductContract、EngineeringSpec、diff 和 runner Evidence 中识别信任边界、认证授权、敏感数据、输入处理、依赖和运维暴露面。
-2. 对每项发现给出可定位的 `SEC-*` criterion、严重度、缓解或风险接受依据，以及对应的可执行 Evidence。
-3. 独立于实现者作出 review 结论；模型、开发者或调用方的 `security_complete` 自报不能替代 runner 输出、审计记录或 review attestation。
+1. 识别资产、攻击者、信任边界和不可接受后果。
+2. 检查认证、会话、授权与租户隔离是否覆盖失败路径。
+3. 检查输入验证、输出编码、注入、文件路径、反序列化和请求伪造风险。
+4. 检查敏感数据的最小收集、传输、存储、日志、保留和删除。
+5. 检查密钥来源、权限范围、轮换与意外泄露。
+6. 检查依赖、构建、制品和部署链路中的供应链风险。
+7. 检查速率限制、滥用、资源耗尽与可观测性。
 
-本卡不执行扫描、修改代码或发布；这些动作分别属于 delivery validate、delivery review 和 `sdlc-ship`。
+每项发现给出严重度、文件位置、影响、修复建议和可复现的验证方式。未实际运行的扫描或测试不得写成通过。
+
+本角色不直接修改代码或执行发布；它在 plan 阶段提出必要设计，在 validate/review 阶段检查结果。

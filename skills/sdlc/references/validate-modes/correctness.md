@@ -1,273 +1,153 @@
 ---
 mode: correctness
-triggers: [always]   # correctness 是 validate 的默认模式，任何 diff 都跑
+triggers: [always]
 distilled-from:
-  - verification-before-completion   # Iron Law + Gate Function + 反合理化表
-  - verify                           # 验证手段优先级阶梯 tests→typecheck/build→narrow→manual
-  - gsd-add-tests                    # TDD/E2E/Skip 三分类 + No-skip 铁律 + text_mode
-  - qa                               # framework bootstrap + runtime→框架表 + 回归测试三步 + baseline 健康分
-  - gsd-validate-phase               # requirement-completeness 三态（COVERED=runs-green）+ 不许改实现/bug escalate
-self-built:
-  - 数字化覆盖率门控（行/分支阈值，pytest-cov / nyc/c8，Python+TS）
-  - 统一证据 schema（correctness-report）
+  - verification-before-completion
+  - verify
+  - gsd-add-tests
+  - qa
+  - gsd-validate-phase
 ---
 
-# Validate 模式：correctness（正确性）
+# Validate mode: correctness
 
-> 角色：把"应该能跑"变成"已验证能跑"的硬证据。这是 validate 中枢的默认模式，
-> 任何 diff 都会触发。引擎=Claude + Read/Edit/Bash/Grep，无运行时依赖，Codex 可跑。
+任何代码改动都运行 correctness。它证明当前 Feature 的实现符合产品验收条件和研发测试策略；详细正文只写研发上下文，机器进度只写 lifecycle state。
 
----
+## 输入与记录位置
 
-## 何时触发
+只读取：
 
-- **always**：进入 `sdlc-validate` 时 correctness 永远在 active modes 里（见 role-routing）。
-- 单独跑：`/sdlc validate --mode=correctness`，或 `sdlc-onboard` 拿它做 brownfield 基线健康检查（baseline）。
-- 与其它模式叠加：前端改动叠 e2e，AI/策略改动叠 eval-bench；correctness 永远是底座。
+- `.sdlc-v1/project.md` 中已经验证过的测试、类型检查和构建命令。
+- 当前 Requirement 的产品上下文及验收条件。
+- 当前 Feature 的 `.sdlc-v1/context/<FEAT>.engineering.md`。
+- 当前 Git diff，以及本轮测试将绑定的实现 commit。
 
----
+详细结果追加到当前研发上下文的 `## Validation` / `### Correctness`。不要创建 correctness report、baseline 状态文件或其他进度文件。所有验证方式完成后，由 `sdlc-validate` 统一调用一次 `lifecycle_state.py record-validation`。
 
-## 关注点（这个模式在乎什么）
+## 核心原则
 
-1. **证据，不是断言**——任何"通过/完成/修好了"必须配本轮真跑出来的命令输出。
-2. **覆盖到行为，不是覆盖到文件**——测试要打中"它做了什么"，不是"它能 import / 渲染"。
-3. **三态诚实**——每条需求/验收点只能是 COVERED / PARTIAL / MISSING，不许把 PARTIAL 说成 COVERED。
-4. **填测试不改实现**——validate 阶段写测试暴露 bug；发现实现 bug 要 **escalate 回 build**，不在这里偷偷改实现。
-5. **数字门控**——覆盖率有明确阈值，达不到就 fail，不靠感觉。
+1. 完成声明必须由本轮实际运行的命令支持。
+2. 测试覆盖行为和分支，不以“存在测试文件”代替覆盖。
+3. 每条验收条件只标 `COVERED`、`PARTIAL` 或 `MISSING`。
+4. correctness 可以补测试；发现实现缺陷时返回 build，不在验证阶段顺手改实现。
+5. 覆盖率使用项目约定阈值；项目未约定时，新增或改动代码默认行覆盖 80%、分支覆盖 70%。
 
----
+## 执行方法
 
-## 步骤流程
+### 1. 发现现有命令
 
-### Step 0 — 发现测试基建（runtime → framework）
+优先使用 `project.md` 已记录命令，再根据语言卡和仓库配置核对。若发现项目实际命令与 `project.md` 不一致，先实际运行确认，再更新 `project.md`。
 
-跑探测，确定语言、框架、跑测命令。**确定语言后,test / coverage 门 / lint 的确切命令优先从 `references/languages/<lang>.md` 取**（python/typescript/go/rust/kotlin/swift/java-spring 各包都有实测过的"接入 sdlc"命令段;见 role-routing §7）。已覆盖语言不用现猜命令;未覆盖语言再回退到下面的通用探测。
+常见顺序：
 
-```bash
-# runtime 探测
-[ -f pyproject.toml ] || [ -f requirements.txt ] && echo "RUNTIME:python"
-[ -f package.json ] && echo "RUNTIME:node"
-# 已有测试基建
-ls pytest.ini pyproject.toml tox.ini 2>/dev/null
-ls vitest.config.* jest.config.* playwright.config.* 2>/dev/null
-ls -d tests/ test/ __tests__/ spec/ e2e/ 2>/dev/null
-```
+1. 相关测试或全量测试。
+2. 类型检查。
+3. 构建。
+4. 覆盖率。
+5. 无自动化覆盖时的最小手工检查。
 
-| runtime | 首选框架 | 跑单测 | 覆盖率 |
-|---------|---------|--------|--------|
-| Python  | pytest  | `pytest` | `pytest --cov=<pkg> --cov-report=term-missing` (pytest-cov) |
-| Node/TS | vitest  | `vitest run` | `vitest run --coverage` (c8/istanbul) |
-| Next.js | vitest + playwright | `vitest run` | `vitest run --coverage` |
+不要把 linter 当作编译或测试的替代。
 
-- **检测到框架**：读 2-3 个现有测试文件学约定（命名、import、断言风格、setup/teardown）。**不要凭文件名臆测**，照抄约定。
-- **无框架**：bootstrap（装框架→建最小 config→建目录→写 1 个真测试验证基建跑通）。bootstrap 失败就 `git checkout` 回滚相关文件，记 BLOCKED，不假装有测试。
-- 把跑测命令、覆盖率命令、阈值写进/读自 `PROFILE.md` 的 `test-commands`。
+### 2. 列出必须证明的行为
 
-### Step 1 — 列出"必须被证明的行为"
+按以下优先级建立清单：
 
-来源（按优先级）：`spec.md` 验收标准 → `plan.md` 任务的 acceptance_criteria → 本轮 `git diff` 改动的函数/分支。
-每条变成一行：`{ 需求/行为, 触发条件, 期望结果 }`。这是后面三态判定的清单。
+1. 产品上下文中的验收条件。
+2. 研发上下文中的测试策略和 Task 验收说明。
+3. Git diff 新增或改变的分支、错误路径和公共行为。
 
-### Step 2 — 分类每个改动文件（TDD / E2E / Skip）
+每项写成“触发条件 / 动作 / 期望结果”，并分类：
 
-读文件确认，不靠文件名。
+| 类型 | 处理 |
+|---|---|
+| 可直接断言的函数、状态机、校验、解析、数据变换 | 单元或集成测试 |
+| 需要浏览器、真实端点或设备的用户旅程 | 交给 e2e mode |
+| 模型、提示、策略或评估数据质量 | 交给 eval-bench mode |
+| 纯样式、无逻辑配置等不适用项 | 记录原因，不伪造测试 |
 
-| 类别 | 判据 | 测试类型 |
-|------|------|---------|
-| **TDD（单测）** | 纯函数/可写 `assert fn(input)==output`：计算、定价、校验、解析、数据变换、状态机、工具函数 | 单元测试 |
-| **E2E** | 需浏览器/真实交互才能验：键盘快捷键、导航路由、表单提交、选择、拖拽、弹窗、数据网格 | 交给 **e2e 模式** 处理 |
-| **Skip** | 无逻辑：纯 CSS/样式、配置、胶水代码、迁移、纯 CRUD、类型/DTO | 不写 |
+### 3. 补齐测试
 
-> E2E 类不在 correctness 里跑，路由到 e2e 模式。correctness 负责单测 + 集成 + 覆盖率 + 真跑应用。
+- 使用 Arrange / Act / Assert。
+- 同时覆盖成功、拒绝、错误和边界路径。
+- 禁止用 `toBeDefined()`、只验证“不抛异常”等平凡断言代替行为验证。
+- 修过的缺陷增加能复现原问题的回归测试。
+- 若测试暴露实现缺陷，记录期望、实际、文件位置和最小复现，返回 `sdlc-build`。
 
-### Step 3 — 补齐测试（填测试，不改实现）
+### 4. 本轮实际运行
 
-对每条 MISSING / PARTIAL 的行为补单测/集成测试：
+每条命令都记录：
 
-- **AAA 结构**：Arrange（造触发该行为的精确前置状态）→ Act（执行暴露行为的动作）→ Assert（断言**正确行为**，禁止 `toBeDefined()` / `不抛异常` 这种空断言）。
-- 顺手把追溯到的相邻边界也测了（null、空数组、边界值）。
-- **铁律：填测试时不许改实现文件。** 若测试暴露实现 bug：
-  - 记一条 `⚠️ 实现 bug：{现象} / 期望 {x} / 实际 {y} / 文件 {path}`，
-  - **escalate 回 sdlc-build**（build 内的 TDD↔调试子循环修），correctness 这一轮该需求标 PARTIAL。
-  - 单条 bug 调试 ≤ 3 次迭代仍无解 → escalate，不死磕。
+- 完整命令。
+- exit code。
+- 通过、失败和跳过数量。
+- 覆盖率或构建摘要。
+- 未运行的原因。
 
-### Step 4 — 真跑：单测 → typecheck/build → narrow → manual（验证阶梯）
+在写“通过”前执行：
 
-按这个**优先级阶梯**取证（来自 verify），上层够用就不必下探：
+1. 识别能证明结论的命令。
+2. 完整运行。
+3. 阅读全部输出和 exit code。
+4. 确认输出确实支持结论。
 
-```
-1. 已有测试（最可信，零成本）       → 跑全量 / 相关子集
-2. Typecheck / Build（编译级）      → 注意：linter ≠ compiler，要单独跑 build
-3. Narrow 直接命令检查（窄）        → 针对单个行为的最小直接验证
-4. Manual / 交互验证（最后手段）    → 描述步骤 + 收集可观察证据；非浏览器场景的"真跑应用"
-```
+上次运行结果或主观信心不能替代本轮结果。
 
-每步都**完整跑、读全输出、看 exit code、数失败数**（Gate Function，见下）。
-非浏览器的"真跑应用"smoke：CLI（`--help` / 子命令 happy path）、server（起服务 + 打 health endpoint）、库（import + 调一个公共入口）。
+### 5. 覆盖率阈值
 
-### Step 5 — 覆盖率门控（数字化，自建）
+优先使用项目原生配置让工具在低于阈值时返回非零 exit code，例如 pytest-cov、Vitest/Jest coverage 或 JaCoCo verification。
 
-跑覆盖率命令，对**本轮改动相关**的行/分支覆盖率与阈值比较：
+| 情况 | 结论 |
+|---|---|
+| 达到项目约定阈值 | 通过覆盖率检查 |
+| 项目无阈值且新增/改动代码达到 80% 行、70% 分支 | 通过默认检查 |
+| 低于阈值 | 补测试后重跑 |
+| 工具无法统计 | 标记未验证并说明原因，不把它写成通过 |
 
-| 语言 | 命令 | 默认门控 |
-|------|------|---------|
-| Python | `pytest --cov=<pkg> --cov-report=term-missing --cov-fail-under=<X>` | 行 ≥ 80%，关键模块分支 ≥ 70% |
-| TS | `vitest run --coverage` + config `coverage.thresholds`（c8/istanbul） | lines/statements ≥ 80%，branches ≥ 70% |
+### 6. 验收条件映射
 
-门控规则（写进 PROFILE，可按项目调）：
-- **新增/改动代码**的行覆盖 < 阈值 → **FAIL**，回 Step 3 补测试。
-- 用 `--cov-fail-under` / `coverage.thresholds` 让工具自己以 **非零 exit code** 把关，别靠肉眼读百分比。
-- 阈值是"门"不是"分"：达标即过，不刷高分；纯样式/配置/迁移文件可在 config 里排除出分母。
-- 阈值缺失时：默认 行 80% / 分支 70%；agentic-config-demo dogfood 用此默认。
+| 状态 | 判定 |
+|---|---|
+| `COVERED` | 测试打中目标行为，且本轮运行通过 |
+| `PARTIAL` | 只覆盖部分路径、测试失败或环境受限 |
+| `MISSING` | 没有可验证证据 |
 
-### Step 6 — 三态判定 + 回归保护
+只有所有必要验收条件为 `COVERED`，测试、类型检查、构建和适用覆盖率检查均通过，correctness 才通过。
 
-对 Step 1 每条行为打三态（来自 gsd-validate-phase）：
+## 写入研发上下文
 
-| 状态 | 判据 |
-|------|------|
-| **COVERED** | 有测试，打中该行为，**本轮真跑 green** |
-| **PARTIAL** | 有测试但 failing / 不完整 / 被 escalate 的实现 bug 阻塞 |
-| **MISSING** | 没有任何测试 |
+在 `.sdlc-v1/context/<FEAT>.engineering.md` 更新：
 
-**COVERED 必须 = runs-green。** 没真跑过的、上一次跑的、"应该会过的"一律不算 COVERED。
+~~~markdown
+## Validation
 
-修过 bug 的，写**回归测试**（来自 qa 三步）：
-1. 学最近的 2-3 个同类测试，照抄风格（像同一个人写的）。
-2. **追 bug 的 codepath**：什么输入/状态触发？走了哪条分支？在哪行断？相邻还有哪些输入会命中同一路径？
-3. 只跑这个新测试文件确认 green；带 attribution 注释（`# Regression: <id> — 什么坏了 / 发现于 <date>`）。
+### Correctness — <commit>
 
-### Step 7 — 写证据报告
+| command | result | summary |
+|---|---|---|
+| <command> | PASS/FAIL/NOT_RUN | <exit code and counts> |
 
-把结果写进 `.sdlc/validate/correctness-report.md`（schema 见下），更新 `STATE.md` 的 gate。
+| acceptance / behavior | status | evidence |
+|---|---|---|
+| <behavior> | COVERED/PARTIAL/MISSING | <command and observed result> |
 
----
-
-## 门控（exit gates，必须全过才算 correctness 通过）
+Coverage: <lines/branches or not available>
+Implementation defects: <none or reproduction + file>
+Unverified: <none or limitation>
+~~~
 
-- [ ] 测试基建已发现或 bootstrap 成功（否则 BLOCKED，不假装）。
-- [ ] Step 1 每条行为都有三态判定，无遗漏。
-- [ ] 全量/相关测试**本轮真跑**：0 failures（贴命令 + exit 0 + 通过数）。
-- [ ] typecheck/build 真跑 exit 0（linter 过不算）。
-- [ ] 覆盖率门控达标（工具以非零 exit 把关，不靠肉眼）。
-- [ ] 无 COVERED 项是靠"应该过/上次过"判定的。
-- [ ] 实现 bug 全部 escalate 回 build，未在 validate 偷改实现。
-- [ ] 修过的 bug 有回归测试且单独跑 green。
+同一 commit 重跑时更新对应小节，不另建报告。
 
-任一项不过 → 该模式状态 = `gated` 或 `blocked`，STATE.next 指回对应阶段（多为 build）。
+## 状态更新
 
----
-
-## Gate Function（取证纪律，来自 verification-before-completion）
+- 任一必要检查失败：`sdlc-validate` 调用 `record-validation --result fail`，Feature 返回 build。
+- 所有选定验证方式通过：`sdlc-validate` 统一调用 `record-validation --result pass`。
+- correctness 自身不直接编辑 `state.json`，也不记录 review 或 release。
 
-```
-在任何"通过/完成/修好"的措辞之前：
-1. IDENTIFY  哪条命令能证明这个声明？
-2. RUN       完整、全新地跑（不是子集、不是上次）
-3. READ      读全输出 + 看 exit code + 数失败数
-4. VERIFY    输出是否真的支持这个声明？
-   否 → 报实际状态 + 证据
-   是 → 报声明 + 证据
-5. 才能说出口
-跳过任何一步 = 说谎，不是验证。
-```
+## 常见错误
 
-**Iron Law：没有本轮新鲜验证证据，不得做任何完成声明。**
-
----
-
-## 反合理化表（看到这些借口立刻 STOP）
-
-| 借口 | 现实 |
-|------|------|
-| "现在应该能跑了" | 去跑验证命令 |
-| "我很有信心" | 信心 ≠ 证据 |
-| "就这一次" | 没有例外 |
-| "linter 过了" | linter ≠ 编译器 ≠ 测试 |
-| "覆盖率看着挺高" | 用 `--cov-fail-under` 让工具判，别肉眼读 |
-| "agent 说成功了" | 看 git diff 独立验证 |
-| "部分检查就够了" | 部分检查什么都证明不了 |
-| "换个说法规则就不适用了" | 精神高于字面 |
-
-红旗词：should / probably / seems to / "Great!" / "Perfect!" / "Done!" —— 出现在验证之前即违规。
-
----
-
-## 好的样子
-
-- 报告里每个 COVERED 都挂着本轮命令 + `34/34 passed` + `exit 0`。
-- 覆盖率由 `--cov-fail-under=80` / `coverage.thresholds` 强制，输出里能看到工具自己 fail/pass。
-- 发现的实现 bug 干净地 escalate 回 build，validate 的实现文件 0 改动。
-- 每个修过的 bug 配一条会红绿验证过的回归测试，带 attribution。
-- 三态清单完整，PARTIAL/MISSING 都写明缺口和下一步。
-
-## 常见翻车
-
-- 把"测试能 import / 组件能渲染"当作 COVERED（空断言）。
-- 只跑改动文件那一个测试就宣布全绿，没跑全量 → 漏掉回归。
-- 在 validate 里顺手改实现把测试改绿（应 escalate 回 build）。
-- linter 过了就说 build 过（linter 不查编译）。
-- 肉眼看覆盖率百分比，没让工具以 exit code 把关 → 阈值形同虚设。
-- E2E 类行为塞进 correctness 硬跑，应该路由到 e2e 模式。
-- bootstrap 失败却继续，假装"已测试"——必须报 BLOCKED。
-- 单条 bug 死磕超过 3 次迭代，不 escalate。
-
-## 介入哪些阶段
-
-- **validate（主场）**：correctness 是 validate 的默认模式，每次都跑。
-- **onboard**：被 `sdlc-onboard` 当 brownfield 基线健康检查调用，产出初始覆盖率/绿灯快照写进 PROFILE。
-- **build（回流）**：暴露的实现 bug escalate 回 build 的 TDD↔调试子循环；修完再回 correctness 复跑。
-- **review 之前**：correctness 全绿 + 覆盖率达标是进入 review 的前置门。
-
----
-
-## 证据 schema：`.sdlc/validate/correctness-report.md`
-
-```markdown
-# Correctness Report: <feature/topic>
-mode: correctness
-updated: <stamp>
-runtime: python | node-ts
-test-commands: { unit: "pytest", coverage: "pytest --cov=app --cov-fail-under=80", build: "tsc --noEmit" }
-
-## Summary
-- result: PASS | GATED | BLOCKED
-- tests: <pass>/<total> passed   (exit 0)
-- coverage: lines <X>% (gate 80%) | branches <Y>% (gate 70%)  → PASS/FAIL
-- build/typecheck: exit 0 | FAIL
-
-## Requirement coverage (three-state)
-| requirement / behavior | status | evidence (command + result) |
-|------------------------|--------|------------------------------|
-| <行为1> | COVERED | `pytest tests/x.py::test_a` → 1 passed, exit 0 |
-| <行为2> | PARTIAL | 测试 failing：暴露实现 bug，已 escalate（见下） |
-| <行为3> | MISSING | 无测试，建议路径 tests/y.py |
-
-## Escalated implementation bugs (→ build)
-- ⚠️ <现象> / 期望 <x> / 实际 <y> / 文件 <path> / 调试迭代 <n>/3
-
-## Regression tests added
-- <test file> — Regression: <id>，单独跑 green（exit 0）
-
-## Coverage gaps / not verified
-- <说明哪些没测到、为什么；非浏览器 smoke 用了什么手法>
-
-## Gates
-- [x] suite green (fresh)
-- [x] build/typecheck exit 0
-- [ ] coverage gate met
-- [x] no impl changed in validate
-- [x] regressions covered
-
-## Next action
--> 覆盖率不达标，回 sdlc-build 补 tests/z.py  (或 -> sdlc-review)
-```
-
----
-
-## Codex / 可移植降级
-
-- 全程只用 Read/Edit/Bash/Grep + git，无 Task/AskUserQuestion/gsd-tools/.planning 依赖。
-- 需要用户决策时（如选测试框架）用 **text_mode**：纯文本编号列表让用户回数字，不调 AskUserQuestion。
-- 无并行能力时（Codex）串行跑各步骤即可——correctness 本就是单 session 线性流程，无 fan-out。
-- 所有产物落 `.sdlc/validate/correctness-report.md` 纯文件 + STATE.md，任何 caller 不依赖 Skill 机制即可续跑。
+- 只跑一个测试文件就宣布全量通过。
+- linter 通过后跳过类型检查或构建。
+- 覆盖率靠肉眼判断，没有使用阈值或明确缺口。
+- 在 validate 中修改实现，使失败证据消失。
+- 把 E2E 或模型质量问题硬塞进单元测试。
+- 把未运行、受限或推断结果标成已验证。

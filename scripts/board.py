@@ -1,810 +1,134 @@
 #!/usr/bin/env python3
-"""scripts/board.py — backlog 需求树 HTML 看板渲染(遵 DESIGN.md)。
-从 backlog.py 抽出(守 800 行铁律);纯标准库,被 backlog.py 的 board 子命令惰性 import。"""
-import html
-import json
-import os
-import re
-import sys
-from collections.abc import Mapping
-from dataclasses import asdict, is_dataclass
+"""Static HTML board for the lightweight SDLC state."""
+from __future__ import annotations
 
-from backlog import load_leaves, build_tree, SHIPPED, STATUS_ORDER, STAGE_TO_STATUS
+from html import escape
+from pathlib import Path
+from typing import Mapping
 
-# ───────────────────────── board 渲染(遵 DESIGN.md) ─────────────────────────
-BOARD_CSS = """
-:root{
-  --bg:#f6f1e6;--panel:#fffaf0;--ink:#1f2d24;--muted:#66776c;--line:#d8cfbd;
-  --green:#6f925f;--green-soft:#d9e5cf;--radius:8px;--shadow:0 2px 0 rgba(31,45,36,.18);
-  --blue:#cddce2;--yellow:#f3d77a;--orange:#df8a54;--danger:#c75f5f;
-}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);
-  font:14px/1.6 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif}
-.board{max-width:1100px;margin:0 auto;padding:24px 24px 80px}
-h1{font-size:22px;margin:0 0 4px}
-.sub{color:var(--muted);font-size:12px;margin-bottom:20px}
-.cov{display:flex;flex-wrap:wrap;gap:12px;margin:0 0 24px}
-.cov .item{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
-  box-shadow:var(--shadow);padding:8px 12px;min-width:150px}
-.cov .name{font-size:12px;color:var(--muted)}
-.cov .bar{height:6px;background:var(--green-soft);border-radius:4px;margin-top:6px;overflow:hidden}
-.cov .bar>i{display:block;height:100%;background:var(--green)}
-details{margin:4px 0}
-details>summary{cursor:pointer;padding:6px 8px;border-radius:6px;font-weight:600;list-style:none}
-details>summary::-webkit-details-marker{display:none}
-details>summary:before{content:"\\25b8";color:var(--green);margin-right:6px;font-size:11px}
-details[open]>summary:before{content:"\\25be"}
-details>summary:hover{background:var(--green-soft)}
-details>summary:focus-visible{outline:2px solid var(--green);outline-offset:1px}
-.domain{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);
-  box-shadow:var(--shadow);margin:10px 0;padding:4px 8px}
-.subdomain{margin-left:16px}
-.subdomain>summary{font-weight:500}
-.cnt{color:var(--muted);font-weight:400;font-size:11px}
-.leaf{margin:6px 0 6px 32px;padding:8px 10px;background:var(--bg);
-  border:1px solid var(--line);border-radius:6px}
-.leaf h2{font-size:13px;margin:0 0 6px;font-weight:600}
-.leaf[aria-current="true"]{border-left:3px solid var(--green);background:var(--green-soft)}
-.meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:11px;color:var(--muted)}
-.badge{padding:1px 7px;border-radius:4px;font-size:11px;color:var(--ink)}
-.status-captured{background:#e6e2d6}
-.status-specd{background:var(--blue)}
-.status-planned{background:var(--yellow)}
-.status-built{background:var(--orange)}
-.status-validated{background:var(--green-soft)}
-.status-shipped{background:var(--green);color:#fff}
-.prio{padding:1px 6px;border-radius:4px;font-weight:600}
-.prio-P0{background:var(--danger);color:#fff}.prio-P1{background:var(--orange)}
-.prio-P2{background:var(--yellow)}.prio-P3{background:#e6e2d6}
-.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
-.risk-high{background:var(--danger)}.risk-medium{background:var(--orange)}.risk-low{background:var(--muted)}
-.deps{font-style:italic}
-.empty{color:var(--muted);padding:48px;text-align:center}
-/* 布局:左树 + 右侧常驻聊天栏 */
-.app{display:flex;gap:16px;max-width:1480px;margin:0 auto;align-items:flex-start;padding:0 16px}
-.board{flex:1;min-width:0;padding:24px 8px 80px;max-width:none;margin:0}
-.leaf{cursor:pointer}
-.leaf:hover{border-color:var(--green)}
-.leaf:focus-visible{outline:2px solid var(--green);outline-offset:1px}
-.leaf[aria-current="true"]{border-left:3px solid var(--green);background:var(--green-soft)}
-/* 聊天面板 */
-.chat-panel{width:380px;flex:none;position:sticky;top:16px;height:calc(100vh - 32px);
-  display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);
-  border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
-.chat-head{padding:12px 14px;border-bottom:1px solid var(--line);font-weight:600;font-size:13px}
-.chat-detail{padding:0 14px;border-bottom:1px solid var(--line);max-height:40%;overflow:auto}
-.chat-detail:empty{display:none}
-.ld-title{font-size:13px;font-weight:600;margin:10px 0 6px}
-.ld-badges{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px}
-.ld-risk{font-size:11px;color:var(--muted)}
-.ld-meta{font-size:11px;color:var(--muted);margin-bottom:6px;word-break:break-word}
-.ld-cross{font-size:11px;color:var(--muted);margin-bottom:6px;word-break:break-word;border-left:2px solid var(--green-soft);padding-left:6px}
-.ld-body{font-size:12px;line-height:1.55;white-space:pre-wrap;color:var(--ink);background:var(--bg);
-  border:1px solid var(--line);border-radius:6px;padding:8px;margin-bottom:10px}
-.chat-msgs{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:8px}
-.chat-empty{color:var(--muted);text-align:center;margin-top:48px;font-size:13px}
-.msg{max-width:85%;padding:8px 11px;border-radius:10px;font-size:13px;line-height:1.5;white-space:pre-wrap;word-break:break-word}
-.msg.user{align-self:flex-end;background:var(--green-soft);border:1px solid var(--line)}
-.msg.agent{align-self:flex-start;background:var(--bg);border:1px solid var(--line)}
-.chat-box{display:flex;gap:8px;padding:10px;border-top:1px solid var(--line)}
-.chat-box textarea{flex:1;resize:none;height:42px;border:1px solid var(--line);border-radius:6px;
-  padding:9px;font:13px/1.4 inherit;background:#fff}
-.chat-box textarea:focus{outline:none;border-color:var(--green)}
-.chat-box button{background:var(--green);color:#fff;border:0;border-radius:6px;padding:0 16px;
-  font-weight:600;cursor:pointer}
-.chat-box button:disabled{opacity:.5;cursor:not-allowed}
-.chat-box button:hover:not(:disabled){filter:brightness(1.06)}
-@media(max-width:768px){
-  .app{flex-direction:column;padding:0}
-  .board{padding:16px;width:100%}.leaf{margin-left:16px}
-  .chat-panel{position:fixed;left:0;right:0;bottom:0;top:auto;width:auto;height:62vh;
-    border-radius:12px 12px 0 0;transform:translateY(calc(100% - 46px));transition:transform .2s;z-index:50}
-  .chat-panel.open{transform:translateY(0)}
-  .chat-head{cursor:pointer}
-}
-@media(prefers-reduced-motion:reduce){*{transition:none!important}}
-/* ── P6 看板重构(DESIGN.md §8) ── */
-/* 图例 */
-.legend{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 14px;font-size:11px}
-.legend .lg{padding:2px 8px;border-radius:4px;cursor:pointer;border:1px solid transparent;color:var(--ink)}
-.legend .lg:hover{border-color:var(--green)}
-.legend .lg[aria-pressed="true"]{border-color:var(--ink);font-weight:600}
-/* 进度分布条(分段) */
-.dist{display:flex;height:8px;border-radius:4px;overflow:hidden;border:1px solid var(--line);margin:6px 0}
-.dist .seg{height:100%}
-.dist .seg.status-captured{background:#e6e2d6}.dist .seg.status-specd{background:var(--blue)}
-.dist .seg.status-planned{background:var(--yellow)}.dist .seg.status-built{background:var(--orange)}
-.dist .seg.status-validated{background:var(--green-soft)}.dist .seg.status-shipped{background:var(--green)}
-.dist-total{margin:0 0 18px}
-/* live badge(在飞态) */
-.live-badge{padding:1px 7px;border-radius:4px;font-size:11px;color:var(--ink);
-  border:1px solid var(--green);animation:livepulse 1.6s ease-in-out infinite}
-@keyframes livepulse{0%,100%{opacity:1}50%{opacity:.55}}
-@media(prefers-reduced-motion:reduce){.live-badge{animation:none}}
-/* 搜索 + 面包屑 */
-.toolbar{display:flex;gap:10px;align-items:center;margin:0 0 12px;flex-wrap:wrap}
-#tree-search{flex:1;min-width:180px;padding:7px 10px;border:1px solid var(--line);border-radius:6px;
-  font:13px inherit;background:#fff}
-#tree-search:focus{outline:none;border-color:var(--green)}
-.crumb{font-size:11px;color:var(--muted);margin:0 0 10px;min-height:16px}
-.crumb a{color:var(--green);cursor:pointer;text-decoration:none}
-.crumb a:hover{text-decoration:underline}
-.leaf.hide{display:none}
-/* 状态过滤:body[data-filter] 时淡化非该状态叶 */
-body[data-filter] .leaf{opacity:.28}
-body[data-filter] .leaf.match-filter{opacity:1}
-/* 叶详情字段分组 */
-.ld-group{margin:8px 0 2px;font-size:10px;letter-spacing:.5px;color:var(--muted);text-transform:uppercase}
-.ld-field{font-size:11px;color:var(--ink);margin:2px 0;word-break:break-word}
-.ld-field .k{color:var(--muted)}
-.dep-link{color:var(--green);cursor:pointer;text-decoration:underline}
-/* control snapshot 只读追踪链 */
-.control-warnings{border:1px solid var(--orange);background:var(--panel);border-radius:6px;
-  padding:8px 12px;margin:0 0 12px;font-size:11px}
-.control-warning{word-break:break-word;color:var(--ink)}
-.tracking-summary{padding:1px 7px;border-radius:4px;background:var(--green-soft);color:var(--ink)}
-.tracking-chain{margin:8px 0 10px;border-left:2px solid var(--green);padding-left:8px}
-.tracking-node{padding:6px 8px;margin:5px 0;background:var(--bg);border:1px solid var(--line);
-  border-radius:6px;font-size:11px;word-break:break-word}
-.tracking-node .kind{font-weight:600;color:var(--green);margin-right:5px}
-.tracking-fields{color:var(--muted);margin-top:2px;white-space:pre-wrap}
-.tracking-task{margin-left:8px}.tracking-evidence{margin-left:16px;border-left:2px solid var(--green-soft)}
-/* 聊天监听状态 */
-#live-status{font-size:11px;font-weight:400;margin-left:6px}
-#live-status.on{color:var(--green)}#live-status.off{color:var(--muted)}
-.chat-guide{color:var(--muted);font-size:12px;line-height:1.6;padding:0 4px}
+
+_CSS = """
+:root{color-scheme:light dark;--bg:#f5f6f8;--panel:#fff;--ink:#18202b;--muted:#677386;
+--line:#dfe3e8;--accent:#356ae6;--done:#25855a;--warn:#b76b00}
+@media(prefers-color-scheme:dark){:root{--bg:#11151b;--panel:#1a2029;--ink:#edf1f7;
+--muted:#a8b2c1;--line:#303846;--accent:#7da2ff;--done:#66c99a;--warn:#f0b35c}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);
+font:14px/1.5 ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+main{max-width:1180px;margin:auto;padding:32px 22px 64px}h1{font-size:28px;margin:0 0 6px}
+.source{color:var(--muted);word-break:break-all}.summary{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0}
+.chip,.badge{border:1px solid var(--line);border-radius:999px;padding:4px 9px;background:var(--panel)}
+.domains{display:grid;gap:24px}.domain h2{font-size:19px;margin:0 0 10px}.cards{display:grid;
+grid-template-columns:repeat(auto-fill,minmax(310px,1fr));gap:12px}.card{background:var(--panel);
+border:1px solid var(--line);border-radius:10px;padding:15px;min-width:0}.card-head{display:flex;
+align-items:flex-start;justify-content:space-between;gap:8px}.id{font-weight:700;color:var(--accent)}
+.title{font-size:16px;font-weight:650;margin:7px 0 12px}.meta{display:grid;grid-template-columns:88px 1fr;
+gap:5px 9px;color:var(--muted)}.meta b{color:var(--ink);font-weight:600}.path{font-family:ui-monospace,
+SFMono-Regular,Menlo,monospace;font-size:12px;word-break:break-all}.feature{border-top:1px solid var(--line);
+margin-top:13px;padding-top:12px}.tasks{margin:9px 0 0;padding-left:20px}.tasks li{margin:3px 0}
+.status-released,.status-done{color:var(--done)}.status-blocked{color:var(--warn)}
+.empty{padding:30px;background:var(--panel);border:1px dashed var(--line);border-radius:10px;color:var(--muted)}
 """
 
-# 聊天面板逻辑(自包含):点叶选中→该叶会话气泡;发送 POST /feedback;轮询 /replies.json 追加 agent 回复;
-# 轮询 /rev 树变即 reload;加载时读 /feedback-history.jsonl + /replies.json 重建线程(刷新不丢)。
-# 后端复用 web-review/server.py(/feedback /wait /rev + 静态文件),不依赖 annotate.*。
-CHAT_JS = """<script>
-(function(){
-  var current=null, threads={}, shown={};
-  var head=document.getElementById('chat-leaf'), msgs=document.getElementById('chat-msgs');
-  var input=document.getElementById('chat-input'), send=document.getElementById('chat-send');
-  var panel=document.getElementById('chat'), detailEl=document.getElementById('chat-detail');
-  var seq=0; function genId(){seq++;return 'm'+seq+'_'+(new Date().getTime());}
-  var LEAFDATA={}; try{LEAFDATA=JSON.parse(document.getElementById('leaf-data').textContent||'{}');}catch(e){}
-  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
-  function csss(s){return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');}
-  // 字段含义 tooltip(痛点③)
-  var FIELDTIP={actor:'触发/使用该需求的角色',failure_class:'做坏会伤哪类:funds资金/consistency一致性/compliance合规/experience体验',
-    contract_refs:'相关接口/数据契约路径',data_owner:'该数据的真相源/owner',
-    old_system_ref:'对应老系统位置',new_domain_path:'新域路径',depends_on:'前置依赖的其它叶',cross_link:'跨域关联'};
-  function fld(k,label,val){
-    if(val==null||val===''||(val.join&&!val.length))return '';
-    var v=val.join?val.join(', '):val;
-    return '<div class="ld-field" title="'+esc(FIELDTIP[k]||'')+'"><span class="k">'+esc(label)+':</span> '+v+'</div>';
-  }
-  function depLinks(deps){
-    if(!deps||!deps.length)return '无';
-    return deps.map(function(id){
-      return LEAFDATA[id]?'<a class="dep-link" data-goto="'+esc(id)+'">'+esc(id)+'</a>':esc(id);
-    }).join(', ');
-  }
-  function pick(obj){
-    if(!obj)return '';
-    for(var i=1;i<arguments.length;i++){
-      var v=obj[arguments[i]];if(v!==undefined&&v!==null&&v!=='')return v;
-    }
-    return '';
-  }
-  function trackingFields(items){
-    return items.filter(function(item){return item[1]!==''&&item[1]!==null&&item[1]!==undefined;})
-      .map(function(item){return '<span><b>'+esc(item[0])+':</b> '+esc(item[1])+'</span>';}).join(' · ');
-  }
-  function evidenceNode(e,extra){
-    var id=pick(e,'evidence_id','id'),cmd=pick(e,'command','_body');
-    var fields=trackingFields([['result',pick(e,'result')],['scope',pick(e,'scope')],
-      ['tested SHA',pick(e,'tested_sha','tested-sha')],['created',pick(e,'created_at','created-at','created')],
-      ['command',cmd]]);
-    return '<div class="tracking-node tracking-evidence '+(extra||'')+'"><span class="kind">evidence</span> '
-      +esc(id)+'<div class="tracking-fields">'+fields+'</div></div>';
-  }
-  function renderTracking(t){
-    if(!t)return '';
-    var out=[],request=t.request||{},claim=t.claim||{},feature=t.feature||{},leaf=t.leaf||{};
-    var requestId=t.request_id||pick(request,'request_id','id');
-    out.push('<div class="tracking-node"><span class="kind">request</span> '+esc(requestId)
-      +'<div class="tracking-fields">'+trackingFields([['title',pick(request,'title')],
-        ['status',pick(request,'status')],['body',pick(request,'_body','body')]])+'</div></div>');
-    out.push('<div class="tracking-node"><span class="kind">leaf</span> '+esc(pick(leaf,'id'))
-      +'<div class="tracking-fields">'+trackingFields([['source request',pick(leaf,'source_request','source-request')]])+'</div></div>');
-    if(Object.keys(claim).length){
-      out.push('<div class="tracking-node"><span class="kind">claim</span> '+esc(pick(claim,'leaf_id','leaf-id'))
-        +'<div class="tracking-fields">'+trackingFields([['status',pick(claim,'status')],
-          ['feature',pick(claim,'feature_id','feature-id')],['owner',pick(claim,'owner')]])+'</div></div>');
-    }
-    if(Object.keys(feature).length){
-      out.push('<div class="tracking-node"><span class="kind">feature</span> '
-        +esc(t.feature_id||pick(feature,'feature_id','id'))+'<div class="tracking-fields">'
-        +trackingFields([['branch',pick(feature,'branch_name','feature_branch','branch')],
-          ['owner',pick(feature,'owner')],['status',pick(feature,'status')],
-          ['integration SHA',pick(feature,'integration_sha','integration-sha')]])+'</div></div>');
-    }
-    (t.tasks||[]).forEach(function(task){
-      var evidence=(task.evidence||[]).map(function(e){return evidenceNode(e,'');}).join('');
-      out.push('<div class="tracking-node tracking-task"><span class="kind">task</span> '
-        +esc(pick(task,'task_id','id'))+'<div class="tracking-fields">'
-        +trackingFields([['status',pick(task,'status')],['branch',pick(task,'branch_name','branch-name')],
-          ['owner',pick(task,'owner')],['merge',pick(task,'merge_status','merge-status')],
-          ['blocked',pick(task,'blocked_reason','blocked-reason')],
-          ['integration SHA',pick(task,'integration_sha','integration-sha')],
-          ['freshness',pick(task,'freshness')]])+'</div>'+evidence+'</div>');
-    });
-    (t.feature_evidence||[]).forEach(function(e){out.push(evidenceNode(e,'feature-evidence'));});
-    return '<div class="ld-group">执行追踪</div><div class="tracking-chain">'+out.join('')+'</div>';
-  }
-  function renderDetail(){
-    if(!current||!LEAFDATA[current]){detailEl.innerHTML='';return;}
-    var d=LEAFDATA[current];
-    detailEl.innerHTML=
-      '<div class="ld-title">'+esc(d.title)+'</div>'+
-      '<div class="ld-group">身份</div>'+
-      '<div class="ld-badges"><span class="badge status-'+csss(d.status)+'">'+esc(d.status)+'</span>'+
-      '<span class="prio prio-'+esc(d.priority)+'">'+esc(d.priority)+'</span>'+
-      '<span class="ld-risk">risk: '+esc(d.risk_level)+'</span></div>'+
-      '<div class="ld-group">定位</div>'+
-      fld('domain_path','域',esc(d.domain_path))+
-      fld('old_system_ref','old',esc(d.old_system_ref))+
-      fld('new_domain_path','new',esc(d.new_domain_path))+
-      '<div class="ld-group">关系</div>'+
-      fld('depends_on','依赖',depLinks(d.depends_on))+
-      fld('cross_link','关联',d.cross_link&&d.cross_link.length?esc(d.cross_link.join(', ')):'')+
-      crossGroup(d)+
-      renderTracking(d.tracking)+
-      '<div class="ld-group">需求</div>'+
-      '<div class="ld-body">'+esc(d.body)+'</div>';
-  }
-  function crossGroup(d){
-    var f=fld('actor','参与者',esc(d.actor))+fld('failure_class','失败类',esc(d.failure_class))
-      +fld('data_owner','数据源',esc(d.data_owner))
-      +fld('contract_refs','契约',d.contract_refs&&d.contract_refs.length?esc(d.contract_refs.join(', ')):'');
-    return f?'<div class="ld-group">交叉</div>'+f:'';
-  }
-  function render(){
-    msgs.innerHTML='';
-    if(!current){msgs.innerHTML='<p class="chat-empty">点左侧一片需求叶，开始对话。</p>';return;}
-    (threads[current]||[]).forEach(function(m){
-      var d=document.createElement('div');d.className='msg '+m.role;d.textContent=m.text;msgs.appendChild(d);
-    });
-    msgs.scrollTop=msgs.scrollHeight;
-  }
-  var crumbEl=document.getElementById('crumb');
-  function setCrumb(el){
-    if(!crumbEl)return;
-    if(!el){crumbEl.innerHTML='';return;}
-    crumbEl.innerHTML=esc(el.getAttribute('data-crumb')||'')+' › '+esc(el.getAttribute('data-leaf')||'');
-  }
-  function selectLeaf(id){
-    current=id;
-    var sel=null;
-    document.querySelectorAll('.leaf').forEach(function(el){
-      var on=el.getAttribute('data-leaf')===id; el.setAttribute('aria-current', on?'true':'false');
-      if(on)sel=el;});
-    head.textContent='\\uD83D\\uDCAC '+id;
-    setCrumb(sel);
-    input.disabled=false;send.disabled=false;
-    if(panel)panel.classList.add('open');
-    renderDetail();render();input.focus();
-  }
-  document.querySelectorAll('.leaf').forEach(function(el){
-    el.setAttribute('tabindex','0');
-    el.addEventListener('click',function(){selectLeaf(el.getAttribute('data-leaf'));});
-    el.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();selectLeaf(el.getAttribute('data-leaf'));}});
-  });
-  // 痛点③ depends_on 可点跳转(事件委托在叶详情面板)
-  if(detailEl)detailEl.addEventListener('click',function(e){
-    var a=e.target.closest&&e.target.closest('.dep-link');if(!a)return;
-    var gid=a.getAttribute('data-goto');var t=document.getElementById(gid);
-    if(t){t.scrollIntoView({block:'center'});selectLeaf(gid);}
-  });
-  // 痛点② 搜索过滤(即时按 id/title)
-  var search=document.getElementById('tree-search');
-  if(search)search.addEventListener('input',function(){
-    var q=search.value.trim().toLowerCase();
-    document.querySelectorAll('.leaf').forEach(function(el){
-      var hay=((el.getAttribute('data-leaf')||'')+' '+(el.getAttribute('data-title')||'')).toLowerCase();
-      el.classList.toggle('hide', q!=='' && hay.indexOf(q)<0);
-    });
-  });
-  // 痛点① 图例点击=状态过滤(切 body[data-filter])
-  document.querySelectorAll('.legend .lg').forEach(function(lg){
-    lg.addEventListener('click',function(){
-      var s=lg.getAttribute('data-status'), cur=document.body.getAttribute('data-filter');
-      document.querySelectorAll('.legend .lg').forEach(function(x){x.setAttribute('aria-pressed','false');});
-      if(cur===s){document.body.removeAttribute('data-filter');}
-      else{document.body.setAttribute('data-filter',s);lg.setAttribute('aria-pressed','true');
-        document.querySelectorAll('.leaf').forEach(function(el){
-          el.classList.toggle('match-filter', el.getAttribute('data-status')===s);});}
-    });
-  });
-  // 痛点② 折叠记忆(localStorage;隐私模式静默降级)
-  function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
-  function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
-  document.querySelectorAll('details').forEach(function(dt){
-    var sm=dt.querySelector('summary'),key='fold:'+(sm?sm.textContent.trim():'');
-    var saved=lsGet(key); if(saved==='0')dt.open=false; else if(saved==='1')dt.open=true;
-    dt.addEventListener('toggle',function(){lsSet(key,dt.open?'1':'0');});
-  });
-  if(head)head.addEventListener('click',function(){if(panel&&window.innerWidth<=768)panel.classList.toggle('open');});
-  function doSend(){
-    var text=input.value.trim();if(!text||!current)return;
-    var id=genId();(threads[current]=threads[current]||[]).push({id:id,role:'user',text:text});
-    input.value='';render();
-    fetch('/feedback',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({id:id,leaf:current,message:text})}).catch(function(){});
-  }
-  if(send)send.addEventListener('click',doSend);
-  if(input)input.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();doSend();}});
-  function applyReplies(rep){
-    if(!rep)return;
-    Object.keys(rep).forEach(function(mid){
-      if(shown[mid])return;
-      for(var leaf in threads){
-        var t=threads[leaf],i=-1,k;
-        for(k=0;k<t.length;k++){if(t[k].id===mid){i=k;break;}}
-        if(i>=0){
-          var has=false;for(k=0;k<t.length;k++){if(t[k].id===mid+'-r'){has=true;break;}}
-          if(!has)t.splice(i+1,0,{id:mid+'-r',role:'agent',text:rep[mid]});
-          shown[mid]=true;break;
-        }
-      }
-    });
-    if(current)render();
-  }
-  function pollReplies(){fetch('/replies.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(applyReplies).catch(function(){});}
-  // 重建历史:用户消息来自 feedback-history.jsonl,agent 回复来自 replies.json
-  fetch('/feedback-history.jsonl',{cache:'no-store'}).then(function(r){return r.ok?r.text():'';}).then(function(txt){
-    (txt||'').split('\\n').forEach(function(line){
-      if(!line.trim())return;var rec;try{rec=JSON.parse(line);}catch(e){return;}
-      if(!rec.leaf||!rec.id)return;var t=threads[rec.leaf]=threads[rec.leaf]||[];
-      var dup=false,k;for(k=0;k<t.length;k++){if(t[k].id===rec.id){dup=true;break;}}
-      if(!dup)t.push({id:rec.id,role:'user',text:rec.message||''});
-    });
-    pollReplies();
-  }).catch(function(){pollReplies();});
-  setInterval(pollReplies,3000);
-  // 痛点④ 监听状态指示:/rev 可达=Live server 在(🟢监听中),否则=静态文件(⚪未监听)
-  var liveEl=document.getElementById('live-status');
-  function setLive(on){
-    if(!liveEl)return;
-    liveEl.className=on?'on':'off';
-    liveEl.textContent=on?'🟢 Live 监听中':'⚪ 未监听';
-  }
-  var lastRev=null;
-  setInterval(function(){fetch('/rev',{cache:'no-store'}).then(function(r){return r.ok?r.text():null;}).then(function(t){
-    if(t==null){setLive(false);return;}setLive(true);
-    if(lastRev===null){lastRev=t;return;}if(t!==lastRev)location.reload();}).catch(function(){setLive(false);});},2000);
-  render();
-})();
-</script>"""
+
+def _status_class(status: object) -> str:
+    value = str(status).replace("_", "-")
+    safe = "".join(character for character in value if character.isalnum() or character == "-")
+    return f"status-{safe}"
 
 
-def _css_safe(s):
-    """状态/风险值 → CSS 类名安全片段(spec'd → specd)。"""
-    return re.sub(r"[^a-z0-9]", "", str(s or "").lower())
-
-
-DETAIL_KEYS = ["title", "status", "priority", "risk_level", "domain_path",
-               "old_system_ref", "new_domain_path", "depends_on", "cross_link",
-               "actor", "failure_class", "contract_refs", "data_owner",
-               "source_request"]
-
-
-def _as_dict(value):
-    """核心 API 的 dict/dataclass → 普通 dict；其它值安全降级为空。"""
-    if isinstance(value, Mapping):
-        return dict(value)
-    if is_dataclass(value):
-        return asdict(value)
-    fields = getattr(value, "__dict__", None)
-    return dict(fields) if isinstance(fields, Mapping) else {}
-
-
-def _value(record, *keys, default=""):
-    data = _as_dict(record)
-    for key in keys:
-        value = data.get(key)
-        if value is not None and value != "":
-            return value
-    return default
-
-
-def _records(value):
-    if value is None:
-        return []
-    if isinstance(value, (list, tuple)):
-        return [_as_dict(item) for item in value]
-    data = _as_dict(value)
-    return [data] if data else []
-
-
-def _evidence_for(mapping, feature_id, task_id):
-    """兼容 task-id、feature/task、tuple 与嵌套映射四种只读索引形状。"""
-    data = _as_dict(mapping)
-    candidates = (task_id, f"{feature_id}/{task_id}", (feature_id, task_id))
-    for key in candidates:
-        if key in data:
-            return _records(data[key])
-    nested = data.get(feature_id)
-    if isinstance(nested, Mapping):
-        return _records(nested.get(task_id))
-    return []
-
-
-def _safe_json_for_html(value):
-    """JSON 嵌入 script[type=application/json] 时隔离 HTML/script 上下文。"""
-    return json.dumps(value, ensure_ascii=False).translate({
-        ord("<"): "\\u003c",
-        ord(">"): "\\u003e",
-        ord("&"): "\\u0026",
-        0x2028: "\\u2028",
-        0x2029: "\\u2029",
-    })
-
-
-def _build_tracking_map(leaves, snapshot):
-    """ControlSnapshot → 按 leaf 索引的 request→claim→feature→task→evidence 链。"""
-    snap = _as_dict(snapshot)
-    if not snap:
-        return {}, []
-    warnings = [str(item) for item in (snap.get("warnings") or [])]
-    if snap.get("mode") == "legacy":
-        return {}, warnings
-
-    requests = _as_dict(snap.get("requests_by_id"))
-    requirements = _as_dict(snap.get("requirements_by_id"))
-    claims = _as_dict(snap.get("claims_by_leaf"))
-    features = _as_dict(snap.get("features_by_id"))
-    tasks_by_feature = _as_dict(snap.get("tasks_by_feature"))
-    evidence_by_task = snap.get("evidence_by_task") or {}
-    feature_evidence = _as_dict(snap.get("feature_evidence_by_feature"))
-    tracking = {}
-
-    for leaf in leaves:
-        leaf_id = str(leaf.get("id") or "")
-        if not leaf_id:
-            continue
-        requirement = _as_dict(requirements.get(leaf_id))
-        source_request = (_value(requirement, "source_request", "source-request")
-                          or leaf.get("source_request") or leaf.get("source-request") or "")
-        request = _as_dict(requests.get(source_request)) if source_request else {}
-        claim = _as_dict(claims.get(leaf_id))
-        feature_id = str(_value(claim, "feature_id", "feature-id"))
-        feature = _as_dict(features.get(feature_id)) if feature_id else {}
-        if not feature:
-            # Released/history snapshots may retain feature without a claim index.
-            for candidate_id, candidate in features.items():
-                candidate_data = _as_dict(candidate)
-                if _value(candidate_data, "leaf_id", "source_leaf", "source-leaf") == leaf_id:
-                    feature_id, feature = str(candidate_id), candidate_data
-                    break
-
-        tasks = _records(tasks_by_feature.get(feature_id)) if feature_id else []
-        tasks.sort(key=lambda item: str(_value(item, "id", "task_id", "task-id")))
-        task_views = []
-        for task in tasks:
-            task_id = str(_value(task, "id", "task_id", "task-id"))
-            evidence = _evidence_for(evidence_by_task, feature_id, task_id)
-            evidence.sort(key=lambda item: (
-                str(_value(item, "created_at", "created-at", "created")),
-                str(_value(item, "id", "evidence_id", "evidence-id")),
-            ))
-            task_view = dict(task)
-            task_view["id"] = task_id
-            task_view["evidence"] = evidence
-            task_views.append(task_view)
-
-        feature_evidence_items = _records(feature_evidence.get(feature_id))
-        feature_evidence_items.sort(key=lambda item: (
-            str(_value(item, "created_at", "created-at", "created")),
-            str(_value(item, "id", "evidence_id", "evidence-id")),
-        ))
-        if source_request or claim or feature or task_views or feature_evidence_items:
-            tracking[leaf_id] = {
-                "request": request,
-                "request_id": source_request,
-                "leaf": {"id": leaf_id, "source_request": source_request},
-                "claim": claim,
-                "feature": feature,
-                "feature_id": feature_id,
-                "tasks": task_views,
-                "feature_evidence": feature_evidence_items,
-            }
-    return tracking, warnings
-
-
-def _leaf_detail_map(leaves, tracking=None, dual_views=None):
-    """{id: {字段... + body}} —— 供聊天面板"叶详情"显示(选叶后看清需求内容)。"""
-    detail = {}
-    for lf in leaves:
-        lid = lf.get("id")
-        if not lid:
-            continue
-        d = {k: lf.get(k) for k in DETAIL_KEYS}
-        d["body"] = lf.get("_body", "")
-        if tracking and lid in tracking:
-            d["tracking"] = tracking[lid]
-        if dual_views and lid in dual_views:
-            d["dual_lifecycle"] = dual_views[lid]
-        detail[lid] = d
-    return detail
-
-
-def _read_state_overlay(req_root):
-    """读 <req_root>/../STATE.md → {leaf, stage, status} 供看板惰性叠加在飞特性 live badge。
-    无 STATE / source-leaf=(none) / stage 非过渡态 → None(向后兼容纯文件 status 渲染)。"""
-    state = os.path.join(os.path.dirname(os.path.abspath(req_root.rstrip("/"))), "STATE.md")
-    if not os.path.isfile(state):
-        return None
-    try:
-        with open(state, encoding="utf-8") as f:
-            txt = f.read()
-    except OSError:
-        return None
-
-    def v(key):
-        m = re.search(rf"(?mi)^{key}:\s*(.+)$", txt)
-        return m.group(1).strip() if m else ""
-    leaf, stage = v("source-leaf"), v("stage")
-    if not leaf or leaf == "(none)":
-        return None
-    to = STAGE_TO_STATUS.get(stage)
-    return {"leaf": leaf, "stage": stage, "status": to} if to else None
-
-
-def render_board(tree, leaves, title="Backlog 需求树看板", live=None, control=None,
-                 dual_views=None, dual_ledger_sha=None):
-    """整树 → 自包含 HTML 看板(左折叠树 + 右聊天面板 + 叶详情 + Live 回路)。只读渲染。
-    live={leaf,stage,status}: legacy 在飞特性叠加；control:可选 ControlSnapshot。
-    dual_views 是显式 dual ledger 的只读产品/交付投影，不能用于写入。"""
-    esc = html.escape
-    summ = tree["summary"]
-    tracking, control_warnings = _build_tracking_map(leaves, control)
-    control_data = _as_dict(control)
-    control_mode = str(control_data.get("mode") or "")
-    control_active = bool(control_data) and control_mode != "legacy"
-    dual_active = dual_views is not None
-    ready_count = summ["ready_count"]
-    if control_active:
-        from control import readyqueue_from_snapshot
-        ready_count = len(readyqueue_from_snapshot(control_data))
-    elif dual_active:
-        ready_count = sum(
-            1 for view in dual_views.values()
-            if isinstance(view, Mapping) and _as_dict(view.get("readiness")).get("ready") is True
-        )
-    # 叶详情数据嵌入：统一隔离 HTML/script 上下文。
-    leaf_data_json = _safe_json_for_html(_leaf_detail_map(leaves, tracking, dual_views))
-    # 痛点① 图例(6 状态色 + 含义,可点过滤)
-    legend_meaning = {"captured": "已收集", "spec'd": "已出spec", "planned": "已拆任务",
-                      "built": "已实现", "validated": "已验证", "shipped": "已交付"}
-    legend_html = ('<div class="legend">' + "".join(
-        f'<span class="lg status-{_css_safe(s)}" data-status="{_css_safe(s)}" '
-        f'role="button" aria-pressed="false" title="点击筛选 {esc(s)}">{esc(s)} {esc(legend_meaning[s])}</span>'
-        for s in STATUS_ORDER) + "</div>")
-
-    def _dist_bar(lvs, cls=""):
-        """痛点① 按 STATUS_ORDER 分段的进度分布条。"""
-        total = len(lvs)
-        if not total:
-            return ""
-        counts = {s: 0 for s in STATUS_ORDER}
-        for lf in lvs:
-            st = lf.get("status")
-            if st in counts:
-                counts[st] += 1
-        segs = "".join(
-            f'<i class="seg status-{_css_safe(s)}" style="width:{counts[s]*100/total:.4g}%" '
-            f'title="{esc(s)} · {counts[s]}"></i>'
-            for s in STATUS_ORDER if counts[s])
-        shipped = counts[SHIPPED]
-        klass = f"dist {cls}" if cls else "dist"
-        return f'<div class="{klass}">{segs}</div><div class="sub">{shipped}/{total} shipped</div>'
-
-    cov_items = []
-    for d in tree["domains"]:
-        dlvs = [lf for sub in d["subdomains"] for lf in sub["leaves"]]
-        cov_items.append(
-            f'<div class="item"><div class="name">{esc(d["domain"])}</div>{_dist_bar(dlvs)}</div>')
-    total_dist = _dist_bar(leaves, cls="dist-total")
-    cov_html = (legend_html + total_dist
-                + ('<div class="cov">' + "".join(cov_items) + "</div>" if cov_items else ""))
-    warning_html = ""
-    if control_warnings:
-        warning_html = ('<div class="control-warnings" role="status"><b>控制记录提示</b>'
-                        + "".join(f'<div class="control-warning">{esc(item)}</div>'
-                                  for item in control_warnings)
-                        + "</div>")
-    dual_notice = ""
-    if dual_active:
-        identity = f" · ledger {esc(str(dual_ledger_sha))}" if dual_ledger_sha else ""
-        dual_notice = (
-            '<div class="control-warnings" role="status"><b>dual-lifecycle-v1</b>'
-            f' · 产品就绪来自权威账本，交付信息为只读投影{identity}</div>'
-        )
-
-    if not tree["domains"]:
-        body = '<p class="empty">暂无需求（.sdlc/requirements/ 为空）</p>'
-    else:
-        doms = []
-        for d in tree["domains"]:
-            subs = []
-            for sub in d["subdomains"]:
-                lvs = []
-                for lf in sub["leaves"]:
-                    raw_id = lf.get("id") or ""
-                    lid = esc(raw_id)
-                    st = lf.get("status") or "unknown"
-                    pr = esc(lf.get("priority") or "P?")
-                    risk = lf.get("risk_level") or "medium"
-                    deps = lf.get("depends_on") or []
-                    deps_html = (f'<span class="deps">依赖: {esc(", ".join(deps))}</span>'
-                                 if deps else "")
-                    # 惰性叠加:在飞特性源叶显示 live badge(不改文件 status)
-                    live_html = ""
-                    if live and live["leaf"] == raw_id:
-                        live_html = (f'<span class="live-badge status-{_css_safe(live["status"])}" '
-                                     f'title="在飞:{esc(live["stage"])}">⏳ {esc(live["stage"])}中</span>')
-                    tracking_html = ""
-                    tracked = tracking.get(raw_id)
-                    if tracked:
-                        feature_id = str(tracked.get("feature_id") or "")
-                        tasks = tracked.get("tasks") or []
-                        verified = sum(1 for task in tasks if task.get("status") == "verified")
-                        summary = (f'{feature_id} · task {verified}/{len(tasks)}'
-                                   if feature_id else f'task {verified}/{len(tasks)}')
-                        tracking_html = f'<span class="tracking-summary">{esc(summary)}</span>'
-                    dual_html = ""
-                    dual_view = dual_views.get(raw_id) if dual_active else None
-                    if isinstance(dual_view, Mapping):
-                        readiness = _as_dict(dual_view.get("readiness"))
-                        delivery = _as_dict(dual_view.get("delivery"))
-                        if readiness.get("ready") is True:
-                            dual_label = "dual: product ready"
-                        else:
-                            dual_label = "dual: " + str(delivery.get("delivery_state") or "not_ready")
-                        dual_html = f'<span class="tracking-summary">{esc(dual_label)}</span>'
-                    title_txt = lf.get("title") or ""
-                    crumb = f'{d["domain"]} › {sub["subdomain"]}'
-                    lvs.append(
-                        f'<section class="leaf" id="{lid}" data-leaf="{lid}" '
-                        f'data-status="{_css_safe(st)}" data-title="{esc(title_txt)}" '
-                        f'data-crumb="{esc(crumb)}" '
-                        f'role="button" aria-label="选择 {lid} 开始对话" aria-current="false">'
-                        f'<h2>{lid} · {esc(title_txt)}</h2>'
-                        f'<div class="meta">'
-                        f'<span class="badge status-{_css_safe(st)}">{esc(st)}</span>'
-                        f'{live_html}'
-                        f'{tracking_html}'
-                        f'{dual_html}'
-                        f'<span class="prio prio-{pr}">{pr}</span>'
-                        f'<span class="dot risk-{_css_safe(risk)}" title="risk: {esc(risk)}"></span>'
-                        f'{deps_html}</div></section>')
-                subs.append(
-                    f'<details class="subdomain" open><summary>{esc(sub["subdomain"])} '
-                    f'<span class="cnt">({len(sub["leaves"])})</span></summary>'
-                    + "".join(lvs) + "</details>")
-            doms.append(
-                f'<details class="domain" open><summary>{esc(d["domain"])}</summary>'
-                + "".join(subs) + "</details>")
-        body = "".join(doms)
-
-    chat_panel = (
-        '<aside class="chat-panel" id="chat">'
-        '<div class="chat-head"><span id="chat-leaf">💬 选择一片需求叶</span>'
-        '<span id="live-status" class="off">⚪ 未监听</span></div>'
-        '<div class="chat-detail" id="chat-detail"></div>'
-        '<div class="chat-msgs" id="chat-msgs">'
-        '<div class="chat-guide">点左侧一片需求叶开始对话。<br>'
-        '此聊天框 = 在场 agent 的耳朵：要<b>实时</b>回复，需让 agent 切到 live 监听（占其会话跑 <code>/wait</code>）；'
-        '🟢=监听中。agent 未监听时你的留言仍会被 <code>/feedback</code> 收集，待其下次处理。</div></div>'
-        '<div class="chat-box">'
-        '<textarea id="chat-input" aria-label="对选中的需求叶发送消息" '
-        'placeholder="问 / 改这片叶…（Enter 发送，Shift+Enter 换行）" '
-        'disabled></textarea>'
-        '<button id="chat-send" disabled>发送</button></div></aside>'
+def render_board(tree: Mapping[str, object], *, title: str, source: str) -> str:
+    summary = tree["summary"]
+    domains = tree["domains"]
+    assert isinstance(summary, Mapping) and isinstance(domains, list)
+    by_status = summary["by_status"]
+    assert isinstance(by_status, Mapping)
+    chips = [f'<span class="chip">total {int(summary["total"])}</span>']
+    chips.extend(
+        f'<span class="chip {escape(_status_class(status))}">{escape(str(status))} {int(count)}</span>'
+        for status, count in sorted(by_status.items())
     )
-    leaf_data = f'<script type="application/json" id="leaf-data">{leaf_data_json}</script>'
+    chips.append(f'<span class="chip">ready {int(summary["ready_count"])}</span>')
+
+    domain_sections: list[str] = []
+    for domain in domains:
+        assert isinstance(domain, Mapping)
+        cards: list[str] = []
+        requirements = domain["requirements"]
+        assert isinstance(requirements, list)
+        for requirement in requirements:
+            assert isinstance(requirement, Mapping)
+            feature = requirement["feature"]
+            feature_html = ""
+            if isinstance(feature, Mapping):
+                tasks = feature["tasks"]
+                assert isinstance(tasks, list)
+                task_items = "".join(
+                    '<li><span class="path">{}</span> — <span class="{}">{}</span>: {}</li>'.format(
+                        escape(str(task["id"])),
+                        escape(_status_class(task["status"])),
+                        escape(str(task["status"])),
+                        escape(str(task["title"])),
+                    )
+                    for task in tasks
+                    if isinstance(task, Mapping)
+                )
+                tasks_html = f'<ul class="tasks">{task_items}</ul>' if task_items else '<div class="source">No tasks yet</div>'
+                feature_html = (
+                    '<div class="feature">'
+                    '<div class="card-head"><span class="id">{feature_id}</span>'
+                    '<span class="badge {feature_class}">{feature_status}</span></div>'
+                    '<div class="meta"><b>branch</b><span class="path">{branch}</span>'
+                    '<b>engineering</b><span class="path">{engineering}</span></div>{tasks}</div>'
+                ).format(
+                    feature_id=escape(str(feature["feature_id"])),
+                    feature_class=escape(_status_class(feature["status"])),
+                    feature_status=escape(str(feature["status"])),
+                    branch=escape(str(feature["branch"])),
+                    engineering=escape(str(feature["engineering_context_ref"])),
+                    tasks=tasks_html,
+                )
+            cards.append(
+                (
+                    '<article class="card"><div class="card-head"><span class="id">{requirement_id}</span>'
+                    '<span class="badge {requirement_class}">{status}</span></div>'
+                    '<div class="title">{title}</div><div class="meta">'
+                    '<b>priority</b><span>{priority}</span>'
+                    '<b>product</b><span class="path">{product}</span></div>{feature}</article>'
+                ).format(
+                    requirement_id=escape(str(requirement["requirement_id"])),
+                    requirement_class=escape(_status_class(requirement["status"])),
+                    status=escape(str(requirement["status"])),
+                    title=escape(str(requirement["title"])),
+                    priority=escape(str(requirement["priority"])),
+                    product=escape(str(requirement["product_context_ref"])),
+                    feature=feature_html,
+                )
+            )
+        domain_sections.append(
+            f'<section class="domain"><h2>{escape(str(domain["domain"]))}</h2>'
+            f'<div class="cards">{"".join(cards)}</div></section>'
+        )
+    content = '<div class="domains">' + "".join(domain_sections) + "</div>" if domain_sections else (
+        '<div class="empty">No requirements captured.</div>'
+    )
     return (
-        f'<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">'
-        f'<meta name="viewport" content="width=device-width,initial-scale=1">'
-        f'<title>{esc(title)}</title><style>{BOARD_CSS}</style></head><body>'
-        f'<div class="app"><div class="board"><h1>{esc(title)}</h1>'
-        f'<div class="sub">共 {summ["total"]} 条需求 · ready {ready_count} 条'
-        f'{(" · control " + esc(control_mode)) if control_active else ""}</div>'
-        f'{warning_html}'
-        f'{dual_notice}'
-        f'{cov_html}'
-        f'<div class="toolbar"><input id="tree-search" type="search" '
-        f'placeholder="🔍 搜索 id / 标题…" aria-label="搜索需求叶"></div>'
-        f'<div class="crumb" id="crumb" aria-live="polite"></div>'
-        f'{body}</div>{chat_panel}</div>'
-        f'{leaf_data}{CHAT_JS}</body></html>'
+        '<!doctype html><html lang="en"><head><meta charset="utf-8">'
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'
+        f'<title>{escape(title)}</title><style>{_CSS}</style></head><body><main>'
+        f'<h1>{escape(title)}</h1><div class="source">Source: {escape(source)}/.sdlc-v1/state.json</div>'
+        f'<div class="summary">{"".join(chips)}</div>{content}</main></body></html>\n'
     )
 
 
-def cmd_board(args):
-    out = args.out or os.path.join(args.root, "_board.html")
-    snapshot = None
-    control_repo = getattr(args, "control_repo", None)
-    dual_ledger_repo = getattr(args, "dual_ledger_repo", None)
-    if control_repo and dual_ledger_repo:
-        print("board-error: --control-repo 与 --dual-ledger-repo 不能同时使用", file=sys.stderr)
-        return 2
-    if control_repo:
-        # 延迟 import：legacy board 不依赖 control 模块，也不触发任何 Git 操作。
-        from control import load_snapshot_from_ref
-        state_path = os.path.join(
-            os.path.dirname(os.path.abspath(args.root.rstrip("/"))), "STATE.md")
-        snapshot = load_snapshot_from_ref(
-            control_repo,
-            ref=getattr(args, "control_ref", None) or "sdlc-control",
-            legacy_requirements_root=args.root,
-            local_state_path=state_path,
-        )
-    dual_views = None
-    dual_ledger_sha = None
-    mode = str(_as_dict(snapshot).get("mode") or "legacy")
-    if dual_ledger_repo:
-        try:
-            from dual_ledger import DualLifecycleLedger, LedgerError
-            from lifecycle_reducer import ReducerError, product_readiness, project_delivery_status
-            ledger_status = DualLifecycleLedger(dual_ledger_repo).status()
-            if ledger_status.snapshot is None:
-                raise LedgerError("dual-lifecycle-ledger-is-not-initialized")
-            dual_snapshot = ledger_status.snapshot
-            definitions = dual_snapshot.get("product_definitions", {})
-            if not isinstance(definitions, dict):
-                raise LedgerError("invalid-lifecycle-snapshot")
-            legacy_leaves = load_leaves(args.root)
-            by_id = {leaf.get("id"): leaf for leaf in legacy_leaves if leaf.get("id")}
-            leaves = list(legacy_leaves)
-            for leaf_id, definition in sorted(definitions.items(), key=lambda item: str(item[0])):
-                if not isinstance(leaf_id, str) or not isinstance(definition, Mapping):
-                    raise LedgerError("invalid-product-definition-record")
-                if leaf_id not in by_id:
-                    parts = leaf_id.split(".")
-                    domain_path = "/".join(parts[:2]) if len(parts) >= 2 else "dual/ledger"
-                    leaf = {
-                        "id": leaf_id, "title": "(dual product definition)", "domain_path": domain_path,
-                        "status": "captured", "priority": "P3", "risk_level": "medium",
-                        "depends_on": [], "old_system_ref": "", "new_domain_path": domain_path,
-                        "cross_link": [], "_body": "",
-                    }
-                    leaves.append(leaf)
-                    by_id[leaf_id] = leaf
-            dual_views = {}
-            for leaf_id in sorted(by_id):
-                if leaf_id not in definitions:
-                    continue
-                readiness = product_readiness(dual_snapshot, leaf_id=leaf_id)
-                delivery = project_delivery_status(dual_snapshot, leaf_id=leaf_id)
-                dual_views[leaf_id] = {"readiness": readiness, "delivery": delivery}
-            dual_ledger_sha = ledger_status.snapshot_sha256
-            mode = "dual-lifecycle-v1"
-        except (ImportError, LedgerError, ReducerError) as exc:
-            print(f"dual-ledger-error: {exc}", file=sys.stderr)
-            return 2
-    elif mode == "legacy":
-        leaves = load_leaves(args.root)
-    else:
-        requirements = _as_dict(_as_dict(snapshot).get("requirements_by_id"))
-        leaves = []
-        for leaf_id, record in sorted(requirements.items(), key=lambda item: str(item[0])):
-            leaf = _as_dict(record)
-            leaf.setdefault("id", str(leaf_id))
-            leaves.append(leaf)
-    tree = build_tree(leaves)
-    live = _read_state_overlay(args.root) if mode == "legacy" else None
-    with open(out, "w", encoding="utf-8") as f:
-        f.write(render_board(
-            tree, leaves, live=live, control=snapshot, dual_views=dual_views,
-            dual_ledger_sha=dual_ledger_sha,
-        ))
-    print(json.dumps({"board": out, "domains": len(tree["domains"]),
-                      "total": tree["summary"]["total"]}, ensure_ascii=False))
-    return 0
+def write_board(repo: Path, state: Mapping[str, object], output: Path, *, title: str = "SDLC backlog") -> Path:
+    from backlog import tree_projection
+
+    destination = output.expanduser().resolve(strict=False)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(
+        render_board(tree_projection(state), title=title, source=str(repo)), encoding="utf-8",
+    )
+    return destination
+
+
+__all__ = ["render_board", "write_board"]

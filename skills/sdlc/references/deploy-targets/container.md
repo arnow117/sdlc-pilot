@@ -5,7 +5,7 @@ Thin adapter for the **container** target type. Owns the command + rollback *ske
 stays language-agnostic (the Dockerfile absorbs language differences). Every
 project-specific value is a `<placeholder>` the runtime resolves from the target repo.
 
-> Methodology (deploy → smoke/health → gate → promote/rollback) lives in the
+> Methodology (deploy → smoke/health → check → promote/rollback) lives in the
 > generic layer. This file only supplies the container-shaped command skeletons.
 
 ---
@@ -16,14 +16,14 @@ Extract these from the target project, do **not** invent them:
 
 | Placeholder | Resolve from |
 |---|---|
-| `<registry>` | `PROFILE.Deploy.registry` / Dockerfile push target / CI config |
-| `<image>` | `PROFILE.Deploy.image` / repo name |
-| `<tag>` | git sha / version (`$(git rev-parse --short HEAD)`) per env |
+| `<registry>` | `.sdlc-v1/project.md` / Dockerfile push target / CI config |
+| `<image>` | `.sdlc-v1/project.md` / repo name |
+| `<tag>` | validation commit sha / version per env |
 | `<deployment>` | k8s manifests `metadata.name` (Deployment) |
 | `<container>` | k8s manifests `spec.template.spec.containers[].name` |
-| `<namespace-ENV>` | k8s manifests / `PROFILE.Deploy.namespaces` per environment |
+| `<namespace-ENV>` | k8s manifests / `.sdlc-v1/project.md` per environment |
 | `<context-ENV>` | kubeconfig context per cluster/env |
-| `<health-path>` | `PROFILE.Deploy.healthPath` / k8s probe `httpGet.path` (default `/health`) |
+| `<health-path>` | `.sdlc-v1/project.md` / k8s probe `httpGet.path` (default `/health`) |
 | `<service-host>` | per-env ingress/service host |
 
 **Secrets rule:** registry creds, kubeconfig tokens, API keys live only in the deploy
@@ -64,7 +64,7 @@ plus a moving env tag, deployed into a distinct `<namespace-ENV>` / `<context-EN
 > only when `<registry>` is in the **same region** as the cluster. A cross-region registry
 > otherwise surfaces later as a stuck `ImagePullBackOff` / slow pull with **no obvious cause** —
 > the user just sees it hang and can't tell why. So:
-> - Resolve the registry region from `PROFILE.Deploy` and compare to the cluster region.
+> - Resolve the registry region from `.sdlc-v1/project.md` and compare to the cluster region.
 > - **Differ → tell the user up front**, and pick one: push to a **same-region** registry, OR
 >   use the registry's **public/internet endpoint** so the cluster can still pull (slower + egress cost),
 >   OR enable registry cross-region replication.
@@ -75,7 +75,7 @@ Pick **one** path based on what the target repo ships.
 
 > **Precondition (idempotent) — ensure the namespace exists before apply.** Check, then
 > create-if-missing; **never auto-delete a namespace** (deleting cascades every resource in it).
-> Use only the name the manifests/`PROFILE` declare — don't invent one.
+> Use only the name the manifests or `.sdlc-v1/project.md` declare — don't invent one.
 > ```bash
 > kubectl --context <context-ENV> get namespace <namespace-ENV> \
 >   || kubectl --context <context-ENV> create namespace <namespace-ENV>
@@ -91,18 +91,18 @@ kubectl --context <context-ENV> -n <namespace-ENV> apply -f <k8s-manifests-dir>/
 kubectl --context <context-ENV> -n <namespace-ENV> \
   set image deployment/<deployment> <container>=<registry>/<image>:<tag>
 
-# Wait for rollout to converge — this is the deploy gate (non-zero exit = failed deploy)
+# Wait for rollout to converge; a non-zero exit means the deploy failed.
 kubectl --context <context-ENV> -n <namespace-ENV> \
   rollout status deployment/<deployment> --timeout=180s
 ```
 
 ### Path B — Cloud container service (no raw K8s)
 
-Use the project's documented CLI; `PROFILE.Deploy` names the provider. Shape only:
+Use the project's documented CLI; `.sdlc-v1/project.md` names the provider. Shape only:
 
 ```bash
 # <cloud-deploy-cmd> --service <service-ENV> --image <registry>/<image>:<tag>
-# then poll the provider's service-state/health until "stable" before gating.
+# then poll the provider's service-state/health until stable before continuing.
 ```
 
 **Env mapping:** dev → staging → canary → full differ only by
@@ -123,7 +123,7 @@ kubectl --context <context-ENV> -n <namespace-ENV> expose deployment/<deployment
   --name <svc> --port <port> --target-port <container-port> --type LoadBalancer
 
 # Internal/intranet IP (reachable inside the VPC, NOT public) — add the provider's
-# internal-LB annotation; it is provider-specific, resolve from PROFILE. Examples:
+# internal-LB annotation; it is provider-specific, resolve from project.md. Examples:
 #   Alibaba ACK : service.beta.kubernetes.io/alibaba-cloud-loadbalancer-address-type: intranet
 #   AWS EKS     : service.beta.kubernetes.io/aws-load-balancer-internal: "true"
 #   GCP GKE     : networking.gke.io/load-balancer-type: "Internal"
@@ -160,7 +160,7 @@ kubectl --context <context-canary> -n <namespace-canary> \
 
 kubectl --context <context-canary> -n <namespace-canary> \
   rollout status deployment/<deployment>-canary --timeout=120s
-# Gate on canary health/metrics, THEN ramp stable to <tag> (Path A) and scale canary to 0.
+# Check canary health/metrics, then ramp stable to <tag> (Path A) and scale canary to 0.
 ```
 
 ### Traffic-split canary (service mesh / weighted routing)
@@ -168,12 +168,12 @@ kubectl --context <context-canary> -n <namespace-canary> \
 ```bash
 # Apply a weighted route (e.g. 95% stable / 5% canary) via the mesh's CRD/manifest.
 kubectl --context <context-canary> -n <namespace-canary> apply -f <canary-route>.yaml
-# Gate, then re-apply with higher canary weight, finally 100% → promote.
+# After checks pass, re-apply with higher canary weight, finally 100% → promote.
 ```
 
 ---
 
-## 4. Rollback (the gate's "fail" branch)
+## 4. Rollback after a failed check
 
 ```bash
 # Fastest: undo the last rollout (Deployment revision history)
@@ -200,12 +200,12 @@ sha tags make this reliable). Capture `<prev-tag>` before every promote.
 
 ---
 
-## 5. Smoke / health (probe after deploy, before gate)
+## 5. Smoke / health (probe after deploy, before promotion)
 
 Probe the live `<health-path>` from outside the cluster (post-rollout):
 
 ```bash
-curl -fsS --max-time 5 "https://<service-host>/<health-path>"   # non-2xx → curl -f exits non-zero → gate fails
+curl -fsS --max-time 5 "https://<service-host>/<health-path>"   # non-2xx → curl -f exits non-zero → check fails
 ```
 
 Or in-cluster against the Service:
@@ -216,8 +216,8 @@ kubectl --context <context-ENV> -n <namespace-ENV> \
   curl -fsS --max-time 5 "http://<service>.<namespace-ENV>.svc/<health-path>"
 ```
 
-> K8s liveness/readiness probes (in the manifests) gate pod readiness during rollout;
-> this external smoke check gates the *pipeline*. Both target `<health-path>`.
+> K8s liveness/readiness probes determine pod readiness during rollout;
+> the external smoke check determines whether promotion continues. Both target `<health-path>`.
 
 ---
 
@@ -227,5 +227,5 @@ Before running any command above, resolve placeholders by reading the target rep
 
 1. `Dockerfile` (+ `.dockerignore`) → `<dockerfile-path>`, exposed port, health path.
 2. k8s manifests dir → `<deployment>`, `<container>`, probe path, per-env `<namespace-ENV>`.
-3. `PROFILE.Deploy` / `CLAUDE.md` → `<registry>`, `<image>`, provider, contexts, env→namespace map.
-4. Tag policy → `<tag>` = immutable git sha; record `<prev-tag>` for rollback.
+3. `.sdlc-v1/project.md` / `CLAUDE.md` → `<registry>`, `<image>`, provider, contexts, env→namespace map.
+4. Tag policy → `<tag>` = immutable validation commit sha, not a later HEAD that only changes `.sdlc-v1/**`; record `<prev-tag>` for rollback.

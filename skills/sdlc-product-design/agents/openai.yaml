@@ -1,4 +1,4 @@
 interface:
   display_name: "SDLC Product Design"
-  short_description: "Preview product design lifecycle"
-  default_prompt: "Run the product design lifecycle in explicit preview mode."
+  short_description: "Shape a requirement into product context"
+  default_prompt: "Run the product design lifecycle for the current requirement."

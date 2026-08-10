@@ -1,28 +1,53 @@
 ---
 name: sdlc-review
 description: >
-  兼容适配器：在 legacy profile 下保留 /sdlc review 的精确 0.19.2 多角色评审流程；
-  façade 已固定 dual profile 时转交软件交付 canonical 生命周期，不能改变 legacy review 状态。
+  评审阶段。根据已验证 commit 的 diff 动态加载产品、架构、客户端、服务端、数据、设计、
+  质量与安全角色，合并发现并记录评审决定。
 ---
 
-# sdlc-review — legacy compatibility adapter
+# sdlc-review — 多角色代码评审
 
-先读取 `sdlc/references/lifecycle-profile.md`；`migration-required` 时停止且不写 legacy review。
+## 入口
 
-façade 已固定 `.sdlc/lifecycle.json=dual-lifecycle-v1` 时，`/sdlc review` 进入 software-delivery 的
-canonical review 阶段。直接调用本 skill 或 legacy profile 下的 `/sdlc review` 先加载固定且校验过的 legacy runbook：
+- Feature 必须已通过验证。
+- validation commit 到当前 HEAD 在 `.sdlc-v1/**` 之外不能有差异。
+- 当前业务代码工作树必须干净；仅 `.sdlc-v1/**` 可以有待提交的上下文或状态修改。
+- 读取项目、产品和研发上下文，但只加载与本次 diff 有关的部分。
 
-    python3 <sdlc-pilot-root>/scripts/legacy_runbook.py \
-      --repo-root <sdlc-pilot-root> show --stage review
+可用以下检查确认实现未变化：
 
-它保留原有的多角色评审、tested_sha / integration 关联以及
-[control-plane.md](../sdlc/references/control-plane.md) 语义。固定对象不存在时明确失败；不能在普通 review
-中隐式运行新的 reducer、批准或变更请求。
+```bash
+git diff --quiet <validation-commit>..HEAD -- . ':(exclude).sdlc-v1/**'
+test -z "$(git status --porcelain --untracked-files=all -- . ':(exclude).sdlc-v1/**')"
+```
 
-显式 `/sdlc software-delivery --phase review --authority dual-lifecycle-v1` 或 façade 已固定 dual profile 才能对
-已验证的当前 tuple 记录
-canonical review。公开请求只能是 `submit_feature_review`：由 authority config 的 `feature_review/feature` policy
-解析 reviewer，且 attestation 必须绑定当前 fence 与全部通过的 Evidence；不能直接提交内部 `review_feature` 或
-caller 自报的 reviewer identity。`/sdlc preview delivery --phase phase.delivery.review …` 仍只能做
-software-delivery preview；preview attestation 和报告只能写 .sdlc/preview/<run-id>/，不能作为 legacy review PASS、
-release candidate 或 ship 的依据。
+任一检查失败时回到 build/validate。角色选择和评审 diff 以 validation commit 的业务代码为准，不把后续 `.sdlc-v1/**` 提交当作实现改动。
+
+## 角色选择
+
+调用 [`role-routing.md`](../sdlc/references/role-routing.md) 的解析规则。通常至少加载 QA；跨模块或改变接口/数据边界时加载 architect；敏感数据、认证、授权、支付或供应链变化时加载 security。
+
+可并行执行互相独立的角色评审，每个角色返回：严重级别、文件与行、问题、影响、建议修复和验证依据。没有多执行者能力时按相同角色顺序串行完成。
+
+## 合并结论
+
+1. 按稳定指纹去重同一问题。
+2. 区分必须修复、建议改进和信息项。
+3. 把结论与处理结果写入研发上下文。
+4. 存在必须修复项时执行：
+
+```bash
+lifecycle_state.py --repo <repo> record-review \
+  --feature-id <feature-id> --decision changes_requested --by <reviewer>
+```
+
+修复后重新验证，再重新评审。
+
+5. 没有未处理的必须修复项时执行：
+
+```bash
+lifecycle_state.py --repo <repo> record-review \
+  --feature-id <feature-id> --decision approved --by <reviewer>
+```
+
+评审决定只对应 validation commit。研发上下文和 state 的后续提交不改变该实现版本。通过后进入 `sdlc-ship`。

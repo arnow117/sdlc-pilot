@@ -1,28 +1,34 @@
 ---
 name: sdlc-spec
 description: >
-  兼容适配器：在 legacy profile 下保留 /sdlc spec 的精确 0.19.2 规格流程；
-  façade 已固定 dual profile 时转交产品设计 canonical 生命周期，不迁移 legacy artifact。
+  产品规格阶段。读取 Requirement 的 product_context_ref，调用产品设计方法收敛场景、业务规则、
+  范围、质量属性与验收条件；完成后把 Requirement 标记为 ready。
 ---
 
-# sdlc-spec — legacy compatibility adapter
+# sdlc-spec — 收敛产品规格
 
-先读取 `sdlc/references/lifecycle-profile.md`；`migration-required` 时停止且不写 legacy spec。
+## 输入
 
-façade 已固定 `.sdlc/lifecycle.json=dual-lifecycle-v1` 时，`/sdlc spec` 进入 product-design 的下一产品阶段；
-它只从 profile 和 dual ledger/projection 判断继续哪一阶段，不读取 legacy Markdown 推断。直接调用本 skill 或
-legacy profile 下的 `/sdlc spec` 是 legacy 行为，不是 ProductContract、EngineeringSpec 或审批操作。先加载经
-SHA-256 校验的 0.19.2 runbook，再完全按其原有流程执行：
+- `product-projection --requirement-id <REQ-id>` 返回的 Requirement。
+- Requirement 的 `product_context_ref`。
+- 必要时读取 `.sdlc-v1/project.md` 了解产品与工程边界。
 
-    python3 <sdlc-pilot-root>/scripts/legacy_runbook.py \
-      --repo-root <sdlc-pilot-root> show --stage spec
+## 流程
 
-历史 runbook 的 [control-plane.md](../sdlc/references/control-plane.md) 约束仍然有效。无法读取固定 Git
-对象时停止并报告 legacy-runbook-error；不得用新的 product-design 流程静默替代。
+1. 加载 `sdlc-product-design` 和 [`lifecycles/product-design.md`](../sdlc/references/lifecycles/product-design.md)。
+2. 先澄清问题、目标用户、期望结果和不做什么。
+3. 用 Given/When/Then 或具体例子覆盖主路径、失败路径和边界。
+4. 明确术语、业务规则、不变量、体验约束和非功能要求。
+5. 将结论直接写回 `product_context_ref` 指向的 Markdown；保留未决问题及决策理由。
+6. 与用户确认范围和验收条件。
+7. 条件满足后调用 `mark-requirement-ready`。
 
-直接调用者明确请求 `/sdlc product-design --authority dual-lifecycle-v1`，或 façade 已固定 dual profile 时，转到
-sdlc-product-design 的 canonical 产品侧流程；它必须通过 dual ledger 写入 ProductDefinition、ProductContract
-及由 authority config 派生的 Approval，不能反向写 legacy spec.md。`/sdlc preview product` 仍只用于预览：
-它必须固定 run-id、PolicyManifest、PhaseContract 和输入 identity，只能写
-.sdlc/preview/<run-id>/，不能修改 legacy spec.md、STATE.md 或 control。普通 legacy spec.md
-可作为 preview 的观察输入，但不能自动转换为 ProductContract 或 EngineeringSpec。
+## 完成条件
+
+- 需求描述的是产品行为，不是预先指定的实现方案。
+- 每条关键规则至少有一个可验证例子。
+- 范围内、范围外、异常行为和依赖均明确。
+- 验收条件足以指导研发和测试。
+- 产品上下文路径仍与 `state.json` 中的 `product_context_ref` 一致。
+
+未满足时保持 `captured` 并列出下一项澄清；不要为了推进状态而补猜答案。

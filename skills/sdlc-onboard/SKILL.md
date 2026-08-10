@@ -1,260 +1,56 @@
 ---
 name: sdlc-onboard
 description: >
-  SDLC 主线的 brownfield 入口流程 skill。把一个【已有项目】测绘成机器可路由的项目记忆——产出
-  <target-repo>/.sdlc/PROFILE.md(技术栈/约定/入口/已知风险 + ★surface-map:模块→glob→默认角色→validate 模式;
-  + AI-readiness 体检 + Deploy 探测)。surface-map 是改动代码路由的可追踪输入。
-  触发于:用户说 "onboard 这个项目"、"给这个仓库建 PROFILE"、"扫一下这个 codebase"、"分析已有项目准备走 SDLC"、
-  "map this repo"、"建立项目记忆"、"sdlc-onboard";driver 判定为 brownfield(无 PROFILE 且 repo 非空)时也路由到此。
-  也可独立调用为现有项目首次建立 SDLC 记忆。
-  本 skill 只测绘并写 PROFILE.md(只读源码),不分叉/不写 spec/不拆任务。四阶段管道(采证→类型→surface-map→聚合)见正文。
+  测绘已有项目并创建 .sdlc-v1/project.md。记录技术栈、入口、约定、测试命令、surface map、
+  风险和部署线索，供后续角色与验证方式选择。只读源码，不推进 Requirement 或 Feature。
 ---
 
-# sdlc-onboard — brownfield 入口：测绘已有项目 → PROFILE.md
+# sdlc-onboard — 建立项目上下文
 
-你是 SDLC 主线的**测绘师**。当一个已有项目第一次走 SDLC 流程时,driver 会先把你叫进来。
-你的唯一交付物是 `<target-repo>/.sdlc/PROFILE.md` —— 项目级、长寿、被之后**每个** feature 共享的记忆,
-其中最关键的是 **surface-map**(模块→glob→默认角色→validate 模式),它是改动代码路由的可追踪输入。
+唯一交付物是 `<repo>/.sdlc-v1/project.md`。已有文件时做局部刷新，保留仍成立的事实。
 
-> **定位**:PROFILE = 项目级、建一次、共享;STATE = feature 级、短寿、每任务交接。本 skill 只写 PROFILE,**不碰 STATE**。
-> **引擎**:Claude + Read/Edit/Bash/Grep。纯文件 + 纯 bash 采证,无 node 工具、无 `.planning/`、无外部 agent 人格依赖。
-> **只读纪律**(蒸馏自 agency codebase-onboarding-engineer):测绘阶段**只读源码、只陈述代码里能查证的事实**,不改代码、不提改进建议、不臆测意图。唯一写动作 = 在结尾写 `.sdlc/PROFILE.md`。
+## 输入与边界
 
-在任何写入前先读取 `sdlc/references/lifecycle-profile.md`。`migration-required` 时停止，不能借 onboard
-创建 PROFILE 绕过 lifecycle 选择；新项目先固定 dual profile，已选择 legacy 或 dual 的项目再按各自协议 onboard。
+- 目标仓库必须明确。
+- 采集阶段只读源码、配置与项目说明；不要顺手修代码。
+- 不创建 Requirement、Feature 或 Task。
+- 可并行采集不同区域，但最终只有一个写入者合并 `project.md`。
 
----
+## 流程
 
-## 0. 可移植前置(入口先做)
+1. 若 `.sdlc-v1/state.json` 不存在，先调用 `lifecycle_state.py --repo <repo> init`。
+2. 收集可验证事实：
+   - 语言、框架、依赖和外部系统；
+   - 启动入口、路由、CLI、数据入口；
+   - 测试、构建、类型检查和部署命令；
+   - 目录约定、项目指令、敏感区域和已知风险。
+3. 将代码区域归纳为 surface map：`name → globs → roles → validate modes`。
+4. 按 [`role-routing.md`](../sdlc/references/role-routing.md) 检查角色和验证方式是否合法。
+5. 按下节的项目上下文结构写入 `.sdlc-v1/project.md`；可复用
+   [`PROJECT.md`](../sdlc/references/templates/PROJECT.md) 模板。
+6. 向用户展示 surface map 与不确定项；确认后定稿。
 
-> **共享 references 的位置(单一约定)**:本文出现的 `references/role-routing.md`、`references/roles/<role>.md`、`references/validate-modes/<mode>.md`、`references/templates/*.md` **物理上只存在于 sdlc 驱动器 skill 目录下**(`sdlc/references/`)。它们不在各流程 skill 自己的目录里。解析路径时一律指向 `sdlc/references/...`(相对 skills 根),或经 dogfooding 软链接定位——**不要**当作相对本 skill 目录的路径去 `cat`/Read,那样会找不到。
+## project.md 必备内容
 
-安装 control-aware hooks 或识别 `shared-control` / `local-serial` 时，遵循
-`sdlc/references/control-plane.md`，不得在 onboard 中另写一套控制事务规则。
-
-本 skill 在 Claude 和 Codex 下都要能跑。两条降级范式(来自 driver §0):
-
-### 0.1 交互降级 — text_mode
-凡需向用户提问(确认技术栈推断、确认 surface-map 草案、确认是刷新还是新建),**用纯文本编号列表**,不硬依赖 AskUserQuestion:
-
-```
-我推断出这些 surface,请确认或修正:
-  1) 接受这份 surface-map(推荐)
-  2) 我要改某几行(说明改哪行)
-回复编号即可。
-```
-
-### 0.2 并行降级 — Task-or-sequential
-采证(Phase A)可拆成 4 个正交 focus(stack / arch / conventions / concerns,蒸馏自 gsd-map-codebase 的 4-focus mapper)。
-**探测有无 Task/并行能力**:
-
-- 有 Task → 可 fan-out 4 个测绘子任务,各自把发现**写进各自的临时笔记**(如 `.sdlc/onboard-notes/<focus>.md`),最后由本 skill 聚合成单一 PROFILE.md。
-- 无 Task(Codex 等)→ **串行**逐 focus 跑同一份采证清单,直接累积到内存/单笔记,再聚合。
-
-> 关键差异(对齐 spec):产物**永远是单一聚合 `PROFILE.md`**,不是 gsd-map 那样 7 个散文件。并行只是加速采证,不改变交付形态。
-
----
-
-## 1. 入口条件(Entry conditions)
-
-进入本 skill 应满足(由 driver 判定,独立调用时自检):
-
-| 条件 | 要确认的事 |
-|---|---|
-| repo 非空(有真实代码) | 目录里有源码文件。**别只靠 `git ls-files` 判空**——目标可能是未跟踪子目录(父仓里显示 `??`、无嵌套 `.git`)或刚克隆未 init 的目录,只看跟踪文件会把真实项目误判为空仓;空时 fallback 到直接列文件。 |
-| 尚无 PROFILE.md,**或**用户要求刷新 | `<repo>/.sdlc/PROFILE.md` 不存在;或架构漂移触发(见 §6) |
-
-两种入口模式:
-- **新建**(no PROFILE)→ 走完整 Phase A→D。
-- **刷新**(PROFILE 已存在,driver 检测到架构漂移)→ 只重跑受影响 focus + 重算 surface-map 相关行,**保留** Conventions/Known-risks 里仍成立的条目(append/tighten,不盲删)。
-
-入口先 text_mode 报告并确认:
-
-```
-.sdlc/PROFILE.md: <无 / 已存在>
-repo: 非空(检测到 <N> 个被跟踪文件)
-→ 模式判定:<新建 / 刷新(架构漂移:<触发面>)>
-
-  1) 按上述模式开始 onboard(推荐)
-  2) 改为只跑一次现状审计(交回 driver: sdlc-validate --mode=e2e --scope=full-chain)
-回复编号。
+```text
+项目定位
+技术栈及选择原因
+启动与代码入口
+测试/构建/类型检查命令
+surface map
+工程约定与禁止事项
+已知风险
+部署目标与配置位置
 ```
 
----
+surface map 中的角色取值来自角色卡目录，验证方式来自 `validate-modes/`。项目特化规则优先于通用路径规则。
 
-## 2. 步骤流程(四阶段管道)
+## 完成条件
 
-```
-Phase A 采证(纯 bash) → Phase B 类型+入口识别 → Phase C 自建 surface-map → Phase D 聚合写 PROFILE.md
-```
+- `project.md` 中没有占位符和未经标记的猜测。
+- 每个主要代码目录已归入一个 surface，或明确列为未归类。
+- 每个 surface 都有有效 globs、角色和验证方式。
+- 实际存在的测试、构建与类型检查命令均已记录；不存在时明确写 `none` 并记为风险。
+- 只修改了 `.sdlc-v1/project.md`。
 
-### Phase A — 采证(先把证据收齐,再下判断)
-
-蒸馏自 `arch-aifriendly-doctor` 的 Phase 0(借"先采证后判断"的纪律,丢 10 维评分)。
-**目标**:在归类型、建 surface-map 之前,先收齐客观证据——靠仓库里查得到的事实,不靠印象。
-**怎么采你定**(grep/find/wc/git 这类只读工具,Claude/Codex 都有);本 skill 只约束**采什么**和**避哪些坑**。
-
-按 4 个正交视角采证(gsd-map-codebase 的 4-focus 骨架),每个视角要回答的问题:
-
-| 视角 | 要查证的问题 |
-|---|---|
-| **stack** | 有哪些语言/包管理器/依赖清单?用了什么框架?接了哪些外部系统(DB/队列/AI API)? |
-| **arch** | 顶层结构长什么样?系统从哪启动(入口/路由/CLI/容器编排)? |
-| **conventions** | 有无 CLAUDE.md/AGENTS.md/README?测试怎么组织、用什么命令跑?有无覆盖率门控? |
-| **concerns** | 改动热点在哪(超大文件)?敏感面(auth/支付/密钥/原始 SQL)在哪?调试残留/TODO 多不多? |
-
-**顺带探测需求树(backlog)**:若 `<target-repo>/.sdlc/requirements/` 存在,说明该项目已用 `sdlc-backlog` 建了需求树——在 PROFILE 记一句"已有 backlog(N 片叶,可经 `sdlc-backlog` 的 Coverage 看迁移进度)",作为已有需求集合的线索。无则忽略。
-
-**采证原则(避坑,作为原则而非某条命令的写法)**:
-- **排噪声再统计**:`node_modules` / 构建产物(`dist` `build` `out` `.next`)/ agent 运行时产物(`.session*` `memory/` `archive/` `.backups/`)不是源码;统计"大文件""顶层结构"时先把它们剔掉,否则会把产物当源码、把汇总行当文件。
-- **别只扫根目录**:monorepo / 子目录前端(如 `web/package.json`)只看仓库根会误判"无栈";依赖清单要连嵌套一起找。
-- **只读不写**:采证阶段不碰源码、不下评分、不提改进(评分是 Phase D 的 AI-readiness 体检,改造是后续 feature)。输出落临时笔记(并行)或内存(串行)。
-
-### Phase B — 类型识别 + 入口定位
-
-蒸馏自 `explorer-repo-report` 的 type-detection(P0/P1/P2 优先级)+ agency onboarding-engineer 的入口发现纪律。
-
-1. **读 P0**:README + CLAUDE.md/AGENTS.md → 项目一句话定位(只取代码/文档里能查证的事实)。
-2. **定类型**(按最显著信号归类,混合则取权重最高):
-   - 工程/基础设施(database/engine/framework/library/SDK/server)
-   - Agentic/AI **代码**(agent/LLM/prompt/RAG/eval 的可执行实现)→ 提示:大概率含 `ai-strategy` 面 + eval-bench 模式。
-   - **配置/agent 定义型**(源主要是 agents/workflows/processes/roles/employees/skill 的**声明式** JSON/YAML/SKILL.md,真实代码很少;如 agentic-config-demo——一家 AI agent 运营的公司,42 个 JSON 定义 + 3 个 Python 文件)→ 提示:走 R7,默认 `server-dev` + `correctness`,验证靠 **schema/契约一致性校验**,**不跑 eval-bench**(它不是 AI 模型代码);内嵌真实代码(*.py/*.ts)按其类型**单独归面**(如 med_crm CLI → server-dev)。
-   - 通用/其他(CLI/工具/脚手架)
-3. **定入口**(agency onboarding-engineer Step 2):找出"系统怎么启动"的最小文件集——启动文件、路由表、CLI 命令、配置入口、迁移命令。
-4. **提测试命令抽象**:从 Phase A 的 scripts/pyproject 线索归纳出 `{ unit, coverage, e2e, typecheck, build }`(语言无关命令,validate/correctness 据此发现并运行套件)。v1 对照 pytest/coverage + vitest/playwright/tsc。
-
-> 三级输出纪律(agency onboarding-engineer):先一句话定位 → 五分钟高层(任务/输入/输出/关键文件) → 深入(代码流/边界)。本 skill 把这三级**沉淀进 PROFILE 的对应小节**,不另出报告。
-
-### Phase C — 自建 surface-map(★核心差异化,无外部源)
-
-这是 sdlc-pilot 独有、必须自建的那张表:**模块/面 → globs → 默认角色 → 默认 validate 模式**。
-机制原型借自 `arch-aifriendly-doctor` 的 P13(git diff → 只跑该域)+ P23(模块 scoped 命令);表本身净新建。
-
-构建步骤:
-1. 从 Phase A 的顶层结构 + Phase B 的入口,切出**有意义的模块/面**(一个面 = 一类会一起改、共享角色/验证策略的代码区)。
-2. 给每个面写 **globs**(用 POSIX/gitignore 语义,匹配该面的文件路径)。
-3. 用 `references/role-routing.md` 的 §2 规则 + §3/§4 取值字典,给每个面**推荐默认角色 + 默认 validate 模式**:
-   - 角色取值字典:`client-dev | server-dev | design | qa | big-data | architect | ai-readiness | skill-maintainer`(architect 跨 ≥2 面由 R8 加载;ai-readiness 由 R9/体检加载;skill-maintainer 仅当被 onboard 的仓是 sdlc-pilot 技能体系自身时由 R10 加载,普通目标项目用不到;security 在 v1 不单列,敏感面由 server-dev/qa 卡的 security 子节承载)。
-   - 模式取值字典:`correctness | e2e:Web | e2e:OpenAPI | e2e:App | eval-bench`。
-4. **项目特化优先于通用规则**:这张表写进 PROFILE 后,路由时**覆盖** role-routing 通用兜底(spec §6.1)。所以这里要尽量贴合本仓真实结构,而不是照抄模板示例。
-
-把 Phase A/B 命中的信号映射成面(典型示例,按实际增删):
-
-| 信号(Phase A 发现) | surface 名 | globs(按实际) | 默认角色 | 默认 modes |
-|---|---|---|---|---|
-| 前端目录(tsx/vue/components/pages/app) | web-frontend | `web/**`, `components/**`, `app/**` | client-dev, design | correctness, e2e:Web |
-| 原生/跨端移动(swift/kt/dart/ios/android) | mobile-app | `ios/**`, `android/**`, `mobile/**` | client-dev, design | correctness, e2e:App |
-| 服务端接口(api/handlers/routes/controllers) | api | `services/api/**`, `**/handlers/**` | server-dev | correctness, e2e:OpenAPI |
-| AI/模型/策略/prompt/evals | ai-strategy | `models/**`, `strategy/**`, `prompts/**`, `evals/**` | server-dev, qa | correctness, eval-bench |
-| 数据管道/数仓/迁移(sql/pipelines/etl) | data | `pipelines/**`, `**/*.sql`, `migrations/**` | big-data | correctness |
-| 配置/agent 定义(agents/workflows/roles/employees/skill 声明式定义) | agent-config | `agents/**.json`, `workflows/**.json`, `processes/**.json`, `roles.json`, `people.json`, `employees/**.yaml`, `**/SKILL.md` | server-dev(+security 当含权限/授权矩阵如 roles.json) | correctness |
-| 内嵌真实代码(配置型工程里少量 .py/.ts) | (按其类型归面,如) embedded-cli | `**/med_crm/**.py` 等 | server-dev | correctness |
-
-5. **surface-map 自检**(三条硬约束,违反则回 Phase A 补采证):
-   - [ ] 每个被跟踪的 code-bearing 顶层目录,要么落进某个面,要么明确归为"未归类"(不能静默丢)。
-   - [ ] 每个面的角色/模式取值都在字典内(无野值)。
-   - [ ] globs 之间尽量不互相吞并到歧义(一个 path 可命中多面是允许的,取并集)。
-
-### Phase D — 聚合写 PROFILE.md + 自检
-
-1. 把模板 `references/templates/PROFILE.md` 复制到 `<target-repo>/.sdlc/PROFILE.md`(目录不存在先建)。
-2. 删掉模板的注释块与所有 `<填写...>` 占位,按 Phase A-C 的实测结果填:
-   - 顶部 `tech-stack` + `test-commands`(Phase B 的命令抽象)。
-   - `## Tech stack`(带"原因"列,蒸馏自 startup-claude-md-init 的 schema:每个技术为何选它)。
-   - `## Surface map`(Phase C 产物,用模板里的 `面: globs[...] roles[...] modes[...]` 行格式)。
-   - `## Conventions`(Phase A conventions focus,蒸馏自 startup-claude-md-init 的"禁止事项" + gsd-map conventions)。
-   - `## Entry points`(Phase B 入口集,让全新上下文 agent 知道"从哪开始读/跑")。
-   - `## Known risks`(Phase A concerns focus:大文件热点、无测试覆盖的危险面、N+1 等)。
-   - `## AI-readiness 体检`(★只读评分,加载 `references/roles/ai-readiness.md` 的 10 维):对照 CLAUDE.md 级联 / scoped 命令 / 噪声 / 类型 / 测试 / LSP 就绪等,给一个**健康分 + 缺口清单**。**只评估、不整改**(守只读纪律);整改是后续 feature 的事。接手陈旧项目时,这是"它对 AI 友不友好、值不值得先改造"的判断依据。
-     - **低分软推荐(保证 AI 友好的入口,不阻断 onboard)**:健康分 **< 阈值(默认 7/10)** → 写完 PROFILE 后用 text_mode **软推荐**起一个 remediation feature 补缺口(典型:CLAUDE.md 级联 / scoped 命令 / 类型 baseline / 测试 baseline / AGENTS.md 软链)。整改走标准 `spec→…→review`(L1 + 文档/配置改动走 Skip-TDD,review/verify 门不短)。**只推荐、不强制**——是否整改由用户决定;onboard 本身不因低分阻断。
-   - `## Deploy`(只读探测,供 `sdlc-ship` 用):扫 `vercel.json` / `netlify.toml` / `Dockerfile` + k8s manifests / `.github/workflows/*deploy*` / 部署脚本(`deploy.sh` 等)/ 目标工程 `CLAUDE.md` 的部署段 → 判**部署目标类型**(static-site / container / vps / 未知)+ 记关键**配置位置**(项目名/集群/主机在哪个文件)。**只记位置与类型,不抄密钥、不臆造**;探不到就写"未检测到部署配置"。
-3. 清理临时笔记(`.sdlc/onboard-notes/` 若用过)。
-4. text_mode 把 surface-map 草案给用户确认(§0.1),用户改完再定稿。
-5. **脚手架自检 — 询问安装三个 Git hook**(纯 shell,不跑 AI、无密钥;由 **git 执行**,人工可用 `--no-verify` 或删除 hook 紧急绕过)。先在目标仓库运行 `git rev-parse --git-common-dir`,把相对结果按仓库根解析为绝对 `<common-dir>`,再令 `<common-hooks>=<common-dir>/hooks`;这是 linked worktree 共用的 **common hooks** 目录,不要写各 worktree 私有的 `.git` 文件。极旧 Git 无法解析 common dir 时才用 `git rev-parse --git-path hooks` 兜底。检测 `<common-hooks>/{pre-commit,pre-push,post-checkout,sdlc-guard}` 是否已是 sdlc 版本。缺则 text_mode 问:
-   ```
-   要装这三个 Git hook 吗?(git 自动运行)
-     · pre-commit:上下文校验 —— STATE/TASK 二选一,并精确核对 branch/worktree 与任务身份
-     · pre-push:ref 路由 —— task 只推声明分支;sdlc-control 只接受 metadata-only fast-forward;feature 核对 validate+review
-     · post-checkout:兼容 flush —— 仅 legacy 模式按 stage 固化源叶 status;shared-control/local-serial/TASK/control 不做 stage flush
-     1) 都装(推荐)  2) 只装 pre-commit  3) 只装 pre-push  4) 只装 post-checkout  5) 跳过
-   ```
-   选装 → 把 `references/templates/hooks/{pre-commit,pre-push,post-checkout}` 按用户选择拷到 `<common-hooks>/`,并把 `skills/sdlc/scripts/sdlc-guard` 拷贝或软链为同级 `<common-hooks>/sdlc-guard`;对已安装文件执行 `chmod +x`。**仅 git 仓安装**(非 git 仓跳过)。pre-commit 优先调用 common hooks 中的同级 guard,因此主 worktree 与所有 linked worktree 使用同一套确定性校验;不要再把 `.sdlc/bin/sdlc-guard` 作为首选安装位置(只保留运行时向后兼容查找)。post-checkout 仅在 legacy STATE 下调用 `backlog.py set-status`;shared-control/local-serial feature、TASK worktree 与 `sdlc-control` worktree均 no-op。装完一句话说明各自负责什么。
-
----
-
-## 3. 读写哪些 .sdlc/ 文件
-
-| 文件 | 动作 | 说明 |
-|---|---|---|
-| `<repo>/.sdlc/PROFILE.md` | **写(主交付物)** | 据 `references/templates/PROFILE.md` 模板填实测结果 |
-| `references/templates/PROFILE.md` | 读(skill 内) | PROFILE 模板,复制后填写 |
-| `references/templates/hooks/{pre-commit,pre-push,post-checkout}` | 读(skill 内) | 三个 hook 模板,Phase D 用户同意后拷贝 |
-| `references/role-routing.md` | 读(skill 内) | §2 规则表 + §3/§4 取值字典,给 surface 推荐默认角色/模式 |
-| `<common-hooks>/{pre-commit,pre-push,post-checkout,sdlc-guard}` | **写(仅用户同意 + git 仓)** | `git rev-parse --git-common-dir` 后拼 `/hooks`;主 worktree 与 linked worktree 共用 |
-| `<repo>/.sdlc/onboard-notes/<focus>.md` | 临时写/读(可选) | 仅并行采证用的中转笔记,Phase D 聚合后删除 |
-| `<repo>/.sdlc/STATE.md` | **不碰** | STATE 是 feature 级,由 driver 单写;onboard 只管项目级 PROFILE |
-
-> 兼容铁律:知识与状态都是纯文件;onboard 不并发写同一文件(单写者);并行采证写各自 focus 笔记,聚合时才合一。
-
----
-
-## 4. 出口门控(Exit gates)
-
-PROFILE.md 视为合格、可交回 driver,需**全部**通过:
-
-- [ ] `<repo>/.sdlc/PROFILE.md` 存在,无残留 `<填写...>` 占位 / 注释块。
-- [ ] `tech-stack` + `test-commands` 已据实填写。规则:**有套件就必须抓到对应命令**;**没有套件不是阻断,但必须显式标 `none`**(如 `unit: "none — 项目无测试套件"`),并在 `## Known risks` 记一条覆盖率缺口。绝不留空白。brownfield 真实项目常零测试,这恰恰是最需要建 baseline 的,不能卡在门口。(有可见面且存在 e2e 工具则填 `e2e`,有 TS 则填 `typecheck`。)
-- [ ] `## Surface map` 通过 Phase C §5 三条自检(覆盖全、取值合法、无歧义)。
-- [ ] 每个 surface 的角色/模式落在 role-routing 字典内。
-- [ ] `## Entry points` 至少给出一个可执行的启动/入口线索。
-- [ ] surface-map 草案已经 text_mode 给用户确认。
-- [ ] **只读纪律守住**:onboard 期间**未修改任何源码**;写动作仅限 PROFILE(+临时笔记)+ 用户明确同意后装入 common hooks 的 hook/guard(非源码)。
-- [ ] (若为 git 仓)已询问是否安装 Git hooks(Phase D 步 5);用户选了才按选择写入 common hooks,且同级 `sdlc-guard` 可执行。
-
-任一未过 → 停在门口(不前进),text_mode 列出缺项让用户补全或确认。
-
----
-
-## 5. 写什么进 STATE(经由 driver,不自己写)
-
-onboard **不直接写 STATE.md**(STATE 由 driver 单写,见兼容铁律 rule 2)。onboard 完成后,**向 driver 返回**以下结果,由 driver 落进 STATE:
-
-- `stage: onboard` → 完成后建议 driver 将下一步设为 `spec`(brownfield 主线:Onboard → Spec)。
-- Gates passed:勾选 `onboard：PROFILE.md 已建立 / 已确认无漂移`。
-- Next action:`-> invoke sdlc-spec`(开始第一个 feature),或若用户只想审计现状 → `-> invoke sdlc-validate --mode=e2e --scope=full-chain`。
-- 告知 driver:PROFILE.surface-map 已就绪,后续进 build/validate/review 时可被 `resolve(diff × surface-map × routing)` 消费。
-
-返回话术(text_mode):
-
-```
-✅ onboard 完成。
-  - 写出:<repo>/.sdlc/PROFILE.md
-  - surface-map:<N> 个面(<列出面名>)
-  - 下一步建议:开始第一个 feature → sdlc-spec
-交回 driver:stage=onboard 完成,next=invoke sdlc-spec。
-```
-
----
-
-## 6. 架构漂移刷新(refresh 模式)
-
-driver 在 session 开始会拿 `git diff` 路径对照 PROFILE.surface-map;若改动触及 map 里没有的面(新建服务、首个移动目录),会**重新路由到本 skill 做局部刷新**。刷新时:
-
-1. 只对**漂移触及的面**重跑 Phase A 相关 focus + Phase B 入口识别。
-2. 在 surface-map **新增/收紧**对应行(append/tighten,不推翻整张表)。
-3. Conventions / Known-risks 里仍成立的旧条目**保留**;只追加新发现。
-4. 同样过 §4 出口门控 + text_mode 确认后交回 driver。
-
-> 这让"已跟踪的架构"保持诚实,而不需要重头 onboard 整个项目。
-
----
-
-## 7. 蒸馏来源(distilled-from,供时用时新追溯)
-
-- `gsd-map-codebase` — 4 正交 focus(stack/arch/conventions/concerns)+ Task-or-sequential 降级范式(取范式,丢 Task 子代理 / 7 散文件 / `.planning/`)。
-- `arch-aifriendly-doctor` — Phase 0 纯 bash 采证清单(Codex 友好);P13 domain-aware check + P23 模块 scoped 命令(作 surface-map 机制原型)。取采证 + 机制,丢 10 维评分与改造管道。
-- `explorer-repo-report` — type-detection(工程/agentic/通用)+ P0/P1/P2 探索优先级。取分类与优先级,丢 clone-to-workspace / 5W1H 报告外壳。
-- `startup-claude-md-init` — PROFILE schema:技术栈表带"原因"列 + "禁止事项"。取 schema,丢"写 CLAUDE.md/对话问卷"形态。
-- `agency: codebase-onboarding-engineer` — 只读纪律 + 入口发现 + 三级解释结构(1 行/5 分钟/深入)。取 mission/concerns,丢 agent 人格(emoji/vibe/memory)。
-
-> 新蒸馏一个 onboard 相关源时,把可复用方法**追加进本 skill 的对应 Phase**,并在此登记 `distilled-from`(见 `references/distillation-loop.md`)。
+完成后返回项目上下文路径、surface 数量、主要测试命令和建议的下一阶段。

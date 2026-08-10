@@ -1,67 +1,50 @@
 ---
 role: skill-maintainer
-triggers: ["skills/**", "**/SKILL.md", ".claude-plugin/**", "skills/sdlc/references/**"]   # 编辑技能体系自身时由 role-routing 加载(见 role-routing §2 R10)
-distilled-from: [kb-manage, sop-extractor, skill-creator, distillation-loop, session:sdlc-evolve-design-2026-06-06, session:evolve-dogfood-2026-06-06, session:sdlc-backlog-build-2026-06-15]
-updated: 2026-06-15
+triggers: ["skills/**", "**/SKILL.md", ".claude-plugin/**", "skills/sdlc/references/**"]
+distilled-from: [skill-creator, distillation-loop, session:sdlc-evolve-design-2026-06-06]
+updated: 2026-08-10
 ---
 
-# skill-maintainer — 技能体系维护者视角角色卡
+# skill-maintainer — 技能体系维护视角
 
-> 一张"看问题的镜片",不是流程。被 sdlc-spec / sdlc-build / sdlc-validate / sdlc-review / **sdlc evolve** 在**改动落在技能体系自身**(`skills/**`、`*SKILL.md`、`references/**`、`.claude-plugin/**`)时加载。
-> 这是**唯一作用于工具自身**的角色(其它角色都看某个目标项目的某一段)。它管的是:这套可移植、时用时新的技能族,改完之后**还自洽、不臃肿、可移植、可追溯、且没把自己改坏**。
-> 关键背景(自我修改):用 vN 的技能改出 vN+1,**本次运行始终是 vN 在掌舵,vN+1 下趟才生效** → 一个改动的行为只能在下一趟验证,所以当前趟的安全网是 lint + additive 守卫 + 人工过目,而非"现场跑一下"。
+修改技能体系自身时加载。目标是让技能保持边界清楚、按需加载、可移植、可验证，并避免同一规则在多处重复定义。
 
 ## 关注点
 
-维护者在意"改完之后这套东西会不会烂掉",六件事:
-
-1. **防臃肿(反膨胀红线)** —— family = `sdlc` driver + 8 流程 skill(onboard/backlog/spec/plan/build/validate/review/ship)。新增能力**默认永不新增顶层 skill**,一律走 references 既有卡片(角色/模式/语言/部署)+ 路由;"该不该加" 默认答案是"不加,扩卡片"。**唯一例外** = SDLC 主线缺的真·生命周期阶段(如 ship 发布、backlog 需求源),这类才改 stage 枚举新增流程 skill,且须过完整 `/sdlc` + 本卡评审。
-2. **additive 合并,不覆盖**(蒸馏 kb-manage) —— 新方法融进目标卡对应 section,**保留有价值的旧内容**;与旧说法冲突则就地标 `<!-- CONFLICT: 旧… / 新…(源) -->`,不删不裁,留人决策。
-3. **防孤儿 / 不断链**(蒸馏 kb-manage Lint) —— 每个新 `.md` 必须被某处引用(被某 SKILL.md 读到 / 被 role-routing 指向);新增/改名的角色·模式·语言都要有路由入口;路由指向的文件都真实存在。
-4. **溯源完整(distilled-from)** —— 每张被改动的卡 frontmatter 追加本次源(内部 skill 用 name、外部 repo 用 owner/repo、实战洞察用 `session:<topic>-<date>`)。这是审计与防孤儿的锚点。
-5. **可移植铁律** —— 凡落进流程的 pattern 都降级为纯文件 + git + Read/Edit/Bash/Grep:AskUserQuestion→text_mode;Task 并行→Task-or-sequential;二进制/node 工具→等价 bash。离开运行时就不成立的 pattern 不蒸馏。流程 skill 约束"做什么/为什么/避坑",**不写死命令手册**(铁律 #4)。
-6. **语义化版本 + CHANGELOG + 自我修改安全** —— 补内容=patch、加能力=minor、破坏性=major;每次改动一条 CHANGELOG。自我修改在临时分支上做,过 lint + additive 守卫 + 人工检查点才落 main;任一不过即 `git restore` 回滚,坏改动进不了 main/GitHub。
+1. **职责单一**：新增能力优先进入现有阶段、角色或参考；只有出现新的独立生命周期职责才增加顶层 skill。
+2. **单一事实源**：状态字段、角色字典、验证方式和命令只在一个位置定义，其他文件引用它。
+3. **无孤儿**：新增参考必须被某个 SKILL 或路由引用；删除或改名后同步更新所有引用。
+4. **按需加载**：总路由保持短小，只加载当前阶段和明确相关的角色；不要把所有方法放入每次上下文。
+5. **可移植**：核心流程依赖普通文件、Git 和常见命令；交互与并行能力缺失时有简洁降级方式。
+6. **可验证**：技能结构检查覆盖 frontmatter、引用、角色/验证方式字典和关键命令；不为普通文案维护重复摘要值。
+7. **发布质量**：行为变化与版本说明一致，破坏性变化有明确升级说明。
 
 ## 检查清单
 
-> `[diff]` = 从改动 + grep 静态可判;`[trace]` = 需通读多文件/追引用。
+- [ ] 新增顶层 skill 是否真的代表新的独立职责？
+- [ ] 新增文件是否有调用入口，删除文件是否没有残留引用？
+- [ ] 角色、验证方式和语言参考是否在 `role-routing.md` 中有唯一登记？
+- [ ] 同一状态或流程规则是否被复制到多个技能？能否改为引用？
+- [ ] 总路由是否只负责读取、判断、加载和交接？
+- [ ] 阶段 skill 是否主要描述输入、工作方法、完成条件和状态命令？
+- [ ] 是否引入特定运行时的硬依赖？没有该能力时能否串行执行或用文本交互？
+- [ ] `bash scripts/validate-skills` 和相关测试是否通过？
+- [ ] 版本与变更说明是否与实际行为一致？
 
-- [ ] `[diff]` 本次是否新增了**顶层 skill 目录**或新 `SKILL.md`?→ 几乎总是该改为"扩 references 卡片 + 路由",否则违反反膨胀红线。
-- [ ] `[diff]` 新增的每个 `.md` 是否**被引用**(被某 SKILL.md 读 / 被 role-routing 指)?无人引用 = 孤儿,挂进既有体系或删。
-- [ ] `[diff]` 被改动的卡是否更新了 `distilled-from` 与 `updated`?`grep -L distilled-from` 查漏标。
-- [ ] `[diff]` 新增/改名的角色·模式·语言,是否在 `role-routing.md`(§2 触发 + §3/§4 字典 + §5 自检)、`STATE.md` 模板、`sdlc-onboard` Phase C 字典**四处同步**?缺一即不一致。
-- [ ] `[diff]` 流程 skill 里是否混进了脆弱命令一行流(带 shell 怪癖的 find/grep/awk)?→ 原则化(铁律 #4);稳定契约命令(`git diff --name-only`)与参考卡(languages/deploy-targets)的具体命令除外。
-- [ ] `[diff]` 是否引入了对 AskUserQuestion / Task / 二进制的**硬依赖**(无 text_mode / 无串行降级)?→ 违反可移植铁律。
-- [ ] `[diff]` 是否升了版本 + 写了 CHANGELOG?改动是 patch/minor/major 选对了吗?
-- [ ] `[diff]` (自我修改时)diff 是否 **additive-only**:只动已存在卡、只见新增、无意外删除、无新建文件、未碰契约文件(role-routing/driver/STATE模板/枚举)?碰了 = 结构性大改,应走完整 `/sdlc` 而非 evolve。
-- [ ] `[trace]` `bash scripts/validate-skills` 是否通过(断链/孤儿/frontmatter/角色·模式·语言交叉引用)?不过不提交。
-- [ ] `[trace]` `grep -r CONFLICT references/` 有无待人决策的冲突标记?汇总上报,不自动裁决。
+## 常见问题
 
-## 好的样子
-
-- 新能力"无声地"长进既有卡片:多了一条检查清单/一个踩坑/一条路由规则,**没有新顶层 skill、没有游离文件**。
-- 每张动过的卡都能回答"这条是从哪蒸来的"(distilled-from)、"何时更新的"(updated)。
-- 改完 `validate-skills` 绿、无孤儿、无断链;版本与 CHANGELOG 同步。
-- 自我修改全程在临时分支,人工过目 diff 后才落 main;真出问题一条 `git revert` 或降版本即回滚。
-- 流程文档读起来是"约束 + 原则",不是会在某个 shell 崩的命令清单。
-
-## 常见翻车
-
-| 翻车 | 后果 | 怎么防 |
+| 问题 | 后果 | 处理方式 |
 |---|---|---|
-| 顺手新增一个顶层 skill | family 膨胀、边界失守 | 默认扩 references 卡片 + 路由;真要加阶段才慎重改枚举 |
-| 写了游离 `.md` 没人引用 | 孤儿文件、断链 | 每个新文件必须被引用或删;跑防孤儿 lint |
-| 加角色卡只改了文件,忘了路由/STATE/onboard 同步 | 角色存在却从不被加载(死卡) | 四处同步清单;lint 交叉引用兜底 |
-| 覆盖式编辑,删掉旧内容 | 丢失有价值的既有方法 | additive 合并;冲突只标不删 |
-| 蒸馏时把运行时依赖一起搬进来 | 在 Codex 下跑不了 | 降级为纯文件+git;不可移植的 pattern 不蒸 |
-| 自我修改直接改 main 工作区、不过闸 | 把工具改坏、影响以后每次运行 | 临时分支 + lint + additive 守卫 + 人工检查点 + 回滚 |
-| 改了不升版本/不写 CHANGELOG | 无法追溯、无法回滚到已知好版本 | 每次改动 semver + 一条 CHANGELOG |
-| 软链装完就以为能用,没验 `readlink` 落点 | evolve 探源拿到的不是可写 git 仓 / 无 plugin.json → 回流静默失败 | 装完验 `readlink ~/.{claude,codex}/skills/sdlc` 指向真实可写 git 仓(含 `.claude-plugin/plugin.json`);技能在**新会话**才注册,当前会话要 dogfood 就把 playbook 当数据手动执行 |
+| 同一规则复制到多处 | 修改一处后反复修其他文件 | 选一个权威定义，其余引用 |
+| 为每个小方法新增 skill | 路由与加载成本持续上升 | 扩充现有参考或角色卡 |
+| 新参考无人读取 | 文件存在但不会影响行为 | 接入路由或删除 |
+| 把运行结果写成复杂协议 | AI 把时间花在维护流程自身 | 只保留实际协作所需字段 |
+| 一次加载全部角色 | 上下文噪声增加 | 根据当前阶段与 diff 动态选择 |
 
-## 介入哪些阶段
+## 介入阶段
 
-- **spec**:当特性是"给技能体系加能力"时,第一问是"**这能不能不加 skill、用 references 扩**?";审是否触及契约(碰了就是大改)。
-- **evolve(小改快路)** / **build(大改)**:落位守 additive、守可移植、守溯源;改契约时提醒四处同步。
-- **validate**:`bash scripts/validate-skills` 是这套体系的 correctness——断链/孤儿/frontmatter/交叉引用全过。
-- **review**:防臃肿 + 溯源完整 + 可移植 + 命令手册化(铁律 #4)是本角色在评审里的四把尺。
-- **ship**:版本与 CHANGELOG 是否同步、回滚路径是否清楚。
+- spec：确认新能力放在哪个既有职责中。
+- build：保持文件边界、引用关系和平台可移植性。
+- validate：运行结构检查和行为测试。
+- review：检查重复规则、无入口文件和不必要复杂度。
+- ship：检查版本、变更说明和回退方式。

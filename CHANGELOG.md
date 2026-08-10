@@ -2,6 +2,30 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [1.0.0] — 2026-08-10
+
+### Changed
+
+- SDLC 收敛为一条轻量主线：阶段 skill + 角色卡 + `.sdlc-v1/context/*.md` 产品/工程上下文 + Git-tracked `.sdlc-v1/state.json`。
+- lightweight state schema 升为 `state_version=3`；Requirement/Feature 必须分别绑定仓库内产品/工程 context Markdown。
+- Requirement、Feature、Task、validation、review 和 release 共用一个可读状态文件；Git 负责跨 clone 传输、冲突处理与历史。validation 前 state 必须已 tracked 且无 unmerged entry。
+- 新增确定性的公开 `next` 查询；backlog/board 收敛为只读 `readyqueue/coverage/lint/tree/board` 投影。
+- `init` 会识别仍安装在目标仓库中的旧 sdlc-pilot copied hooks，报告准确目录并要求人工清理，不自动覆盖团队 hooks。
+- `scripts/validate-skills` 改为快速结构/frontmatter/引用检查，并只运行 lifecycle state、backlog/board 和 contrast 三组小测试。
+
+### Removed（Breaking）
+
+- 删除独立控制分支、本机持久化事件记录、内容寻址合同、审批/权限配置、Policy/Obligation、typed attestation、receipt 和 replay 实现。
+- 删除 preview/shadow、skill baseline/candidate/live evaluator，以及对应 fixture、评估集和回归测试。
+- 删除固定 0.19.2 runbook、lifecycle profile、自动迁移和兼容 adapter；旧命令不再有运行时实现。
+- 删除 SDLC Git hook/guard 的安装模板和持续运行时检查；只在 `init` 时一次性识别 0.x 遗留副本，避免它继续改写旧状态。代码提交仍使用项目自己的 Git hooks、测试和 review 规则。
+
+### Upgrade
+
+- 不自动转换或删除旧 `.sdlc/`、`.sdlc-control/` 等历史文件。人工把仍有价值的需求、设计和决策整理到
+  `.sdlc-v1/context/*.md`，按 `init` 报告清理旧 copied hooks，再重新建立 Requirement → Feature 关联。
+- 这是一次有意的主版本断代；0.x 以下条目作为历史记录保留，不代表 1.0 仍提供相应命令或协议。
+
 ## [0.21.0] — 2026-08-08
 
 ### Added

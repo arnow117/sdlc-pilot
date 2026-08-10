@@ -6,7 +6,7 @@ command** (e.g. `pnpm build`, `npm run build`). This card only knows how to *pus
 output up* and move traffic between environments. Every project-specific value is a
 `<placeholder>` the runtime resolves from the target repo.
 
-> Methodology (deploy → smoke/health → gate → promote/rollback) lives in the generic
+> Methodology (deploy → smoke/health → check → promote/rollback) lives in the generic
 > layer. This file only supplies the static-site-shaped command skeletons.
 > Flags below verified against **Vercel CLI 54.9.1** (`vercel <cmd> --help`, 2026-06-05).
 
@@ -18,13 +18,13 @@ Extract these from the target project, do **not** invent them:
 
 | Placeholder | Resolve from |
 |---|---|
-| `<project>` | `vercel.json` (project name) / `.vercel/project.json` / `PROFILE.Deploy.project` |
-| `<scope>` | Vercel team/org slug — `PROFILE.Deploy.team` / `.vercel/project.json` `orgId` |
+| `<project>` | `vercel.json` (project name) / `.vercel/project.json` / `.sdlc-v1/project.md` deployment section |
+| `<scope>` | Vercel team/org slug — `.sdlc-v1/project.md` / `.vercel/project.json` `orgId` |
 | `<output-dir>` | build output dir — `vercel.json` / framework default (`dist`, `.next`, `build`) |
-| `<prod-domain>` | the production alias/custom domain — `vercel.json` / `PROFILE.Deploy.domain` |
-| `<canary-domain>` | dedicated canary alias host — `PROFILE.Deploy.canaryDomain` (optional) |
-| `<health-path>` | `PROFILE.Deploy.healthPath` (default `/`, SPA: a known route; or a `/healthz` static file) |
-| `<netlify-site>` | `netlify.toml` / `PROFILE.Deploy.netlifySite` (Netlify path only) |
+| `<prod-domain>` | the production alias/custom domain — `vercel.json` / `.sdlc-v1/project.md` |
+| `<canary-domain>` | dedicated canary alias host — `.sdlc-v1/project.md` (optional) |
+| `<health-path>` | project deployment section (default `/`, SPA: a known route; or a `/healthz` static file) |
+| `<netlify-site>` | `netlify.toml` / `.sdlc-v1/project.md` (Netlify path only) |
 
 **Secrets rule:** Vercel/Netlify tokens (`$VERCEL_TOKEN`, `$NETLIFY_AUTH_TOKEN`) and any
 build-time env vars live **only in the deploy environment or local shell**. Reference via
@@ -42,7 +42,7 @@ env value, or `.vercel`/`.netlify` credential into this file, the repo, or build
 <pkg> build              # e.g. pnpm build / npm run build  → emits <output-dir>/
 ```
 
-Two ways to hand the artifact to Vercel — pick per `PROFILE.Deploy`:
+Two ways to hand the artifact to Vercel — pick from the target project's deployment configuration:
 
 - **Remote build (default):** push source, let Vercel build. Simplest; needs Vercel env vars configured.
 - **Prebuilt:** build locally with `vercel build`, then `vercel deploy --prebuilt` to upload
@@ -63,7 +63,7 @@ vercel build --prod --yes
 | `dev` | local | language pack dev server (`<pkg> dev`) — not a Vercel deploy |
 | `staging` | **preview** deployment | `vercel deploy` (no `--prod`) → unique preview URL |
 | `canary` | preview pinned to a canary alias | `vercel deploy` → `vercel alias set <url> <canary-domain>` |
-| `full` | **production** | `vercel deploy --prod` *or* `vercel promote <url>` of the gated preview |
+| `full` | **production** | `vercel deploy --prod` *or* `vercel promote <url>` of the checked preview |
 
 > Every Vercel deploy is immutable and addressable by its own URL — that *is* the rollback
 > primitive (no artifact to rebuild). Capture each deploy URL; promote/alias moves traffic
@@ -74,10 +74,11 @@ vercel build --prod --yes
 ## 2. Deploy per environment (Vercel — primary)
 
 ```bash
-# staging = preview deploy. Capture the printed URL = the gate's subject under test.
+# staging = preview deploy. Capture the printed URL as the subject under test.
+VALIDATION_COMMIT="<validation-commit>"
 STAGING_URL=$(vercel deploy --yes \
   --scope <scope> --token "$VERCEL_TOKEN" \
-  -m stage=staging -m sha="$(git rev-parse --short HEAD)")
+  -m stage=staging -m sha="$(git rev-parse --short "$VALIDATION_COMMIT")")
 # (add --prebuilt if you ran `vercel build` in step 0)
 
 # canary = same preview deploy, then move the canary alias onto it
@@ -86,17 +87,17 @@ vercel alias set "$CANARY_URL" <canary-domain> --scope <scope> --token "$VERCEL_
 
 # full = production. Either deploy straight to prod...
 PROD_URL=$(vercel deploy --prod --yes --scope <scope> --token "$VERCEL_TOKEN")
-# ...or PROMOTE the already-gated canary/preview deployment to production (no rebuild):
+# ...or PROMOTE the canary/preview deployment that passed checks (no rebuild):
 vercel promote "$CANARY_URL" --yes --scope <scope> --token "$VERCEL_TOKEN"
 ```
 
 Useful flags (verified): `--prebuilt` (deploy `.vercel/output` from `vercel build`),
-`--skip-domain` (deploy prod build but DON'T auto-alias yet — gate first, then `vercel promote`),
+`--skip-domain` (deploy prod build but do not auto-alias yet — check first, then `vercel promote`),
 `--no-wait` (don't block), `-F json`/`--format json` (machine-readable output for capturing the URL).
 
-> **Gate-before-promote pattern:** `vercel deploy --prod --skip-domain` builds the production
+> **Check-before-promote pattern:** `vercel deploy --prod --skip-domain` builds the production
 > deployment but withholds the domain alias; run smoke/health against the returned URL, and
-> only `vercel promote <url>` (or `vercel alias set`) on pass. Clean fit for the canary→full gate.
+> only `vercel promote <url>` (or `vercel alias set`) after smoke/health passes.
 
 **Env mapping:** dev → staging → canary → full differ only by `--prod`/`--skip-domain` and
 which alias (`<canary-domain>` vs `<prod-domain>`) gets moved — same deploy skeleton.
@@ -119,7 +120,7 @@ vercel inspect "$URL" --scope <scope> --token "$VERCEL_TOKEN"        # add -l fo
 
 ---
 
-## 4. Rollback (the gate's "fail" branch)
+## 4. Rollback after a failed check
 
 Static deploys are immutable, so rollback = **point traffic at the last known-good
 deployment** — no rebuild.
@@ -148,7 +149,7 @@ record its URL/ID rather than relying on "the one before".
 
 ---
 
-## 5. Smoke / health (probe after deploy, before gate)
+## 5. Smoke / health (probe after deploy, before promotion)
 
 Probe the just-deployed URL (or the alias for canary/prod) from outside:
 
@@ -157,7 +158,7 @@ Probe the just-deployed URL (or the alias for canary/prod) from outside:
 curl -fsS --max-time 10 "$STAGING_URL/<health-path>"          # staging: the preview URL
 curl -fsS --max-time 10 "https://<canary-domain>/<health-path>"   # canary alias
 curl -fsS --max-time 10 "https://<prod-domain>/<health-path>"     # full / production
-# non-2xx → curl -f exits non-zero → gate fails
+# non-2xx → curl -f exits non-zero → check fails
 ```
 
 > Static sites have no `/health` endpoint by default. Either ship a tiny static
@@ -175,7 +176,7 @@ Same environment model; different CLI. Resolve `<netlify-site>` from `netlify.to
 ```bash
 # staging = preview (draft) deploy → prints a unique deploy URL
 netlify deploy --dir <output-dir> --site <netlify-site> --json     # add --build to build first
-# (auth via $NETLIFY_AUTH_TOKEN in env; --message "stage=staging sha=$(git rev-parse --short HEAD)")
+# (auth via $NETLIFY_AUTH_TOKEN in env; use the validation commit in the deploy message)
 
 # full = production deploy
 netlify deploy --prod --dir <output-dir> --site <netlify-site>
@@ -196,6 +197,7 @@ netlify deploy --prod --dir <output-dir> --site <netlify-site>
 Before running any command above, resolve placeholders by reading the target repo:
 
 1. `vercel.json` (+ `.vercel/project.json` if present) → `<project>`, `<scope>`/orgId, `<output-dir>`, domains.
-2. `PROFILE.Deploy` / `CLAUDE.md` → provider (Vercel vs Netlify), `<prod-domain>`, `<canary-domain>`, build/prebuilt choice, `<health-path>`.
+2. `.sdlc-v1/project.md` / `CLAUDE.md` → provider (Vercel vs Netlify), `<prod-domain>`, `<canary-domain>`, build/prebuilt choice, `<health-path>`.
 3. Language pack → the real build command emitting `<output-dir>` (this adapter does not build).
-4. Token + scope → `$VERCEL_TOKEN`/`$NETLIFY_AUTH_TOKEN` from the deploy env; record `<prev-deployment-url>` before every promote for rollback.
+4. Implementation version → use the Feature's validation commit, not a later HEAD that only changes `.sdlc-v1/**`.
+5. Token + scope → `$VERCEL_TOKEN`/`$NETLIFY_AUTH_TOKEN` from the deploy env; record `<prev-deployment-url>` before every promote for rollback.

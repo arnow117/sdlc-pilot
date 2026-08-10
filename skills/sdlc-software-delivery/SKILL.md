@@ -1,82 +1,58 @@
 ---
 name: sdlc-software-delivery
 description: >
-  软件交付生命周期：以 SDD、TDD 和按需的架构、领域、可靠性方法处理 EngineeringSpec、DeliveryPlan、实现、验证、评审和发布准备度。
-  默认显式调用是 Phase 1 preview；携带 --authority dual-lifecycle-v1 或由已固定 dual profile 路由的调用才写
-  canonical ledger。不改写 legacy artifact。
+  软件交付生命周期。把 ready Requirement 转成研发上下文、Feature 和 Task，使用 SDD/TDD 完成实现，
+  并把验证、评审和发布绑定到明确的 Git commit。
 ---
 
 # sdlc-software-delivery
 
-在工程侧把已定义的产品意图转为可实现、可验证、可运维的交付设计。阶段选择、角色义务和完成条件只来自
-PolicyManifest / PhaseContract；本 skill 不复制这些规则。
+本技能回答“如何可靠地实现、验证和发布产品意图”。详细方法见
+[`lifecycles/software-delivery.md`](../sdlc/references/lifecycles/software-delivery.md)。
 
-## Phase 1 边界
+## 输入
 
-只在调用者明确选择 preview 后运行。先确认目标仓库、`lifecycle_run_id`、固定的 `policy_manifest_id`、
-operation、phase 和输入 artifact identity；缺失或不匹配时只返回诊断。`implement` 还必须显式给出
-`evidence_strategy`（`tdd | static-check | contract-check | visual-regression`）和 `issue_class`
-（`none | regression | runtime_error | unexpected_failure`）；缺失时返回 `needs_classification`，不按路径猜测。
+- ready Requirement 与 `product_context_ref`。
+- `.sdlc-v1/project.md`。
+- Feature 的 `engineering_context_ref`，若尚无则创建。
+- 当前代码、测试和 Git 状态。
 
-- 所有新输出仅能写到 `.sdlc/preview/<run-id>/`，并固定 `scope=preview`。
-- 不创建或修改 `.sdlc-control/`，不修改 `.sdlc/STATE.md`，不改 legacy `.sdlc/spec.md` / `.sdlc/plan.md`，不执行实现写入、部署、发布或回滚副作用。
-- 若 preview runtime 提供安全 Evidence runner，只能按明确 argv / cwd / timeout 运行诊断性测试；其结果仍是不可消费的 `scope=preview` 输出。
-- preview 的 Context、Obligation、Evidence、attestation 和 readiness package 不能供 control、validate、review 或 ship 消费。
-- `plan`、`implement`、`validate`、`review` 的 canonical 输入是获批 `EngineeringSpec`。Phase 1 尚无此 control artifact 时，只能报告所缺条件。
-- legacy spec 不是 `EngineeringSpec`。唯一兼容例外是 `legacy-composite-v1`，它只渲染 legacy plan 的 preview 诊断，不能完成 dual approval 或产生 dual record。
-
-既有 `/sdlc plan`、`/sdlc build`、`/sdlc validate` 和 `/sdlc review` 在 Phase 1 仍是 canonical 路径；本 skill
-不会从 legacy driver 自动接管它们。
-
-## 执行协议
-
-1. 读取 `../sdlc/references/lifecycles/software-delivery.md`，仅加载 PolicyManifest 选中的 module anchor。
-2. 从 PhaseContract 取得 `phase_contract_ref`、输入契约、role obligations、机械 assertions 和语义 attestation 类型。
-3. 对可用的产品合同、工程输入、PROFILE snapshot、diff identity 和风险信号做 SDD/TDD 诊断；不要用路径猜测产品语义。
-4. 把语义结论写为具名 typed attestation，至少绑定 actor、subject、scope、claim、evidence refs、policy 和 phase ref；模型自报的 `tests_passed`、`approved`、`review_complete` 不是 Evidence。
-5. 仅输出 preview-only phase intent、选择理由、待补输入和诊断。不得提交 transition、注册 plan、更新 task/evidence 或写 release 状态。
-
-## `legacy-composite-v1`
-
-该兼容操作只能显式调用，并且只读 legacy `.sdlc/spec.md` 与 `legacy_approval_observation`。输出也只能是
-preview 目录中的 legacy-plan rendering / parity diagnostic。它绝不创建 `EngineeringSpec`、`DeliveryPlan`、
-Approval 或 Task，也不覆盖 legacy plan。
-
-`release-candidate` 在任何阶段都只描述 readiness package；部署、发布和回滚由正交的 `sdlc-ship` 负责，
-而 Phase 1 preview 连 readiness package 也只能是不可消费的诊断副本。
-
-详情和稳定 anchors 见
-[`software-delivery.md`](../sdlc/references/lifecycles/software-delivery.md)。
-
-## Canonical authority 模式
-
-先读取 `sdlc/references/lifecycle-profile.md`。这是 canonical 写入的共同前置条件，优先于任何调用参数；
-`migration-required` 时停止且不创建 Feature、Task、Evidence、Review 或 release 状态。
-
-直接调用时只有明确给出 `--authority dual-lifecycle-v1` 才进入此模式；经 façade 调用时，已固定的
-`.sdlc/lifecycle.json` 选择 `dual-lifecycle-v1` 也可进入。不能从 preview、legacy artifact、文件路径、旧 STATE
-或仅有 ledger 猜出。先读取
-[`dual-lifecycle-runtime.md`](../sdlc/references/dual-lifecycle-runtime.md)，再用 `feature-projection` 取得当前
-Feature fence、Task 摘要和 ChangeRequest refs；只在需要注册新 artifact 时读取相应的不可变输入。缺任一项时返回缺失前置输入。
-
-工程侧只消费已经固定到 Feature 的 ProductContract tuple，并按以下顺序提交 canonical intent：
+## 研发上下文结构
 
 ```text
-claim_feature → register_profile_snapshot → register_engineering_spec → request_approval
-→ adopt_engineering_spec → activate_delivery_plan → transition_task / execute_task_evidence
-→ validate_feature → submit_feature_review → publish_feature
+关联 Requirement 与验收条件
+现状代码和约束
+设计与关键取舍
+接口、数据和兼容性影响
+Task 与依赖
+测试和验证策略
+风险、回滚与运维要求
+实现过程中的工程决策
+验证、评审和发布摘要
 ```
 
-`activate_delivery_plan` 同时绑定 current EngineeringSpec、generation 和完整 Task 集合；Markdown plan 只能是
-兼容投影。每次 Task/Evidence/validate/review/ship 都携带 exact fence。revoke、accepted blocking
-ChangeRequest、CAS 冲突或 stale generation 会停止当前动作，不能退回 legacy 操作绕过。
+## 默认序列
 
-`execute_task_evidence` 由 ledger 发起 argv-only runner，并原子保存不可变 receipt；模型自报完成、普通 Markdown、
-preview Evidence 或未绑定 trace 的记录均不能推进状态。工程侧发现产品规则缺口时创建 ChangeRequest，不能静默
-改写 ProductContract。产品投影是只读输出，交付状态不会写回 ProductDefinition。
+```text
+start-feature → add-task → set-task-status
+→ record-validation → record-review → record-release
+```
 
-canonical runner 支持 DeliveryPlan 中完整声明的 `tdd`、`static-check`、`contract-check` 与 `visual-regression`
-strategy，并要求请求的 `argv` 与 `cwd` 完全匹配 Task 已固化的值；typed attestation 仍是语义结论，不能替代
-runner receipt 或临时替换为一条 canonical 命令。review 使用 `submit_feature_review`：ledger 从 authority config 解析
-reviewer 与 policy，attestation 必须引用当前 Feature 全部通过的 Evidence；调用方不能直接提交内部
-`review_feature`、review ref 或 reviewer identity。
+1. 规划：把产品验收条件映射到设计和 Task，写入研发上下文。
+2. 实现：依赖就绪的 Task 才开始；默认先写失败测试，再实现最小改动。
+3. 调试：用假设和最小实验定位问题，避免无依据地连续改动。
+4. 验证：运行与 diff 相符的检查，并把通过结果绑定到当前集成 commit。
+5. 评审：根据 surface map 和 diff 加载相关角色；必须修复项清零后批准。
+6. 发布：只发布评审对应的 commit；部署与回滚由 `sdlc-ship` 执行。
+
+## 角色与方法
+
+- 客户端、服务端、数据、设计、QA 与安全角色由 [`role-routing.md`](../sdlc/references/role-routing.md) 动态选择。
+- 跨两个以上 surface、改变公共接口或数据归属时加载 `architect`。
+- 只有高风险持久化格式、跨机器协议、不可逆外部行为或公共 API 兼容性决策，才使用对抗性架构复核。
+
+## Commit 一致性
+
+全部 Task 完成后才能记录通过验证。验证时 `.sdlc-v1/**` 之外的业务代码工作树必须干净；命令保存测试时的 HEAD 作为 validation commit。之后可以提交仅修改 `.sdlc-v1/**` 的状态、上下文和证据。评审与发布要求 validation commit 到当前 HEAD 在该目录之外无差异，且业务代码工作树干净。Task 重新打开或业务代码变化后，重新验证。
+
+工程侧发现产品规则缺口时，停止相关 Task，将问题写回产品上下文，由产品侧决定补充规则、增加 Task 或建立新 Requirement。

@@ -12,7 +12,7 @@ distilled-from: [arch-aifriendly-doctor, startup-claude-md-init]
 
 ## 关注点(10 维 AI-友好度,从"扫描可判"到"需通读"递进)
 
-1. **CLAUDE.md 质量 + 级联**(P1)——根级有 CLAUDE.md?是否级联到 domain/module(agent 走到哪目录自动加载哪层上下文)?还是一个巨石根文件。**判断该在哪几层建**:用 PROFILE 的 surface-map 当输入——每个有「局部 + 代码看不出 + 违反代价高」规则的面,就是一层 `src/<surface>/CLAUDE.md` 候选;规则大多全局、面又小,则单根足够。
+1. **CLAUDE.md 质量 + 级联**(P1)——根级有 CLAUDE.md?是否级联到 domain/module(agent 走到哪目录自动加载哪层上下文)?还是一个巨石根文件。**判断该在哪几层建**:用 `.sdlc-v1/project.md` 的 surface map 当输入——每个有「局部 + 代码看不出 + 违反代价高」规则的面,就是一层 `src/<surface>/CLAUDE.md` 候选;规则大多全局、面又小,则单根足够。
 2. **该进 CLAUDE.md 的才进**(P3)——三条件全满足才写进:project-specific + 代码里看不出 + 违反代价高。避免把代码能自证的东西塞进去。
 3. **scoped 命令**(P23)——每个模块/包有自己的 `test/build/lint` 命令?还是只有一个全局命令、改一处要跑全部。
 4. **domain-aware check**(P13)——能否 `git diff` 判改动域 → 只跑该域的检查?(这正是我们 surface-map 路由的同源思想)
@@ -55,6 +55,6 @@ distilled-from: [arch-aifriendly-doctor, startup-claude-md-init]
 
 ## 介入哪些阶段
 
-- **sdlc-onboard(只读体检打分)**:onboard 用本卡的 10 维做**只读评分**,把 AI-友好度健康分 + 缺口写进 PROFILE 的 `## Known risks`。**只评估,不整改**(守 onboard 只读纪律)。
-- **遗留改造 feature**:当一个 feature 的目标是"把这个陈旧/不友好的仓改造成 AI-friendly"时,本卡的 23 模式是整改的"好的样子"清单。**整改是 feature → 走标准 spec→plan→build→validate→review loop**;但通常按 **L1 复杂度 + 文档/配置改动走 Skip-TDD**(加 CLAUDE.md/scoped 命令这类没法单测),**走轻但不短 review/verify 门**。
+- **sdlc-onboard(只读体检打分)**:onboard 用本卡的 10 维做**只读评分**,把 AI-友好度健康分 + 缺口写进 `.sdlc-v1/project.md` 的 `## Known risks`。**只评估,不整改**。
+- **遗留改造 feature**:当一个 feature 的目标是"把这个陈旧/不友好的仓改造成 AI-friendly"时,本卡的 23 模式是整改的"好的样子"清单。整改仍走标准 Feature 流程；文档/配置类改动可以不做 TDD，但必须运行相关验证与评审。
 - **sdlc-review**:作为可维护性透镜审"本次改动有没有降低 AI-友好度"(如新增巨石文件、删了 scoped 命令)。

@@ -57,7 +57,7 @@ cargo install cargo-llvm-cov          # 一次性安装
 cargo llvm-cov                        # 摘要
 cargo llvm-cov --html                 # HTML 报告
 cargo llvm-cov --lcov --output-path lcov.info   # 给 CI 的 LCOV
-cargo llvm-cov --fail-under-lines 80  # 行覆盖率 < 80% 退出码 1（门）
+cargo llvm-cov --fail-under-lines 80  # 行覆盖率 < 80% 时退出码 1
 
 # 备选：cargo-tarpaulin（纯 Linux x86_64 最稳）
 cargo tarpaulin --out Lcov --fail-under 80
@@ -68,7 +68,7 @@ cargo tarpaulin --out Lcov --fail-under 80
 ## Lint（linter + 确切命令）
 
 ```bash
-cargo clippy --all-targets --all-features --locked -- -D warnings   # 标准门：所有警告当错误
+cargo clippy --all-targets --all-features --locked -- -D warnings   # 标准检查：所有警告当错误
 cargo clippy -- -D clippy::perf                                     # 性能向 lint
 cargo fmt --check                                                   # 格式检查（CI 用，不改文件）
 cargo fmt                                                           # 本地格式化
@@ -100,7 +100,7 @@ cargo fmt                                                           # 本地格�
 
 - **build / TDD（RED-GREEN-REFACTOR）用的 test 命令**：
   `cargo test`（含 doc tests）；并行加速可选 `cargo nextest run`（注意补一条 `cargo test --doc` 跑 doc tests）。
-- **validate/correctness 的 coverage 门命令**：
-  `cargo llvm-cov --fail-under-lines 80`（默认 80% 行覆盖门，按 role 调整阈值；备选 `cargo tarpaulin --fail-under 80`）。
-- **lint/format 门**：`cargo clippy --all-targets --all-features --locked -- -D warnings` + `cargo fmt --check`。
+- **validate/correctness 的 coverage 命令**：
+  `cargo llvm-cov --fail-under-lines 80`（默认 80% 行覆盖阈值，按 role 调整；备选 `cargo tarpaulin --fail-under 80`）。
+- **lint/format 检查**：`cargo clippy --all-targets --all-features --locked -- -D warnings` + `cargo fmt --check`。
 - **归属 role 卡**：Rust 同时服务 **server-dev**（axum/actix/tokio 服务、sqlx）与 **client-dev**（CLI 工具、Tauri/WASM、嵌入式）。判定看 crate 类型——网络服务/守护进程 → server-dev；本地 CLI/桌面/库 → client-dev。两类共用上面同一套 test/coverage/lint 命令。

@@ -1,71 +1,58 @@
 ---
 name: sdlc-product-design
 description: >
-  产品设计生命周期：用 BDD 与战略 DDD 澄清问题、行为、领域、体验和产品质量。
-  默认显式调用是 Phase 1 preview；携带 --authority dual-lifecycle-v1 或由已固定 dual profile 路由的调用才写
-  canonical ProductDefinition/ProductContract/Approval ledger。两者都不改写 legacy artifact。
+  产品设计生命周期。用 BDD、领域建模、体验设计和质量属性把原始请求收敛为可验证的产品上下文，
+  并通过 lightweight state 管理 Requirement 进度。
 ---
 
 # sdlc-product-design
 
-在产品侧澄清“为什么做、给谁做、外部行为和约束是什么”。阶段选择、角色义务和完成条件由固定的
-PolicyManifest / PhaseContract 决定；本 skill 不维护第二份规则。
+本技能回答“为什么做、给谁做、系统对外表现什么行为”。详细方法见
+[`lifecycles/product-design.md`](../sdlc/references/lifecycles/product-design.md)。
 
-## Phase 1 边界
+## 输入
 
-只在调用者明确选择 preview 后运行。先确认以下输入均可识别：目标仓库、`lifecycle_run_id`、固定的
-`policy_manifest_id`、请求意图，以及要解析的 phase/operation。缺任一项时只报告诊断，不补猜状态。
+- 原始用户请求或现有 Requirement。
+- `.sdlc-v1/project.md` 中与产品边界有关的事实。
+- `.sdlc-v1/context/<requirement-id>.product.md`。
 
-- 所有新输出仅能写到 `.sdlc/preview/<run-id>/`，并固定 `scope=preview`。
-- 不创建或修改 `.sdlc-control/`，不修改 `.sdlc/STATE.md`，也不改 legacy `.sdlc/spec.md`、`.sdlc/plan.md`。
-- preview 的 Context、Obligation、attestation 和 phase intent 都不能供 control、validate、review 或 ship 消费。
-- legacy spec 只能作为观察输入；它不是 `ProductContract`，更不能被转换为 `EngineeringSpec` 或 dual approval。
-- `unknown` / `needs_classification` 只形成待澄清项，不能改变 legacy 路由、退出状态或权威写入。
-- 在飞 preview 若必须采用新 PolicyManifest，只能调用
-  `migrate-preview-policy(expected_head, old_policy_manifest_ref, new_context_manifest, new_policy_manifest, actor, reason_ref)`：
-  runtime 以 expected-head CAS 写入迁移审计，并按新 policy 重新生成未完成义务。任何 policy ref 不匹配都停止执行。
+若 Requirement 尚不存在，先创建产品上下文，再调用 `capture-requirement` 并保存 `product_context_ref`。
 
-既有 `/sdlc spec` 仍是 Phase 1 的 canonical 路径。本 skill 不主动从 driver 接管它；只有 runtime 的显式
-shadow 调用才可以并行生成 preview 诊断。
+## 产品上下文结构
 
-## 执行协议
+```text
+问题与当前行为
+目标用户与期望结果
+成功指标
+范围内 / 范围外
+用户场景与具体例子
+术语、业务规则和不变量
+体验约束
+非功能要求
+验收条件
+依赖、未决问题和产品决策
+```
 
-1. 读取 `../sdlc/references/lifecycles/product-design.md`，并按 PolicyManifest 选中的 module anchor 加载最小正文。
-2. 从 PhaseContract 取得 `phase_contract_ref`、输入契约、role obligations 和 completion assertions；不要从文件路径推断业务意图。
-3. 执行选中的 BDD / DDD / 体验 / 质量方法，保留 `SCN-*`、`TERM-*`、`RULE-*`、`EXP-*`、`NFR-*`、`EVAL-*` 的稳定 ID。
-4. 语义结论使用具名 typed attestation，至少绑定 actor、subject、scope、claim、evidence refs、policy 和 phase ref。它是输入，不是机械完成事实。
-5. 输出 preview-only phase intent、选中模块、待澄清项和适用的 preview attestation；不提交 transition，不更新任何批准或合同 head。
+稳定 ID 可以用于复杂需求：`SCN-*` 表示场景，`TERM-*` 表示术语，`RULE-*` 表示规则，`NFR-*` 表示质量要求。简单需求不必为了格式制造大量 ID。
 
-## 产物语义
+## 工作顺序
 
-Phase 1 可以产生候选产品定义、结构报告或 parity diagnostic，但必须保留 `scope=preview`。产品批准只能在
-后续 canonical control 已实现时由授权流程写入；当前最多记录 `legacy_approval_observation`，它只服务于
-compatibility 比较，不能完成 approval obligation。
+1. 问题发现：确认用户痛点、现状、结果和不做什么。
+2. 行为设计：用 Given/When/Then 和例子覆盖主路径、失败路径、权限与边界。
+3. 领域澄清：建立统一语言，识别实体、值、规则、不变量和归属边界。
+4. 体验设计：明确状态、反馈、空态、错误、无障碍和跨端差异。
+5. 质量设计：明确性能、可靠性、安全、隐私、可观测和评估要求。
+6. 产品确认：检查场景、规则与验收条件无矛盾，处理未决问题。
 
-详情和稳定 anchors 见
-[`product-design.md`](../sdlc/references/lifecycles/product-design.md)。产品 owner / 领域专家的长期判断视角见
-[`product-owner.md`](../sdlc/references/roles/product-owner.md) 与
-[`domain-expert.md`](../sdlc/references/roles/domain-expert.md)。
+## 角色
 
-## Canonical authority 模式
+- 默认加载 `product-owner`。
+- 术语、规则或业务边界复杂时加载 `domain-expert`。
+- 交互或视觉行为显著时加载 `design`。
+- 涉及敏感数据、认证、授权、支付或合规时加载 `security`。
 
-先读取 `sdlc/references/lifecycle-profile.md`。这是 canonical 写入的共同前置条件，优先于任何调用参数；
-`migration-required` 时停止且不创建 ProductDefinition、ProductContract 或 Approval。
+## 状态
 
-直接调用时只有明确给出 `--authority dual-lifecycle-v1` 才进入此模式；经 façade 调用时，已固定的
-`.sdlc/lifecycle.json` 选择 `dual-lifecycle-v1` 也可进入。它不能从 preview、legacy spec、文件路径、旧 STATE
-或仅有 ledger 猜出。先读取
-[`dual-lifecycle-runtime.md`](../sdlc/references/dual-lifecycle-runtime.md)，并以 ledger `status` 的 exact snapshot
-SHA 作为这次 intent 的比较对象。
+产品侧只执行 `capture-requirement` 和 `mark-requirement-ready`。它可以用 `product-projection` 查看研发进度，但不修改 Feature、Task、验证、评审或发布状态。
 
-产品侧按 `create_product_definition → start_product_definition → submit_product_contract → request_approval →
-adopt_product_contract` 顺序提交独立、可重试的 intent。每个 intent 有稳定 idempotency key；CAS 冲突后重新读取
-状态，不重放过期上下文。`register_requirement` 只保存产品级依赖元数据，不能被工程任务状态替代。
-
-成功采用后，ProductDefinition 的 current tuple 才可供未来 `claim_feature` 使用。新合同不会自动修改在途 Feature；
-要采用它必须通过 Feature 级 accepted ChangeRequest 和 `adopt_feature_product_contract`。产品侧只读取交付投影，
-不能直接变更 Task、Evidence、validation、review 或 release。
-
-ProductContract 中的 `DEC-*`（已作出的产品判断）与 `DEF-*`（明确暂缓项）各自必须指向同一不可变 bundle
-内的哈希组件；`EXP-*` 存在时也必须指向体验定义组件。它们定义产品上下文，不可作为 EngineeringSpec 的
-`implements_product_ids`；交付侧只实现 `OUT/SCN/RULE/EXP/NFR/EVAL` 这六类 criterion。
+产品规则发生实质变化时，先更新产品上下文；已经发布的能力通常新建 Requirement，不改写已完成记录。

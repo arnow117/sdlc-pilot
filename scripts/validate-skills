@@ -1,147 +1,148 @@
 #!/usr/bin/env bash
-# sdlc-pilot 结构 lint —— 可重复回归测试(纯 shell,无依赖)。
-# 检查:① 每个 SKILL.md 有合法 frontmatter;② 角色名↔文件↔字典一致;
-#       ③ validate 模式名↔文件↔字典一致;④ 关键共享文件存在。
-# 用法:bash scripts/validate-skills   (commit 前必跑;退出码 0=通过)
-set -u
+# Fast, dependency-free repository checks for the lightweight SDLC.
+set -uo pipefail
+
 cd "$(dirname "$0")/.." || exit 2
-ROOT="skills"; REF="$ROOT/sdlc/references"
+
+ROOT="skills"
+REF="$ROOT/sdlc/references"
 fail=0
-err(){ echo "  ✗ $1"; fail=$((fail+1)); }
-ok(){ echo "  ✓ $1"; }
 
-echo "== 1. 关键共享文件/目录 =="
-for p in "$REF/role-routing.md" "$REF/distillation-loop.md" "$REF/control-plane.md" "$REF/lifecycle-profile.md" "$REF/runtime-adapters/codex.md" "$REF/roles" "$REF/validate-modes" "$REF/templates/STATE.md" "$REF/templates/TASK.md" "$REF/templates/PROFILE.md"; do
-  [ -e "$p" ] && ok "$p" || err "缺失:$p"
-done
+err() {
+  echo "  ✗ $1"
+  fail=$((fail + 1))
+}
 
-echo "== 2. 每个 SKILL.md frontmatter(name + description) =="
-for f in "$ROOT"/*/SKILL.md; do
-  head -15 "$f" | grep -qE '^name:' || err "$f 缺 name:"
-  head -15 "$f" | grep -qE '^description:' || err "$f 缺 description:"
-done
-[ $fail -eq 0 ] && ok "全部 SKILL.md frontmatter 合法"
+ok() {
+  echo "  ✓ $1"
+}
 
-echo "== 3. 角色卡:文件 ↔ role-routing 字典 ↔ STATE 模板 =="
-for rf in "$REF"/roles/*.md; do
-  r="$(basename "$rf" .md)"
-  grep -q "$r" "$REF/role-routing.md" || err "角色 '$r' 未在 role-routing.md 出现(字典/规则漏登记)"
-  grep -q "$r" "$REF/templates/STATE.md" || err "角色 '$r' 未在 STATE 模板取值字典"
-done
-ok "角色卡交叉引用检查完成($(ls "$REF"/roles/*.md | wc -l | tr -d ' ') 个)"
-
-echo "== 4. validate 模式:文件 ↔ role-routing ↔ sdlc-validate =="
-for mf in "$REF"/validate-modes/*.md; do
-  m="$(basename "$mf" .md)"
-  grep -q "$m" "$REF/role-routing.md" || err "模式 '$m' 未在 role-routing.md"
-  python3 scripts/legacy_runbook.py --repo-root . show --stage validate | grep -Fq -- "$m" \
-    || err "模式 '$m' 未被固定 legacy validate runbook 引用"
-done
-ok "validate 模式交叉引用检查完成($(ls "$REF"/validate-modes/*.md | wc -l | tr -d ' ') 个；正文按需由 adapter 加载)"
-
-echo "== 5. 可移植自检:流程 skill 不得硬依赖 Claude 专属工具 =="
-for f in "$ROOT"/*/SKILL.md; do
-  # 允许出现在"降级/不依赖"语境;这里只粗查是否完全没提降级却硬用 AskUserQuestion
-  if grep -q "AskUserQuestion" "$f" && ! grep -q "text_mode" "$f"; then
-    err "$f 提到 AskUserQuestion 但无 text_mode 降级(违反可移植铁律)"
-  fi
-done
-[ $fail -eq 0 ] && ok "可移植自检通过"
-
-echo "== 6. 语言包:文件 ↔ role-routing §7 登记 =="
-if [ -d "$REF/languages" ]; then
-  for lf in "$REF"/languages/*.md; do
-    l="$(basename "$lf" .md)"
-    grep -q "languages/$l" "$REF/role-routing.md" || err "语言包 '$l' 未在 role-routing §7 登记"
-    head -6 "$lf" | grep -qE '^lang:' || err "$lf 缺 lang: frontmatter"
-  done
-  ok "语言包检查完成($(ls "$REF"/languages/*.md 2>/dev/null | wc -l | tr -d ' ') 个)"
-fi
-
-echo "== 7. control 协议跨流程引用与行为测试 =="
-for f in "$ROOT/sdlc/SKILL.md" "$ROOT/sdlc-backlog/SKILL.md" "$ROOT/sdlc-onboard/SKILL.md" "$ROOT/sdlc-plan/SKILL.md" "$ROOT/sdlc-build/SKILL.md" "$ROOT/sdlc-spec/SKILL.md" "$ROOT/sdlc-validate/SKILL.md" "$ROOT/sdlc-review/SKILL.md" "$ROOT/sdlc-ship/SKILL.md"; do
-  grep -q "control-plane.md" "$f" || err "$f 未引用 control-plane.md"
-done
-[ -f scripts/lifecycle_profile.py ] && ok "scripts/lifecycle_profile.py" || err "缺失 scripts/lifecycle_profile.py"
-for f in "$ROOT/sdlc/SKILL.md" "$ROOT/sdlc-product-design/SKILL.md" "$ROOT/sdlc-software-delivery/SKILL.md" "$ROOT/sdlc-onboard/SKILL.md" "$ROOT/sdlc-backlog/SKILL.md" "$ROOT/sdlc-plan/SKILL.md" "$ROOT/sdlc-build/SKILL.md" "$ROOT/sdlc-spec/SKILL.md" "$ROOT/sdlc-validate/SKILL.md" "$ROOT/sdlc-review/SKILL.md" "$ROOT/sdlc-ship/SKILL.md"; do
-  grep -q "lifecycle-profile.md" "$f" || err "$f 未声明 lifecycle profile 前置条件"
-  grep -q "migration-required" "$f" || err "$f 未声明 migration-required 停止语义"
-done
-for f in scripts/test_control.py scripts/test_control_intake.py scripts/test_hooks.py; do
-  [ -f "$f" ] && ok "$f" || err "缺失:$f"
-done
-python3 scripts/test_control_intake.py \
-  && ok "control intake 正文行为测试通过" || err "control intake 正文行为测试失败"
-for f in scripts/control.py scripts/control_cli.py scripts/control_intake.py scripts/control_lint.py scripts/control_model.py scripts/control_store.py; do
-  if [ -f "$f" ]; then
-    lines=$(wc -l < "$f" | tr -d ' ')
-    [ "$lines" -lt 1000 ] && ok "$f(${lines} lines)" || err "$f 达 ${lines} 行,需拆分(<1000)"
+echo "== 1. Lightweight runtime and shared references =="
+for path in \
+  scripts/lifecycle_state.py \
+  scripts/backlog.py \
+  scripts/board.py \
+  scripts/contrast_check.py \
+  scripts/test_lifecycle_state.py \
+  scripts/test_backlog.py \
+  scripts/test_contrast_check.py \
+  "$REF/role-routing.md" \
+  "$REF/lightweight-runtime.md" \
+  "$REF/lifecycles/product-design.md" \
+  "$REF/lifecycles/software-delivery.md" \
+  "$REF/runtime-adapters/codex.md" \
+  "$REF/roles" \
+  "$REF/validate-modes" \
+  "$REF/languages"; do
+  if [ -e "$path" ]; then
+    ok "$path"
   else
-    err "缺失:$f"
+    err "缺失: $path"
   fi
 done
-python3 -m py_compile scripts/control.py scripts/control_cli.py scripts/control_intake.py scripts/control_lint.py scripts/control_model.py scripts/control_store.py \
-  && ok "control modules 可导入/编译" || err "control modules 编译失败"
-[ -f docs/adr/0001-sdlc-control-branch.md ] && ok "control ADR 存在" || err "缺失 control ADR"
-grep -q "docs/adr/0001-sdlc-control-branch.md" "$REF/control-plane.md" \
-  || err "control-plane.md 未引用 control ADR"
-grep -q "/sdlc intake" "$ROOT/sdlc/SKILL.md" || err "driver 缺 /sdlc intake"
-grep -q "/sdlc deliver" "$ROOT/sdlc/SKILL.md" || err "driver 缺 /sdlc deliver"
-grep -q "lifecycle_profile.py" "$ROOT/sdlc/SKILL.md" || err "driver 缺 lifecycle profile 路由"
-grep -q "/sdlc migrate" "$ROOT/sdlc/SKILL.md" || err "driver 缺显式 lifecycle migration"
-python3 scripts/legacy_runbook.py --repo-root . show --stage plan | grep -Fq "depends_on_tasks" \
-  || err "固定 legacy plan runbook 缺 Task 依赖字段"
-python3 scripts/legacy_runbook.py --repo-root . show --stage plan | grep -Fq "write_set" \
-  || err "固定 legacy plan runbook 缺 Task write_set 字段"
-python3 scripts/legacy_runbook.py --repo-root . show --stage build | grep -Fq "TASK.md" \
-  || err "固定 legacy build runbook 未接入 TASK identity"
-python3 scripts/legacy_runbook.py --repo-root . show --stage build | grep -Fq "integration_sha" \
-  || err "固定 legacy build runbook 未引用 integration_sha"
-python3 scripts/legacy_runbook.py --repo-root . show --stage validate | grep -Fq "tested_sha" \
-  || err "固定 legacy validate runbook 未引用 tested_sha evidence"
 
-echo "== 8. 强门禁脚本 sdlc-guard 随技能自包含且可执行 =="
-GUARD="$ROOT/sdlc/scripts/sdlc-guard"
-if [ -f "$GUARD" ]; then
-  [ -x "$GUARD" ] && ok "$GUARD(存在且可执行)" || err "$GUARD 不可执行(chmod +x)"
-  # hook 模板的查找路径必须指向 skills/sdlc/scripts(三种安装方式一致)
-  grep -q "skills/sdlc/scripts/sdlc-guard" "$REF/templates/hooks/pre-commit" \
-    || err "pre-commit hook 未按 skills/sdlc/scripts/ 查找 sdlc-guard(路径漂移)"
+echo "== 2. Skill frontmatter =="
+skill_count=0
+for file in "$ROOT"/*/SKILL.md; do
+  skill_count=$((skill_count + 1))
+  first_line=$(head -n 1 "$file")
+  [ "$first_line" = "---" ] || err "$file 首行不是 ---"
+  head -n 20 "$file" | grep -qE '^name:[[:space:]]*[^[:space:]]' \
+    || err "$file 缺少 name"
+  head -n 20 "$file" | grep -qE '^description:[[:space:]]*(>|[^[:space:]])' \
+    || err "$file 缺少 description"
+done
+ok "$skill_count 个 SKILL.md 已检查"
+
+echo "== 3. Role and validate-mode routing =="
+role_count=0
+for file in "$REF"/roles/*.md; do
+  role_count=$((role_count + 1))
+  role=$(basename "$file" .md)
+  grep -Fq -- "$role" "$REF/role-routing.md" \
+    || err "角色 $role 未在 role-routing.md 登记"
+done
+ok "$role_count 个角色卡已检查"
+
+mode_count=0
+for file in "$REF"/validate-modes/*.md; do
+  mode_count=$((mode_count + 1))
+  mode=$(basename "$file" .md)
+  grep -Fq -- "$mode" "$REF/role-routing.md" \
+    || err "验证模式 $mode 未在 role-routing.md 登记"
+  grep -Fq -- "$mode" "$ROOT/sdlc-validate/SKILL.md" \
+    || err "验证模式 $mode 未被 sdlc-validate 引用"
+done
+ok "$mode_count 个验证模式已检查"
+
+echo "== 4. Language packs =="
+language_count=0
+for file in "$REF"/languages/*.md; do
+  language_count=$((language_count + 1))
+  language=$(basename "$file" .md)
+  head -n 8 "$file" | grep -qE '^lang:' || err "$file 缺少 lang frontmatter"
+  grep -Fq -- "languages/$language" "$REF/role-routing.md" \
+    || err "语言包 $language 未在 role-routing.md 登记"
+done
+ok "$language_count 个语言包已检查"
+
+echo "== 5. Local Markdown references =="
+if python3 - <<'PY'
+from pathlib import Path
+import re
+
+roots = [Path("README.md"), Path("CLAUDE.md")]
+roots.extend(Path("skills").rglob("*.md"))
+missing = []
+
+for source in roots:
+    text = source.read_text(encoding="utf-8")
+    for raw_target in re.findall(r"\]\(([^)]+)\)", text):
+        target = raw_target.strip().split(maxsplit=1)[0].strip("<>")
+        target = target.split("#", 1)[0]
+        if not target or target.startswith(("http://", "https://", "mailto:")):
+            continue
+        if any(marker in target for marker in ("<", ">", "*")):
+            continue
+        resolved = (source.parent / target).resolve()
+        if not resolved.exists():
+            missing.append(f"{source}: {raw_target}")
+
+if missing:
+    print("\n".join(f"missing local reference: {item}" for item in missing))
+    raise SystemExit(1)
+PY
+then
+  ok "本地 Markdown 引用均存在"
 else
-  err "缺失:$GUARD(强门禁脚本应随 sdlc 技能自包含)"
+  err "存在悬空的本地 Markdown 引用"
 fi
-for f in "$GUARD" "$REF"/templates/hooks/pre-commit "$REF"/templates/hooks/pre-push "$REF"/templates/hooks/post-checkout; do
-  sh -n "$f" || err "$f shell syntax 无效"
-done
 
-echo "== 9. 双生命周期 Policy / Playbook 闭包 =="
-POLICY_ROOT="$REF/policies"
-for f in "$POLICY_ROOT/modules.json" "$POLICY_ROOT/phases.json" "$POLICY_ROOT/roles.json" \
-         "$ROOT/sdlc-product-design/SKILL.md" "$ROOT/sdlc-software-delivery/SKILL.md" \
-         "$REF/lifecycles/product-design.md" "$REF/lifecycles/software-delivery.md"; do
-  [ -f "$f" ] && ok "$f" || err "缺失:$f"
+echo "== 6. Portability =="
+for file in "$ROOT"/*/SKILL.md; do
+  if grep -q "AskUserQuestion" "$file" && ! grep -q "text_mode" "$file"; then
+    err "$file 使用 AskUserQuestion 但未声明 text_mode 降级"
+  fi
 done
-python3 scripts/policy_compiler.py check --policy-root "$POLICY_ROOT" --skill-root "$ROOT" --engine-version 1.0.0 \
-  && ok "双生命周期 Policy compiler 检查通过" || err "双生命周期 Policy compiler 检查失败"
-grep -q "scope=preview" "$ROOT/sdlc-product-design/SKILL.md" \
-  || err "sdlc-product-design 未声明 preview scope"
-grep -q "scope=preview" "$ROOT/sdlc-software-delivery/SKILL.md" \
-  || err "sdlc-software-delivery 未声明 preview scope"
-grep -q "legacy-composite-v1" "$ROOT/sdlc-software-delivery/SKILL.md" \
-  || err "sdlc-software-delivery 未声明 legacy bridge"
+ok "可移植性文本检查完成"
 
-echo "== 10. 兼容 adapter / pinned legacy runbook =="
-for f in "$ROOT/sdlc/SKILL.md" "$ROOT/sdlc-spec/SKILL.md" "$ROOT/sdlc-plan/SKILL.md" \
-         "$ROOT/sdlc-build/SKILL.md" "$ROOT/sdlc-validate/SKILL.md" "$ROOT/sdlc-review/SKILL.md"; do
-  grep -q "legacy_runbook.py" "$f" || err "$f 未声明固定 legacy runbook loader"
-  lines=$(wc -l < "$f" | tr -d ' ')
-  [ "$lines" -lt 180 ] && ok "$f($lines lines)" || err "$f 达 $lines 行,adapter 应保持精简(<180)"
+echo "== 7. Focused tests =="
+for test_file in \
+  scripts/test_lifecycle_state.py \
+  scripts/test_backlog.py \
+  scripts/test_contrast_check.py; do
+  if PYTHONDONTWRITEBYTECODE=1 python3 "$test_file"; then
+    ok "$test_file"
+  else
+    err "$test_file 失败"
+  fi
 done
-python3 scripts/legacy_runbook.py --repo-root . verify \
-  && ok "固定 legacy runbook 全量字节校验通过" || err "固定 legacy runbook 校验失败"
-grep -q "/sdlc preview" "$ROOT/sdlc/SKILL.md" \
-  && ok "driver 声明 explicit preview 路由" || err "driver 缺 explicit preview 路由"
 
 echo
-if [ $fail -eq 0 ]; then echo "RESULT: PASS ✅"; exit 0
-else echo "RESULT: $fail 项不一致 ❌(修完再 commit)"; exit 1; fi
+if [ "$fail" -eq 0 ]; then
+  echo "RESULT: PASS"
+  exit 0
+fi
+
+echo "RESULT: $fail 项不一致"
+exit 1

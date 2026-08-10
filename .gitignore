@@ -1,24 +1,24 @@
-# .sdlc/ 二分:在飞工作态本地忽略;已完成/已蒸馏产物纳入 git 跨机器持久
+# sdlc-pilot 自身的 0.x dogfood 历史；不是 1.0 运行时协议
 .sdlc/*
 !.sdlc/archive/
 !.sdlc/EVOLUTION.md
-!.sdlc/lifecycle.json
 !.sdlc/PROFILE.md
 
-# dual-lifecycle-v1 local-serial ledger, lock and authority adapter configuration
-# are runtime state; they are never source artifacts in this repository.
-.sdlc-control/dual-lifecycle/
+# `.sdlc-v1/state.json` 与 `.sdlc-v1/context/*.md` 必须由 Git 追踪，勿在此忽略。
+
 .DS_Store
 node_modules/
+__pycache__/
+*.py[cod]
 .superpowers/
 docs/dogfood/
-.playwright-mcp/    # 浏览器 MCP 会话产物(console/page 快照),非源码
+.playwright-mcp/    # 浏览器 MCP 会话产物（console/page 快照），非源码
 
-# web-review 运行时产物（server.py 在其目录跑测试/审阅时生成，非源码）
+# web-review 运行时产物
 skills/sdlc/references/web-review/feedback.json
 skills/sdlc/references/web-review/feedback-history.jsonl
 skills/sdlc/references/web-review/replies.json
 skills/sdlc/references/web-review/rev
 
-# backlog board 渲染产物(派生,可由 backlog.py board 重生成)
+# backlog board 派生产物
 _board.html

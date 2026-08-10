@@ -1,50 +1,83 @@
-# sdlc-pilot — 维护契约(给在本仓工作的 coding agent 读)
+# sdlc-pilot — 维护契约
 
-> 本文件被 Claude Code 自动加载;`AGENTS.md`(指向本文件)供 Codex 等读。
-> **任何修改本项目的 agent,先读这里再动手。** 用户向导见 `README.md`;设计依据见 `docs/specs/`。
+> 本文件被 Claude Code 自动加载；`AGENTS.md` 指向本文件，供其他 coding agent 使用。用户向导见 `README.md`。
 
 ## 这是什么
-一套自洽、可移植、纯文件的 SDLC 技能族。结构、用法、溯源见 `README.md`。核心:**Roles=职能视角(知识卡) / Skills=流程阶段**;验证类(e2e/eval)是 `sdlc-validate` 的**模式**不是独立 skill。
 
-## 三条不可破的铁律(改任何东西都要守)
-1. **不新增顶层 skill**(除非是 SDLC 主线缺的真·生命周期阶段,如新增 ship / backlog 那样的重大决策)。家族 = `sdlc` driver + **8 流程 skill**(onboard / backlog / spec / plan / build / validate / review / ship;其中 onboard、backlog 是项目级 stage)。新增能力优先走:职能视角→`references/roles/<r>.md`;验证手法→`references/validate-modes/<m>.md`;语言→`references/languages/<lang>.md`;部署目标→`references/deploy-targets/<type>.md`;流程纪律→`references/*.md`。**真要加流程阶段**=改 stage 枚举(driver + STATE 模板)+ driver 路由表 + 计数,慎重。
-2. **可移植**:不硬依赖 Workflow / AskUserQuestion / subagent。交互用 text_mode(纯文本编号),并行用 Task-or-sequential 降级。必须在 Codex 下也能跑。
-3. **纯文件 + 单写者**:知识/状态都是文件;Feature driver 单写 `STATE.md`，control transitions 只经 adapter；Task agent 两者都不写。
-4. **skill 约束"做什么/为什么/避哪些坑",不规定"怎么执行命令"**。流程 skill 是约束与原则,不是命令手册——别写死带一堆 flag/转义/shell 怪癖的 `find`/`grep`/`awk` 一行流(模型自己会写,写死只会脆、只会在某个 shell 崩)。把"坑"写成**原则**(如"统计大文件先排掉构建产物""别只扫根目录"),让模型自己选实现。例外:① `git diff --name-only` 这类**稳定且是契约输入**的单命令可留;② `references/languages/<lang>.md`、`deploy-targets/<type>.md` 这类**参考卡**——它们的职责就是记录某语言/目标的具体 lint/test/build 命令,命令本身即交付物,保留。判据:这条命令是"流程怎么走"还是"某环境的具体工具调用"?前者→原则化,后者→留在参考卡。
+一套自洽、可移植、纯文件的 SDLC 技能族。核心模型是：
 
-## 怎么迭代(常见改动 → 要同步哪些地方)
+- Roles = 专业视角知识卡；
+- Skills = 生命周期入口或流程阶段；
+- `.sdlc-v1/state.json`（`state_version=3`）= 唯一机器可读进度；
+- Git = 唯一跨 clone 传输和历史机制；
+- Markdown = 产品、工程和项目上下文。
 
-| 改动 | 步骤(缺一即不一致) |
+## 维护原则
+
+1. **保持单一路径。** 不重新引入第二状态源、第二版本历史、第二运行时或技能自评估运行时。
+2. **状态保持小。** `state.json` 只追踪 Requirement、Feature、Task 与验证/评审/发布摘要；长篇 PRD、设计、ADR、测试报告放 Markdown。
+3. **普通 Git 协作。** 跨机器交接使用 commit/push/pull/merge；不要构造第二套并发、历史或身份协议。
+4. **按需加载。** 生命周期只加载当前阶段、相关角色卡和验证模式，避免每轮重读全套方法论。
+5. **可移植。** 不硬依赖 Workflow、AskUserQuestion 或 subagent；交互可退化为纯文本，并行可退化为串行。
+6. **Skill 写约束和原则。** 环境特定命令放语言包或部署目标卡，不把流程 skill 写成 shell cookbook。
+
+## 结构
+
+```text
+skills/
+├── sdlc/                         # driver + 共享 references
+├── sdlc-product-design/          # 产品生命周期入口
+├── sdlc-software-delivery/       # 研发交付入口
+└── sdlc-{onboard,backlog,spec,plan,build,validate,review,ship}/
+
+scripts/
+├── lifecycle_state.py            # 唯一状态实现
+├── backlog.py / board.py         # state 的只读投影（readyqueue/coverage/lint/tree/board）
+├── contrast_check.py             # 设计对比度检查
+├── test_*.py                     # 三组小测试
+└── validate-skills               # 快速结构检查 + 小测试
+```
+
+共享 role、routing、validate mode、language、deploy target 和 playbook 只放在
+`skills/sdlc/references/`，阶段技能引用它们，不复制一份。
+
+## 常见改动要同步什么
+
+| 改动 | 同步项 |
 |---|---|
-| **加一个角色卡** | ① 写 `skills/sdlc/references/roles/<role>.md`(关注点/检查清单/好的样子/常见翻车/介入阶段)→ ② role-routing.md:§2 加触发规则 + §3 取值字典 + §5 自检 → ③ `templates/STATE.md` 角色取值字典 → ④ `sdlc-onboard` Phase C 角色字典 → ⑤ 跑 `scripts/validate-skills` |
-| **加一个 validate 模式** | ① 写 `references/validate-modes/<mode>.md` → ② role-routing.md §4 字典 + §2 触发 → ③ `sdlc-validate` 调度层引用 → ④ validate-skills |
-| **加/改路由规则** | 只改 `references/role-routing.md`(它是改动→角色+模式的**单一事实源**);driver 只调用不内联 |
-| **加一个流程阶段** | **慎重**(要改 stage 枚举:`sdlc/SKILL.md` + `templates/STATE.md` + 各 skill)。一般别加,优先用角色/模式扩展 |
-| **改 spec/plan/build 等流程** | 改对应 `skills/sdlc-<x>/SKILL.md`;保持 §0 可移植前置不动 |
-| **加/改 backlog 派生操作** | ① 在 `scripts/backlog.py` 加子命令 + `scripts/test_backlog.py` 加用例(TDD)→ ② `skills/sdlc-backlog/SKILL.md` 加操作章节 + 顶部 op 枚举 → ③ 若涉及特性生命周期(如 Retire 在 done 触发):driver §2/§4 + `templates/STATE.md` 同步 → ④ validate-skills。**不新增 stage/skill**(派生 op 挂在 backlog 下) |
-| **改控制记录/任务分支协议** | ① 先改 `references/control-plane.md` + `scripts/control*.py`/`test_control.py`；② 同步 driver/backlog/plan/build/validate/review/ship；③ 同步 STATE/TASK/hook；④ 跑 control + hook + backlog + static validation。禁止各 skill 自行拼一套 Git transaction |
-| **加/改 meta 能力(改工具自身)** | meta 能力(如 evolve 自更新回流)**不新增顶层 skill**,用"角色卡 + playbook + driver 子命令"表达:`references/roles/skill-maintainer.md`(维护者视角)+ `references/evolve-loop.md`(回流 playbook)+ driver 的 `/sdlc evolve` 入口 + role-routing **R10**。小改走 `/sdlc evolve`(append-only),结构性大改对本仓跑完整 `/sdlc` |
-| **改/扩 loop 编排** | loop(自治批量推进)同 evolve 范式:`references/build-loop.md`(playbook)+ driver `/sdlc loop` 入口,**不新增 skill、不进 STATE 枚举、只编排既有阶段**。往 `build-loop.md` append 一条原则(如 §E 蒸馏区)= 小改走 `/sdlc evolve`;改 loop 骨架/converge 契约 = 大改走完整 `/sdlc` |
+| 加角色卡 | `references/roles/<role>.md` → `role-routing.md` 登记 → `validate-skills` |
+| 加 validate 模式 | `references/validate-modes/<mode>.md` → `role-routing.md` → `sdlc-validate/SKILL.md` |
+| 改路由规则 | 只改 `role-routing.md`；driver 不内联同一张映射 |
+| 改生命周期状态 | `lifecycle_state.py` → `test_lifecycle_state.py` → 生命周期/阶段 skill → README/设计 spec |
+| 改 backlog/board | 保持只读 projection；`backlog.py`/`board.py` → `test_backlog.py` → `sdlc-backlog/SKILL.md` |
+| 改阶段行为 | 对应 `sdlc-<stage>/SKILL.md`；确认引用存在并保持可移植 |
+| 改工具自身 | `skill-maintainer` 角色 + `evolve-loop.md`；结构性改动走完整 SDLC |
 
-## 每次提交前必做
-1. **跑全量检查**:`python3 scripts/test_control.py && python3 scripts/test_backlog.py && python3 scripts/test_hooks.py && bash scripts/validate-skills`。**不过不提交。**
-2. **更新 `CHANGELOG.md`** + 必要时升 `.claude-plugin/{plugin,marketplace}.json` 的 `version`(语义化)。
-3. 行为变更 → 用 dogfood 验证(见下"测试")。
+## 提交前
 
-## 测试这套 skill(两层,markdown playbook 没法单测)
-- **结构 lint(可重复回归)**:`scripts/validate-skills` —— 一致性/悬空引用/frontmatter。
-- **行为 dogfood**:把某个流程 skill 真跑在一个**通用 fixture/真实项目**上,对照判据查产出(如 onboard 产的 surface-map 是否过 Phase C 三条自检)。产出样例见 `examples/`。**别把内部项目产物 commit 进来**(`docs/dogfood/` 已 gitignore,只在本地跑)。
+```bash
+bash scripts/validate-skills
+git diff --check
+```
 
-## 内容怎么"长大"(时用时新)
-分析到新的好 skill/项目 → 按 `skills/sdlc/references/distillation-loop.md` 把可复用 pattern **蒸馏**进对应角色卡/模式/阶段,标 `distilled-from`。**蒸馏方法论,不搬代码、不引入运行时依赖。**
+同时更新 `CHANGELOG.md`；发布行为变化时按语义化版本同步
+`.claude-plugin/plugin.json` 和 `.claude-plugin/marketplace.json`。
 
-## 路径约定(给别的 agent)
-跨 skill 引用的共享数据(role-routing / roles / validate-modes / templates)**物理上只在 `skills/sdlc/references/` 下**;解析时按"相对 skills 根的 `sdlc/references/...`"定位,不要当作相对调用方 skill 目录。
+## 状态与上下文约定
 
-## `.sdlc/` track 策略(二分)
-`.sdlc/` 按生命周期二分,gitignore 用 `.sdlc/*` + `!` 反忽略实现(见 `.gitignore`):
-- **在飞工作态**(顶层 `spec.md`/`plan.md`/`STATE.md`/`validate/`/`review/`)→ **本地忽略**(churn 不污染 git 历史)。
-- **已完成 / 已蒸馏**(`archive/<date>-<feat>/` 退场归档 + `EVOLUTION.md` 演进流水 + `PROFILE.md` 项目记忆)→ **纳入 git** 跨机器/团队持久。退场(Retire op)是把前者转后者的那道闸。
-- **Evolution log 独立成 `EVOLUTION.md`**(唯一正屋),PROFILE 仅留指针——无界流水不塞进每会话整篇加载的有界 PROFILE。
-- ⚠ **隐私**:track 前确认 archive/EVOLUTION 无密钥——Decisions log 可能含敏感配置位置 / 内网地址 / token。有则先脱敏再入仓。
-- 这是 sdlc-pilot 自身采用的**推荐约定**,各项目可自选 track 粒度。
+- `.sdlc-v1/state.json` 必须纳入目标仓库 Git，不要加入 `.gitignore`。
+- Requirement/Feature 的 context ref 必填，且只能指向已存在、非符号链接的 `.sdlc-v1/context/*.md`。
+- 不把 Markdown 正文、完整测试输出或评审全文塞进 `state.json`。
+- `next` 是公开 state 查询：单候选返回下一阶段，多候选返回 `needs_selection`，不得静默任选一条。
+- backlog/board 只能读取 state 并生成 `readyqueue/coverage/lint/tree/board` 投影；禁止反写 lifecycle 状态。
+- validation 前 state 必须已 tracked、无 unmerged index entry 且未 staged，当前 context 必须已 tracked 且无冲突，
+  业务代码工作树必须干净；之后只提交 `.sdlc-v1/**` 不使验证失效，其他路径变化后必须重新验证。
+- `init` 检出旧 sdlc-pilot copied hooks 时必须停止并给出路径；只能人工检查/清理，不能自动覆盖团队 hooks。
+- 多人冲突按普通 Git 冲突处理；同步并解决冲突后重跑测试和状态检查。
+- 本仓现有 `.sdlc/archive/` 属于项目历史，不代表 1.0 运行时协议。
+
+## 测试边界
+
+结构检查只验证 frontmatter、关键共享文件和本地引用；行为测试只覆盖仍存在的轻量实现。
+`validate-modes/eval-bench.md` 用于验证业务产品内的 AI 功能，应保留。Web Review Live 模式用于本地文档批注，
+也应保留。两者都是与 lifecycle state 正交的普通能力。

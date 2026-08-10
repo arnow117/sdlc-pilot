@@ -1,133 +1,87 @@
-# 回流回路(Evolve Loop)—— 时用时新的"改自己并发回 GitHub"
+# Evolve loop：轻量维护 SDLC 技能
 
 > distilled-from: kb-manage, distillation-loop, session:sdlc-evolve-design-2026-06-06
->
-> 这份 playbook 是 **数据,不是 skill**(与 `distillation-loop.md` 并列)。任何引擎(Claude + Read/Edit/Bash/Grep,或 Codex)都能照着执行,不依赖任何运行时工具。
-> 由 driver 的 **`/sdlc evolve`** 子命令入口加载。它**复用** `distillation-loop.md` 做"把 pattern 放进哪张卡"(不重写方法论),只补 distillation-loop 不管的:**定位源 + 安全发布闸 + GitHub 回流**。
-> 全程以 `skill-maintainer` 角色卡为透镜(防臃肿 / additive / 防孤儿 / 溯源 / 可移植 / semver / 自我修改安全)。
 
----
+`/sdlc evolve` 用于修改 sdlc-pilot 自身。它只负责定位真实源码、编辑、做最小校验并汇报，不建立独立生命周期状态。
 
-## 0. 它解决什么
+## 1. 定位可写源码
 
-时用时新的最后一公里:你在**别的项目 X** 里用着 sdlc-pilot,冒出"这套技能该改进 Y"的念头,
-evolve 把这个念头**安全地落回 sdlc-pilot 的 git 源、并发回 GitHub**。
+按顺序检查：
 
-核心认知(决定为何要人工检查点):用 vN 改出 vN+1,**本次运行始终 vN 掌舵,vN+1 下趟才生效**。
-所以一个改动的行为只能下趟验证 → 当前趟的安全网 = lint + additive 守卫 + **人工过目**,不是"现场跑"。
+1. 当前工作区是否就是 sdlc-pilot Git 仓库。
+2. 项目或用户 skill 链接指向的真实路径，例如 `readlink` 结果。
+3. 用户明确给出的 clone 路径。
 
----
+只有真实、可写的 Git 源码可以修改。插件缓存或只读安装目录只用于定位版本；找不到可写源码时，说明需要 clone/fork 的位置后停止。
 
-## 1. 用 evolve(小改)还是走完整 `/sdlc`(大改)—— 机器可判
+不要因为当前工作树已有用户改动而清理、恢复或覆盖它们。先用 `git status` 和 `git diff` 确认本次可安全编辑的文件；有重叠时向用户说明。
 
-evolve **物理上只做 append-to-existing 小改**。落位前先判:
+## 2. 判断改动范围
 
-```
-若这次落位 = 仅 append/收紧 references/ 下【已存在】的卡  → evolve 放行
-若 = 新建文件 / 动 role-routing / driver / STATE 模板 / stage 枚举(契约/结构性)
-     → 停,escalate(text_mode):
-       "这是结构性改动(新建卡/动契约),不该走 evolve 轻量路。
-        请对 sdlc-pilot 仓跑完整 /sdlc(spec→…→ship),含多角色 review。"
-```
+| 类型 | 例子 | 处理 |
+|---|---|---|
+| 局部改动 | 调整一张角色卡、一个阶段说明、一个命令示例 | 直接编辑对应文件 |
+| 结构改动 | 新增/删除技能、改变路由、状态 schema 或公共命令 | 明确列出受影响入口后再编辑相关文件 |
 
-> 这道 guard 在 §3 闸 B 用 `git diff` 再兜一次:即便判断失误真写了结构性改动,闸 B 也会拦下并回滚。
+这个分类用于控制修改范围和发布影响，不强制切换到另一套流程，也不生成额外计划或状态文件。
 
----
+需要把外部方法合并进角色卡、验证方式或语言卡时，复用 `distillation-loop.md` 的定位原则；普通修正不必完整执行蒸馏流程。
 
-## 2. 主管道(6 步)
+## 3. 编辑原则
 
-```
-①捕获 → ②探源 → ③落位 → ④发布闸(§3)→ ⑤回流(§4)→ ⑥回报
-```
+- 修改真实来源，不改生成缓存。
+- 优先更新已有文件，避免为一条规则新建孤立 reference。
+- 同一规则只保留一个权威定义，其他文件链接引用。
+- 保留与当前目标无关的用户修改。
+- 命令、路径和引用必须与仓库当前实现一致。
+- 不建立 evolve inbox、临时账本或第二套进度。
+- 不强制创建临时分支；用户希望隔离时才使用普通 Git 分支。
 
-### ① 捕获
-洞察来自**当前 session**(刚才 build/validate/review 里发现的踩坑/缺口)+ 用户一句话描述要改什么。
-**不做持久 inbox**(跨机器不可靠)。一次 evolve 聚焦**一个**改进。
+## 4. 最小校验
 
-### ② 探源(定位可写的 sdlc-pilot 源)—— 见 §5
-按序探:`readlink ~/.claude/skills/sdlc` 的目标 → 记录过的 source-path → 都没有则**只剩只读插件缓存**,
-停下,text_mode 引导用户先 clone(owner)或 fork(第三方),给出命令。**绝不在只读缓存上改。**
+编辑完成后只运行：
 
-### ③ 落位(复用 distillation-loop)
-`cd` 到源,按 `distillation-loop.md` §2-③/④/⑤ 的两轴定位写进对的卡(角色/模式/语言/阶段),
-additive 合并、标 `distilled-from` 与 `updated`。**这一步不重写方法论,直接照 distillation-loop 做。**
+~~~bash
+bash scripts/validate-skills
+git diff --check
+~~~
 
-### ④ 发布闸
-见 §3(临时分支 → lint → additive 守卫 → 升版本/CHANGELOG → 人工检查点)。
+然后阅读 `git diff -- <本次文件>`，确认：
 
-### ⑤ 回流
-见 §4(owner 合 main 直推 / 第三方 fork+PR)。
+- 只修改了预期文件。
+- 没有断开的相对链接或 frontmatter 问题。
+- 没有空白错误。
+- 没有误删与本次目标无关的内容。
 
-### ⑥ 回报(text_mode)
-告诉用户:改了哪张卡、版本号、commit sha /(第三方)PR 链接。
+校验失败时继续修正当前改动并重跑。不要自动恢复整个工作树；需要撤销时只处理本次明确创建的改动，并先取得用户授权。
 
----
+## 5. 版本与 CHANGELOG
 
-## 3. 安全发布闸(自我修改的四层兜底)
+根据发布影响决定，不要求每次 evolve 都升版：
 
-```
-①(在源)开临时分支:  git switch -c evolve/<topic>     # 绝不直接动 main 工作区
-② 应用 ③ 落位的 append 改动
-③ 闸 A 结构 lint:      bash scripts/validate-skills    # 断链/孤儿/frontmatter/交叉引用全过
-④ 闸 B additive 守卫:  git diff --stat / --name-only 自检——
-      只动 references/ 下已存在卡、只见新增行、无意外删除、无新建文件、未碰 role-routing|driver|STATE模板|枚举
-      → 任一不满足:判为结构性 → 自动回滚(§ 回滚)+ escalate 走完整 /sdlc
-⑤ 升版本 + CHANGELOG:  补内容=patch / 加能力=minor(改 plugin.json + marketplace.json + 写一条 CHANGELOG)
-⑥ 闸 C 人工检查点(text_mode):把 diff + 版本 + CHANGELOG 摆给用户,等确认
-      1) 确认,发布   2) 我要再改   3) 放弃(回滚)
-```
+| 改动 | 版本 / CHANGELOG |
+|---|---|
+| 仅本地使用、文字修正、内部 reference 调整 | 默认不升版；CHANGELOG 可省略 |
+| 会随插件发布的行为变化或新能力 | 按现有 SemVer 约定更新版本，并写简短 CHANGELOG |
+| 破坏公共命令、状态 schema 或兼容性 | 明确说明影响，按现有规则选择 major/minor，并写迁移说明 |
 
-**回滚**(任一闸挂 / 用户放弃):
-```
-git restore . ; git switch main ; git branch -D evolve/<topic>
-```
-源回到干净 main,坏改动**进不了 main、进不了 GitHub**。一次 evolve = 一聚焦改动 = 一 commit + 一次升版本 → 真出问题 `git revert` 或把插件降回上一版本号即回滚。
+只有真正准备发布插件时才同步相关插件元数据。不要为了维持“一次修改一次版本”而制造无意义版本。
 
-四层安全:**范围闸**(§1)+ **临时分支/回滚** + **人工检查点(闸 C)** + **原子可逆**。
+## 6. Git 权限
 
----
+- 是否 commit、push 或创建 PR 完全服从用户授权和当前仓库 Git 规则。
+- 不自动合并主分支，不自动 push，不以 dry-run 推送探测权限。
+- 用户未授权时，只保留工作区修改并汇报差异。
+- 用户授权 commit 时，提交内容只包含本次修改。
+- 用户授权 push/PR 时，再按现有 remote 和分支执行。
 
-## 4. GitHub 回流(探权限自适应)
+## 7. 输出
 
-闸 C 通过 → 在临时分支 commit → 探对 upstream 的推送权,二选一:
+完成后简要返回：
 
-```
-owner(对 upstream 有写权):
-  git switch main && git merge --ff-only evolve/<topic> && git push origin main
-  (不走 PR;安全已由闸 C 人工过目 + 临时分支回滚兜住)
+- 修改了哪些文件及行为。
+- `validate-skills` 和 `git diff --check` 的结果。
+- 是否更新版本与 CHANGELOG，以及判断依据。
+- Git 工作树状态；若未获授权，明确说明没有 commit/push。
 
-第三方(无 upstream 写权):
-  git push <fork> evolve/<topic>
-  gh pr create --repo <upstream> --base main --head <fork>:evolve/<topic>  # 起草 PR 回上游
-```
-
-- 怎么判 owner vs 第三方:试探 upstream 推送权(如 `git push --dry-run origin` 成功 = owner;失败/无权 = 第三方)。
-- **无 `gh` 的环境**(纯 Codex)且为第三方:不假装已提 PR,改为打印手动建 PR 的步骤 + 比较 URL(`https://github.com/<upstream>/compare/main...<fork>:evolve/<topic>`)。
-- **密钥**:全程不读不写任何密钥;push/PR 靠用户本机已有的 git/gh 凭据。
-
----
-
-## 5. 探源细节(②)
-
-```
-1) readlink -f ~/.claude/skills/sdlc  或  ~/.codex/skills/sdlc  2>/dev/null
-     → 两个都试(Claude Code 装在前者、Codex 装在后者;owner 常两者都软链到同一源)。
-     → 指向一个真实 git 仓(含 .claude-plugin/plugin.json)= 软链安装的源,用它。
-2) 否则读记录过的 source-path(如用户 ~/.sdlc-pilot-source 或 git config 里的约定项)。
-3) 否则定位到只读缓存(~/.claude/plugins/cache/.../sdlc-pilot)= 不可写:
-     停,text_mode:
-       "没找到可写的 sdlc-pilot 源 clone。先:
-          owner →  git clone git@github.com:<you>/sdlc-pilot.git ~/code/sdlc-pilot
-          第三方 → 先 fork,再 clone 你的 fork
-        然后重跑 /sdlc evolve(我会记住这个路径)。"
-```
-
-> 找到可写源后,确认它在干净状态(`git status` 无未提交无关改动);脏树则先提示用户处理,**不把 evolve 改动和无关改动混在一起**。
-
----
-
-## 6. 与其他源的配合(一句话)
-
-- `distillation-loop.md` 提供 **③落位** 的方法论(放进哪张卡 / additive 合并 / 溯源 / 防孤儿)——evolve 复用,不重写。
-- `skill-maintainer.md` 角色卡提供**全程透镜**(防臃肿 / 可移植 / semver / 自我修改安全的判据)。
-- 本 playbook 只增量贡献 distillation-loop 不管的:**探源 + 安全发布闸 + GitHub 回流**。
+evolve 不编辑目标项目的 `.sdlc-v1/state.json`，也不生成自己的进度文件。

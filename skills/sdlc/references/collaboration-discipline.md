@@ -51,21 +51,21 @@ worktree 解决的是"**同时进行且互不干扰**"。没有并行需求就**
 ```bash
 git fetch origin
 git worktree add ../<repo>-<purpose> -b <type>/<summary> origin/main   # 从最新主干切
-#   再配本目录独立 .env / DB(或 schema) / 端口;初始化各自 .sdlc 状态。合见 §5.3
+#   再配本目录独立 .env / DB(或 schema) / 端口；同步 .sdlc-v1 文件。合见 §5.3
 ```
 
 ## 5. 并行协作:前置合约(核心)+ 收敛安全网
 
 隔离的 agent 没有共享上下文 → 不在开之前把"怎么对齐"定死,各方会做出**局部合理、彼此不兼容**的选择(上下文对不齐)。**省事在前置,后置只是兜底。**
 
-### 5.1 前置:开 worktree 之前定死
+### 5.1 前置：开 worktree 之前确定
 
 - **独立性测试**:只对**真正独立**的子任务开并行;B 依赖 A → 串行(并行只会变成带额外开销的串行)。
-- **契约先冻**:agent 间共享的接口 / schema / 事件契约**先定死**,作各方单一事实源(接口对齐是消除"对不齐"的头号杠杆;跨边界契约审查见 `roles/architect`)。
+- **先确定契约**：agent 间共享的接口、schema 和事件契约先写入共同上下文，作为各方单一事实源；跨边界检查见 `roles/architect`。
 - **面切分 + 文件归属**:谁动哪些模块/文件**不重叠**;"无主之地"显式归谁。会碰同一批文件 → 别并行。
 - **同一基**:都从**同一 commit(最新主干)**切。
 - **自包含简报 + 显式边界**:每个 agent 给「目标 + 产出格式 + 明确"别碰 X,那是别人的活"」。
-- **决策落共享记忆**:关键决策写进各自 `STATE` / 汇进共享记忆,不靠 agent 互相"看见"(复用 sdlc 的 STATE 交接,不另造)。
+- **决策落共享记忆**:产品判断写入产品上下文，工程判断写入 Feature 研发上下文，不靠 agent 互相“看见”。
 
 ### 5.2 实施中
 
@@ -76,7 +76,7 @@ git worktree add ../<repo>-<purpose> -b <type>/<summary> origin/main   # 从最�
 
 即便有合约,基线仍会动。**收敛是串行的**:每次合并都改变其余分支的目标基。
 
-- **串行收敛**:合主干一次一个,经单一闸口,不并发抢合。
+- **串行收敛**：合主干一次一个，不并发集成。
 - **★先基到最新 + 重测,才合**:合 B 前把 B 重基到含 A 的最新主干、**重跑全量验证**(绿要相对最新基),再合。这条防 **merge skew**——孤立看兼容、合进更新后的主干就坏。
 - **合后跑全量**:抓**语义冲突**(文本无冲突 ≠ 正确)。
 - **冲突在特性分支里解**(rebase 到主干上解),保主干始终可发布。
@@ -99,51 +99,18 @@ git worktree remove ../<repo>-<purpose> && git branch -d <type>/<summary> && git
 
 > 有 CI 时,§5.3 的"先基+重测"可由 merge queue 自动化;无 CI 则作人工纪律。
 
-### 5.4 监督式多-agent build loop(自治并行的高烈度形态)
+### 5.4 多 agent Task 分支协议
 
-#### 5.4a SDLC control Task 分支协议
+- 只把依赖已完成、写集不重叠、接口已确定、环境可隔离的 Task 并行化；否则串行。
+- Task 分支是可选隔离手段，不是默认要求。使用时一项独立 Task 对应一个分支和唯一负责人。
+- 每个执行者收到自包含 brief：`feature_id + task_id + branch + depends_on + write_scope + completion conditions`。
+- 执行者只修改授权范围；发现需要越界或接口不明确时停止并回报，不自行扩大范围。
+- 执行者不直接编辑 `state.json`，也不与其他执行者同时写 Feature 研发上下文；返回代码 diff、实际测试和未解决问题，由 Feature 负责人合并。
+- Feature 负责人串行集成 Task 分支。每合入一个分支，其余待集成分支先同步最新集成 commit。
+- 每次集成后运行受影响测试；全部 Task 集成完成后，在最新集成 commit 上重新运行 Feature 的完整必要验证。
+- 并行条件失效时切回串行，保留已有 Task ID、分支和结果。
 
-当仓库启用 `shared-control` 或 `local-serial` 时，具体执行以 `control-plane.md` 为准：
-
-- Feature branch 绑定一个 active claim；Task branch 绑定 `feature_id + task_id + plan_revision`。
-- Task 分支不是默认选项。只有依赖已 verified、write_set 不重叠、接口固定且 owner 唯一、runtime
-  可隔离、活动 Task 分支少于 3、无 serial Task 时才允许创建。
-- Task worktree 使用只读 `.sdlc/TASK.md`，不得复制 Feature `.sdlc/STATE.md`；Task agent 不写 control。
-- Feature orchestrator 串行集成。每次基于当前 Feature integration HEAD 重放 Task 变更并重测，
-  记录 source tip、merge method、 resulting integration SHA；证据必须精确测试该 resulting SHA。
-- serial Task 独占 Feature branch，与活动 Task branches 互斥。并行资格失效时安全降级为 serial，
-  仍保留 Task record 追踪。
-
-这些规则把分支生命周期、写集冲突和测试证据变成可查询数据，避免依赖 agent 自述。
-
-把 §5 的并行交给**后台 / 自治 agent**(主循环只监督、不在每步等人确认)时,§5.1 的前置要再收紧、§5.3 的收敛要多一道闸——这是同一纪律在"**agent 中途问不了人**"约束下的强化版,不是新方法。
-
-**loop 形状(串行冻 → 并行建 → 集成收敛):**
-
-```
-串行(人在环):  冻决策 + 冻契约 → 独立评审契约(对抗式,可多轮)
-   ▼
-并行(后台 agent,主循环监督):每 track 一 worktree,摸不重叠的面,各自跑到绿
-   ▼
-串行(主循环):  合并 → ★跨 track 集成闸 → 定向 remediation → 复审 → 收口
-```
-
-关键:**不是"撒 N 个 agent 各自跑完整 SDLC"**(各自猜、合不拢),而是"**串行冻契约 → 并行建竖切 → 主循环跑一次集成 SDLC 收敛**"。
-
-**前置再收紧(补 §5.1)—— 自治 agent 无人工通道:**
-
-- 后台 agent 遇模糊点**没法问你、只会自己猜**。所以冻死的不只是接口契约,而是**所有会让 agent 现场拍板的决策**(架构取舍 / 边界口径 / 取值语义)——派发前在串行段(人在环)全部敲定并落成文件。
-- 每个 agent 简报必含一句硬约束:**"契约 / 边界之外受阻 → 停下回报,不要猜。"** 把"猜"改成"停",让漂移在派发后第一时间暴露,而非埋进产物到集成时才炸。
-- 真栈并行的 agent 各自**自举隔离环境**(独立 DB/schema + 端口 + 缓存 db + 依赖安装),否则并发 e2e 互撞(呼应 §4 worktree 纪律)。
-
-**收敛再加闸(补 §5.3)—— 契约解读漂移,per-track 测试看不见:**
-
-- ★**冻结的契约只保证"形状",不保证"解读"**:并行 track 会对同一共享边界做出**各自局部自洽、彼此不兼容**的解读(路径如何 normalize、字段顺序、canonical 串拼法、空 body 的 hash)。每条 track 的单测都**对着自己那套解读**跑、且都绿——所以 per-track 测试**根本测不出**这种跨 track 解读漂移。
-  - 实证:一侧签名用 `/suppliers`、另一侧验签用 `/vendor/api/v1/suppliers` → canonical 不一致 → **真实请求 100% 401(flow-dead)**;两侧单测全绿,整条链路却不通。
-- 故收敛**必过一道跨 track 集成闸**:由**独立评审者**(新 agent / 第二模型,喂**两端真实接线**而非各 track 的自述摘要)审"边界两侧是否真对齐",或跑**一条真穿过那条缝的 e2e**。这是 §5.3"合后跑全量抓语义冲突"的尖锐特例——专盯**共享边界的解读一致性**。
-- 闸是**对抗式 + 迭代**的:评审 → 定向 remediation → 复审,直到收敛(契约阶段、集成阶段各可能多轮);别指望一轮过。
-
-一句话(5.4):**自治并行 = 决策全部前移到冻结点 + 边界对齐后移到一道跨 track 集成闸;agent 问不了人,所以"猜"要改"停",per-track 绿 ≠ 集成通。**
+标准角色评审按改动范围和风险选择；不强制额外的多轮对抗复审。
 
 ---
 

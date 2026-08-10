@@ -1,152 +1,93 @@
-# Software delivery lifecycle playbook
+# Software delivery lifecycle
 
-本文件保存软件交付方法，不定义阶段选择、角色基数、skip 语义或状态转换；这些规则只能来自
-`references/policies/{modules,phases,roles}.json` 的编译结果。每个 `playbook-anchor` 是 policy 可引用的稳定文本。
+软件交付把 ready Requirement 转为 `.sdlc-v1/context/<feature-id>.engineering.md`、代码和可验证的 Git commit。按改动风险选择方法，不要求小改动复制完整架构文档。
 
-## Phase 1 preview 约束
+## 1. Engineering specification
 
-结果只写 `.sdlc/preview/<run-id>/` 并带 `scope=preview`；不得写 control、legacy STATE/spec/plan 或业务代码。
-preview ref 不能作为后续 canonical 输入。缺契约、policy 或语义意图时返回诊断或 `needs_classification`。安全
-runner 仅可运行明确的诊断命令并保存不可消费的 preview Evidence。
+研发上下文应把产品验收条件映射到实现：
 
-<!-- playbook-anchor: delivery.engineering-spec -->
-<!-- playbook-anchor: delivery.module.core-sdd -->
-<!-- playbook-anchor: delivery.module.engineering-spec -->
-## engineering-spec
+- 当前代码入口、数据流和约束；
+- 拟修改的模块与接口；
+- 数据结构、兼容性和部署影响；
+- 每条验收条件对应的设计与测试；
+- 明确不改的区域和假设。
 
-Obligation refs: `obl.delivery.engineering-spec.trace`, `obl.delivery.engineering-spec.design`.
+重要接口或决策可使用 `ARCH-*`、`API-*`、`DATA-*` 标识。引用应指向普通文件路径、符号或测试，而不是复制正文。
 
-1. 输入是获批 ProductContract revision、PROFILE snapshot 和 base SHA；逐条映射到 `ARCH-*`、`API-*`、
-   `DATA-*`、`REL-*`、`SEC-*`、`TEST-*` criterion。
-2. 明确接口、数据/迁移、可靠性、安全、观测、回滚和测试策略，并连到上游 criterion 或风险。
-3. legacy `.sdlc/spec.md` 只能作为兼容观察，不是 EngineeringSpec。Phase 1 可以生成工程规格诊断候选，
-   但不能创建 EngineeringSpec record、批准或下游输入。
+## 2. 架构设计
 
-<!-- playbook-anchor: delivery.module.architecture -->
-### architecture（条件模块）
+跨多个 surface、改变公共接口或引入新依赖时，检查：
 
-Obligation ref: `obl.delivery.architecture.design`.
+- 模块边界、依赖方向和所有权是否清楚；
+- 失败是否被隔离，是否需要超时、重试、幂等和降级；
+- 数据一致性、并发和版本兼容如何处理；
+- 方案是否可渐进部署、观测和回滚；
+- 是否存在更小且足够的方案。
 
-当跨 surface、公共接口、数据模型或 blast radius 较高时，定义组件边界、接口 owner、兼容策略、数据流和 ADR
-候选。把运行时约束和回滚路径写成可验证的工程 criterion，而不是泛化架构叙述。
+高风险持久化格式、跨机器协议、不可逆外部行为和公共 API 兼容性决策，可以增加一次独立的对抗性复核。普通功能、重构和局部实现不需要。
 
-<!-- playbook-anchor: delivery.module.tactical-ddd -->
-### tactical-ddd（条件模块）
+## 3. 领域映射
 
-Obligation ref: `obl.delivery.tactical-ddd.mapping`.
+业务规则复杂时，将产品术语映射到代码职责：
 
-当上游 `RULE-*` 需要领域模型表达时，映射 aggregate、value object、domain event、ACL 和持久化边界。它实现
-产品侧的领域规则，不重新划定产品侧 bounded context。
+- 聚合或一致性边界；
+- 命令、查询、事件和状态变化；
+- 仓储、外部服务与领域逻辑的分工；
+- API DTO、领域对象和持久化对象之间的转换。
 
-<!-- playbook-anchor: delivery.module.reliability -->
-### reliability（条件模块）
+避免只因采用某个模式而增加抽象；模型应减少规则分散和状态不一致。
 
-Obligation ref: `obl.delivery.reliability.design`.
+## 4. 可靠性设计
 
-仅在 `NFR-*`、资金/一致性风险或 `availability_critical` 存在时加载。选择 timeout、retry、幂等、隔离、
-降级、容量、观测、恢复和演练机制，并把每项映射到 NFR 与 failure evidence。
+涉及外部系统、长任务、数据处理或高可用要求时，说明：
 
-<!-- playbook-anchor: delivery.module.eval-harness -->
-### eval-harness（条件模块）
+- timeout、retry、backoff、circuit breaking；
+- 幂等键、去重和重复投递；
+- 容量、限流、背压和资源上限；
+- 日志、指标、追踪和告警；
+- 数据修复、降级、恢复与演练。
 
-Obligation ref: `obl.delivery.eval-harness.bench`.
+每项应对应产品质量要求和具体测试或演练方式。
 
-当 ProductContract 包含 `EVAL-*` 时，固定数据集、rubric、阈值、版本、命令和 tested SHA，由 runner 记录
-可复现 EvalEvidence；单例、模型自评或调用方通过标记无效。
+## 5. 规划
 
-<!-- playbook-anchor: delivery.plan -->
-<!-- playbook-anchor: delivery.module.planning -->
-## plan
+把设计拆成可独立验证的 Task：
 
-Obligation ref: `obl.delivery.plan.delivery-plan`.
+1. 每个 Task 有明确代码范围、完成条件和测试方式。
+2. 用 Task ID 表达依赖；保持依赖图无环。
+3. 优先按纵向可运行增量拆分，避免长时间只有基础设施而无可观察行为。
+4. 可能并行的 Task 必须写集基本不重叠，并提前明确接口。
+5. 小改动可以只有一个 Task。
 
-1. 只消费获批 EngineeringSpec。若没有获批 ref，停止在诊断，不能由 legacy spec 或 preview candidate 补位。
-2. 输出 `DeliveryPlan`：静态 Task DAG、每项 write set、interface owner、依赖、criterion refs、测试/证据边界和
-   execution mode。它不重复 ProductContract 或 EngineeringSpec 正文，也不保存 Task 运行状态。
-3. 小改动仍保留 trace：计划可编译成单个 Task，但该 Task 仍绑定 EngineeringSpec criterion 和明确 evidence。
+## 6. 实现（TDD）
 
-<!-- playbook-anchor: delivery.implement -->
-<!-- playbook-anchor: delivery.module.implementation-tdd -->
-## implement
+默认循环：
 
-Obligation ref: `obl.delivery.implement.tdd`.
+1. 选择一个依赖已满足的 Task。
+2. 写最小失败测试并确认失败原因。
+3. 实现使测试通过的最小改动。
+4. 重构并重新运行相关检查。
+5. 更新研发上下文中的长期工程决策。
+6. 将 Task 标记为 done。
 
-1. 对可执行行为使用 RED → GREEN → REFACTOR：先让与 criterion 绑定的测试失败，再实现最小变更、最后重构并
-   采集 command / exit code / tested SHA 等机械事实。
-2. 预期 RED 是 TDD 的正常输入，不加载 debugging。只有 `unexpected_failure`、`regression` 或 `runtime_error`
-   才选择 debugging。
-3. 文档、纯声明配置或纯视觉调整必须选择明确替代 Evidence，而不是笼统跳过测试。
+文档、纯配置、生成文件或无法先测试的机械改动，可以先实施再运行最接近的静态或集成检查，但必须记录验证方式。
 
-<!-- playbook-anchor: delivery.module.static-check -->
-<!-- playbook-anchor: delivery.module.contract-check -->
-<!-- playbook-anchor: delivery.module.visual-regression -->
-### 替代 Evidence（条件模块）
+## 7. 调试
 
-Obligation refs: `obl.delivery.implement.static-check`, `obl.delivery.implement.contract-check`,
-`obl.delivery.implement.visual-regression`.
+意外失败时：收集事实 → 提出一个可证伪假设 → 做最小实验 → 根据结果保留或否定假设。每轮只改变一个主要变量。定位到产品规则缺口时停止实现，回到产品上下文确认。
 
-`static-check` 适用于可解析的文档或配置规则；`contract-check` 适用于 schema/API/声明一致性；
-`visual-regression` 适用于仅视觉调整。每个替代项都要有执行命令、输入 scope、预期结果和当前 SHA，不能把
-“无需 TDD”当结论。
+## 8. 验证
 
-<!-- playbook-anchor: delivery.module.debugging -->
-### debugging（条件模块）
+根据 project surface map 和 diff 选择单元测试、类型检查、构建、端到端、契约、视觉或评估检查。逐条核对产品验收条件，记录实际命令和结果。
 
-Obligation ref: `obl.delivery.debugging.hypothesis-loop`.
+通过结果必须绑定到业务代码工作树干净时的当前 Git commit。之后可以只修改或提交 `.sdlc-v1/**`；该目录之外的代码变化需要重新验证。
 
-固定现象与复现、列出可证伪假设、用最小实验收集证据、修复后回到相应 criterion 的测试与验证。不要在调试
-循环中绕过规格差异；发现业务规则缺失时提出 ChangeRequest 返回产品侧。
+## 9. 评审
 
-<!-- playbook-anchor: delivery.validate -->
-<!-- playbook-anchor: delivery.module.validation-review -->
-## validate
+按 diff 选择角色，独立检查正确性、回归、架构、数据、安全、体验和可维护性。每个问题给出文件位置、影响、修复建议和判断依据。
 
-Obligation refs: `obl.delivery.validate.mechanical-evidence`, `obl.delivery.validate.trace-freshness`,
-`obl.delivery.eval-harness.bench`.
+必须修复项清零且修改重新验证后，才能批准 validation commit。后续仅含 `.sdlc-v1/**` 的证据提交不使验证失效。
 
-1. 在当前 integration SHA 上运行适用的 correctness、contract、E2E、reliability 或 eval 检查，并记录 runner
-   产生的 exit code、输出摘要、工具版本和 tested SHA。
-2. 检查 Evidence 与 product/engineering/task criterion 的 trace、输入新鲜度、覆盖缺口和不支持的风险主张。
-3. 模型或调用方写出的 `tests_passed`、`approved`、`review_complete` 不是 Evidence；机械事实只能由 runner、Git
-   或 canonical record 派生。
+## 10. 发布准备
 
-Phase 1 只可形成 preview evidence diagnostic，不能更新 Feature evidence 或完成权威 validation。
-
-<!-- playbook-anchor: delivery.review -->
-## review
-
-Obligation refs: `obl.delivery.review.independent-verdict`, `obl.delivery.security.review`.
-
-独立 reviewer 针对当前 diff、合同、计划、Evidence 和风险作出语义判断，输出可定位 finding、风险接受或
-需要返工的原因。review 不修正实现，也不把自报结论升级为通过结果。Phase 1 的任何 review 结论仅为 preview
-attestation，不能写 review status。
-
-<!-- playbook-anchor: delivery.module.security -->
-### security（条件模块）
-
-存在 `SEC-*`、敏感数据、信任边界或合规风险时，security reviewer 独立检查认证授权、数据暴露、秘密、依赖和
-操作路径；结论必须引用当前 diff、criterion 和 runner Evidence。
-
-<!-- playbook-anchor: delivery.release-candidate -->
-## release-candidate
-
-Obligation ref: `obl.delivery.release-candidate.readiness`.
-
-构造 readiness package：reviewed SHA、适用 Evidence、发布步骤、观测指标、告警、回滚条件和责任人。它不执行
-部署、发布或回滚；这些副作用只属于正交的 `sdlc-ship`。Phase 1 只产生不可消费的 preview readiness diagnostic。
-
-<!-- playbook-anchor: delivery.compatibility.legacy-composite-v1 -->
-## legacy-composite-v1
-
-Obligation ref: `obl.delivery.compatibility.legacy-composite`.
-
-这是 Phase 1 唯一的 `spec → plan` 兼容桥。输入只能是已批准的 legacy `.sdlc/spec.md` 与
-`legacy_approval_observation`，输出只能是 preview 目录中的 legacy plan rendering / parity diagnostic。
-它不得创建或标记 EngineeringSpec、DeliveryPlan、Task、Evidence 或 Approval，不得完成 dual approval，
-不得覆盖 legacy `.sdlc/plan.md`、STATE 或 control。
-
-## Typed attestation 最小信息
-
-每份语义结论至少包含 `type`、`subject_ref`、`scope`、`actor`、`claim`、`evidence_refs`、
-`policy_manifest_ref`、`phase_contract_ref` 和 `issued_at`。runtime 校验引用、身份、独立性和新鲜度；本 playbook
-只规定需要说明的工程判断。
+确认构建产物、配置、数据变化、部署顺序、smoke、观测和回滚方案。实际发布由 `sdlc-ship` 执行；发布实现版本始终是 validation commit，后续仅含 `.sdlc-v1/**` 的提交不替换它。

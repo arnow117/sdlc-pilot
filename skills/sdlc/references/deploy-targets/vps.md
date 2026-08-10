@@ -2,12 +2,12 @@
   vps.md — sdlc-ship 目标类型适配器：自有服务器（ssh + systemd）
   ─────────────────────────────────────────────────────────
   三层分工里的【第②层：目标类型适配器】。薄。只给"命令骨架 + 回滚骨架"。
-    ① 通用方法论 = sdlc-ship 主流程（deploy→smoke/health→门）。本文不重复。
+    ① 通用方法论 = sdlc-ship 主流程（deploy→smoke/health→检查→继续或回滚）。本文不重复。
     ② 适配器（本文）= 把通用阶段映射成 "ssh 这个目标类型怎么发、怎么重启、怎么回滚"。
        骨架按【目标类型】分（vps / 容器 / PaaS …），不按语言分。
     ③ 项目特定配置 = 运行时从【目标工程】抽，不写进本文：
        主机 / 用户 / release 根路径 / 服务名 / health 路径 / canary 编排细节
-       → 全部写成 <占位>，由 driver 从目标工程的部署脚本 + PROFILE.Deploy 解析。
+       → 全部写成 <占位>，由 driver 从目标工程的部署脚本 + .sdlc-v1/project.md 解析。
   铁律（与项目 CLAUDE.md 一致）：
     - 命令真实可跑（rsync/ssh/systemctl/ln/nginx flag 已对真实 CLI 校验，别臆造）。
     - 密钥 / SSH key 只在本地或部署环境，绝不入仓；示例一律占位或 env 引用。
@@ -34,14 +34,14 @@ driver 进入 ship 前，从目标工程按下表解析；解析不到就停下�
 
 | 占位 | 含义 | 抽取来源（优先级从高到低） |
 |---|---|---|
-| `<SSH_HOST_dev/staging/canary/full>` | 各环境主机（host 或 ssh alias） | 目标工程部署脚本 / `PROFILE.Deploy.hosts` / `~/.ssh/config` |
-| `<SSH_USER>` | 部署用户（建议非 root 专用账号） | 部署脚本 / `PROFILE.Deploy.user` |
-| `<RELEASE_ROOT>` | 服务器上 release 根目录 | 部署脚本 / `PROFILE.Deploy.release_root`（如 `/srv/<app>`） |
-| `<SVC>` | systemd 服务名（`<app>.service`） | 部署脚本 / `PROFILE.Deploy.service` |
-| `<HEALTH_PATH>` | health/smoke 端点路径 | `PROFILE.Deploy.health`（如 `/healthz`） |
-| `<HEALTH_URL_<env>>` | 各环境对外可探活的 URL | PROFILE / 部署脚本 |
-| `<BUILD_DIR>` | 本地待传产物目录 | 目标工程构建输出（PROFILE.test-commands.build 的产物） |
-| `<CANARY_HOSTS>` / `<CANARY_WEIGHT>` | canary 的"先发哪台/组"或 nginx 权重 | 部署脚本 / PROFILE.Deploy.canary |
+| `<SSH_HOST_dev/staging/canary/full>` | 各环境主机（host 或 ssh alias） | 目标工程部署脚本 / `.sdlc-v1/project.md` / `~/.ssh/config` |
+| `<SSH_USER>` | 部署用户（建议非 root 专用账号） | 部署脚本 / `.sdlc-v1/project.md` |
+| `<RELEASE_ROOT>` | 服务器上 release 根目录 | 部署脚本 / `.sdlc-v1/project.md`（如 `/srv/<app>`） |
+| `<SVC>` | systemd 服务名（`<app>.service`） | 部署脚本 / `.sdlc-v1/project.md` |
+| `<HEALTH_PATH>` | health/smoke 端点路径 | `.sdlc-v1/project.md`（如 `/healthz`） |
+| `<HEALTH_URL_<env>>` | 各环境对外可探活的 URL | `.sdlc-v1/project.md` / 部署脚本 |
+| `<BUILD_DIR>` | 本地待传产物目录 | 目标工程构建输出（`.sdlc-v1/project.md` 的 build 命令产物） |
+| `<CANARY_HOSTS>` / `<CANARY_WEIGHT>` | canary 的“先发哪台/组”或 nginx 权重 | 部署脚本 / `.sdlc-v1/project.md` |
 
 > SSH key / 密钥：**只在本地或部署环境**（`ssh-agent` / `~/.ssh/` / 部署 runner 的 secret store）。
 > 适配器示例里出现的认证一律 env 或 ssh-config 引用，**不收任何凭据进目标工程仓库**。
@@ -127,9 +127,9 @@ $SSH "sudo nginx -t && sudo systemctl reload nginx"   # 或: sudo nginx -s reloa
 
 ---
 
-## 4. smoke / health 门（curl 探活）
+## 4. smoke / health 检查（curl 探活）
 
-切换后**立即探活**，这是晋级门：过 = 进下一环境；不过 = 立刻回滚（§6）。
+切换后**立即探活**：通过则继续下一环境，失败则立刻回滚（§6）。
 
 ```bash
 HEALTH_URL="<HEALTH_URL_${ENV}>"     # 例：https://staging.<app>/healthz
@@ -143,7 +143,7 @@ fi
 ```
 
 > 加固：探活带**重试 + 退避**（服务重启需预热），如循环 5 次每次 sleep 3s 任一 200 即通过，全败才判 FAIL。
-> 探活路径/URL 从 `PROFILE.Deploy.health` 抽；没有 health 端点时退化为探主页 2xx，并在报告标注"无专用 health 端点"。
+> 探活路径/URL 从 `.sdlc-v1/project.md` 抽；没有 health 端点时退化为探主页 2xx，并在 Feature 研发上下文标注“无专用 health 端点”。
 
 ---
 
@@ -165,7 +165,7 @@ done
 
 ```nginx
 # nginx upstream 骨架：把 <CANARY_WEIGHT> 比例的流量导到新版本 upstream
-# 实际权重/后端地址从目标工程 nginx 配置 + PROFILE.Deploy.canary 抽
+# 实际权重/后端地址从目标工程 nginx 配置 + .sdlc-v1/project.md 抽
 upstream <app>_pool {
     server <STABLE_BACKEND> weight=<STABLE_WEIGHT>;   # 旧版本
     server <CANARY_BACKEND> weight=<CANARY_WEIGHT>;   # 新版本，小权重
@@ -177,7 +177,7 @@ upstream <app>_pool {
 $SSH "sudo nginx -t && sudo systemctl reload nginx"
 ```
 
-> canary 门：观测期内 §4 探活持续 200 且关键指标（错误率/延迟，从目标工程监控抽）不退化 → 晋级 full；
+> canary 必要条件：观测期内 §4 探活持续 200 且关键指标（错误率/延迟，从目标工程监控抽）不退化 → 晋级 full；
 > 任一退化 → §6 回滚（方式 A 切回 canary 主机软链；方式 B 把 `<CANARY_WEIGHT>` 调 0 再 reload）。
 
 ---
@@ -221,13 +221,13 @@ canary 专属回滚：
   2. 传产物（§2）：mkdir 新 release → rsync -az --delete → 软链共享配置
   3. 切换+重启（§3）：ln -sfn current → systemctl restart → nginx -t && reload
      ↳ 若 env=canary：改用 §5（先发一组 或 权重放量）
-  4. smoke/health 门（§4）：curl health（带重试）
-        PASS → 记 STATE，晋级下一 env
+  4. smoke/health 检查（§4）：curl health（带重试）
+        PASS → 结果写入 Feature 研发上下文，晋级下一 env
         FAIL → §6 回滚本 env + STOP，回报现状交人决策
 ```
 
 > 与通用方法论的边界：**晋级/回滚的"决策"在 sdlc-ship 主流程**；本文只提供 vps 上每一步的**可跑命令骨架**。
-> 项目特定值（主机/用户/路径/服务名/canary 编排）一律 `<占位>`，运行时从目标工程部署脚本 + PROFILE.Deploy 抽。
+> 项目特定值（主机/用户/路径/服务名/canary 编排）一律 `<占位>`，运行时从目标工程部署脚本 + `.sdlc-v1/project.md` 抽。
 
 ---
 
@@ -237,7 +237,7 @@ canary 专属回滚：
 - [ ] dev/staging/canary/full 的 `HOST/USER` 已按环境分开，**未跨环境复用同一把 key**？
 - [ ] 产物走**新建时间戳 release 目录**，未直接覆盖 `current`？`.env`/密钥已 `--exclude`、只在服务器本地？
 - [ ] 切换是 `ln -sfn`（原子、可回滚），不是 `cp` 覆盖？
-- [ ] 每个 env 切换后都有 §4 探活作门？canary 有独立门与独立回滚？
+- [ ] 每个 env 切换后都运行 §4 探活？canary 有独立检查与独立回滚？
 - [ ] rollback 路径验证过：能定位上一个 release 并切回（PREVIOUS 文件或时间戳排序）？
 - [ ] sudo 仅限白名单命令（restart/reload <SVC>、nginx reload），未要求全权 root？
 - [ ] 任何凭据都未写进本适配器、也未写进目标工程仓库（只 env / ssh-config / 服务器本地）？

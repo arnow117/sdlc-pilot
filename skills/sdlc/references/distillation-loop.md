@@ -36,8 +36,8 @@ sdlc-pilot 的知识（角色卡 / stage playbook / validate-mode playbook）不
 
 除了"分析外部新 skill",还应**从本系统自己的运行中学习**:
 
-- **触发**:`STATE.stage=done`(一个 feature 走完整 loop 收口)后,或 build 调试 3-strike 后 → 可选跑一段轻量 retro。
-- **★硬门(必须)**:**只有这个 session 真正跑过 sdlc loop 才提炼** —— 即 `STATE` 存在且 `stage` 至少到过 build/validate/review(完成或接近完成一个 feature)。半截/中断/没走流程的 session **不提炼**(否则是噪声 learning,污染卡片)。这等于"带 sdlc 上下文的 session-miner",而非泛挖任意会话。
+- **触发**：一个 Feature 已完成验证、评审或发布，或 build 调试连续三次仍未解决时，可选跑一段轻量 retro。
+- **必要条件**：当前 session 必须真实参与过该 Feature，并能从 `lifecycle_state.py feature-projection` 与研发上下文确认经历了 build/validate/review 中至少一个阶段。半截、无关或只讨论未执行的 session 不提炼。
 - **提炼什么**:这次哪个 pattern 反复出现 / 哪里绊住了 / 哪类问题我们的卡没覆盖 / 哪个修复套路值得固化。
 - **去向**:追加进对应角色卡的"常见翻车"/检查清单、或 validate-mode、或路由规则,标 `distilled-from: session:<topic>-<date>`(见 §123 溯源)。仍走 §2 的两轴定位 + §4 防孤儿。
 
@@ -79,10 +79,10 @@ sdlc-pilot 的知识（角色卡 / stage playbook / validate-mode playbook）不
 
 | pattern 类型 | 形态 | 落进哪种卡 |
 |---|---|---|
-| 方法 / 流程步骤 | 编号步骤、状态机、阶段闸 | stage playbook |
+| 方法 / 流程步骤 | 编号步骤、状态变化、必要条件 | stage playbook |
 | 检查清单 | 关注点 / 检查项 / "好的样子" / "常见翻车" | 角色卡 |
 | 决策分支 | "什么条件走什么分支"（sop-extractor 的条件树思路） | stage 或 validate-mode |
-| 验证手法 | 具体的跑法、证据 schema、门控阈值 | validate-mode playbook |
+| 验证手法 | 具体的跑法、证据 schema、检查阈值 | validate-mode playbook |
 
 **可移植铁律（必须执行）**：凡蒸馏出的 pattern，都要把运行时依赖降级为 **纯文件 + git + 基础工具**：
 - AskUserQuestion → gsd 的 `text_mode`（纯文本编号列表让用户回数字）。
@@ -113,11 +113,11 @@ roles/<r>.md   ┌───┴───┐
 ```
 
 - **角色卡**（`roles/`）：某职能视角"在意什么"。无动作 → 检查清单 / 关注点。
-- **stage 逻辑**（v1 **内联**在对应 `skills/sdlc-<stage>/SKILL.md`，无独立 `stages/` 目录）：某一步"我们怎么做"。有多步动作 → 进度、闸门、状态机。`stages/` 为未来拆分预留点。
+- **stage 逻辑**（v1 **内联**在对应 `skills/sdlc-<stage>/SKILL.md`，无独立 `stages/` 目录）：某一步“我们怎么做”。有多步动作时写清顺序、必要条件和状态变化。
 - **validate-mode playbook**（`validate-modes/`）：某种验证手法。属于 correctness / e2e / eval-bench 三者之一 → 跑法 + 证据 + 阈值。
 - **role-routing.md**：如果蒸出的是"什么改动该上什么角色/模式"的映射（新语言 glob、新模态），追加进路由表。
 
-> 一条 pattern 可能落多处（如一个"安全审查"源 → server-dev 角色卡的检查清单 + review stage 的安全闸）。允许，但每处都要独立写清、独立标溯源。**禁止**为一条 pattern 新建一个游离文件 —— 必须挂进既有卡片体系。
+> 一条 pattern 可能落多处（如一个安全审查源 → server-dev 角色卡的检查清单 + review stage 的必要检查）。允许，但每处都要独立写清、独立标溯源。**禁止**为一条 pattern 新建一个游离文件 —— 必须挂进既有卡片体系。
 
 ### ④ 追加合并（借 kb-manage 的合并规则）
 
@@ -126,7 +126,7 @@ roles/<r>.md   ┌───┴───┐
 1. **合并、不覆盖**：把新方法融进目标卡对应的 section（如角色卡的"检查清单"），保留有价值的旧内容。
 2. **标矛盾、不裁决**：若新源与卡里已有说法冲突，在冲突处加 `<!-- CONFLICT: 旧:… / 新:…（源:<name>） -->`，不删旧内容，留给人决策。
 3. **更新时间戳**：目标卡 frontmatter 的 `updated` 字段刷新为当天（stamp 由调用方传入，不要硬编造）。
-4. **保持精炼**：卡片是门面不是仓库。一条 pattern 抽其精华（方法 / 判据），别把源全文糊进来。若确需保留长底稿，照 kb-manage 双层模型存到知识库的 `sources/`，卡里只留链接 —— **不要把长文塞进 references/**。
+4. **保持精炼**：卡片是执行索引，不是原文仓库。一条 pattern 抽其精华（方法 / 判据），别把源全文糊进来。若确需保留长底稿，照 kb-manage 双层模型存到知识库的 `sources/`，卡里只留链接 —— **不要把长文塞进 references/**。
 5. **交叉维护**：若这条 pattern 影响别的卡（如改了一个角色，路由表也得加 glob），顺手更新关联卡（kb-manage Step 5 的全局交叉思想）。
 
 ### ⑤ 标记溯源（distilled-from）
@@ -154,10 +154,10 @@ updated: <stamp>
 | 蒸馏出的东西 | 落点 | 不该去哪 |
 |---|---|---|
 | 职能视角 / 检查清单 | `references/roles/<role>.md` | ❌ 新建顶层 skill |
-| 流程步骤 / 阶段闸 | v1 内联进 `skills/sdlc-<stage>/SKILL.md`（`stages/` 为未来拆分预留，v1 暂空） | ❌ 散落 md |
+| 流程步骤 / 阶段必要条件 | v1 内联进 `skills/sdlc-<stage>/SKILL.md` | ❌ 散落 md |
 | 验证手法 / 阈值 / 证据 schema | `references/validate-modes/{correctness,e2e,eval-bench}.md` | ❌ 新建 validate skill（验证永远是 mode，不是 skill） |
 | 改动代码 → 角色/模式 的映射 | `references/role-routing.md` | — |
-| 项目级架构事实（surface map） | 目标 repo 的 `.sdlc/PROFILE.md`（由 onboard 维护，不进 references） | ❌ references/ |
+| 项目级架构事实（surface map） | 目标 repo 的 `.sdlc-v1/project.md`（由 onboard 维护，不进 references） | ❌ references/ |
 | 与 SDLC 无关的通用领域知识 | `kb-manage` 的 `~/Documents/nsync/ai_knowledge/` | ❌ sdlc references/ |
 
 **反膨胀红线（对齐 spec §5.1）**：蒸馏**永远不新增顶层 skill**。家族边界恒为 **1 driver + 6 process skills**。所有增长都发生在 `references/` 的既有卡片里。验证类 pattern 一律进 validate-mode（数据），不graduate成 skill。

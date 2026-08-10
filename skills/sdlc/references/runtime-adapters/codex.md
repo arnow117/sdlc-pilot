@@ -1,87 +1,66 @@
 # Codex runtime adapter
 
 > distilled-from: session:sdlc-codex-compat-2026-06-17
-> updated: 2026-06-17
+> updated: 2026-08-10
 
-This adapter is data, not a skill. It defines how the SDLC playbooks map their portable contracts onto Codex runtimes without depending on Claude-only APIs.
+This reference maps portable SDLC behavior onto Codex capabilities. Core lifecycle semantics do not depend on a particular agent runtime.
 
 ## Interface map
 
-| SDLC interface | Codex implementation | Fallback |
+| SDLC need | Codex implementation | Fallback |
 |---|---|---|
-| User choice | Use a native structured-input tool only when it is exposed and allowed by the current mode | `text_mode`: numbered plain-text options; stop at the gate and wait |
-| Multi-agent fan-out | Use Codex multi-agent tools only when explicitly available | Sequential inline execution of the same playbook |
-| Parallel shell/file reads | `multi_tool_use.parallel` is safe for read-only commands | Sequential `rg`/`sed`/`git` reads |
-| File edits | `apply_patch` for manual text edits; target scripts for mechanical writes | No shell heredocs or ad hoc file writes |
-| Long document review | `web-review` file mode or Live mode with blocking `/wait` | Plain text review gate |
-| Headless/non-interactive | Do not ask questions; write `needs-human` and choose the safe default | Block rather than accepting risk |
-| Cross-model adversary | Do not call `codex` from inside Codex | Run the adversarial pass inline |
+| User choice | Use structured input when exposed and appropriate | Numbered plain-text choices |
+| Independent subwork | Use multi-agent tools for concrete disjoint tasks | Run the same steps sequentially |
+| Parallel reads | Parallelize read-only repository inspection | Sequential `rg`/`sed`/`git` reads |
+| File edits | Use `apply_patch` for manual edits; use project scripts for defined mechanical changes | Avoid ad hoc shell writes |
+| Long visual review | Use the available web review workflow | Plain-text findings |
+| Non-interactive execution | Stop when a missing decision would change behavior or accept risk | Report the required input |
+| Independent model check | Use another available model only when it is genuinely independent | Perform a separate inline pass |
 
-## Multi-agent adapter
+## Multi-agent work
 
-Codex may expose different orchestration tools across environments. Treat them as an optional implementation detail behind the SDLC `Task-or-sequential` interface.
+1. Fan out only concrete tasks that can proceed independently.
+2. Read-only exploration can run in parallel even when writes cannot.
+3. Write tasks need disjoint repository paths, explicit interfaces and isolated runtime resources.
+4. Each Task receives a self-contained brief containing Feature ID, Task ID, branch, dependencies, write scope and completion conditions.
+5. Task agents do not edit `.sdlc-v1/state.json`; the Feature owner updates status through `lifecycle_state.py`.
+6. Task agents return changed files, commands run, result and source commit.
+7. The Feature owner integrates one Task at a time and reruns checks on the resulting commit.
+8. If independence becomes false, continue serially on the Feature branch.
 
-1. If a true sub-agent tool is available, fan out only to independent units that write disjoint files.
-2. If only `multi_tool_use.parallel` is available, use it for read-only evidence gathering, not as a replacement for independent writing agents.
-3. If no multi-agent tool is available, run each role, mode, focus, or phase sequentially in the current session and write the same per-unit output files.
-4. The Feature orchestrator remains the only writer for `.sdlc/STATE.md` and control transitions; Task agents write neither.
+The optional brief structure is in `templates/TASK.md`. It can be embedded in the Feature engineering context or passed directly to a sub-agent; it is not a separate progress file.
 
-Before any write fan-out, call the control adapter's Task eligibility check. Use Task-level
-`depends_on_tasks`, normalized `write_set`, interface ownership, runtime isolation, active branch
-count, and serial-task exclusion. If the check fails, execute that Task serially on the Feature branch;
-do not infer safety from Phase wave alone.
+## User choices
 
-For an eligible Task, create a dedicated branch/worktree from the current Feature integration HEAD
-and materialize `.sdlc/TASK.md` from the template. Give the sub-agent a self-contained contract and an
-explicit write set. It returns changed files, RED/GREEN commands, and source tip. The orchestrator
-integrates tasks one at a time, retests, and records the resulting integration SHA and evidence.
-
-## User-choice adapter
-
-Codex sessions do not always permit structured choice widgets. Every gate must therefore have a plain-text representation:
+When structured input is unavailable, use:
 
 ```text
-我需要你选一个:
+我需要你选一个：
   1) 选项 A — 说明
   2) 选项 B — 说明
 回复编号即可。
 ```
 
-Rules:
-- Use structured input only when the tool is present and the current collaboration mode allows it.
-- In normal interactive mode, stop at approval gates until the user answers.
-- In headless mode, never prompt. Mark the item `needs-human`, use the safe default, and keep the gate blocked when risk acceptance would be required.
-- Do not run two active feedback channels at once. If `web-review` Live mode is waiting on `/wait`, defer terminal questions until that wait returns.
+- Ask only when the choice materially changes scope, behavior or external effects.
+- In non-interactive execution, do not guess risk acceptance; report the missing decision.
+- Do not run two active feedback channels at once.
 
-## Handoff adapter
+## Handoff
 
-Stage playbooks produce a machine-readable `## HANDOFF` block. The SDLC driver is the canonical writer of `.sdlc/STATE.md`.
+Progress is already queryable through `lifecycle_state.py`. A handoff message should be a short projection, not another stored record:
 
-```markdown
-## HANDOFF
-stage: <stage>
-status: in-progress | gated | blocked
-validate-modes: [...]
-active-roles: [...]
-changed-files:
-- <path>
-gates-passed:
-- <gate>
-decisions:
-- <date> <decision>
-next-action: -> invoke <sdlc-stage>
+```text
+Requirement: <id> (<status>)
+Feature: <id> (<status>)
+Branch: <branch>
+Validation commit: <sha or none>
+Product context: <path>
+Engineering context: <path>
+Next action: <stage and concrete task>
 ```
 
-Standalone stage execution may write `.sdlc/STATE.md` only when no driver is active; in that case it must still use the same `## HANDOFF` schema first, then apply it as the single writer.
+Cross-machine handoff also states the Git remote/ref to pull. Do not duplicate this message inside `state.json`.
 
-## Discovery adapter
+## Discovery
 
-For repository-local Codex discovery, maintain `.agents/skills/sdlc*` symlinks that point at the writable sdlc-pilot source or installed skill directories. After adding or changing these links:
-
-```bash
-for skill in .agents/skills/sdlc*; do
-  readlink "$skill"
-done
-```
-
-If the current Codex session was already running, a new session may be required before the skill registry sees new links.
+For repository-local Codex discovery, maintain `.agents/skills/sdlc*` symlinks pointing to the writable source or installed skill directories. Verify their targets after adding or changing links. A new Codex session may be required before discovery refreshes.
