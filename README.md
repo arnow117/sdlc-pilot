@@ -1,3 +1,5 @@
+
+
 # sdlc-pilot
 
 > 一套轻量、可移植、纯文件的 SDLC 技能族：用阶段技能推进工作，用角色卡补充专业视角，用 Git 共享状态与上下文。
@@ -144,8 +146,8 @@ SDLC_SKILLS="$PWD/skills"
 
 mkdir -p "$HOME/.claude/skills" "$HOME/.codex/skills"
 for d in "$SDLC_SKILLS"/*/; do
-  ln -sfn "$d" "$HOME/.claude/skills/$(basename "$d")"
-  ln -sfn "$d" "$HOME/.codex/skills/$(basename "$d")"
+  ln -sfn "$d" "$HOME/.claude/skills/$(basename "$d" /)"
+  ln -sfn "$d" "$HOME/.codex/skills/$(basename "$d" /)"
 done
 
 bash scripts/validate-skills
