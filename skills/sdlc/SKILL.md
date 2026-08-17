@@ -24,7 +24,7 @@ description: >
 ```
 
 - `state.json`：Requirement、Feature、Task 的进度与上下文引用；只能通过 `lifecycle_state.py` 修改。
-- `project.md`：技术栈、入口、约定、测试命令、surface map、部署线索；由 `sdlc-onboard` 维护。
+- `project.md`：技术栈、入口、约定、测试命令、surface map、部署线索，以及可选的长期工程上下文索引；由 `sdlc-onboard` 维护。
 - `context/*.product.md`：问题、用户场景、业务规则、范围、质量属性和验收条件；由产品侧维护。
 - `context/*.engineering.md`：设计、任务、代码位置、测试策略、风险和实施决策；由研发侧维护。
 
@@ -35,7 +35,7 @@ Git 保存历史并负责跨 clone 同步。状态变化可以与相关文档或
 1. 确认目标仓库。
 2. 若 `.sdlc-v1/state.json` 不存在，执行 `lifecycle_state.py --repo <repo> init`。
 3. 若项目已有源码而 `.sdlc-v1/project.md` 不存在，进入 `sdlc-onboard`。
-4. 读取 `state.json`，再读取当前记录引用的上下文；不要扫描无关历史文件。
+4. 读取 `state.json`，再读取当前记录引用的上下文；若 `project.md` 列出当前 commit 已验证的长期工程上下文，再按需读取其中相关路径；不要扫描无关历史文件。
 5. `/sdlc next` 根据当前状态直接进入下一阶段。
 
 ## 3. 路由
@@ -81,6 +81,7 @@ record-release
 - 恢复工作时先读 `status` 或具体 projection，再读它引用的上下文。
 - `record-validation` 记录测试时的业务代码 commit；评审和发布始终对应这个实现版本。
 - 验证后允许提交仅修改 `.sdlc-v1/**` 的状态、上下文和证据。若 validation commit 到当前 HEAD 在该目录之外有差异，或业务代码工作树不干净，则回到 build/validate。
+- `project.md` 只索引长期工程上下文，不复制其正文；`.sdlc-v1/context/*.md` 只记录当前 Requirement/Feature 的决定、证据和发布后观察。二者通过路径引用协作，不共享状态文件。
 - 完成一次跨人或跨机器交接时，给出 Requirement、Feature、分支、当前阶段、下一动作和需要拉取的 Git ref。
 
 本路由器不复制 BDD、领域建模、SDD、TDD、验证或部署方法；这些正文只在对应阶段加载。

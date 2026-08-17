@@ -118,7 +118,20 @@ else
   err "存在悬空的本地 Markdown 引用"
 fi
 
-echo "== 6. Portability =="
+echo "== 6. Long-lived context integration =="
+for expected in \
+  "$ROOT/sdlc-onboard/SKILL.md:.repo-context/manifest.yaml" \
+  "$ROOT/sdlc/references/templates/PROJECT.md:Repository context sources" \
+  "$ROOT/sdlc-product-design/SKILL.md:发布后观察窗口" \
+  "$ROOT/sdlc-plan/SKILL.md:发布后观察" \
+  "$ROOT/sdlc-ship/SKILL.md:发布后观察记录"; do
+  file=${expected%%:*}
+  text=${expected#*:}
+  grep -Fq -- "$text" "$file" || err "$file 缺少长期上下文协作约束: $text"
+done
+ok "长期上下文协作约束已检查"
+
+echo "== 7. Portability =="
 for file in "$ROOT"/*/SKILL.md; do
   if grep -q "AskUserQuestion" "$file" && ! grep -q "text_mode" "$file"; then
     err "$file 使用 AskUserQuestion 但未声明 text_mode 降级"
@@ -126,7 +139,7 @@ for file in "$ROOT"/*/SKILL.md; do
 done
 ok "可移植性文本检查完成"
 
-echo "== 7. Focused tests =="
+echo "== 8. Focused tests =="
 for test_file in \
   scripts/test_lifecycle_state.py \
   scripts/test_backlog.py \

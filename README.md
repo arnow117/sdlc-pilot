@@ -8,6 +8,7 @@
 2. **工程上下文**用 Markdown 记录设计、任务拆分、测试策略、评审结论和发布说明。
 3. **共享进度**只写目标仓库的 `.sdlc-v1/state.json`。
 4. **协作与历史**使用普通 Git branch、commit、push、pull/merge；不再维护第二套版本历史。
+5. **长期工程上下文**可由仓库自己的 `AGENTS.md`、架构/产品文档及可选的 repo-context 索引提供；SDLC 只在 `project.md` 记录已验证路径，不复制它们的正文或状态。
 
 产品与研发是同一个生命周期的两个视角，不是两套相互同步的存储系统：
 
@@ -38,6 +39,19 @@ Requirement: captured → ready → in_delivery → validated → released
 每条 Requirement 的 `product_context_ref` 和每个 Feature 的 `engineering_context_ref` 都是必填项，只接受
 `.sdlc-v1/context/*.md` 下已存在的仓库相对 Markdown 文件；不能引用仓库外路径、符号链接或项目 `docs/`。
 项目原有文档仍可保留，但需把当前生命周期直接引用的上下文整理进 `.sdlc-v1/context/`。
+
+## 与长期工程上下文协作
+
+`sdlc-onboard` 总会读取仓库 `AGENTS.md`；若同时发现当前 commit 对齐的 `.repo-context/evidence.json` 和
+`.repo-context/manifest.yaml`，会将其中的 canonical 文档路径写入 `project.md` 的索引。两份 repo-context
+文件缺失、过期或无法读取时，onboard 继续从源码和配置建立项目上下文，不产生运行时依赖。
+
+职责保持分离：长期目标、产品、架构与开发说明由仓库文档维护；`.sdlc-v1/context/*.product.md` 和
+`*.engineering.md` 仅维护当前 Requirement/Feature 的行为、实现、验证、发布后观察和新需求回流。研发上下文需要
+记录预期结果、可观察指标（或不可观测原因）、观察窗口、负责人和反馈应创建或更新的 Requirement。
+
+repo-context 的 `sync`/`refine` 若会改动业务路径或长期文档，应在当前 Feature 的 validation 前完成；若在 validation
+之后进行，则建立单独的维护 Requirement，或在评审/发布前重新验证。SDLC 的 state 校验规则不为这些路径提供例外。
 
 ## 技能体系
 

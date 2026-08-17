@@ -366,6 +366,20 @@ class LifecycleStateTest(unittest.TestCase):
         self.assertEqual(product["requirement"]["status"], "released")
         self.assertEqual(product["feature"]["release"]["commit"], head)
 
+    def test_review_rejects_long_lived_context_change_after_validation(self) -> None:
+        self.initialize_state()
+        self.capture("REQ-context")
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-context")
+        self.start("REQ-context", "FEAT-context")
+        self.complete_one_task("FEAT-context")
+        self.commit_state("ready for long-lived context check")
+        lifecycle_state.record_validation(repo=self.repo, feature_id="FEAT-context", result="pass")
+        (self.repo / "AGENTS.md").write_text("# Updated contributor guidance\n", encoding="utf-8")
+        self.git("add", "AGENTS.md")
+        self.git("commit", "-m", "docs: update long-lived guidance")
+        with self.assertRaisesRegex(lifecycle_state.LifecycleStateError, "review-commit-does-not-match-validation"):
+            lifecycle_state.record_review(repo=self.repo, feature_id="FEAT-context", decision="approved")
+
     def test_next_routes_the_full_single_feature_lifecycle(self) -> None:
         self.initialize_state()
         self.assertEqual(lifecycle_state.next_action(self.repo)["stage"], "intake")

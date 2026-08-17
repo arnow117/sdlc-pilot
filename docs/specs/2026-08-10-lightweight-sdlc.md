@@ -1,8 +1,8 @@
-# Lightweight SDLC 1.0
+# Lightweight SDLC 1.1
 
-- **日期**：2026-08-10
+- **日期**：2026-08-17
 - **状态**：Accepted
-- **版本**：1.0.0
+- **版本**：1.1.0
 
 ## 1. 问题
 
@@ -22,6 +22,7 @@
 4. **方法论按需加载**：阶段 skill 决定流程，角色卡提供专业视角。
 5. **不把语义伪装成校验值**：产品判断和评审结论由人/agent 明确记录，不用内容哈希代替理解。
 6. **只保留高收益一致性检查**：状态 schema、合法转换、依赖、当前 Git HEAD 与验证/发布记录的一致性。
+7. **长期上下文与当前迭代分层**：可选的 repository context 只提供当前 commit 已验证的路径索引；当前 Requirement/Feature 的决策、证据和发布后效果只写 lifecycle context。
 
 ## 3. 存储模型
 
@@ -59,6 +60,20 @@
 - 产品：用户问题、行为场景、范围、验收标准、领域语言；
 - 工程：架构方案、接口、数据迁移、测试策略、可靠性与安全判断；
 - 决策：仍有效的取舍、原因和后续约束。
+
+### 3.3 长期工程上下文（可选）
+
+仓库可以同时维护 `AGENTS.md`、目标/产品/架构/开发文档，以及由 `repo-context-creator` 生成的
+`.repo-context/evidence.json` 和 `manifest.yaml`。SDLC 不依赖其脚本、格式或写入能力：`sdlc-onboard` 只有在
+manifest/evidence 的 `analyzedCommit`、`evidenceDigest` 彼此一致且等于当前 `HEAD` 时，才把其中的 canonical 路径索引到
+`project.md`。其他情况记录 `stale` 或 `none` 并回退到源码扫描。
+
+两类内容的所有权固定如下：
+
+- 长期文档：项目方向、产品契约、架构、可复用工程约束和贡献说明；
+- `.sdlc-v1/context/*.product.md`：当前 Requirement 对长期方向的引用、预期结果、指标和验收；
+- `.sdlc-v1/context/*.engineering.md`：当前 Feature 的设计/Task、验证/发布证据和发布后效果观察；
+- `.sdlc-v1/state.json`：唯一机器进度状态，不由 repo-context 读取或写入。
 
 ## 4. 生命周期
 
@@ -151,6 +166,7 @@ state 是普通 JSON。如果两条分支修改不同记录但产生文本冲突
 - validation 前 state 必须已由 Git 追踪、没有 unmerged index entry 且未 staged；
 - validation 保存测试时的 Git HEAD；review/release 要求当前业务代码与该 commit 一致；
 - `.sdlc-v1/**` 的状态/上下文交接提交不使验证失效，其他路径变化后必须重新验证；
+- repo-context、`AGENTS.md` 或长期文档的变更不属于 `.sdlc-v1/**`；若属于当前 Feature，须在 validation 前完成，否则单列维护 Requirement 或重新验证；
 - validation/review/release 时业务代码工作树必须干净，state 和当前 context 必须已追踪且无冲突；
 - 写入采用本机文件锁和原子替换，避免同一 clone 的并发进程破坏 JSON；
 - 已 staged 的 state 不被后台写入覆盖。
@@ -199,6 +215,8 @@ git diff --check
 - backlog/board 五个命令只生成 projection；
 - validation 前 state 已 tracked、无 unmerged entry 且未 staged，当前 context 已 tracked 且无冲突；
 - validation 后只提交 `.sdlc-v1/**` 可继续 review/release，业务代码变化则要求重新验证；
+- onboard 可在有或没有 repo-context 的仓库工作；当前 commit 对齐时只读取其路径索引，过期时回退源码扫描；
+- 产品/工程上下文分别记录方向来源和发布后效果观察，且不重复长期文档正文；
 - 遗留 copied hooks 未清理时 `init` 明确停止且不改写 hook；
 - 所有 stage skill、role card、validate mode 和上下文 Markdown 能继续独立使用；
 - 仓库结构检查与三组核心测试在本地快速完成。

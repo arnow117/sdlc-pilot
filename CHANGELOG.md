@@ -2,6 +2,18 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [1.1.0] — 2026-08-17
+
+### Added
+
+- `sdlc-onboard` 现在可选地读取当前 commit 对齐的 repo-context 索引、根/作用域 `AGENTS.md` 和其中的 canonical 文档路径；repo-context 缺失、过期或不可解析时继续源码扫描，不产生运行时依赖。
+- 产品上下文新增长期方向来源、预期结果、指标/不可观测原因、观察窗口与反馈回流；工程上下文和 ship 阶段新增发布后效果观察、负责人、时间窗口及新 Requirement 路径。
+
+### Changed
+
+- 明确生命周期 context 与长期工程文档的所有权：当前 Requirement/Feature 记录保留在 `.sdlc-v1/context/`，`project.md` 只索引长期上下文。
+- 明确 repo-context、`AGENTS.md` 和长期文档的任何改动都不享有 validation 后豁免；必须在 validation 前完成，或单列维护 Requirement/重新验证。
+
 ## [1.0.0] — 2026-08-10
 
 ### Changed

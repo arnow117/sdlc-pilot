@@ -77,6 +77,20 @@ health_check: <path/command or none>
 
 Do not include secrets. Record where configuration comes from, not secret values.
 
+## Repository context sources
+
+```yaml
+root_guidance: <AGENTS.md path or none>
+scoped_guidance: [<applicable AGENTS.md paths>]
+canonical_documents: [<long-lived architecture, goal, product, or development document paths>]
+repo_context:
+  status: <ready | stale | none>
+  analyzed_commit: <commit or none>
+```
+
+List only source paths verified for the current repository state. This section is an index: do not copy
+long-lived document prose into `project.md`, and do not treat `.sdlc-v1/` as repo-context input.
+
 ## AI readiness
 
 <Short factual summary of project instructions, scoped commands, test discoverability,

@@ -23,8 +23,9 @@ description: >
 4. 记录当前 last-good commit 或产物版本到研发上下文。
 5. 按项目实际环境执行发布；每一步使用可复现命令。
 6. 运行 health、smoke 和关键业务探测，观察约定指标。
-7. 失败时停止继续扩大范围，执行回滚并将结果写入研发上下文。
-8. 成功后调用：
+7. 在研发上下文补齐发布后观察记录：方向来源、指标或不可观测原因、基线与目标、观察窗口、负责人、信号位置，以及新信息应更新当前 Requirement 还是创建新 Requirement。没有生产观测能力时也要记录原因、负责人和下次检查时间。
+8. 失败时停止继续扩大范围，执行回滚并将结果写入研发上下文。
+9. 成功后调用：
 
 ```bash
 python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> \
@@ -33,4 +34,4 @@ python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> \
 
 ## 完成输出
 
-返回实现版本（validation commit）、环境、产物版本、smoke 结果、观测结果和回滚状态。`record-release` 记录 validation commit 作为发布实现版本，且只记录成功发布；失败或只完成发布准备时保持原状态。
+返回实现版本（validation commit）、环境、产物版本、smoke 结果、观测结果、后续观察负责人/时间和回滚状态。`record-release` 记录 validation commit 作为发布实现版本，且只记录成功发布；失败或只完成发布准备时保持原状态。
