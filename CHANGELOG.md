@@ -2,6 +2,24 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [1.2.0] — 2026-08-20
+
+### Added
+
+- 新增 `revise-requirement` 与 `cancel-requirement`：允许长期 backlog 在进入
+  交付前安全调整依赖、优先级或保留取消历史，不再需要手改 `state.json`；
+  活动依赖方存在时拒绝取消。
+- 新增 `retract-release` 纠错命令：当历史记录把主分支合并或发布准备误写为
+  `released` 时，要求给出原因并将 Feature 恢复为 `reviewed`、Requirement
+  恢复为 `validated`；验证和评审证据保持不变，长篇原因留在工程上下文和
+  Git 纠正提交中。
+
+### Changed
+
+- 明确 `record-release` 只用于声明发布目标及该目标要求的 smoke、约定观测
+  成功；发布目标可以是源码分发或环境部署，合入主分支本身不是发布，失败
+  发布也不得先记录成功再撤回。
+
 ## [1.1.0] — 2026-08-17
 
 ### Added

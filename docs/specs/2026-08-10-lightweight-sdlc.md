@@ -84,6 +84,8 @@ captured → ready → in_delivery → validated → released
 ```
 
 - `capture-requirement` 捕获一条产品需求，并绑定已有的 `.sdlc-v1/context/*.md` 产品上下文；
+- `revise-requirement` 修订尚未绑定 Feature 的 `captured` Requirement；
+- `cancel-requirement` 取消尚未绑定 Feature 且没有活动依赖方的 backlog 项，并保留历史；
 - BDD/战略 DDD 澄清后，用 `mark-requirement-ready` 表示可以交付；
 - 产品侧读取 Feature 投影了解研发进展，不维护第二份研发状态。
 
@@ -97,7 +99,11 @@ Task:    todo ↔ in_progress → done
 - `start-feature` 把一个 ready Requirement 绑定到实际开发分支和已有的 `.sdlc-v1/context/*.md` 工程上下文；
 - `add-task` / `set-task-status` 维护实现任务与依赖；
 - SDD/TDD 的正文和测试仍在普通项目文件中；
-- `record-validation`、`record-review`、`record-release` 只记录最小结果。
+- `record-validation`、`record-review`、`record-release` 只记录最小结果；
+  `released` 表示声明发布目标及其约定 smoke、观测完成，不等于合入主分支。
+  发布目标可以是明确约定的源码分发，也可以是环境部署。
+- `retract-release` 只纠正历史误记：要求原因，把 Feature 恢复为
+  `reviewed`、Requirement 恢复为 `validated`，不替代正常发布失败或回滚。
 
 一个 state 可以同时容纳多条 Requirement、Feature 和 Task。实现层只约束“一条 Requirement 只能绑定一个
 Feature”，不限制整个项目同时追踪的需求数量。

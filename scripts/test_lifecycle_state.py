@@ -105,6 +105,63 @@ class LifecycleStateTest(unittest.TestCase):
         self.assertEqual(after["state_version"], 3)
         self.assertTrue((self.repo / product_ref).is_file())
 
+    def test_captured_requirement_can_be_revised_and_cancelled(self) -> None:
+        self.initialize_state()
+        self.capture("REQ-base")
+        self.capture("REQ-change")
+        revised = lifecycle_state.revise_requirement(
+            repo=self.repo,
+            requirement_id="REQ-change",
+            title="Revised requirement",
+            description="Narrowed delivery result",
+            domain="platform",
+            priority="P0",
+            depends_on=["REQ-base"],
+            at="2026-08-10T00:02:00Z",
+        )
+        self.assertEqual(revised["requirement"]["title"], "Revised requirement")
+        self.assertEqual(revised["requirement"]["depends_on"], ["REQ-base"])
+        with self.assertRaisesRegex(
+            lifecycle_state.LifecycleStateError, "requirement-has-active-dependents:REQ-change",
+        ):
+            lifecycle_state.cancel_requirement(
+                repo=self.repo, requirement_id="REQ-base", reason="superseded",
+            )
+        lifecycle_state.revise_requirement(
+            repo=self.repo, requirement_id="REQ-change", depends_on=[],
+        )
+        cancelled = lifecycle_state.cancel_requirement(
+            repo=self.repo,
+            requirement_id="REQ-base",
+            reason="superseded by a bounded requirement",
+            at="2026-08-10T00:03:00Z",
+        )
+        self.assertEqual(cancelled["requirement"]["status"], "cancelled")
+        self.assertEqual(cancelled["reason"], "superseded by a bounded requirement")
+        with self.assertRaisesRegex(lifecycle_state.LifecycleStateError, "requirement-not-cancellable"):
+            lifecycle_state.cancel_requirement(
+                repo=self.repo, requirement_id="REQ-base", reason="cancel twice",
+            )
+
+    def test_requirement_revision_rejects_invalid_or_started_changes(self) -> None:
+        self.initialize_state()
+        self.capture("REQ-one")
+        with self.assertRaisesRegex(
+            lifecycle_state.LifecycleStateError, "requirement-revision-has-no-changes",
+        ):
+            lifecycle_state.revise_requirement(repo=self.repo, requirement_id="REQ-one")
+        with self.assertRaisesRegex(
+            lifecycle_state.LifecycleStateError, "unknown-requirement-dependency:REQ-missing",
+        ):
+            lifecycle_state.revise_requirement(
+                repo=self.repo, requirement_id="REQ-one", depends_on=["REQ-missing"],
+            )
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-one")
+        with self.assertRaisesRegex(lifecycle_state.LifecycleStateError, "requirement-not-revisable"):
+            lifecycle_state.revise_requirement(
+                repo=self.repo, requirement_id="REQ-one", priority="P0",
+            )
+
     def test_state_must_not_be_ignored_staged_or_unmerged(self) -> None:
         (self.repo / ".gitignore").write_text(".sdlc-v1/\n", encoding="utf-8")
         self.git("add", ".gitignore")
@@ -365,6 +422,40 @@ class LifecycleStateTest(unittest.TestCase):
         product = lifecycle_state.product_projection(repo=self.repo, requirement_id="REQ-release")
         self.assertEqual(product["requirement"]["status"], "released")
         self.assertEqual(product["feature"]["release"]["commit"], head)
+
+    def test_retract_release_restores_reviewed_state_without_rewriting_validation(self) -> None:
+        self.initialize_state()
+        self.capture("REQ-retract")
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-retract")
+        self.start("REQ-retract", "FEAT-retract")
+        self.complete_one_task("FEAT-retract")
+        self.commit_state("ready for release correction test")
+        validation = lifecycle_state.record_validation(
+            repo=self.repo, feature_id="FEAT-retract", result="pass", command="python -m unittest",
+        )["feature"]["validation"]
+        self.commit_state("record validation")
+        lifecycle_state.record_review(
+            repo=self.repo, feature_id="FEAT-retract", decision="approved", by="owner",
+        )
+        self.commit_state("record review")
+        lifecycle_state.record_release(repo=self.repo, feature_id="FEAT-retract")
+
+        result = lifecycle_state.retract_release(
+            repo=self.repo,
+            feature_id="FEAT-retract",
+            reason="release was recorded after merge without deployment smoke",
+            at="2026-08-10T00:10:00Z",
+        )
+
+        self.assertEqual(result["reason"], "release was recorded after merge without deployment smoke")
+        self.assertEqual(result["feature"]["status"], "reviewed")
+        self.assertEqual(result["feature"]["release"], {"status": "pending", "commit": None, "at": None})
+        self.assertEqual(result["feature"]["validation"], validation)
+        self.assertEqual(result["requirement"]["status"], "validated")
+        with self.assertRaisesRegex(lifecycle_state.LifecycleStateError, "feature-not-released"):
+            lifecycle_state.retract_release(
+                repo=self.repo, feature_id="FEAT-retract", reason="duplicate correction",
+            )
 
     def test_review_rejects_long_lived_context_change_after_validation(self) -> None:
         self.initialize_state()

@@ -85,9 +85,15 @@ python3 scripts/lifecycle_state.py --repo <target-repo> status
 python3 scripts/lifecycle_state.py --repo <target-repo> capture-requirement \
   --id REQ-001 --title "导出财务数据" --priority P1 \
   --product-context-ref .sdlc-v1/context/product.md
+python3 scripts/lifecycle_state.py --repo <target-repo> revise-requirement \
+  --requirement-id REQ-001 --priority P0 --depends-on ""
 python3 scripts/lifecycle_state.py --repo <target-repo> mark-requirement-ready \
   --requirement-id REQ-001
 ```
+
+未绑定 Feature 的 `captured` Requirement 可以用 `revise-requirement` 修订；
+不再交付的 `captured`/`ready` Requirement 使用 `cancel-requirement --reason <why>`
+保留历史。取消前必须先处理活动依赖方。
 
 研发侧：
 
@@ -105,6 +111,16 @@ python3 scripts/lifecycle_state.py --repo <target-repo> record-review \
   --feature-id FEAT-001 --decision approved --by reviewer
 python3 scripts/lifecycle_state.py --repo <target-repo> record-release \
   --feature-id FEAT-001
+```
+
+`released` 只表示声明的发布目标及该目标要求的 smoke、观测已经完成；
+发布目标可以是明确约定的源码分发，也可以是环境部署。它不表示代码仅仅
+合入了主分支。若历史记录误把合并或发布准备当成发布，先在工程上下文
+记录原因，再纠正机器状态：
+
+```bash
+python3 scripts/lifecycle_state.py --repo <target-repo> retract-release \
+  --feature-id FEAT-001 --reason "recorded after merge without deployment smoke"
 ```
 
 公开查询命令为 `status`、`next`、`readyqueue`、`product-projection` 和 `feature-projection`。`next` 在只有一个

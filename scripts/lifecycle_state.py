@@ -780,6 +780,98 @@ def capture_requirement(
     return _mutate(root, operation, at=at)
 
 
+def revise_requirement(
+    *, repo: str | os.PathLike[str] = ".", requirement_id: str,
+    title: str | None = None, description: str | None = None, domain: str | None = None,
+    priority: str | None = None, product_context_ref: str | None = None,
+    depends_on: Sequence[str] | None = None, at: str | None = None,
+) -> dict[str, object]:
+    """Revise an unbound captured requirement without rewriting state by hand."""
+    root = _repo_root(repo)
+    requirement_id = _id(requirement_id, label="requirement-id")
+    if all(value is None for value in (
+        title, description, domain, priority, product_context_ref, depends_on,
+    )):
+        raise LifecycleStateError("requirement-revision-has-no-changes")
+    if title is not None:
+        title = _text(title, label="requirement-title")
+    if description is not None:
+        description = _text(description, label="requirement-description", allow_empty=True)
+    if domain is not None:
+        domain = _text(domain, label="requirement-domain")
+    if priority is not None and priority not in _PRIORITIES:
+        raise LifecycleStateError("invalid-requirement-priority")
+    if product_context_ref is not None:
+        product_context_ref = _context_ref(
+            product_context_ref, label="requirement-product-context-ref",
+        )
+        _require_context_file(root, product_context_ref, label="product-context")
+    dependencies = None
+    if depends_on is not None:
+        dependencies = [_id(item, label="requirement-depends-on-item") for item in depends_on]
+        if len(set(dependencies)) != len(dependencies) or requirement_id in dependencies:
+            raise LifecycleStateError("invalid-requirement-depends-on")
+
+    def operation(state: dict[str, object], timestamp: str) -> dict[str, object]:
+        requirement = _requirement(state, requirement_id)
+        if requirement["status"] != "captured" or requirement["feature_id"] is not None:
+            raise LifecycleStateError(f"requirement-not-revisable:{requirement_id}")
+        if dependencies is not None:
+            requirements = state["requirements"]
+            assert isinstance(requirements, dict)
+            missing = [item for item in dependencies if item not in requirements]
+            if missing:
+                raise LifecycleStateError(
+                    "unknown-requirement-dependency:" + ",".join(sorted(missing))
+                )
+            requirement["depends_on"] = list(dependencies)
+        for field, value in (
+            ("title", title), ("description", description), ("domain", domain),
+            ("priority", priority), ("product_context_ref", product_context_ref),
+        ):
+            if value is not None:
+                requirement[field] = value
+        requirement["updated_at"] = timestamp
+        return {"operation": "revise-requirement", "requirement": deepcopy(requirement)}
+
+    return _mutate(root, operation, at=at)
+
+
+def cancel_requirement(
+    *, repo: str | os.PathLike[str] = ".", requirement_id: str, reason: str,
+    at: str | None = None,
+) -> dict[str, object]:
+    """Cancel an unbound backlog item while retaining its history and context."""
+    requirement_id = _id(requirement_id, label="requirement-id")
+    reason = _text(reason, label="requirement-cancellation-reason")
+
+    def operation(state: dict[str, object], timestamp: str) -> dict[str, object]:
+        requirement = _requirement(state, requirement_id)
+        if requirement["status"] not in {"captured", "ready"} or requirement["feature_id"] is not None:
+            raise LifecycleStateError(f"requirement-not-cancellable:{requirement_id}")
+        requirements = state["requirements"]
+        assert isinstance(requirements, dict)
+        dependents = sorted(
+            item_id for item_id, item in requirements.items()
+            if item_id != requirement_id
+            and isinstance(item, dict)
+            and item["status"] != "cancelled"
+            and requirement_id in item["depends_on"]
+        )
+        if dependents:
+            raise LifecycleStateError(
+                "requirement-has-active-dependents:" + ",".join(dependents)
+            )
+        requirement["status"] = "cancelled"
+        requirement["updated_at"] = timestamp
+        return {
+            "operation": "cancel-requirement", "reason": reason,
+            "requirement": deepcopy(requirement),
+        }
+
+    return _mutate(repo, operation, at=at)
+
+
 def mark_requirement_ready(*, repo: str | os.PathLike[str] = ".", requirement_id: str, at: str | None = None) -> dict[str, object]:
     requirement_id = _id(requirement_id, label="requirement-id")
 
@@ -1016,6 +1108,42 @@ def record_release(
     return _mutate(root, operation, at=at)
 
 
+def retract_release(
+    *, repo: str | os.PathLike[str] = ".", feature_id: str, reason: str,
+    at: str | None = None,
+) -> dict[str, object]:
+    """Correct a release record that did not represent a completed deployment.
+
+    Git retains the prior record and the corrective commit. Long-form incident
+    evidence belongs in the Feature engineering context; ``reason`` is required
+    so CLI/audit output can state why the correction was made without expanding
+    the lightweight state schema.
+    """
+    feature_id = _id(feature_id, label="feature-id")
+    reason = _text(reason, label="release-retraction-reason")
+    root = _repo_root(repo)
+
+    def operation(state: dict[str, object], timestamp: str) -> dict[str, object]:
+        feature = _feature(state, feature_id)
+        if feature["status"] != "released" or feature["release"]["status"] != "released":
+            raise LifecycleStateError(f"feature-not-released:{feature_id}")
+        _code_head(root, state, feature)
+        feature["release"] = {"status": "pending", "commit": None, "at": None}
+        feature["status"] = "reviewed"
+        feature["updated_at"] = timestamp
+        requirement = _requirement(state, str(feature["requirement_id"]))
+        requirement["status"] = "validated"
+        requirement["updated_at"] = timestamp
+        return {
+            "operation": "retract-release",
+            "reason": reason,
+            "feature": deepcopy(feature),
+            "requirement": deepcopy(requirement),
+        }
+
+    return _mutate(root, operation, at=at)
+
+
 def readyqueue(repo: str | os.PathLike[str] = ".") -> list[dict[str, object]]:
     state = load(repo)
     requirements = state["requirements"]
@@ -1198,6 +1326,22 @@ def build_parser() -> argparse.ArgumentParser:
     capture.add_argument("--product-context-ref", required=True)
     capture.add_argument("--depends-on", default="", help="comma-separated requirement IDs")
     capture.add_argument("--at")
+    revise = commands.add_parser("revise-requirement", help="revise an unbound captured requirement")
+    revise.add_argument("--requirement-id", required=True)
+    revise.add_argument("--title")
+    revise.add_argument("--description")
+    revise.add_argument("--domain")
+    revise.add_argument("--priority", choices=sorted(_PRIORITIES))
+    revise.add_argument("--product-context-ref")
+    revise.add_argument(
+        "--depends-on", default=None,
+        help="comma-separated requirement IDs; pass an empty value to clear dependencies",
+    )
+    revise.add_argument("--at")
+    cancel = commands.add_parser("cancel-requirement", help="cancel an unbound backlog requirement")
+    cancel.add_argument("--requirement-id", required=True)
+    cancel.add_argument("--reason", required=True)
+    cancel.add_argument("--at")
     ready = commands.add_parser("mark-requirement-ready", help="mark a captured requirement ready for delivery")
     ready.add_argument("--requirement-id", required=True)
     ready.add_argument("--at")
@@ -1233,6 +1377,10 @@ def build_parser() -> argparse.ArgumentParser:
     release.add_argument("--feature-id", required=True)
     release.add_argument("--commit")
     release.add_argument("--at")
+    retract = commands.add_parser("retract-release", help="correct a release record without a completed deployment")
+    retract.add_argument("--feature-id", required=True)
+    retract.add_argument("--reason", required=True)
+    retract.add_argument("--at")
     commands.add_parser("readyqueue", help="list requirements ready for delivery")
     commands.add_parser("next", help="show the next lifecycle stage")
     product = commands.add_parser("product-projection", help="show one requirement and its feature")
@@ -1254,6 +1402,18 @@ def main(argv: Sequence[str] | None = None) -> int:
                 repo=args.repo, requirement_id=args.id, title=args.title, description=args.description,
                 domain=args.domain, priority=args.priority, product_context_ref=args.product_context_ref,
                 depends_on=_split_ids(args.depends_on), at=args.at,
+            )
+        elif args.command == "revise-requirement":
+            result = revise_requirement(
+                repo=args.repo, requirement_id=args.requirement_id, title=args.title,
+                description=args.description, domain=args.domain, priority=args.priority,
+                product_context_ref=args.product_context_ref,
+                depends_on=None if args.depends_on is None else _split_ids(args.depends_on),
+                at=args.at,
+            )
+        elif args.command == "cancel-requirement":
+            result = cancel_requirement(
+                repo=args.repo, requirement_id=args.requirement_id, reason=args.reason, at=args.at,
             )
         elif args.command == "mark-requirement-ready":
             result = mark_requirement_ready(repo=args.repo, requirement_id=args.requirement_id, at=args.at)
@@ -1282,6 +1442,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             )
         elif args.command == "record-release":
             result = record_release(repo=args.repo, feature_id=args.feature_id, commit=args.commit, at=args.at)
+        elif args.command == "retract-release":
+            result = retract_release(
+                repo=args.repo, feature_id=args.feature_id, reason=args.reason, at=args.at,
+            )
         elif args.command == "readyqueue":
             result = readyqueue(args.repo)
         elif args.command == "next":
@@ -1303,7 +1467,7 @@ if __name__ == "__main__":
 
 __all__ = [
     "LifecycleStateError", "STATE_DIRECTORY", "STATE_FILENAME", "STATE_FORMAT", "STATE_VERSION",
-    "add_task", "capture_requirement", "feature_projection", "initialize", "load", "main",
-    "mark_requirement_ready", "next_action", "product_projection", "readyqueue", "record_release",
-    "record_review", "record_validation", "set_task_status", "start_feature", "state_path", "status",
+    "add_task", "cancel_requirement", "capture_requirement", "feature_projection", "initialize", "load", "main",
+    "mark_requirement_ready", "next_action", "product_projection", "readyqueue", "record_release", "retract_release",
+    "record_review", "record_validation", "revise_requirement", "set_task_status", "start_feature", "state_path", "status",
 ]

@@ -31,6 +31,30 @@ python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> \
 
 存在依赖时追加 `--depends-on <REQ-id>`。不要直接编辑 `state.json`。
 
+## 修订、合并与取消
+
+需求仍处于 `captured` 且尚未绑定 Feature 时，可以保留原 ID 修订标题、
+摘要、领域、优先级、上下文引用或依赖：
+
+```bash
+python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> \
+  revise-requirement --requirement-id <REQ-id> --priority <P0-P3> \
+  --depends-on <REQ-id-a,REQ-id-b>
+```
+
+显式传入空的 `--depends-on ""` 可清空依赖。已经 ready 或进入交付的需求
+不得回写；如范围变化，创建新 Requirement 并建立依赖。
+
+被更具体需求替代或不再交付的未绑定需求使用：
+
+```bash
+python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> \
+  cancel-requirement --requirement-id <REQ-id> --reason <why>
+```
+
+取消前先处理仍引用它的活动 Requirement，并在产品上下文说明替代关系。
+不要删除历史记录，也不要直接编辑 `state.json`。
+
 ## 需求澄清与 ready
 
 调用 `sdlc-product-design` 或 `sdlc-spec` 完善产品上下文。满足以下条件后执行：

@@ -65,6 +65,8 @@ Git 保存历史并负责跨 clone 同步。状态变化可以与相关文档或
 
 ```text
 capture-requirement
+revise-requirement
+cancel-requirement
 mark-requirement-ready
 start-feature
 add-task
@@ -72,7 +74,18 @@ set-task-status
 record-validation
 record-review
 record-release
+retract-release
 ```
+
+`revise-requirement` 只修改尚未绑定 Feature 的 `captured` Requirement；
+`cancel-requirement` 只取消未绑定且没有活动依赖方的 backlog 项。两者保留
+原 ID 和 Git 历史，不能用来改写已进入交付的需求。
+
+`retract-release` 只用于纠正尚未完成声明发布目标及该目标要求的 smoke、
+观测，却误写成 `released` 的记录；发布目标可以是明确约定的源码分发，
+也可以是环境部署。它要求说明原因，并把 Feature 恢复为 `reviewed`、
+Requirement 恢复为 `validated`。正文证据写入 Feature 工程上下文，Git
+保留原记录与纠正历史。普通发布失败不得先 `record-release` 再撤回。
 
 产品或研发正文直接编辑其 Markdown；`state.json` 只保存 `product_context_ref`、`engineering_context_ref` 和进度字段。上下文路径必须是 `.sdlc-v1/context/*.md` 下的仓库相对路径。
 
