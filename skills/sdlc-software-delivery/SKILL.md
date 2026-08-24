@@ -23,6 +23,7 @@ description: >
 关联 Requirement 与验收条件
 长期方向来源与本 Feature 的预期结果
 现状代码和约束
+复用评估与决定（方法和触发条件由 `sdlc-plan` 定义）
 设计与关键取舍
 接口、数据和兼容性影响
 Task 与依赖
@@ -40,7 +41,7 @@ start-feature → add-task → set-task-status
 → record-validation → record-review → record-release
 ```
 
-1. 规划：把产品验收条件映射到设计和 Task，写入研发上下文。
+1. 规划：先按 `sdlc-plan` 评估复用现有实现或成熟依赖，再把产品验收条件映射到设计和 Task，写入研发上下文。
 2. 实现：依赖就绪的 Task 才开始；默认先写失败测试，再实现最小改动。
 3. 调试：用假设和最小实验定位问题，避免无依据地连续改动。
 4. 验证：运行与 diff 相符的检查，并把通过结果绑定到当前集成 commit。

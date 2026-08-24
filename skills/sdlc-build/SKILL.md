@@ -11,8 +11,9 @@ description: >
 
 1. 读取 `feature-projection --feature-id <feature-id>`。
 2. 读取 `engineering_context_ref` 与 `product_context_ref`。
-3. 选择一个依赖已完成的 Task；不要同时修改多个相互覆盖的 Task。
-4. 根据 `.sdlc-v1/project.md` 和 Git diff 加载相关角色卡与语言参考。
+3. 对当前流程中新规划的非简单 Feature，确认研发上下文已经记录复用评估及决定；若缺失，或实现前发现候选框架、依赖能力与原评估明显不符，返回 `sdlc-plan` 更新设计，不在 build 阶段临时拍板引入框架。
+4. 选择一个依赖已完成的 Task；不要同时修改多个相互覆盖的 Task。
+5. 根据 `.sdlc-v1/project.md` 和 Git diff 加载相关角色卡与语言参考。
 
 ## 实现循环
 
