@@ -7,6 +7,12 @@ description: >
 
 # sdlc-validate — 验证实现
 
+## Orchestrated mode
+
+遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。validate Agent 不修改实现或 state，只记录
+验证证据和请求 `record-validation`；主 Agent 核对运行输出、当前 commit 与工作树后执行。产品 `eval-bench` 仍按实际
+改动面选择，不增加新的行为评估流程。
+
 ## 输入
 
 - Feature projection 及其两个上下文。

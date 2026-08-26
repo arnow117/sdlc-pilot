@@ -9,6 +9,11 @@ description: >
 
 唯一交付物是 `<repo>/.sdlc-v1/project.md`。已有文件时做局部刷新，保留仍成立的事实。
 
+## Orchestrated mode
+
+遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。若尚未初始化，主 Agent 先执行
+`init`；onboard Agent 只写 `project.md` 并返回证据和上下文候选，不改 `state.json`。
+
 ## 输入与边界
 
 - 目标仓库必须明确。

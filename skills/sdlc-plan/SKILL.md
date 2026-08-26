@@ -7,6 +7,14 @@ description: >
 
 # sdlc-plan — Engineering plan
 
+## Orchestrated mode
+
+遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。plan Agent 写工程上下文并按顺序返回
+`start-feature`、`add-task` 等请求；主 Agent 验证后执行。Feature 特有发现留在工程上下文，产品行为更新产品上下文，
+跨 Feature 规则作为 `project_candidates` 返回；只有明确跨项目的 SDLC 通用改进才提议 `/sdlc evolve`。
+返回前检查 `lifecycle_state.py start-feature --help` 并只使用 brief 中的参数 contract：`start-feature` 不接受
+`title`；Task 标题只属于后续 `add-task` 请求。
+
 ## 输入
 
 - ready Requirement 及其 `product_context_ref`。

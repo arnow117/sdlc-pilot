@@ -22,7 +22,8 @@
 4. **方法论按需加载**：阶段 skill 决定流程，角色卡提供专业视角。
 5. **不把语义伪装成校验值**：产品判断和评审结论由人/agent 明确记录，不用内容哈希代替理解。
 6. **只保留高收益一致性检查**：状态 schema、合法转换、依赖、当前 Git HEAD 与验证/发布记录的一致性。
-7. **长期上下文与当前迭代分层**：可选的 repository context 只提供当前 commit 已验证的路径索引；当前 Requirement/Feature 的决策、证据和发布后效果只写 lifecycle context。
+7. **阶段协作不新增状态。** 默认由主 Agent 选择一个阶段 Agent，验证其 artifact/evidence 后执行其有序 lifecycle 请求；阶段 Agent 不写 state，无法创建子 Agent 时保持相同的串行流程。
+8. **长期上下文与当前迭代分层**：可选的 repository context 只提供当前 commit 已验证的路径索引；当前 Requirement/Feature 的决策、证据和发布后效果只写 lifecycle context。
 
 ## 3. 存储模型
 
@@ -135,6 +136,17 @@ server-dev；跨多个面加载 architect；验证阶段按 correctness/e2e/eval
 - 多个活动 Feature 或同状态 Requirement 并存时返回 `needs_selection` 和稳定排序的 candidates；
 - 全部 Requirement 终态时返回 `done`。
 
+### 5.2 阶段 Agent 编排（1.5.0）
+
+阶段协作的唯一规范为 `skills/sdlc/references/stage-agent-protocol.md`。主 Agent 读取 `next`、创建一个阶段 brief、
+验证该阶段返回的 changed files、命令证据、上下文候选和有序 `requested_transitions`，再使用现有
+`lifecycle_state.py` 更新状态并继续。阶段 Agent 不编辑 `state.json`、不执行 lifecycle mutation；直接调用阶段
+skill 时仍可 standalone。review 优先由与实现者不同的新 Agent 执行，无法提供时按相同规则串行评审并披露 fallback。
+
+产品行为进入 Requirement context，Feature 实现与验证进入 engineering context；跨 Feature 的目标项目规则作为
+`project_candidates` 提议写入长期项目文档。只有明确跨项目且可复用的 SDLC 改进才提议 `/sdlc evolve`。本约定不新增
+runtime、事件账本、行为 Eval 或自动 retrospective，也不改变 `state_version=3`。
+
 `backlog.py` 只读取 state，提供 `readyqueue`、`coverage`、`lint`、`tree`、`board` 五个 projection。前四个不写文件；
 `board` 只写可重建 HTML，不得改变 state。`lint` 检查 state/context 是否存在并已由 Git 追踪。
 
@@ -218,6 +230,7 @@ git diff --check
 - A 在机器 1 提交 ready Requirement，B 在机器 2 pull 后可直接 start Feature；
 - state 可同时追踪多条产品需求和研发任务；
 - `next` 对单候选确定路由、对多候选明确请求选择；
+- 默认阶段 Agent 只返回 artifact、命令证据、上下文候选和有序状态请求；主 Agent 验证并写 state，运行时不支持时串行 fallback；
 - backlog/board 五个命令只生成 projection；
 - validation 前 state 已 tracked、无 unmerged entry 且未 staged，当前 context 已 tracked 且无冲突；
 - validation 后只提交 `.sdlc-v1/**` 可继续 review/release，业务代码变化则要求重新验证；

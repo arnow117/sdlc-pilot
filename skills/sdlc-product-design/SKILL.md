@@ -10,6 +10,11 @@ description: >
 本技能回答“为什么做、给谁做、系统对外表现什么行为”。详细方法见
 [`lifecycles/product-design.md`](../sdlc/references/lifecycles/product-design.md)。
 
+## Orchestrated mode
+
+遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。产品设计 Agent 只更新产品正文并请求
+必要的 Requirement transition；主 Agent 验证后更新 state。缺少会改变范围的产品决定时返回问题，不猜测推进。
+
 ## 输入
 
 - 原始用户请求或现有 Requirement。

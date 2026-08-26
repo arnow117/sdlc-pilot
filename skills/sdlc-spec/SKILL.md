@@ -7,6 +7,11 @@ description: >
 
 # sdlc-spec — 收敛产品规格
 
+## Orchestrated mode
+
+遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。spec Agent 只写产品上下文并返回
+`mark-requirement-ready` 请求；由主 Agent 在验收条件和用户决定已完整时执行。Standalone mode 保留现有行为。
+
 ## 输入
 
 - `product-projection --requirement-id <REQ-id>` 返回的 Requirement。

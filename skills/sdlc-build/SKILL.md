@@ -7,6 +7,12 @@ description: >
 
 # sdlc-build — 实现 Feature
 
+## Orchestrated mode
+
+遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。build Agent 可以修改本 Task 的代码和
+工程上下文，但不更新 lifecycle state；它返回 `set-task-status` 请求和命令证据。Feature 特有发现留在工程上下文，
+产品行为更新产品上下文，跨 Feature 规则作为 `project_candidates` 返回；明确跨项目的 SDLC 通用改进才提议 evolve。
+
 ## 入口
 
 1. 读取 `feature-projection --feature-id <feature-id>`。

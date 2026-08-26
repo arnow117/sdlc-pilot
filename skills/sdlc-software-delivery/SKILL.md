@@ -10,6 +10,11 @@ description: >
 本技能回答“如何可靠地实现、验证和发布产品意图”。详细方法见
 [`lifecycles/software-delivery.md`](../sdlc/references/lifecycles/software-delivery.md)。
 
+## Orchestrated mode
+
+各阶段按 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md) 依次执行：主 Agent 拥有状态，
+阶段 Agent 返回 artifact、证据、上下文候选和有序 transition 请求。无子 Agent 能力时按相同顺序串行 inline 执行。
+
 ## 输入
 
 - ready Requirement 与 `product_context_ref`。

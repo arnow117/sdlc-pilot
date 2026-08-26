@@ -9,6 +9,11 @@ description: >
 
 本技能维护多个 Requirement，但不做工程实现。
 
+## Orchestrated mode
+
+遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。Agent 创建或修订产品上下文，返回
+有序 `requested_transitions`；主 Agent 验证后执行 Requirement mutation。直接调用时保留本技能的 standalone 命令。
+
 ## 捕获需求
 
 1. 保留用户原始请求，分清目标、用户、范围和主要约束。

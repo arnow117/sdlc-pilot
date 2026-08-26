@@ -20,6 +20,7 @@
 4. **按需加载。** 生命周期只加载当前阶段、相关角色卡和验证模式，避免每轮重读全套方法论。
 5. **可移植。** 不硬依赖 Workflow、AskUserQuestion 或 subagent；交互可退化为纯文本，并行可退化为串行。
 6. **Skill 写约束和原则。** 环境特定命令放语言包或部署目标卡，不把流程 skill 写成 shell cookbook。
+7. **阶段执行集中编排。** 默认主 Agent 使用 `next` 派发一个阶段 Agent，验证 artifact/evidence 后才执行其有序 transition 请求；协议只定义在 `references/stage-agent-protocol.md`，阶段 skill 不复制 schema。
 
 ## 结构
 
@@ -51,6 +52,7 @@ scripts/
 | 改生命周期状态 | `lifecycle_state.py` → `test_lifecycle_state.py` → 生命周期/阶段 skill → README/设计 spec |
 | 改 backlog/board | 保持只读 projection；`backlog.py`/`board.py` → `test_backlog.py` → `sdlc-backlog/SKILL.md` |
 | 改阶段行为 | 对应 `sdlc-<stage>/SKILL.md`；确认引用存在并保持可移植 |
+| 改阶段子 Agent 编排 | `references/stage-agent-protocol.md` → driver/runtime adapter/TASK template → 各阶段引用 → `validate-skills` |
 | 改工具自身 | `skill-maintainer` 角色 + `evolve-loop.md`；结构性改动走完整 SDLC |
 
 ## 提交前
@@ -69,6 +71,7 @@ git diff --check
 - Requirement/Feature 的 context ref 必填，且只能指向已存在、非符号链接的 `.sdlc-v1/context/*.md`。
 - 不把 Markdown 正文、完整测试输出或评审全文塞进 `state.json`。
 - `next` 是公开 state 查询：单候选返回下一阶段，多候选返回 `needs_selection`，不得静默任选一条。
+- orchestrated mode 中只有主 Agent 可运行 lifecycle mutation 或写 `state.json`；阶段 Agent 返回 artifact、证据、上下文候选和有序 `requested_transitions`。缺少证据、用户决定或外部授权时暂停；无子 Agent 能力时串行 inline fallback。
 - backlog/board 只能读取 state 并生成 `readyqueue/coverage/lint/tree/board` 投影；禁止反写 lifecycle 状态。
 - validation 前 state 必须已 tracked、无 unmerged index entry 且未 staged，当前 context 必须已 tracked 且无冲突，
   业务代码工作树必须干净；之后只提交 `.sdlc-v1/**` 不使验证失效，其他路径变化后必须重新验证。
@@ -85,4 +88,4 @@ git diff --check
 
 结构检查只验证 frontmatter、关键共享文件和本地引用；行为测试只覆盖仍存在的轻量实现。
 `validate-modes/eval-bench.md` 用于验证业务产品内的 AI 功能，应保留。Web Review Live 模式用于本地文档批注，
-也应保留。两者都是与 lifecycle state 正交的普通能力。
+也应保留。两者都是与 lifecycle state 正交的普通能力；不要把阶段 Agent 协作扩展成新的行为 Eval、事件 runtime 或自动 retrospective。

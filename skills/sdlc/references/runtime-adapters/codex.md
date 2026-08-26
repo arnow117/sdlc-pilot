@@ -17,18 +17,17 @@ This reference maps portable SDLC behavior onto Codex capabilities. Core lifecyc
 | Non-interactive execution | Stop when a missing decision would change behavior or accept risk | Report the required input |
 | Independent model check | Use another available model only when it is genuinely independent | Perform a separate inline pass |
 
-## Multi-agent work
+## Stage and Task agent work
 
-1. Fan out only concrete tasks that can proceed independently.
-2. Read-only exploration can run in parallel even when writes cannot.
-3. Write tasks need disjoint repository paths, explicit interfaces and isolated runtime resources.
-4. Each Task receives a self-contained brief containing Feature ID, Task ID, branch, dependencies, write scope and completion conditions.
-5. Task agents do not edit `.sdlc-v1/state.json`; the Feature owner updates status through `lifecycle_state.py`.
-6. Task agents return changed files, commands run, result and source commit.
-7. The Feature owner integrates one Task at a time and reruns checks on the resulting commit.
-8. If independence becomes false, continue serially on the Feature branch.
+The canonical behavior is [`stage-agent-protocol.md`](../stage-agent-protocol.md).
 
-The optional brief structure is in `templates/TASK.md`. It can be embedded in the Feature engineering context or passed directly to a sub-agent; it is not a separate progress file.
+1. The main Agent owns `next`, lifecycle mutations and `.sdlc-v1/state.json`; Stage and Task Agents never edit that file.
+2. Dispatch one Stage Agent with a self-contained brief, verify its artifacts and evidence, apply its ordered requested transitions, then call `next` again.
+3. Read-only exploration can run in parallel. Write work needs disjoint paths, explicit interfaces and isolated runtime resources; otherwise continue serially.
+4. Give review to a fresh Agent separate from the implementer when possible. If unavailable, run the review serially and disclose that fallback.
+5. When multi-agent tools are unavailable, perform the same stage inline. SDLC behavior must not depend on a particular runtime.
+
+The optional brief/result structure is in `templates/TASK.md`. It can be embedded in the Feature engineering context or passed directly to a sub-agent; it is not a separate progress file.
 
 ## User choices
 

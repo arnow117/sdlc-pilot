@@ -30,6 +30,7 @@ for path in \
   "$REF/lightweight-runtime.md" \
   "$REF/lifecycles/product-design.md" \
   "$REF/lifecycles/software-delivery.md" \
+  "$REF/stage-agent-protocol.md" \
   "$REF/runtime-adapters/codex.md" \
   "$REF/roles" \
   "$REF/validate-modes" \
@@ -131,7 +132,31 @@ for expected in \
 done
 ok "长期上下文协作约束已检查"
 
-echo "== 7. Portability =="
+echo "== 7. Stage agent orchestration =="
+for expected in \
+  "$ROOT/sdlc/SKILL.md:stage-agent-protocol.md" \
+  "$ROOT/sdlc/SKILL.md:allowed_transitions" \
+  "$REF/runtime-adapters/codex.md:stage-agent-protocol.md" \
+  "$REF/stage-agent-protocol.md:allowed_transitions" \
+  "$REF/templates/TASK.md:requested_transitions" \
+  "$REF/templates/TASK.md:project_candidates" \
+  "$REF/templates/TASK.md:allowed_transitions" \
+  "$ROOT/sdlc-plan/SKILL.md:start-feature --help"; do
+  file=${expected%%:*}
+  text=${expected#*:}
+  grep -Fq -- "$text" "$file" || err "$file 缺少阶段 Agent 协作约束: $text"
+done
+
+for stage in onboard backlog product-design spec plan build validate review ship; do
+  file="$ROOT/sdlc-$stage/SKILL.md"
+  grep -Fq -- "stage-agent-protocol.md" "$file" \
+    || err "$file 未引用阶段 Agent 协议"
+done
+grep -Fq -- "stage-agent-protocol.md" "$ROOT/sdlc-software-delivery/SKILL.md" \
+  || err "$ROOT/sdlc-software-delivery/SKILL.md 未引用阶段 Agent 协议"
+ok "阶段 Agent 编排约束已检查"
+
+echo "== 8. Portability =="
 for file in "$ROOT"/*/SKILL.md; do
   if grep -q "AskUserQuestion" "$file" && ! grep -q "text_mode" "$file"; then
     err "$file 使用 AskUserQuestion 但未声明 text_mode 降级"
@@ -139,7 +164,7 @@ for file in "$ROOT"/*/SKILL.md; do
 done
 ok "可移植性文本检查完成"
 
-echo "== 8. Focused tests =="
+echo "== 9. Focused tests =="
 for test_file in \
   scripts/test_lifecycle_state.py \
   scripts/test_backlog.py \

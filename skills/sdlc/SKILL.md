@@ -8,7 +8,8 @@ description: >
 
 # sdlc — router / handoff
 
-`/sdlc` 只做四件事：读取、判断、加载、交接。实际工作由阶段技能完成。
+`/sdlc` 读取当前状态、选择阶段、编排一次执行、验证结果并推进。实际工作仍由阶段技能完成；阶段子 Agent
+协作规则唯一见 [`stage-agent-protocol.md`](references/stage-agent-protocol.md)。
 
 ## 1. 唯一目录
 
@@ -38,6 +39,19 @@ Git 保存历史并负责跨 clone 同步。状态变化可以与相关文档或
 4. 读取 `state.json`，再读取当前记录引用的上下文；若 `project.md` 列出当前 commit 已验证的长期工程上下文，再按需读取其中相关路径；不要扫描无关历史文件。
 5. `/sdlc next` 根据当前状态直接进入下一阶段。
 
+## 2.1 编排执行
+
+默认以 orchestrated mode 执行：主 Agent 读取 `next` 的结果，为一个阶段创建带上下文、写入范围、完成条件和
+`allowed_transitions` 的 brief；后者由当前阶段每个 operation 的 `lifecycle_state.py <operation> --help` 生成，
+只列 operation 及 exact long-option names。主 Agent 收集该阶段的 artifact、命令证据、上下文候选和
+`requested_transitions`，验证后再通过 `lifecycle_state.py` 更新状态并再次调用 `next`。
+
+- 阶段 Agent 不编辑 `state.json`，也不调用任何 lifecycle mutation；直接调用阶段 skill 时保留 standalone mode。
+- `onboard` 需要 init 时由主 Agent 先完成；一个阶段默认串行。review 优先使用与实现者不同的新 Agent。
+- `needs_selection`、缺少用户决策或外部授权、阶段 blocked/failed、或证据不足时暂停并报告，不推进状态。
+- 执行 transition 前，主 Agent 校验 operation、required arguments 和 unknown arguments 是否符合 brief；不一致时不猜测删除或补充参数，不修改 state，而是交回同一阶段 Agent 更正。
+- 无子 Agent 能力时，主 Agent 按同一协议串行 inline 执行并说明 fallback；不会因此中断流程。
+
 ## 3. 路由
 
 | 当前意图或状态 | 主技能 | 主要输入 |
@@ -61,7 +75,8 @@ Git 保存历史并负责跨 clone 同步。状态变化可以与相关文档或
 
 ## 4. 状态写入
 
-不要直接编辑 `state.json`。阶段技能调用以下命令完成状态变化：
+不要直接编辑 `state.json`。standalone mode 下阶段技能调用以下命令完成状态变化；orchestrated mode 下阶段 Agent
+只在结果中请求这些变化，由主 Agent 执行：
 
 ```text
 capture-requirement
