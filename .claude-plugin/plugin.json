@@ -1,6 +1,6 @@
 {
   "name": "sdlc-pilot",
-  "version": "1.2.0",
+  "version": "1.4.0",
   "description": "轻量可移植 SDLC 技能族：阶段与角色按需加载，以 Git-tracked .sdlc-v1/state.json 和 context Markdown 协同产品设计与软件交付。",
   "author": {
     "name": "arnow117"
