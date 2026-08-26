@@ -7,6 +7,11 @@ description: >
 
 # sdlc-ship — 发布已验证 Feature
 
+## Orchestrated mode
+
+遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。ship Agent 准备发布和 smoke 证据，
+但外部副作用及 `record-release`/`retract-release` 均由取得用户授权的主 Agent 执行；未授权时返回阻塞原因。
+
 ## 入口条件
 
 - Feature 状态为 `reviewed`。

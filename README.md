@@ -10,6 +10,10 @@
 4. **协作与历史**使用普通 Git branch、commit、push、pull/merge；不再维护第二套版本历史。
 5. **长期工程上下文**可由仓库自己的 `AGENTS.md`、架构/产品文档及可选的 repo-context 索引提供；SDLC 只在 `project.md` 记录已验证路径，不复制它们的正文或状态。
 
+默认运行时由主 Agent 使用 `next` 选择一个阶段、派发一个阶段 Agent、验证返回的文件与命令证据，再更新 state 并继续。
+阶段 Agent 不编辑 `state.json`；没有子 Agent 能力时按同一顺序串行执行。完整约定见
+[`stage-agent-protocol.md`](skills/sdlc/references/stage-agent-protocol.md)，它不引入新的 runtime、事件记录、行为 Eval 或自动 retrospective。
+
 产品与研发是同一个生命周期的两个视角，不是两套相互同步的存储系统：
 
 ```text
@@ -57,7 +61,7 @@ repo-context 的 `sync`/`refine` 若会改动业务路径或长期文档，应�
 
 | 层 | 内容 | 作用 |
 |---|---|---|
-| Driver | `sdlc` | 根据当前状态和用户意图恢复、路由或推进 |
+| Driver | `sdlc` | 根据当前状态和用户意图恢复、路由、编排与推进 |
 | 生命周期 | `sdlc-product-design`、`sdlc-software-delivery` | 分别组织产品澄清和研发交付 |
 | 阶段技能 | onboard、backlog、spec、plan、build、validate、review、ship | 在需要时只加载当前阶段 |
 | 角色卡 | product-owner、domain-expert、architect、client-dev、server-dev、qa、design、security 等 | 按改动面补充检查视角 |

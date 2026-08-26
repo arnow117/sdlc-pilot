@@ -2,6 +2,18 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [1.5.0] — 2026-08-26
+
+### Added
+
+- 新增统一的阶段子 Agent 协议：主 Agent 基于 `next` 派发单个阶段、验证 artifact 与命令证据、再执行有序 lifecycle 请求；阶段 Agent 不写 state。
+
+### Changed
+
+- driver、阶段 skill、Codex adapter、Task 模板和 build loop 统一采用编排模式；review 优先使用独立新 Agent，缺少子 Agent 能力时明确串行 fallback。
+- plan/build 的发现按产品、Feature 和目标项目长期上下文分流；只有明确跨项目的通用改进才提议 `/sdlc evolve`。没有引入新的 runtime、事件账本、行为 Eval 或自动 retrospective。
+- 主 Agent 现在从 lifecycle CLI help 生成允许的 transition 参数契约，并在执行前拒绝 operation、必填参数或未知参数不匹配的阶段结果。
+
 ## [1.4.0] — 2026-08-26
 
 ### Added

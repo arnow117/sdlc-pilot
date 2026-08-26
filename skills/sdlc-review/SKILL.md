@@ -7,6 +7,12 @@ description: >
 
 # sdlc-review — 多角色代码评审
 
+## Orchestrated mode
+
+遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。运行时支持时，主 Agent 使用与实现者不同的
+新 review Agent；否则按相同检查串行完成并披露 fallback。review Agent 不修改实现或 state，只返回发现、证据和
+`record-review` 请求，由主 Agent 验证后执行。
+
 ## 入口
 
 - Feature 必须已通过验证。

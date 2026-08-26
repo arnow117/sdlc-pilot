@@ -12,7 +12,8 @@
 | 只做一个 Feature 或需要逐阶段确认 | 普通 `/sdlc` |
 | 没有 Requirement | 先用 `sdlc-backlog` 捕获 |
 
-循环自动选择下一项和恢复进度，但不会跳过产品确认、测试、评审或发布授权。默认一次只推进一个 Feature；独立 Task 的并行见 `collaboration-discipline.md`。
+循环自动选择下一项和恢复进度，但不会跳过产品确认、测试、评审或发布授权。默认一次只推进一个 Feature；
+阶段 Agent 的编排、状态所有权和 fallback 见 [`stage-agent-protocol.md`](stage-agent-protocol.md)。
 
 ## 2. 外层循环
 
@@ -22,7 +23,7 @@ python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> readyqueue
 
 1. 队列非空时取优先级最高且依赖已满足的 Requirement。
 2. 读取其 `product_context_ref`。
-3. 调用 `start-feature` 建立 Feature 和 `engineering_context_ref`。
+3. 主 Agent 运行 plan 阶段，验证其结果后执行请求的 `start-feature` 和 `add-task` mutation。
 4. 完成单 Feature 内循环。
 5. 发布成功后重新读取 ready queue。
 
@@ -42,7 +43,9 @@ plan
   → ship
 ```
 
-每个阶段直接调用对应 skill，并通过 `feature-projection` 获取当前进度。研发上下文保存设计、Task 细节、测试策略、失败教训和决策；`state.json` 只保存状态和引用。
+每一轮由主 Agent 运行 `next`，创建一个阶段 Agent，收集其 artifact、证据、上下文候选和有序 transition 请求，
+验证后才通过 `lifecycle_state.py` 更新状态并再次调用 `next`。研发上下文保存设计、Task 细节、测试策略、失败教训和决策；
+`state.json` 只保存状态和引用。阶段 Agent 不编辑 state；无子 Agent 能力时按相同顺序 inline 执行并披露 fallback。
 
 ### completion check
 
@@ -97,7 +100,7 @@ plan
 
 ## 8. 独立复核
 
-另一执行者或引擎可用时，可以在 review 阶段只读检查 diff 是否满足产品验收条件。不可用时直接跳过。只有可定位、可复现的问题才进入修复列表；判断分歧且缺少事实时交给用户决定。
+运行时支持时，review 使用与实现者不同的新 Agent，只读检查 diff 是否满足产品验收条件。不可用时按相同角色顺序串行评审并说明 fallback。只有可定位、可复现的问题才进入修复列表；判断分歧且缺少事实时交给用户决定。
 
 ## 9. 停止条件
 
@@ -105,3 +108,4 @@ plan
 - 达到用户设置的 Feature 数量或时间范围：停止并汇报进度。
 - 同一根因三轮无进展、测试基础设施不可用、产品问题未决或需要新的外部授权：停止当前循环并给出所需输入。
 - 每次通过判断都必须来自本轮实际命令、输出和 exit code；没有运行就不能声称通过。
+- `next` 要求选择、需要用户决策/外部授权、或阶段结果缺少证据时暂停当前 Feature，不执行 transition。
