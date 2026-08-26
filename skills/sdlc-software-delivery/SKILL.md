@@ -41,7 +41,7 @@ start-feature → add-task → set-task-status
 → record-validation → record-review → record-release
 ```
 
-1. 规划：先按 `sdlc-plan` 评估复用现有实现或成熟依赖，再把产品验收条件映射到设计和 Task，写入研发上下文。
+1. 规划：先按 `sdlc-plan` 评估复用现有实现或成熟依赖，再按软件交付生命周期的执行纪律处理假设与歧义，把产品验收条件映射到设计和 Task，写入研发上下文。
 2. 实现：依赖就绪的 Task 才开始；默认先写失败测试，再实现最小改动。
 3. 调试：用假设和最小实验定位问题，避免无依据地连续改动。
 4. 验证：运行与 diff 相符的检查，并把通过结果绑定到当前集成 commit。

@@ -2,6 +2,16 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [1.4.0] — 2026-08-26
+
+### Added
+
+- 软件交付生命周期新增受 Karpathy 指南启发并自包含的执行纪律：显式关键假设、按风险处理歧义、选择最简单的充分方案、精准控制 diff，并以可验证证据声明完成。
+
+### Changed
+
+- `sdlc-plan`、`sdlc-build` 与 `sdlc-review` 分别将执行纪律落实为规划记录、实现检查和 scope drift 评审；`sdlc-software-delivery` 作为阶段入口引用 canonical 生命周期定义。
+
 ## [1.3.0] — 2026-08-24
 
 ### Added
