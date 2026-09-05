@@ -160,3 +160,18 @@
 | **(模式) eval-bench** | `engineering-ai-engineer` `engineering-prompt-engineer` `testing-performance-benchmarker` |
 
 > 净效果:**big-data 从"从零"变"有强源";design/client-dev 缺口补齐。** 不读全部 ~200,只榨相关 ~25。
+
+---
+
+## 7. 补充源：Ponytail（2026-09-05，1.6.0）
+
+来源：[DietrichGebert/ponytail](https://github.com/DietrichGebert/ponytail)，重点参考
+[`ponytail-review`](https://github.com/DietrichGebert/ponytail/blob/main/skills/ponytail-review/SKILL.md)
+的删除建议，以及主 skill 的复用优先顺序和 debt skill 的延期条件记录。
+
+| 维度 | 取舍 |
+|---|---|
+| 借鉴 | 在本次 diff 内检查重复实现、不必要抽象、冗余配置与依赖，将简化判断转成有证据的删除或替换建议。 |
+| 适配 | 复用 SDLC 现有评审分级、去重与返修流程；替代方案需要当前版本的能力证据及行为保持依据，有据的保留或延期进入现有研发上下文。 |
+| 不采用 | 最少文件、单行实现、单实现接口或测试规模等机械限制；不以删行量衡量质量，不引入 Ponytail hooks、独立审计/债务流程或运行时依赖。 |
+| 权威定义 | 完整行为仅定义在 [`sdlc-review`](../skills/sdlc-review/SKILL.md)，README 只介绍并链接；不复制整套 Ponytail 方法。 |

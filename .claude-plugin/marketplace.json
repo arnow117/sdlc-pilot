@@ -5,14 +5,14 @@
   },
   "metadata": {
     "description": "sdlc-pilot —— 自洽/可移植/时用时新的 SDLC 技能族",
-    "version": "1.5.0"
+    "version": "1.6.0"
   },
   "plugins": [
     {
       "name": "sdlc-pilot",
       "source": "./",
       "description": "轻量产品设计/软件交付生命周期：阶段与角色按需加载，使用 Git-tracked 单一状态与 context Markdown。",
-      "version": "1.5.0",
+      "version": "1.6.0",
       "author": {
         "name": "arnow117"
       },
