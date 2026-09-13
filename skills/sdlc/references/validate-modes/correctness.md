@@ -115,6 +115,10 @@ distilled-from:
 
 ## 写入研发上下文
 
+统一遵循 [sdlc-validate 的验证归因](../../../sdlc-validate/SKILL.md#验证归因)，在下列小节记录每项检查的
+outcome、分类依据、执行时间和脱敏环境信息；混合问题分开记录。这里的覆盖/质量指标不替代验证归因。
+
+
 在 `.sdlc-v1/context/<FEAT>.engineering.md` 更新：
 
 ~~~markdown
@@ -139,7 +143,7 @@ Unverified: <none or limitation>
 
 ## 状态更新
 
-- 任一必要检查失败：`sdlc-validate` 调用 `record-validation --result fail`，Feature 返回 build。
+- 必要检查未通过时，由 `sdlc-validate` 按统一归因规则记录未通过并决定下一动作；环境阻塞或证据不足不自动触发实现修复。
 - 所有选定验证方式通过：`sdlc-validate` 统一调用 `record-validation --result pass`。
 - correctness 自身不直接编辑 `state.json`，也不记录 review 或 release。
 

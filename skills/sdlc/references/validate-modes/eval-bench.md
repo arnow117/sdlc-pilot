@@ -122,9 +122,13 @@ eval-bench 通过需要：
 - 灾难性失败模式全部通过。
 - 无法运行或未覆盖的部分已明确标 `PARTIAL` 或 `UNVERIFIABLE`。
 
-任一关键条件不满足时返回 `sdlc-build` 或 spec/plan，修正后重新评估。
+关键质量或验收条件确实不满足时返回 `sdlc-build` 或 spec/plan；环境阻塞与原因未明按统一归因规则处理，解决后重新评估。
 
 ## 写入研发上下文
+
+统一遵循 [sdlc-validate 的验证归因](../../../sdlc-validate/SKILL.md#验证归因)，在下列小节记录每项检查的
+outcome、分类依据、执行时间和脱敏环境信息；混合问题分开记录。这里的覆盖/质量指标不替代验证归因。
+
 
 在 `.sdlc-v1/context/<FEAT>.engineering.md` 更新：
 
