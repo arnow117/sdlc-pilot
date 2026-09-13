@@ -49,7 +49,7 @@ Git 保存历史并负责跨 clone 同步。状态变化可以与相关文档或
 
 - 阶段 Agent 不编辑 `state.json`，也不调用任何 lifecycle mutation；直接调用阶段 skill 时保留 standalone mode。
 - `onboard` 需要 init 时由主 Agent 先完成；一个阶段默认串行。review 优先使用与实现者不同的新 Agent。
-- `needs_selection`、缺少用户决策或外部授权、阶段 blocked/failed、或证据不足时暂停并报告，不推进状态。
+- `needs_selection`、缺少用户决策或外部授权、阶段 blocked/failed、或证据不足时暂停并报告，不推进状态。验证阶段可先按编排协议记录未通过以失效旧通过记录；这不是阶段推进。
 - 执行 transition 前，主 Agent 校验 operation、required arguments 和 unknown arguments 是否符合 brief；不一致时不猜测删除或补充参数，不修改 state，而是交回同一阶段 Agent 更正。
 - 无子 Agent 能力时，主 Agent 按同一协议串行 inline 执行并说明 fallback；不会因此中断流程。
 

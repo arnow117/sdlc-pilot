@@ -105,6 +105,10 @@ e2e 通过需要：
 
 ## 写入研发上下文
 
+统一遵循 [sdlc-validate 的验证归因](../../../sdlc-validate/SKILL.md#验证归因)，在下列小节记录每项检查的
+outcome、分类依据、执行时间和脱敏环境信息；混合问题分开记录。这里的覆盖/质量指标不替代验证归因。
+
+
 在 `.sdlc-v1/context/<FEAT>.engineering.md` 更新：
 
 ~~~markdown

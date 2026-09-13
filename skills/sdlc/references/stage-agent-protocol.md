@@ -127,6 +127,14 @@ then calls `next`. It pauses instead of advancing when `next` returns
 `needs_selection`, a user decision or external authorization is needed, the
 result is blocked/failed, or evidence is missing.
 
+For validation only, a blocked/failed result may request `record-validation` with
+`result: fail` to invalidate an older pass before pausing. The main Agent verifies
+that the request is allowed by the brief and supported by the recorded failure,
+blocker, or missing evidence; this records non-passage, never advances the stage.
+All normal CLI preconditions apply. If recording is rejected, stop dispatch for
+that Feature and resolve the precondition; do not continue review/ship using the
+old pass or mutate state directly. See [validation attribution](../../sdlc-validate/SKILL.md#验证归因).
+
 ## Context routing
 
 - Product behavior, scenarios, and business rules update the Requirement product
