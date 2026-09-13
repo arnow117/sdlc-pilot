@@ -10,7 +10,7 @@
 4. **协作与历史**使用普通 Git branch、commit、push、pull/merge；不再维护第二套版本历史。
 5. **长期工程上下文**可由仓库自己的 `AGENTS.md`、架构/产品文档及可选的 repo-context 索引提供；SDLC 只在 `project.md` 记录已验证路径，不复制它们的正文或状态。
 
-默认运行时由主 Agent 使用 `next` 选择一个阶段、派发一个阶段 Agent、验证返回的文件与命令证据，再更新 state 并继续。
+进入生命周期后，默认由主 Agent 使用 `next` 选择一个阶段、派发一个阶段 Agent、验证返回的文件与命令证据，再更新 state 并继续。
 阶段 Agent 不编辑 `state.json`；没有子 Agent 能力时按同一顺序串行执行。完整约定见
 [`stage-agent-protocol.md`](skills/sdlc/references/stage-agent-protocol.md)，它不引入新的 runtime、事件记录、行为 Eval 或自动 retrospective。
 
@@ -26,12 +26,32 @@ Requirement: captured → ready → in_delivery → validated → released
 一条 Requirement 关联一个 Feature；Feature 下可以有多个 Task。仓库可以同时保存多条 Requirement 和 Feature，
 因此并不限制为“同时只能追踪一个需求”。
 
+## 何时进入生命周期
+
+| 请求 | 执行方式 |
+|---|---|
+| 仅查询进度 | 只读已有状态及其引用；状态不存在就如实报告，不初始化、不自动开始执行 |
+| 未纳入已有 Requirement/Feature/Task 的小型、局部、可逆修改 | 可直接实现并做必要验证，无需创建完整生命周期记录 |
+| 明确要求完整流程、修改已有跟踪任务，或涉及跨客户端/服务端协同、公共协议兼容性、持久化及并发/恢复风险 | 进入对应 SDLC 阶段，不通过拆小任务绕过这些条件 |
+
+确定进入生命周期后，才在状态缺失时初始化；已有源码但缺少 `project.md` 时先运行 onboard。
+完整入口规则见 [`sdlc`](skills/sdlc/SKILL.md#2-入口)。
+
+阶段 Agent 在约定范围内自主完成实现与必要验证，集中返回证据和反馈。已有连续执行授权在原范围内延续，
+不新增逐阶段审批；缺少用户决策或外部授权时仍需暂停。独立 Feature 使用精简上下文的新 Agent，
+同阶段修正复用原 Agent，评审保持独立。
+
+仅当相关代码、配置与环境一致，且有实际执行的命令、结果及被测版本时，才可复用验证证据；
+输入变化、失败、证据缺失或阶段另有要求时执行相应检查。详见
+[`阶段协作协议`](skills/sdlc/references/stage-agent-protocol.md#execution-communication-and-context-budget)。
+
 ## 文件放在哪里
 
 ```text
 <target-repo>/
 ├── .sdlc-v1/
 │   ├── state.json          # sdlc-lightweight-state-v1，state_version=3；必须纳入 Git
+│   ├── project.md          # onboard 维护的技术栈、入口、测试命令与长期上下文索引
 │   └── context/            # state 引用的产品/工程上下文；必须放在这里
 │       ├── product.md
 │       ├── engineering.md
@@ -149,6 +169,15 @@ python3 scripts/backlog.py board --root <target-repo> --out ./_board.html
 unmerged index entry 且未 staged（先 commit 或 unstage），当前产品/研发上下文也必须已追踪且无冲突，业务代码
 工作树必须干净。之后可以单独提交 `.sdlc-v1/**` 来同步状态和证据；如果其他路径相对 validation commit 有变化，
 review/release 会要求重新验证。
+
+验证前，先定向查找项目文档、配置示例、fixture 和已有记录，再询问仍缺少的环境信息。
+验证结果在现有工程上下文中区分 `PASS`、`IMPLEMENTATION_FAILED`、`ENV_BLOCKED` 和 `INCONCLUSIVE`，
+分别对应通过、实现/验收失败、已确认的环境阻塞及证据不足；不增加 state 字段。
+
+任何必要检查失败、受阻或证据不足，都需按正常 CLI 前置条件记录 validation 为 `fail`，使旧通过记录失效。
+这里的 `fail` 表示必要验证未通过，不自动证明实现有错；下一步按归因修复实现、解决环境或补充证据。
+若记录失败，应先解决前置条件，不得沿用旧通过记录继续 review/ship。只有所有必要检查通过才可记录 `pass`。
+证据格式和完整流程见 [`sdlc-validate`](skills/sdlc-validate/SKILL.md#验证归因)。
 
 ## 多人、多机器协作
 
