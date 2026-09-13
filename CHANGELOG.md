@@ -2,7 +2,7 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
-## [Unreleased]
+## [1.7.1] — 2026-09-13
 
 ### Fixed
 
