@@ -33,11 +33,12 @@ Git 保存历史并负责跨 clone 同步。状态变化可以与相关文档或
 
 ## 2. 入口
 
-1. 确认目标仓库。
-2. 若 `.sdlc-v1/state.json` 不存在，执行 `lifecycle_state.py --repo <repo> init`。
-3. 若项目已有源码而 `.sdlc-v1/project.md` 不存在，进入 `sdlc-onboard`。
-4. 读取 `state.json`，再读取当前记录引用的上下文；若 `project.md` 列出当前 commit 已验证的长期工程上下文，再按需读取其中相关路径；不要扫描无关历史文件。
-5. `/sdlc next` 根据当前状态直接进入下一阶段。
+1. 确认目标仓库和请求范围。仅查询进度时只读已有状态及其引用；状态不存在就如实报告，不 init、不自动进入执行阶段。
+2. 未纳入已有 Requirement/Feature/Task 的小型、局部、可逆修改，可直接实现并做必要验证，不为此创建完整生命周期记录。用户明确要求完整流程、修改已有跟踪任务，或涉及跨客户端/服务端协同、公共协议兼容性、持久化及并发/恢复风险时，仍走对应 SDLC 阶段；不得拆小任务绕过这些条件。
+3. 确定进入生命周期后，若 `.sdlc-v1/state.json` 不存在，执行 `lifecycle_state.py --repo <repo> init`。
+4. 若项目已有源码而 `.sdlc-v1/project.md` 不存在，进入 `sdlc-onboard`。
+5. 读取 `state.json`，再读取当前记录引用的上下文；若 `project.md` 列出当前 commit 已验证的长期工程上下文，再按需读取其中相关路径；不要扫描无关历史文件。
+6. `/sdlc next` 根据当前状态直接进入下一阶段。
 
 ## 2.1 编排执行
 

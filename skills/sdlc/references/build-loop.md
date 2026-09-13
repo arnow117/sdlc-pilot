@@ -9,11 +9,15 @@
 | 场景 | 选择 |
 |---|---|
 | 有多个 ready Requirement，希望连续推进 | `/sdlc loop` |
-| 只做一个 Feature 或需要逐阶段确认 | 普通 `/sdlc` |
+| 只做一个 Feature | 普通 `/sdlc` |
 | 没有 Requirement | 先用 `sdlc-backlog` 捕获 |
 
 循环自动选择下一项和恢复进度，但不会跳过产品确认、测试、评审或发布授权。默认一次只推进一个 Feature；
 阶段 Agent 的编排、状态所有权和 fallback 见 [`stage-agent-protocol.md`](stage-agent-protocol.md)。
+
+用户已授权“完成所有需求”等连续执行范围时，在该范围内自动推进后续阶段和 ready Requirement，
+不新增逐阶段审批。仅在缺少影响范围、验收或外部操作的必要决策/授权，或满足下文停止条件时暂停；
+已有授权继续有效，明确要求逐阶段确认时遵从该要求。
 
 ## 2. 外层循环
 
@@ -43,9 +47,9 @@ plan
   → ship
 ```
 
-每一轮由主 Agent 运行 `next`，创建一个阶段 Agent，收集其 artifact、证据、上下文候选和有序 transition 请求，
-验证后才通过 `lifecycle_state.py` 更新状态并再次调用 `next`。研发上下文保存设计、Task 细节、测试策略、失败教训和决策；
-`state.json` 只保存状态和引用。阶段 Agent 不编辑 state；无子 Agent 能力时按相同顺序 inline 执行并披露 fallback。
+每一轮按 [`stage-agent-protocol.md`](stage-agent-protocol.md) 派工、等待、验收和推进状态，
+同阶段修正复用、跨 Feature 上下文交接和证据复用也以该协议为准。
+研发上下文保存设计、Task 细节、测试策略、失败教训和决策；`state.json` 只保存状态和引用。
 
 ### completion check
 

@@ -1,6 +1,6 @@
 # Stage agent protocol
 
-> updated: 2026-08-26
+> updated: 2026-09-13
 
 This is the canonical protocol for running an SDLC stage through a sub-agent. It
 adds an execution convention only: lifecycle state remains `state_version=3`,
@@ -21,6 +21,42 @@ and no event runtime, behavioral evaluation, or retrospective loop is created.
 If the runtime cannot create sub-agents, the main Agent executes the same stage
 serially inline and discloses that fallback. The protocol is never a runtime
 dependency.
+
+## Execution, communication, and context budget
+
+- Dispatch a complete bounded stage with acceptance conditions, not one file or
+  test command at a time. Within the brief, the stage Agent completes ordinary
+  implementation choices and necessary checks autonomously. It reports material
+  blockers, contract conflicts, or completion; it does not seek approval for each
+  routine step. Existing user authorization carries forward within its scope.
+- Messages between Agents must add a constraint, correct direction, resolve a
+  blocker, or deliver a result. Do not send no-op acknowledgements, requests for
+  progress, or repeated instructions to continue. This does not remove required
+  user-facing progress updates; the main Agent uses evidence already available.
+- While a stage runs, the main Agent does independent work if available. Otherwise
+  use an event-aware wait, defaulting to 60 seconds where supported and waking
+  early for completion, blockers, or user input. A timeout alone is not a reason
+  to send a message, list Agents, query status, or invent another task; continue
+  waiting after any required user-facing update. Respect runtime wait limits.
+- For an unrelated Feature, create a fresh Agent with minimal context; when
+  supported, prefer `fork_turns="none"` with an explicit brief. Include the goal,
+  write boundary, output format, tool guidance, relevant decisions, authorization,
+  constraints, and paths to required repository/skill instructions and artifacts.
+  The Agent must load missing applicable instructions before acting. Do not omit
+  necessary contracts to shorten context. Without selective inheritance, provide
+  the same concise brief and load only relevant files. Reuse the same Agent for
+  corrections within the same stage; review independence still applies below.
+- Collect completion evidence before review and return actionable feedback in
+  one batch. Recheck affected findings after correction; do not start repeated
+  reviews without changed evidence or an unresolved concern. Required lifecycle
+  validate/review stages and their commit rules remain mandatory.
+- Reuse command evidence only when the required checks actually ran and the
+  relevant code, configuration, and environment snapshot still matches. Include
+  command, result/exit code, tested revision and any relevant working-tree or
+  environment details. The main Agent inspects this evidence rather than rerunning
+  identical checks solely because it received a handoff. Changed inputs, failures,
+  missing evidence, or stage-specific requirements require the appropriate checks;
+  an old pass never substitutes for current lifecycle validation.
 
 ## Brief
 
