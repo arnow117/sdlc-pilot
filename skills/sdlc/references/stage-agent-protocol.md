@@ -29,6 +29,21 @@ dependency.
   implementation choices and necessary checks autonomously. It reports material
   blockers, contract conflicts, or completion; it does not seek approval for each
   routine step. Existing user authorization carries forward within its scope.
+- Before cross-layer implementation, the main Agent records the relevant API/DTO
+  inputs and outputs, identity and permission sources, persistence ownership,
+  version compatibility, and retry/cancellation/recovery behavior in the existing
+  engineering context. Name the affected server, client and composition paths
+  and an observable acceptance scenario. Resolve material interface gaps first;
+  routine implementation details remain with the implementer. Do not require a
+  separate design document or this analysis for an unrelated simple edit.
+- Keep implementation, its necessary tests, and corrections with the same stage
+  Agent. A new implementer needs an independently verifiable deliverable, explicit
+  write scope and settled dependencies, or a stated replacement reason such as
+  an unavailable Agent. Missing tests and unfinished edits alone are not reasons
+  to create another Agent. Independent validate/review stages remain separate.
+  If two consecutive correction attempts on the same blocker satisfy no acceptance
+  condition and add no evidence narrowing its cause, apply the mandatory stop
+  below; changing Agent names or splitting work does not reset this condition.
 - Messages between Agents must add a constraint, correct direction, resolve a
   blocker, or deliver a result. Do not send no-op acknowledgements, requests for
   progress, or repeated instructions to continue. This does not remove required
@@ -38,18 +53,26 @@ dependency.
   early for completion, blockers, or user input. A timeout alone is not a reason
   to send a message, list Agents, query status, or invent another task; continue
   waiting after any required user-facing update. Respect runtime wait limits.
-- For an unrelated Feature, create a fresh Agent with minimal context; when
-  supported, prefer `fork_turns="none"` with an explicit brief. Include the goal,
+- For every newly created stage Agent, default to minimal context; when
+  supported, explicitly set `fork_turns="none"` with a brief. Include the goal,
   write boundary, output format, tool guidance, relevant decisions, authorization,
   constraints, and paths to required repository/skill instructions and artifacts.
   The Agent must load missing applicable instructions before acting. Do not omit
   necessary contracts to shorten context. Without selective inheritance, provide
   the same concise brief and load only relevant files. Reuse the same Agent for
   corrections within the same stage; review independence still applies below.
+  Fuller inheritance requires a stated decision that cannot be conveyed reliably
+  through the brief and referenced artifacts. Use the repository's configured
+  role/model routing; report runtime limitations instead of assuming that a role
+  file changed an already running Agent's model.
 - Collect completion evidence before review and return actionable feedback in
   one batch. Recheck affected findings after correction; do not start repeated
   reviews without changed evidence or an unresolved concern. Required lifecycle
   validate/review stages and their commit rules remain mandatory.
+  Code written with missing or failing agreed checks is not a completed stage.
+  Record partial work and the concrete blocker, distinguishing implementation
+  failures from environment failures. Do not start review solely on a count of
+  passing tests without evidence covering the completion conditions.
 - Reuse command evidence only when the required checks actually ran and the
   relevant code, configuration, and environment snapshot still matches. Include
   command, result/exit code, tested revision and any relevant working-tree or
@@ -57,6 +80,28 @@ dependency.
   identical checks solely because it received a handoff. Changed inputs, failures,
   missing evidence, or stage-specific requirements require the appropriate checks;
   an old pass never substitutes for current lifecycle validation.
+
+## Mandatory stop for non-converging execution
+
+The condition above, or two consecutive redispatch/review/retest cycles repeating
+the same work without changed inputs, a new finding, or a required lifecycle
+check, requires a stop of the current delivery segment. This overrides ordinary
+continuation under earlier authorization to complete all work.
+
+Stop new dispatch and interrupt active Agents for that segment using available
+runtime controls. Cancel only clearly identified task-owned test/build jobs when
+safe. Preserve the working tree and recovery evidence; do not reset Git, delete
+data, or stop shared database/deployment services. Do not advance lifecycle state.
+Report the trigger, completed and unfinished work, interruption results and any
+work that could not be stopped, and a proposed recovery approach. End the turn
+and wait for explicit user direction before resuming. Read-only analysis for this
+report is allowed; reassessment alone does not authorize another implementation
+attempt. If interruption controls are unavailable, disclose that limitation and
+do not claim running work has stopped.
+
+Elapsed time, token count, a normal wait timeout, and required independent review
+alone do not trigger this rule. This is an Agent execution instruction, not an
+external watchdog or a new lifecycle state/runtime.
 
 ## Brief
 
@@ -137,6 +182,12 @@ old pass or mutate state directly. See [validation attribution](../../sdlc-valid
 
 ## Context routing
 
+- Keep a compact current handoff in the existing Feature engineering context:
+  branch/revision, accepted work, unresolved contracts/findings, evidence with its
+  tested snapshot, and the next bounded action. Replace that summary as work
+  advances; retain detailed evidence below or by reference. Recovery starts from
+  this summary and authoritative state, not a replay of the entire conversation.
+  A summary of earlier passes is not fresh verification of the current tree.
 - Product behavior, scenarios, and business rules update the Requirement product
   context.
 - Feature-specific design, implementation, validation evidence, and decisions
