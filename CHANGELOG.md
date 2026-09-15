@@ -2,29 +2,29 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
-## [Unreleased]
+## [1.8.0] — 2026-09-15
 
 ### Changed
 
-- 阶段编排唯一收敛到 `stage-agent-protocol.md`：主 Agent 定义范围、接口和验收，默认串行派发一个实际执行子 Agent，
-  并统一集成与 lifecycle mutation。子 Agent 返回 `awaiting_acceptance`、`incomplete` 或 `blocked`，不自行完成或写 state；
-  只有主 Agent 明确理由、边界和汇总时才允许额外层级或合格并行。runtime adapter、阶段技能、模板、build loop 和协作纪律改为引用该协议。
-- Plan 只保留当前方案、Task 边界、接口、依赖和验收策略；派工/催补/调试/重跑记录不再写入 Plan。新增按需的单 Feature
-  checkpoint 模板，恢复先核对 branch、HEAD 和 workspace，版本不一致时重判证据；它不增加 lifecycle state。
-- 结果必须带实际命令及 exit 结果、revision、workspace 状态和未解项；主 Agent 在两次未验收后先诊断合同或环境，
-  两次无新证据仍触发既有强制停止。验证失败记录和外部发布授权边界保持不变。
-- 完整 brief 现在显式列出本次允许的 lifecycle transition 及 CLI `--help` 的长参数；主 Agent 固定 `--repo`，拒绝越阶段、
-  缺参或未知参请求而不改 state。standalone 仅限未被主 Agent 编排的独立入口，checkpoint 仅由主 Agent 维护。
-- 协作纪律将 Task 分支串行集成到 Feature 分支；完整验收和相应授权前不默认合入主干。此次不改状态 schema、既有 CLI、插件版本或发布元数据。
-
-- 同一阻塞两轮尝试无验收进展且无新定位证据，或两轮无依据重复派工/评审/检查时，强制停止当前交付段并报告；保留代码与恢复记录，仅在用户明确指示后恢复，不新增监控运行时或状态字段。
-
-- 阶段派工前明确跨层接口与恢复行为；同一执行者负责实现、必要测试及修正，新执行者须有独立交付或明确替换原因。新阶段默认精简上下文，连续修正不收敛时回到主 Agent 分析；保留独立验证、评审及现有状态协议。工程上下文维护简洁的当前交接摘要。
+- 阶段编排唯一收敛到 `stage-agent-protocol.md`：主 Agent 先确定范围、接口和验收，默认串行派发一个实际执行子 Agent，
+  统一完成集成验收和 lifecycle mutation。子 Agent 只返回 `awaiting_acceptance`、`incomplete` 或 `blocked`，不自行写 state；
+  额外层级或并行必须先有明确理由、边界和汇总点。
+- 派工前先确定跨层接口与恢复行为。完整 brief 现在包含允许的 lifecycle transition、当前 CLI `--help` 中的长参数和固定的
+  `--repo`；主 Agent 拒绝越阶段、缺参或未知参请求而不修改 state。发生实质范围或接口变化时，使用完整的 `supersedes` brief。
+- Plan 只保存当前方案、Task 边界、接口、依赖和验收策略。按需使用每个 Feature 一份的 checkpoint 进行暂停、跨会话恢复或
+  执行环境变更；恢复时先核对 branch、HEAD 和 workspace，版本不一致时重新判断证据。checkpoint 不增加 lifecycle state。
+- 同一执行者负责实现、必要测试和修正；结果必须带实际命令与 exit 结果、revision、workspace 状态和未解项。两轮未验收后先诊断合同或环境；
+  两轮没有新定位证据则停止当前交付段，保留代码和恢复记录，等待用户明确指示后再继续。
 
 ### Documentation
 
-- README 说明主/子职责、fallback、结果状态、按需 checkpoint 和结构检查边界；新增可复现的跨模块编排演练，区分实际 fixture 证据和书面情景。
-- README 补齐 1.7.0/1.7.1 的生命周期入口边界、阶段协作与证据复用、验证归因及旧通过记录失效规则，并在目录示例中补上 `project.md`；技能行为和插件版本不变。
+- README 说明主/子职责、fallback、结果状态、按需 checkpoint、证据复用和结构检查边界；新增可复现的跨模块编排演练，区分实际 fixture
+  证据和书面情景。
+
+### Compatibility
+
+- 继续使用原生运行时工具、`state_version=3`、现有公共 CLI 和 Git/Markdown 上下文；无需 schema 迁移，也不新增事件服务、消息服务、
+  本地结果存储或行为评估运行时。
 
 ## [1.7.1] — 2026-09-13
 
