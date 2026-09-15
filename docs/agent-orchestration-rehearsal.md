@@ -120,8 +120,9 @@ unresolved_items: [permission-isolation test not run]
 
 ### 5. 暂停与恢复
 
-fixture 的 checkpoint 只有 `定位`、`已确认`、`未完成`、`下一步`、`必要引用` 五节，且由主 Agent 创建、更新和删除；子
-Agent 最多返回候选。首次恢复检查还发现 Git 分支 `main` 与 state/checkpoint 的 `feature/cancel-task` 不一致，因此拒绝
+fixture 的 checkpoint 只有 `定位`、`已确认`、`未完成`、`下一步`、`必要引用` 五节。按修正后的协议，实际编排时 checkpoint
+应由主 Agent 创建、更新和删除，子 Agent 最多返回候选；本次兼容性 fixture 最初由执行者生成。首次恢复检查还发现
+Git 分支 `main` 与 state/checkpoint 的 `feature/cancel-task` 不一致，因此拒绝
 恢复。分支修正后，恢复者仍先比较 Feature 分支、HEAD 和 workspace。checkpoint 的 `a50525d` 与当前 `42e633e` 不同，
 因此先重新判断测试和 validation 证据，再决定是否进入只读 review。Feature 完成后主 Agent 删除该 checkpoint；有效
 Plan、state 和 Git/实际工作树代码仍分别是方案、生命周期和代码历史/现状的权威。
