@@ -28,6 +28,7 @@ fixture 中的最后一项是 `.sdlc-v1/**` 证据提交，因此 validation 的
 首次恢复检查因分支和 HEAD 都不一致而必须拒绝恢复；上表保留了该错误和修正过程。修正分支后，checkpoint 与
 当前 HEAD 仍不一致，因此恢复仍须重判证据。fixture 的 `TASK-001: done` 和 `FEAT-001: validated` 来自直接调用
 `lifecycle_state.py` 的 standalone CLI 兼容性测试，不表示子 Agent 可以自行推进或已经获得主 Agent 接受。
+这项直接 CLI 测试也不是一次实际的主 Agent lifecycle 推进。
 
 ## 书面编排情景
 
@@ -35,7 +36,8 @@ fixture 中的最后一项是 `.sdlc-v1/**` 证据提交，因此 validation 的
 
 ### 1. 从领域分析到唯一有效 Plan
 
-主 Agent 先串行收集两个有界分析：
+主 Agent 按领域、现有模块和关键风险选择有界分析。本 fixture 选择了两个串行分析；这不是要求每个 Plan
+都拆成两个角色或等待共享实现接口先稳定的规则。
 
 | 分析边界 | 返回事实 | 主 Agent 结论 |
 |---|---|---|
@@ -63,10 +65,16 @@ required_verification: [python3 -m unittest discover -s tests -v]
 expected_result: [changed_files, commands, revision, workspace_status, unresolved_items]
 authorization: implementation and local verification only; no push, merge, or release
 supersedes: none
+allowed_transitions:
+  - operation: set-task-status
+    required_arguments: [feature-id, task-id, status]
+    optional_arguments: [at]
 ```
 
 主 Agent 选择串行：客户端和服务端共用取消响应与权限语义，尚不能证明写入和验收独立。执行子 Agent 不得再派生
-客户端或服务端子 Agent。
+客户端或服务端子 Agent。它先实际运行 `lifecycle_state.py set-task-status --help` 核对上述长参数；`--repo` 固定为
+fixture 目标仓库，不能由子 Agent 在结果中提供或覆盖。子 Agent 只能请求这一 allow-list 中的 operation 和参数；主
+Agent 在接受证据后才执行 `set-task-status`。本节是书面编排情景，不把 fixture 的直接 CLI 兼容性测试改写成该主执行。
 
 ### 3. 接口变化时替换完整 brief
 
@@ -87,6 +95,10 @@ required_verification: [python3 -m unittest discover -s tests -v]
 expected_result: [changed_files, commands, revision, workspace_status, unresolved_items]
 authorization: implementation and local verification only; no push, merge, or release
 supersedes: FEAT-001/TASK-001 build brief v1
+allowed_transitions:
+  - operation: set-task-status
+    required_arguments: [feature-id, task-id, status]
+    optional_arguments: [at]
 ```
 
 ### 4. 故意缺少必要测试时拒收
@@ -108,10 +120,18 @@ unresolved_items: [permission-isolation test not run]
 
 ### 5. 暂停与恢复
 
-fixture 的 checkpoint 只有 `定位`、`已确认`、`未完成`、`下一步`、`必要引用` 五节。首次恢复检查还发现 Git 分支
-`main` 与 state/checkpoint 的 `feature/cancel-task` 不一致，因此拒绝恢复。分支修正后，恢复者仍先比较 Feature 分支、
-HEAD 和 workspace。checkpoint 的 `a50525d` 与当前 `42e633e` 不同，因此先重新判断测试和 validation 证据，再决定
-是否进入只读 review。Feature 完成后删除该 checkpoint；Plan、state 和 Git 仍分别是设计、进度和历史的权威。
+fixture 的 checkpoint 只有 `定位`、`已确认`、`未完成`、`下一步`、`必要引用` 五节，且由主 Agent 创建、更新和删除；子
+Agent 最多返回候选。首次恢复检查还发现 Git 分支 `main` 与 state/checkpoint 的 `feature/cancel-task` 不一致，因此拒绝
+恢复。分支修正后，恢复者仍先比较 Feature 分支、HEAD 和 workspace。checkpoint 的 `a50525d` 与当前 `42e633e` 不同，
+因此先重新判断测试和 validation 证据，再决定是否进入只读 review。Feature 完成后主 Agent 删除该 checkpoint；有效
+Plan、state 和 Git/实际工作树代码仍分别是方案、生命周期和代码历史/现状的权威。
+
+## 主 Agent 的有界验收结论
+
+主 Agent 已接受 `a50525d` 的有界 fixture 证据：客户端到服务端的取消旅程，以及权限拒绝后任务保持 active，依据是
+两项测试和代码只读审查。第 4 节的缺少必要测试示例仍被拒收。`a50525d` 到 `42e633e` 的 diff 仅为 `.sdlc-v1/**`，所以
+HEAD 不同不丢弃该实现证据；它不表示整个 Feature 已验收，也不完成真实 review 或 release。本段转录主 Agent 的决定，
+不是子 Agent 自行接受。
 
 ## 子 Agent 待验收结果
 
@@ -137,5 +157,5 @@ evidence:
   revision: fixture implementation a50525d; fixture evidence checkpoint 42e633e
   workspace_status: fixture clean after checkpoint commit
 unresolved_items:
-  - Main Agent must decide whether the fixture evidence is accepted; this document does not claim that decision.
+  - The main Agent accepted only the bounded a50525d implementation evidence; real integration acceptance, review, and release remain pending.
 ```

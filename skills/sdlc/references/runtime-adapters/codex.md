@@ -16,17 +16,18 @@ does not define lifecycle, dispatch, result, acceptance, or checkpoint semantics
 | Routine clarification or constraint | `send_message` when it does not alter the brief | Include it in the next complete brief |
 | Wait for a result | `wait_agent` | Use the runtime's interruptible wait |
 | Stop an active child | `interrupt_agent` | Disclose that no stop control is available |
+| Inspect active agents | `list_agents` only for a user status request, interruption recovery, or necessary diagnosis | Do not poll after a normal wait timeout |
 | Read-only inspection | Parallel tool calls are allowed when independent | Run `rg`, `sed`, and `git` reads serially |
 | File edits | `apply_patch`; use project scripts for defined mechanical changes | Avoid ad hoc shell writes |
 | User choice | Structured input when exposed and appropriate | Numbered plain-text choices |
 | Independent review | A fresh direct child selected by the main Agent | Serial review labeled as a fallback, never independent |
 
-`spawn_agent`, `followup_task`, `send_message`, `wait_agent`, and
-`interrupt_agent` are communication controls, not a message system. Do not create
-an inbox, result directory, local state, or mandatory task-card file around them.
-The main Agent uses one child at a time by default; a child never creates its own
-children. It evaluates any permitted parallel work using the canonical protocol's
-interface, write-scope, isolation, and independent-verification conditions.
+`spawn_agent`, `followup_task`, `send_message`, `wait_agent`, `interrupt_agent`,
+and the limited `list_agents` use above are communication controls, not a message
+system. Do not create an inbox, result directory, local state, or mandatory
+task-card file around them. The main Agent uses one child for actual stage work by
+default; a child never creates its own children. The main Agent, not the child,
+applies the canonical protocol when it permits bounded analysis or parallel work.
 
 [`templates/TASK.md`](../templates/TASK.md) is an optional brief/result message
 shape. Pass it directly to a child; do not persist it as a Plan, task card, or

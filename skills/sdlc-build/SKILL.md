@@ -23,7 +23,8 @@ description: >
 
 ## 实现循环
 
-1. 在 orchestrated mode 的结果中请求 `set-task-status ... --status in_progress`；standalone mode 才直接调用 CLI。
+1. 在 orchestrated mode 的结果中请求 `set-task-status ... --status in_progress`；只有独立、不在主 Agent 编排中的
+   standalone mode 才直接调用 CLI。
 2. 复述本 Task 的完成条件和对应产品验收条件。
 3. 写明会影响实现或验收的假设；高风险歧义先确认，低风险默认值说明后继续。
 4. 优先写失败测试；确认失败原因与目标行为一致。
@@ -32,7 +33,7 @@ description: >
 7. 必要时重构，再运行相同检查；只修改本 Task 范围内的代码，不顺带格式化、重构或清理无关区域，只删除本次改动产生的无用代码。
 8. 把有长期价值的设计决定、代码位置变化和风险更新到研发上下文。
 9. 逐条核对完成条件与验收条件，记录实际检查命令和结果；满足后在 orchestrated mode 请求
-   `set-task-status ... --status done`，standalone mode 才直接调用 CLI。
+   `set-task-status ... --status done`，只有独立、不在主 Agent 编排中的 standalone mode 才直接调用 CLI。
 
 ## 调试
 

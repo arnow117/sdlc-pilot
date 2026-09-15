@@ -12,30 +12,34 @@ contexts retain their current roles.
 
 - In **orchestrated mode**, the main Agent owns goal understanding, work
   decomposition, cross-module decisions, integration acceptance, lifecycle
-  mutations, and `.sdlc-v1/state.json`. It calls `next`, dispatches one bounded
-  child at a time, verifies the child's evidence, applies valid transitions, and
-  calls `next` again.
+  mutations, and `.sdlc-v1/state.json`. It calls `next`, dispatches the bounded
+  stage work, verifies the child's evidence, applies valid transitions, and calls
+  `next` again.
 - Actual stage work, including a small implementation task, is performed by the
   dispatched child. The main Agent does not treat a brief as completed work.
 - The default hierarchy is one layer: **main Agent → one child Agent**. A child
   must not fan out, create another lifecycle, or delegate its contract. The main
-  Agent decides whether a further bounded analysis or a later independent review
-  is necessary; every level returns a summary before the next one starts. An
-  exceptional extra layer requires the main Agent to record why it is needed, its
-  exact boundary, and its aggregation point before dispatch. It cannot expand itself
-  beyond that named hierarchy.
-- In **standalone mode**, a directly invoked stage skill keeps its existing CLI
-  behavior. This protocol does not change any CLI, Spec/Plan/Build/Validate/Review/
-  Ship stage, or state schema.
+  Agent may request one or more independent, bounded read-only analyses when it
+  records the reason, boundary, and aggregation point first. A further execution
+  layer requires the same record. Every layer returns a summary before the main
+  Agent proceeds; no level expands itself beyond the hierarchy the main Agent named.
+- **Standalone mode** means an independently direct invocation with no current main
+  Agent orchestration. Once the main Agent orchestrates a Feature or stage, every
+  stage skill invocation inherits orchestrated mode, even if called directly. It
+  cannot use standalone mode to bypass child execution or main acceptance. This
+  protocol does not change any CLI, Spec/Plan/Build/Validate/Review/Ship stage, or
+  state schema.
 - If the runtime cannot create a child, the main Agent performs the same steps
   serially inline and discloses that fallback. An inline pass is not an
   independent review.
 
-The main Agent can use serial, bounded analysis before planning. Each analysis
+Before Spec becomes Plan, the main Agent chooses bounded analysis by domain,
+existing module, or key risk. One analysis is the default; it may fan out
+independent read-only analysis only when the actual need warrants it. Each analysis
 returns current-state evidence, reuse recommendations, interface needs, risks, and
-unresolved decisions. Those analysis notes are inputs only: the main Agent resolves
-conflicts and records one effective unified Plan. No analysis draft independently
-changes scope or authorizes implementation.
+unresolved decisions. Those notes are inputs only: they do not write the unified
+Plan, change scope, or authorize implementation. The main Agent resolves conflicts
+and records the one effective unified Plan.
 
 ## 2. Dispatch contract
 
@@ -54,6 +58,10 @@ The brief includes all of the following:
   paths, and an observable acceptance scenario before implementation.
 - Write scope, dependencies, branch/worktree constraints, completion conditions,
   and required verification.
+- `allowed_transitions`: the ordered lifecycle operation allow-list for this brief.
+  Use `[]` when no lifecycle mutation is allowed. For every allowed operation, list
+  the exact required and optional long option names emitted by that operation's
+  current `--help` output.
 - Required result contents: changed files, actual commands with exit results,
   tested revision and workspace status, unresolved items, requested transitions,
   and any context-update proposal.
@@ -66,7 +74,9 @@ when it does not change the contract.
 
 The child completes ordinary implementation choices and necessary checks without
 asking for approval at each step. It stops for a material missing decision,
-interface conflict, authorization gap, or write-scope conflict.
+interface conflict, authorization gap, or write-scope conflict. A runtime with
+child capability still uses one child for a small actual work item; only the stated
+inline fallback applies when that capability is absent.
 
 The same implementer owns implementation, necessary tests, and corrections until
 the work item is accepted. A replacement needs an independently verifiable
@@ -94,9 +104,11 @@ requirements remain in the Requirement product context. Dispatch records,
 reminders, debug notes, and rerun logs do not belong in a Plan.
 
 For implementation, split work by independently acceptable units, not by a fixed
-frontend/backend/domain pattern. Agree shared interfaces first; serial execution is
-required while an interface or dependency remains unresolved. The main Agent may
-allow parallel child work only after verifying all of these conditions:
+frontend/backend/domain pattern. Agree shared implementation interfaces first;
+serial execution is required while one of those interfaces or a dependency remains
+unresolved. This does not prevent the main Agent from first obtaining independent,
+read-only Spec-to-Plan analysis. The main Agent may allow parallel implementation
+work only after verifying all of these conditions:
 
 1. the interface is stable;
 2. write scopes do not overlap;
@@ -108,12 +120,13 @@ acceptance on the integrated revision.
 
 ### Integration and acceptance
 
-Acceptance covers the relevant user journey plus recovery/concurrency and
-permission-isolation behavior when those risks apply. A child supplies reproducible
-evidence and coverage gaps; the main Agent chooses the repair order. Review is
-read-only with respect to implementation. When the runtime can create an actually
-independent reviewer, the main Agent dispatches one after implementation. If it
-cannot, it records a serial fallback and never labels it independent.
+The main Agent selects bounded integration checks from the relevant user journeys,
+recovery/concurrency behavior, and permission isolation; it may use a small set or
+run them serially instead of mechanically splitting roles. A child supplies
+reproducible evidence and coverage gaps; the main Agent chooses the repair order.
+Review is read-only with respect to implementation. When the runtime can create an
+actually independent reviewer, the main Agent dispatches one after implementation.
+If it cannot, it records a serial fallback and never labels it independent.
 
 Validate is also read-only with respect to implementation. Ship may prepare release
 and smoke evidence, but external effects and release mutations remain with the
@@ -149,8 +162,16 @@ context_updates:
   project_candidates: []
 unresolved_items: []
 requested_transitions:
+  [] # no lifecycle mutation requested
+```
+
+A nonempty ordered request uses only this brief's `allowed_transitions`:
+
+```yaml
+requested_transitions:
   - operation: <lifecycle_state command>
-    arguments: {<exact-long-option-without-leading-dashes>: <value>}
+    arguments:
+      <exact-long-option-without-leading-dashes>: <value>
 ```
 
 Only the main Agent accepts a result. A child never reports `completed`; it returns
@@ -159,12 +180,17 @@ satisfied. `incomplete` and `blocked` explain what remains or what prevents it.
 Historic `completed` or `failed` messages are evidence to reinterpret, not a state
 schema migration or an alternative state transition.
 
-`requested_transitions` stay ordered. The main Agent obtains the allowed operation
-and exact long-option names from `lifecycle_state.py <operation> --help` before
-dispatch. It verifies the operation, required arguments, and unknown arguments;
-it neither drops nor invents values. On a mismatch it leaves state unchanged and
-returns the result to the same child for correction. Only then does it execute the
-existing CLI.
+`requested_transitions` stay ordered. Before every lifecycle request, the main
+Agent compares it with this brief's `allowed_transitions`: operation, required
+arguments, and unknown arguments must all match. It creates that allow-list from
+`lifecycle_state.py <operation> --help` before dispatch and lists each operation's
+actual required and optional long option names. The main Agent fixes `--repo` to
+the target repository; a child result cannot provide or override it. It preserves
+the CLI's existing scalar and repeated-option value semantics, neither dropping nor
+inventing values. A request that is CLI-legal but not allowed for this stage is
+rejected just like a missing or unknown argument: state remains unchanged and the
+complete result returns to the same child for correction. Only then does the main
+Agent execute the existing CLI.
 For validation, a non-passing result may request the existing
 `record-validation --result fail` under the established validation-attribution
 rules; it records non-passage and does not advance the stage. If the CLI rejects
@@ -214,20 +240,27 @@ and acceptance evidence use their existing engineering-context section or a
 reference. Keep those sections distinct. Do not put a current handoff or a stream
 of dispatch/debug/rerun notes in the Plan.
 
-An on-demand checkpoint is allowed only for pause, cross-conversation recovery, or
-execution-environment change. Its only path is
+The effective Plan is authoritative for the current solution; `state.json` is
+authoritative for lifecycle progress; Git history and the actual working-tree code
+are authoritative for what is present. An on-demand checkpoint is allowed only for
+pause, cross-conversation recovery, or execution-environment change. Its only path is
 `.sdlc-v1/checkpoints/<feature-id>.md`; use
 [`templates/CHECKPOINT.md`](templates/CHECKPOINT.md). There is at most one per
-Feature, it has at most 60 lines, and it has exactly these five sections:
+Feature, it has at most 60 lines, and only the main Agent creates, updates, or
+deletes it. A child may return a candidate, but never writes the checkpoint. It has
+exactly these five sections:
 
 1. `定位` — Feature, branch, HEAD, workspace, Plan Task;
 2. `已确认` — main-Agent accepted work, commands, results, versions;
 3. `未完成` — active, unaccepted, failed, or blocked work;
-4. `下一步` — first action, condition, and verification constraint;
-5. `必要引用` — only the state, Plan, context, or Git references required.
+4. `下一步` — first action, completion condition, necessary verification, and
+   constraints that must remain;
+5. `必要引用` — only the required state, Plan, context, Git, code, or evidence
+   references.
 
 The checkpoint is not a Spec, Plan, chat transcript, full log, state replacement,
-or credential/private-machine-path store. On recovery, first verify branch, HEAD,
-and workspace. If the recorded version differs, reassess the evidence before
-continuing. Update the single file in place; Git preserves its history. Delete it
-when the Feature completes.
+or credential, private material, or unnecessary local-path store. On recovery,
+first verify branch, HEAD, and workspace. If the recorded version differs,
+reassess the evidence before continuing. The main Agent updates the single file in
+place; Git preserves its history. The main Agent deletes it when the Feature
+completes.

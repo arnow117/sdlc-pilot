@@ -13,6 +13,8 @@
   checkpoint 模板，恢复先核对 branch、HEAD 和 workspace，版本不一致时重判证据；它不增加 lifecycle state。
 - 结果必须带实际命令及 exit 结果、revision、workspace 状态和未解项；主 Agent 在两次未验收后先诊断合同或环境，
   两次无新证据仍触发既有强制停止。验证失败记录和外部发布授权边界保持不变。
+- 完整 brief 现在显式列出本次允许的 lifecycle transition 及 CLI `--help` 的长参数；主 Agent 固定 `--repo`，拒绝越阶段、
+  缺参或未知参请求而不改 state。standalone 仅限未被主 Agent 编排的独立入口，checkpoint 仅由主 Agent 维护。
 - 协作纪律将 Task 分支串行集成到 Feature 分支；完整验收和相应授权前不默认合入主干。此次不改状态 schema、既有 CLI、插件版本或发布元数据。
 
 - 同一阻塞两轮尝试无验收进展且无新定位证据，或两轮无依据重复派工/评审/检查时，强制停止当前交付段并报告；保留代码与恢复记录，仅在用户明确指示后恢复，不新增监控运行时或状态字段。

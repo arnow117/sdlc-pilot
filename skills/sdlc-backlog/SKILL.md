@@ -12,7 +12,8 @@ description: >
 ## Orchestrated mode
 
 遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。Agent 创建或修订产品上下文，返回
-有序 `requested_transitions`；主 Agent 验证后执行 Requirement mutation。直接调用时保留本技能的 standalone 命令。
+有序 `requested_transitions`；主 Agent 验证后执行 Requirement mutation。只有没有当前主 Agent 编排的独立直接调用
+才保留本技能的 standalone 命令；编排中的直接调用仍遵循 orchestrated mode。
 
 ## 捕获需求
 

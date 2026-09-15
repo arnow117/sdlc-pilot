@@ -45,7 +45,7 @@ Requirement: captured → ready → in_delivery → validated → released
 
 仅当相关代码、配置与环境一致，且有实际执行的命令、结果及被测版本时，才可复用验证证据；
 输入变化、失败、证据缺失或阶段另有要求时执行相应检查。详见
-[`阶段协作协议`](skills/sdlc/references/stage-agent-protocol.md#execution-communication-and-context-budget)。
+[`阶段协作协议`](skills/sdlc/references/stage-agent-protocol.md#5-evidence-git-and-mandatory-stop)。
 
 ## 文件放在哪里
 

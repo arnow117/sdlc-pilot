@@ -47,8 +47,8 @@ description: >
 3. 逐条验证产品验收条件；同时运行相关单元测试、类型检查、构建和必要的端到端检查。
 4. 按上面的归因规则记录本轮证据到研发上下文。
 5. 任一必要检查失败、受阻或证据不足，都请求 `record-validation --result fail`；实际执行过时附 `--test-command <command>`，全部未运行时省略该参数并在上下文写明原因。这里的 `fail` 只表示未通过必要验证，不代表已证明代码有错。主 Agent 按允许的 lifecycle 命令记录后，按归因决定修复实现、解决环境或补证据；不要仅凭 `fail` 自动重做实现。Task 均为 done 时，当前 `next` 仍选择 validate。需要实现修复时由主 Agent 将相关 Task 恢复为 in_progress，再进入 build。
-6. 全部必要检查通过，且 `.sdlc-v1/**` 之外的业务代码工作树干净时，在 orchestrated mode 请求、
-   standalone mode 才直接调用：
+6. 全部必要检查通过，且 `.sdlc-v1/**` 之外的业务代码工作树干净时，在 orchestrated mode 请求；只有独立、
+   不在主 Agent 编排中的 standalone mode 才直接调用：
 
 ```bash
 python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> \

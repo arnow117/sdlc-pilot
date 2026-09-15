@@ -3,8 +3,9 @@ Optional recovery checkpoint. Canonical rules:
 ../stage-agent-protocol.md#6-context-and-checkpoints
 Path: .sdlc-v1/checkpoints/<feature-id>.md
 Keep this file to 60 lines or fewer. It is updated in place and deleted when the
-Feature completes. Do not put credentials, private-machine paths, chat history, a
-Spec, a Plan, or full logs here.
+Feature completes. Only the main Agent creates, updates, or deletes it; a child may
+return a candidate but never writes it. Do not put credentials, private material,
+unnecessary local paths, chat history, a Spec, a Plan, or full logs here.
 -->
 
 # Checkpoint: <feature-id>
@@ -24,8 +25,8 @@ Spec, a Plan, or full logs here.
 
 ## 下一步
 
-- <first action; condition; required verification>
+- <first action; completion condition; required verification; constraints that must remain>
 
 ## 必要引用
 
-- <state, Plan, context, or Git reference>
+- <required state, Plan, context, Git, code, or evidence reference>

@@ -143,10 +143,15 @@ for expected in \
   "$REF/runtime-adapters/codex.md:stage-agent-protocol.md" \
   "$REF/runtime-adapters/codex.md:spawn_agent" \
   "$REF/runtime-adapters/codex.md:interrupt_agent" \
+  "$REF/runtime-adapters/codex.md:list_agents" \
   "$REF/stage-agent-protocol.md:sole authority" \
   "$REF/stage-agent-protocol.md:awaiting_acceptance | incomplete | blocked" \
+  "$REF/stage-agent-protocol.md:allowed_transitions" \
   "$REF/stage-agent-protocol.md:record-validation --result fail" \
   "$REF/stage-agent-protocol.md:checkpoints/<feature-id>.md" \
+  "$REF/templates/TASK.md:allowed_transitions:" \
+  "$REF/templates/TASK.md:[] # no lifecycle mutation for this brief" \
+  "$REF/templates/TASK.md:--repo" \
   "$REF/templates/TASK.md:required_verification" \
   "$REF/templates/TASK.md:supersedes" \
   "$REF/templates/TASK.md:awaiting_acceptance | incomplete | blocked" \
@@ -171,13 +176,95 @@ done
 grep -Fq -- "stage-agent-protocol.md" "$ROOT/sdlc-software-delivery/SKILL.md" \
   || err "$ROOT/sdlc-software-delivery/SKILL.md 未引用阶段 Agent 协议"
 
-checkpoint_sections=$(grep -Ec '^## ' "$REF/templates/CHECKPOINT.md")
-if [ "$checkpoint_sections" -ne 5 ]; then
-  err "$REF/templates/CHECKPOINT.md 必须只有 5 个固定章节"
+check_checkpoint_shape() {
+  local file=$1
+  local sections
+  local lines
+  local headings
+
+  sections=$(grep -Ec '^## ' "$file")
+  lines=$(wc -l < "$file" | tr -d '[:space:]')
+  headings=$(grep -E '^## ' "$file" | paste -sd '|' -)
+
+  [ "$sections" -eq 5 ] || return 1
+  [ "$lines" -le 60 ] || return 1
+  [ "$headings" = '## 定位|## 已确认|## 未完成|## 下一步|## 必要引用' ]
+}
+
+check_child_result_status() {
+  local file=$1
+  local status
+
+  status=$(grep -E '^status:[[:space:]]*' "$file" | head -n 1 | sed -E 's/^status:[[:space:]]*//')
+  case "$status" in
+    awaiting_acceptance|incomplete|blocked)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+if check_checkpoint_shape "$REF/templates/CHECKPOINT.md"; then
+  ok "checkpoint 模板固定五节、顺序和 60 行限制已检查"
+else
+  err "$REF/templates/CHECKPOINT.md 必须按固定顺序保留五节且不超过 60 行"
 fi
-checkpoint_lines=$(wc -l < "$REF/templates/CHECKPOINT.md")
-if [ "$checkpoint_lines" -gt 60 ]; then
-  err "$REF/templates/CHECKPOINT.md 不能超过 60 行"
+
+# These fixtures execute the document-shape checks against real temporary copies.
+# They do not replace the main Agent's semantic authorization or acceptance review.
+checkpoint_fixture=$(mktemp -d "${TMPDIR:-/tmp}/sdlc-checkpoint-shape.XXXXXX") || {
+  err "无法创建 checkpoint 形状测试临时目录"
+  checkpoint_fixture=""
+}
+if [ -n "$checkpoint_fixture" ]; then
+  trap 'rm -rf "$checkpoint_fixture"' EXIT
+
+  cp "$REF/templates/CHECKPOINT.md" "$checkpoint_fixture/valid.md"
+  if check_checkpoint_shape "$checkpoint_fixture/valid.md"; then
+    ok "checkpoint 合法模板正例已执行"
+  else
+    err "checkpoint 合法模板正例失败"
+  fi
+
+  grep -v '^## 已确认$' "$checkpoint_fixture/valid.md" > "$checkpoint_fixture/missing.md"
+  if check_checkpoint_shape "$checkpoint_fixture/missing.md"; then
+    err "checkpoint 缺少固定章节的反例未被拒绝"
+  else
+    ok "checkpoint 缺少固定章节反例已拒绝"
+  fi
+
+  cp "$checkpoint_fixture/valid.md" "$checkpoint_fixture/extra.md"
+  printf '\n## 额外\n' >> "$checkpoint_fixture/extra.md"
+  if check_checkpoint_shape "$checkpoint_fixture/extra.md"; then
+    err "checkpoint 额外章节反例未被拒绝"
+  else
+    ok "checkpoint 额外章节反例已拒绝"
+  fi
+
+  cp "$checkpoint_fixture/valid.md" "$checkpoint_fixture/over-limit.md"
+  while [ "$(wc -l < "$checkpoint_fixture/over-limit.md" | tr -d '[:space:]')" -le 60 ]; do
+    printf '# filler\n' >> "$checkpoint_fixture/over-limit.md"
+  done
+  if check_checkpoint_shape "$checkpoint_fixture/over-limit.md"; then
+    err "checkpoint 超过 60 行反例未被拒绝"
+  else
+    ok "checkpoint 超过 60 行反例已拒绝"
+  fi
+
+  printf 'status: awaiting_acceptance\n' > "$checkpoint_fixture/result-valid.yaml"
+  printf 'status: completed\n' > "$checkpoint_fixture/result-legacy.yaml"
+  if check_child_result_status "$checkpoint_fixture/result-valid.yaml"; then
+    ok "子 Agent 当前结果状态正例已执行"
+  else
+    err "子 Agent 当前结果状态正例失败"
+  fi
+  if check_child_result_status "$checkpoint_fixture/result-legacy.yaml"; then
+    err "旧 completed 结果反例未被拒绝"
+  else
+    ok "旧 completed 结果反例已拒绝"
+  fi
 fi
 
 # These checks intentionally cover document shape only. The main Agent must still

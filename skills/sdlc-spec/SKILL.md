@@ -10,7 +10,8 @@ description: >
 ## Orchestrated mode
 
 遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。spec Agent 只写产品上下文并返回
-`mark-requirement-ready` 请求；由主 Agent 在验收条件和用户决定已完整时执行。Standalone mode 保留现有行为。
+`mark-requirement-ready` 请求；由主 Agent 在验收条件和用户决定已完整时执行。只有没有当前主 Agent 编排的独立
+调用才使用 standalone mode。
 
 ## 输入
 
@@ -28,7 +29,8 @@ description: >
 5. 明确术语、业务规则、不变量、体验约束和非功能要求。
 6. 将结论直接写回 `product_context_ref` 指向的 Markdown；保留未决问题、结果指标与决策理由。
 7. 与用户确认范围和验收条件。
-8. 条件满足后在 orchestrated mode 请求 `mark-requirement-ready`；standalone mode 才直接调用 CLI。
+8. 条件满足后在 orchestrated mode 请求 `mark-requirement-ready`；只有独立、不在主 Agent 编排中的 standalone
+   mode 才直接调用 CLI。
 
 ## 完成条件
 

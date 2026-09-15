@@ -22,9 +22,12 @@ expected_result: [changed_files, commands, revision, workspace_status, unresolve
 authorization: <existing authorization and excluded external actions>
 supersedes: <brief identifier or none>
 allowed_transitions:
-  - operation: <lifecycle_state command>
-    required_arguments: [<exact-long-option-without-leading-dashes>]
-    optional_arguments: [<exact-long-option-without-leading-dashes>]
+  [] # no lifecycle mutation for this brief
+# Or, after the main Agent reads `<operation> --help`, list each allowed request:
+# - operation: <lifecycle_state command>
+#   required_arguments: [<exact-required-long-option-name>]
+#   optional_arguments: [<exact-optional-long-option-name>]
+# `--repo` is fixed by the main Agent and is never a child-provided argument.
 ```
 
 Use `supersedes` only after a material scope or interface change has updated the
@@ -50,8 +53,18 @@ context_updates:
   project_candidates: []
 unresolved_items: []
 requested_transitions:
-  - operation: <lifecycle_state command>
-    arguments: {<exact-long-option-without-leading-dashes>: <value>}
+  [] # no lifecycle mutation requested
 ```
+
+A nonempty ordered request allowed by this complete brief uses this shape:
+
+```yaml
+requested_transitions:
+  - operation: <lifecycle_state command>
+    arguments:
+      <exact-long-option-without-leading-dashes>: <value>
+```
+
+Keep scalar and repeated values in the existing CLI format; do not invent a new one.
 
 Only the main Agent accepts this result. The child does not use `completed`.

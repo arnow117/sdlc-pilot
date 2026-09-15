@@ -45,7 +45,7 @@ SDLC 通用改进才提议 `/sdlc evolve`。
    - 发布后观察：指标/不可观测原因、基线和目标、观察窗口、负责人，以及反馈转为新 Requirement 的路径。
    派工、催补、调试和重跑日志不追加到 Plan；最终验证和验收证据使用现有独立章节或引用。
 5. 在 orchestrated mode 请求 `start-feature --engineering-context-ref .sdlc-v1/context/<feature-id>.engineering.md`；
-   standalone mode 才直接执行 CLI，写入 Requirement、Feature、分支和上下文引用。
+   只有独立、不在主 Agent 编排中的 standalone mode 才直接执行 CLI，写入 Requirement、Feature、分支和上下文引用。
 6. 按可独立验证的增量请求 `add-task`；依赖使用 Task ID 明确表示。
 
 ## Task 质量

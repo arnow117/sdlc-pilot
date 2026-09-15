@@ -47,7 +47,8 @@ Git 保存历史并负责跨 clone 同步。状态变化可以与相关文档或
 执行已有 lifecycle CLI，并重新读取 `next`。本 router 不重复 brief、结果、检查点、并行资格或纠偏规则。
 
 `onboard` 需要 `init` 时由主 Agent 先完成。`needs_selection`、缺少用户决策或外部授权、未通过验收、或证据不足时，
-按 protocol 暂停而不推进状态。直接调用阶段 skill 时保留 standalone mode。
+按 protocol 暂停而不推进状态。只有未处于主 Agent 编排中的独立直接调用才是 standalone mode；已开始的
+编排中，即使直接调用阶段 skill 也继承 orchestrated mode。
 
 ## 3. 路由
 
@@ -72,8 +73,8 @@ Git 保存历史并负责跨 clone 同步。状态变化可以与相关文档或
 
 ## 4. 状态写入
 
-不要直接编辑 `state.json`。standalone mode 下阶段技能调用以下命令完成状态变化；orchestrated mode 下阶段 Agent
-只在结果中请求这些变化，由主 Agent 执行：
+不要直接编辑 `state.json`。只有不在主 Agent 编排中的 standalone mode 下阶段技能才调用以下命令完成状态变化；
+orchestrated mode 下阶段 Agent 只在结果中请求这些变化，由主 Agent 执行：
 
 ```text
 capture-requirement
