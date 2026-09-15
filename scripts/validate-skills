@@ -32,6 +32,8 @@ for path in \
   "$REF/lifecycles/software-delivery.md" \
   "$REF/stage-agent-protocol.md" \
   "$REF/runtime-adapters/codex.md" \
+  "$REF/templates/TASK.md" \
+  "$REF/templates/CHECKPOINT.md" \
   "$REF/roles" \
   "$REF/validate-modes" \
   "$REF/languages"; do
@@ -135,12 +137,26 @@ ok "长期上下文协作约束已检查"
 echo "== 7. Stage agent orchestration =="
 for expected in \
   "$ROOT/sdlc/SKILL.md:stage-agent-protocol.md" \
-  "$ROOT/sdlc/SKILL.md:allowed_transitions" \
+  "$REF/role-routing.md:stage-agent-protocol.md" \
+  "$REF/evolve-loop.md:stage-agent-protocol.md" \
+  "$REF/roles/skill-maintainer.md:stage-agent-protocol.md" \
   "$REF/runtime-adapters/codex.md:stage-agent-protocol.md" \
-  "$REF/stage-agent-protocol.md:allowed_transitions" \
+  "$REF/runtime-adapters/codex.md:spawn_agent" \
+  "$REF/runtime-adapters/codex.md:interrupt_agent" \
+  "$REF/stage-agent-protocol.md:sole authority" \
+  "$REF/stage-agent-protocol.md:awaiting_acceptance | incomplete | blocked" \
+  "$REF/stage-agent-protocol.md:record-validation --result fail" \
+  "$REF/stage-agent-protocol.md:checkpoints/<feature-id>.md" \
+  "$REF/templates/TASK.md:required_verification" \
+  "$REF/templates/TASK.md:supersedes" \
+  "$REF/templates/TASK.md:awaiting_acceptance | incomplete | blocked" \
+  "$REF/templates/TASK.md:workspace_status" \
   "$REF/templates/TASK.md:requested_transitions" \
-  "$REF/templates/TASK.md:project_candidates" \
-  "$REF/templates/TASK.md:allowed_transitions" \
+  "$REF/templates/CHECKPOINT.md:## 定位" \
+  "$REF/templates/CHECKPOINT.md:## 已确认" \
+  "$REF/templates/CHECKPOINT.md:## 未完成" \
+  "$REF/templates/CHECKPOINT.md:## 下一步" \
+  "$REF/templates/CHECKPOINT.md:## 必要引用" \
   "$ROOT/sdlc-plan/SKILL.md:start-feature --help"; do
   file=${expected%%:*}
   text=${expected#*:}
@@ -154,7 +170,33 @@ for stage in onboard backlog product-design spec plan build validate review ship
 done
 grep -Fq -- "stage-agent-protocol.md" "$ROOT/sdlc-software-delivery/SKILL.md" \
   || err "$ROOT/sdlc-software-delivery/SKILL.md 未引用阶段 Agent 协议"
-ok "阶段 Agent 编排约束已检查"
+
+checkpoint_sections=$(grep -Ec '^## ' "$REF/templates/CHECKPOINT.md")
+if [ "$checkpoint_sections" -ne 5 ]; then
+  err "$REF/templates/CHECKPOINT.md 必须只有 5 个固定章节"
+fi
+checkpoint_lines=$(wc -l < "$REF/templates/CHECKPOINT.md")
+if [ "$checkpoint_lines" -gt 60 ]; then
+  err "$REF/templates/CHECKPOINT.md 不能超过 60 行"
+fi
+
+# These checks intentionally cover document shape only. The main Agent must still
+# make the semantic dispatch, acceptance, and parallelism decisions at runtime.
+for forbidden in \
+  "$REF/templates/TASK.md:status: <completed" \
+  "$REF/templates/TASK.md:status: <failed" \
+  "$REF/roles/client-dev.md:并行加载本卡" \
+  "$REF/roles/client-dev.md:review/client-dev.md" \
+  "$REF/collaboration-discipline.md:git switch main" \
+  "$REF/collaboration-discipline.md:origin/main" \
+  "$REF/divergence-frames.md:并行起 5 个 agent"; do
+  file=${forbidden%%:*}
+  text=${forbidden#*:}
+  if grep -Fq -- "$text" "$file"; then
+    err "$file 保留冲突的阶段 Agent 文案: $text"
+  fi
+done
+ok "阶段 Agent 编排形状和冲突反例已检查"
 
 echo "== 8. Portability =="
 for file in "$ROOT"/*/SKILL.md; do

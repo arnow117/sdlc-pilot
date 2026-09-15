@@ -4,6 +4,11 @@
 
 `/sdlc evolve` 用于修改 sdlc-pilot 自身。它只负责定位真实源码、编辑、做最小校验并汇报，不建立独立生命周期状态。
 
+当 evolve 使用多 Agent 编排时，主 Agent、执行子 Agent 和独立评审的职责，以及串行、brief、结果和验收规则，
+唯一遵循 [`stage-agent-protocol.md`](stage-agent-protocol.md)。evolve 没有 Requirement/Feature ID 时在 brief 中明确
+`not-applicable`；它不因此创建 state、Plan、inbox 或子生命周期。默认主 Agent 只派一个实际执行子 Agent，完成并汇总后
+才可按需要派只读独立评审。运行时不支持独立评审时，必须披露 fallback，不能声称独立。
+
 ## 1. 定位可写源码
 
 按顺序检查：

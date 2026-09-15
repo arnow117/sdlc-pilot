@@ -28,7 +28,7 @@ description: >
 5. 明确术语、业务规则、不变量、体验约束和非功能要求。
 6. 将结论直接写回 `product_context_ref` 指向的 Markdown；保留未决问题、结果指标与决策理由。
 7. 与用户确认范围和验收条件。
-8. 条件满足后调用 `mark-requirement-ready`。
+8. 条件满足后在 orchestrated mode 请求 `mark-requirement-ready`；standalone mode 才直接调用 CLI。
 
 ## 完成条件
 

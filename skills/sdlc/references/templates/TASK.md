@@ -1,61 +1,57 @@
 <!--
-Optional stage or Task brief. Insert it into the Feature's
-.sdlc-v1/context/<feature-id>.engineering.md or pass it to a sub-agent.
-It is not a separate runtime file and does not hold progress.
+Optional dispatch-message shape. Pass it directly to a child. It is not a mandatory
+task card, inbox, result file, Plan section, or second progress record. Canonical rules:
+../stage-agent-protocol.md
 -->
 
-## Task: <task-id> — <title>
+## Dispatch: <stage> / <work item>
 
 ```yaml
-feature_id: <feature-id>
-task_id: <task-id>
-stage: <build>
-branch: <branch>
-depends_on: [<task-id>]
-write_scope: [<repository-relative paths>]
+stage: <onboard|backlog|product-design|spec|plan|build|validate|review|ship|evolve>
+feature_id: <feature-id or not-applicable>
+plan_task_id: <task-id or not-applicable>
+goal: <current intended outcome>
+out_of_scope: [<work not authorized for this dispatch>]
+settled_interfaces: [<API/DTO/ownership/compatibility decisions>]
 context_refs: [<project/product/engineering paths>]
-expected_artifacts: [<paths or observable outcomes>]
-completion_conditions: [<checks>]
+write_scope: [<repository-relative paths>]
+dependencies: [<settled predecessor or external dependency>]
+completion_conditions: [<observable results>]
+required_verification: [<command or evidence required before acceptance>]
+expected_result: [changed_files, commands, revision, workspace_status, unresolved_items]
+authorization: <existing authorization and excluded external actions>
+supersedes: <brief identifier or none>
 allowed_transitions:
-  - operation: set-task-status
-    required_arguments: [feature-id, task-id, status]
-    optional_arguments: [at]
+  - operation: <lifecycle_state command>
+    required_arguments: [<exact-long-option-without-leading-dashes>]
+    optional_arguments: [<exact-long-option-without-leading-dashes>]
 ```
 
-### Product criteria
+Use `supersedes` only after a material scope or interface change has updated the
+effective Plan and this whole brief replaces the earlier one.
 
-- <Criterion from the referenced product context>
-
-### Engineering intent
-
-<What this task changes and why.>
-
-### Completion conditions
-
-- <Observable code or behavior condition>
-- <Required test or check>
-
-### Constraints
-
-- Do not modify files outside `write_scope` without coordinating with the Feature owner.
-- In orchestrated mode, do not edit `.sdlc-v1/state.json` or run lifecycle mutations; request them in the result for the main Agent.
-- Record durable design decisions in the Feature engineering context.
-
-### Result
+## Child result
 
 ```yaml
 stage: <stage>
-status: <completed | blocked | failed>
+status: <awaiting_acceptance | incomplete | blocked> # 待验收 | 未完成 | 受阻
 artifacts:
   changed_files: []
 evidence:
-  commands: []
+  commands:
+    - command: <actual command>
+      exit_code: <integer>
+      result: <short observed result>
+  revision: <tested commit or uncommitted snapshot>
+  workspace_status: <git status summary>
 context_updates:
   product: []
   feature: []
   project_candidates: []
-questions: []
+unresolved_items: []
 requested_transitions:
   - operation: <lifecycle_state command>
     arguments: {<exact-long-option-without-leading-dashes>: <value>}
 ```
+
+Only the main Agent accepts this result. The child does not use `completed`.

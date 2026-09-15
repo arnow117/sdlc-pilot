@@ -47,9 +47,9 @@ plan
   → ship
 ```
 
-每一轮按 [`stage-agent-protocol.md`](stage-agent-protocol.md) 派工、等待、验收和推进状态，
-同阶段修正复用、跨 Feature 上下文交接和证据复用也以该协议为准。
-研发上下文保存设计、Task 细节、测试策略、失败教训和决策；`state.json` 只保存状态和引用。
+每一轮按 [`stage-agent-protocol.md`](stage-agent-protocol.md) 派工、等待、验收和推进状态；该协议也唯一规定
+同阶段修正、跨 Feature 交接、证据复用、检查点和并行资格。研发上下文保存设计、Task 细节、测试策略、失败教训和
+决策；`state.json` 只保存状态和引用。Plan 不记录派工、催补、调试或重跑日志。
 
 ### completion check
 
@@ -63,17 +63,20 @@ plan
 
 未满足时列出具体缺口：实现或测试缺口回 build；验证过期回 validate；评审问题回 build 后重新 validate/review。
 
-同一根因连续三轮没有新进展时停止当前 Feature，记录已尝试方法和下一项决策，不进行第四轮相同尝试。
+重复派工、修正、评审或重测的停止与恢复条件唯一遵循
+[`stage-agent-protocol.md`](stage-agent-protocol.md#5-evidence-git-and-mandatory-stop)。
 
 ## 4. 可恢复性
 
 任意时刻中断后：
 
 1. 运行 `status` 和 `feature-projection`。
-2. 读取 `project.md`、`product_context_ref` 和 `engineering_context_ref`。
+2. 读取 `project.md`、`product_context_ref` 和 `engineering_context_ref`；只有存在按 canonical protocol 创建的按需
+   checkpoint 时才读取它。
 3. 从第一个未完成 Task 或当前 Feature 状态继续。
 
-不要依赖对话历史恢复目标，也不要重新生成已存在的 Feature 或 Task。
+不要依赖对话历史恢复目标，也不要重新生成已存在的 Feature 或 Task。checkpoint 与 HEAD/分支/workspace 不一致时，
+先重新判断证据；Feature 完成后删除 checkpoint。
 
 ## 5. 每轮复述目标
 
@@ -86,15 +89,10 @@ plan
 
 这只是恢复注意力，不是重新规划。
 
-## 6. 失败教训
+## 6. 有价值的失败结论
 
-测试或调试失败后，在研发上下文中记录一行：
-
-```text
-<现象> ← <根因或当前假设> ⇒ <下一轮如何验证或避免>
-```
-
-下一轮先读这些记录，避免重复同一无效尝试。没有足够事实时写“假设”，不要写成已确认根因。
+只有实质方案变化、已确认根因，或最终验证/验收证据有长期价值时，才写入现有工程上下文的相应设计或
+验证/验收章节。不要按每次调试失败、派工或重跑追加日志；没有足够事实时保留为当前未解项，不写成确认结论。
 
 ## 7. 强化测试
 
@@ -104,12 +102,14 @@ plan
 
 ## 8. 独立复核
 
-运行时支持时，review 使用与实现者不同的新 Agent，只读检查 diff 是否满足产品验收条件。不可用时按相同角色顺序串行评审并说明 fallback。只有可定位、可复现的问题才进入修复列表；判断分歧且缺少事实时交给用户决定。
+运行时支持时，主 Agent 使用与实现者不同的新 Agent，只读检查 diff 是否满足产品验收条件。不可用时按相同角色顺序
+串行评审并说明 fallback，且不称其独立。只有可定位、可复现的问题才进入修复列表；判断分歧且缺少事实时交给用户决定。
 
 ## 9. 停止条件
 
 - ready queue 为空且没有未发布 Requirement：完成。
 - 达到用户设置的 Feature 数量或时间范围：停止并汇报进度。
-- 同一根因三轮无进展、测试基础设施不可用、产品问题未决或需要新的外部授权：停止当前循环并给出所需输入。
+- 测试基础设施不可用、产品问题未决或需要新的外部授权：停止当前循环并给出所需输入；重复工作无新证据时按
+  canonical protocol 的强制停止处理。
 - 每次通过判断都必须来自本轮实际命令、输出和 exit code；没有运行就不能声称通过。
 - `next` 要求选择、需要用户决策/外部授权、或阶段结果缺少证据时暂停当前 Feature，不执行 transition。

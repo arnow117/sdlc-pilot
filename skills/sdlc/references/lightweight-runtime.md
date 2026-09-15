@@ -15,6 +15,10 @@
 
 所有文件都由 Git 跟踪。不要为每次状态变化单独提交；在交接、同步、验证或发布节点，与相关文档和代码一起正常提交。
 
+暂停、跨对话恢复或更换执行环境时，才可额外使用唯一的
+`.sdlc-v1/checkpoints/<feature-id>.md`。它不是默认目录成员、进度状态或日志；固定形状、恢复核对和删除条件只见
+[`stage-agent-protocol.md`](stage-agent-protocol.md#6-context-and-checkpoints)。
+
 ## 2. 职责边界
 
 | 文件 | 保存什么 | 谁维护 |

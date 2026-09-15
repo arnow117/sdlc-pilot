@@ -42,16 +42,12 @@ Git 保存历史并负责跨 clone 同步。状态变化可以与相关文档或
 
 ## 2.1 编排执行
 
-默认以 orchestrated mode 执行：主 Agent 读取 `next` 的结果，为一个阶段创建带上下文、写入范围、完成条件和
-`allowed_transitions` 的 brief；后者由当前阶段每个 operation 的 `lifecycle_state.py <operation> --help` 生成，
-只列 operation 及 exact long-option names。主 Agent 收集该阶段的 artifact、命令证据、上下文候选和
-`requested_transitions`，验证后再通过 `lifecycle_state.py` 更新状态并再次调用 `next`。
+默认以 orchestrated mode 执行。主 Agent 先读取 `next`，再按唯一的
+[`stage-agent-protocol.md`](references/stage-agent-protocol.md) 形成完整 brief、串行派发一个子 Agent、验收其证据、
+执行已有 lifecycle CLI，并重新读取 `next`。本 router 不重复 brief、结果、检查点、并行资格或纠偏规则。
 
-- 阶段 Agent 不编辑 `state.json`，也不调用任何 lifecycle mutation；直接调用阶段 skill 时保留 standalone mode。
-- `onboard` 需要 init 时由主 Agent 先完成；一个阶段默认串行。review 优先使用与实现者不同的新 Agent。
-- `needs_selection`、缺少用户决策或外部授权、阶段 blocked/failed、或证据不足时暂停并报告，不推进状态。验证阶段可先按编排协议记录未通过以失效旧通过记录；这不是阶段推进。
-- 执行 transition 前，主 Agent 校验 operation、required arguments 和 unknown arguments 是否符合 brief；不一致时不猜测删除或补充参数，不修改 state，而是交回同一阶段 Agent 更正。
-- 无子 Agent 能力时，主 Agent 按同一协议串行 inline 执行并说明 fallback；不会因此中断流程。
+`onboard` 需要 `init` 时由主 Agent 先完成。`needs_selection`、缺少用户决策或外部授权、未通过验收、或证据不足时，
+按 protocol 暂停而不推进状态。直接调用阶段 skill 时保留 standalone mode。
 
 ## 3. 路由
 

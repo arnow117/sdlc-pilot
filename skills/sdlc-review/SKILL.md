@@ -35,7 +35,8 @@ test -z "$(git status --porcelain --untracked-files=all -- . ':(exclude).sdlc-v1
 
 调用 [`role-routing.md`](../sdlc/references/role-routing.md) 的解析规则。通常至少加载 QA；跨模块或改变接口/数据边界时加载 architect；敏感数据、认证、授权、支付或供应链变化时加载 security。
 
-可并行执行互相独立的角色评审，每个角色返回：严重级别、文件与行、问题、影响、建议修复和验证依据。没有多执行者能力时按相同角色顺序串行完成。
+当前 review Agent 串行汇总所选角色视角，每个发现包含严重级别、文件与行、问题、影响、建议修复和验证依据。
+主 Agent 决定是否在实现之后另派一个实际独立的只读 review Agent；不能派发时只能披露串行 fallback，不称独立评审。
 
 ## 重复实现与可避免工程债
 
@@ -69,7 +70,7 @@ test -z "$(git status --porcelain --untracked-files=all -- . ':(exclude).sdlc-v1
 1. 按稳定指纹去重同一问题，包括上述检查与各角色重复报告的发现。
 2. 区分必须修复、建议改进和信息项；检查每项业务代码改动是否能映射到 Task 或验收条件，将无关的重构、格式化或清理作为 scope drift 报告。
 3. 把结论与处理结果写入研发上下文。
-4. 存在必须修复项时执行：
+4. 存在必须修复项时，在 orchestrated mode 请求、standalone mode 才执行：
 
 ```bash
 lifecycle_state.py --repo <repo> record-review \
@@ -78,7 +79,7 @@ lifecycle_state.py --repo <repo> record-review \
 
 修复后重新验证，再重新评审。
 
-5. 没有未处理的必须修复项时执行：
+5. 没有未处理的必须修复项时，在 orchestrated mode 请求、standalone mode 才执行：
 
 ```bash
 lifecycle_state.py --repo <repo> record-review \

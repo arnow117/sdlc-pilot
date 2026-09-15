@@ -32,7 +32,7 @@ description: >
 6. 运行 health、smoke 和关键业务探测，观察约定指标。
 7. 在研发上下文补齐发布后观察记录：方向来源、指标或不可观测原因、基线与目标、观察窗口、负责人、信号位置，以及新信息应更新当前 Requirement 还是创建新 Requirement。没有生产观测能力时也要记录原因、负责人和下次检查时间。
 8. 失败时停止继续扩大范围，执行回滚并将结果写入研发上下文。
-9. 成功后调用：
+9. 成功后由主 Agent 调用：
 
 ```bash
 python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> \
@@ -40,7 +40,7 @@ python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> \
 ```
 
 如果历史记录把“合入主分支”或“发布准备完成”误写成 `released`，先在
-Feature 工程上下文记录事实和原因，再调用：
+Feature 工程上下文记录事实和原因，再由主 Agent 调用：
 
 ```bash
 python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> \

@@ -23,7 +23,7 @@ description: >
 
 ## 实现循环
 
-1. 调用 `set-task-status ... --status in_progress`。
+1. 在 orchestrated mode 的结果中请求 `set-task-status ... --status in_progress`；standalone mode 才直接调用 CLI。
 2. 复述本 Task 的完成条件和对应产品验收条件。
 3. 写明会影响实现或验收的假设；高风险歧义先确认，低风险默认值说明后继续。
 4. 优先写失败测试；确认失败原因与目标行为一致。
@@ -31,7 +31,8 @@ description: >
 6. 运行受影响区域的静态检查和测试。
 7. 必要时重构，再运行相同检查；只修改本 Task 范围内的代码，不顺带格式化、重构或清理无关区域，只删除本次改动产生的无用代码。
 8. 把有长期价值的设计决定、代码位置变化和风险更新到研发上下文。
-9. 逐条核对完成条件与验收条件，记录实际检查命令和结果；满足后调用 `set-task-status ... --status done`。
+9. 逐条核对完成条件与验收条件，记录实际检查命令和结果；满足后在 orchestrated mode 请求
+   `set-task-status ... --status done`，standalone mode 才直接调用 CLI。
 
 ## 调试
 
@@ -39,7 +40,9 @@ description: >
 
 ## 并行
 
-只有写集基本不重叠、接口已明确、可以独立验证的 Task 才并行。每个执行者使用独立分支或 worktree；合并后由 Feature 负责人在集成 commit 上重新运行验证。
+并行资格、分支/worktree 隔离和集成验收由
+[`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md#3-planning-implementation-integration-and-review)
+唯一确定。本阶段只在主 Agent 已作出该判断后执行授权的一个 Task；否则串行。
 
 ## 完成输出
 

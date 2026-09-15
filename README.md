@@ -10,8 +10,9 @@
 4. **协作与历史**使用普通 Git branch、commit、push、pull/merge；不再维护第二套版本历史。
 5. **长期工程上下文**可由仓库自己的 `AGENTS.md`、架构/产品文档及可选的 repo-context 索引提供；SDLC 只在 `project.md` 记录已验证路径，不复制它们的正文或状态。
 
-进入生命周期后，默认由主 Agent 使用 `next` 选择一个阶段、派发一个阶段 Agent、验证返回的文件与命令证据，再更新 state 并继续。
-阶段 Agent 不编辑 `state.json`；没有子 Agent 能力时按同一顺序串行执行。完整约定见
+进入生命周期后，主 Agent 使用 `next` 选择阶段、界定完整工作合同、派发一个实际执行的子 Agent、验收其文件与命令证据，
+再更新 state 并继续。子 Agent 不编辑 `state.json` 或调用 lifecycle mutation；它只能返回“待验收 / 未完成 / 受阻”。
+运行时没有子 Agent 能力时，主 Agent 按相同顺序串行执行并披露 fallback；这不能称为独立评审。完整约定只见
 [`stage-agent-protocol.md`](skills/sdlc/references/stage-agent-protocol.md)，它不引入新的 runtime、事件记录、行为 Eval 或自动 retrospective。
 
 产品与研发是同一个生命周期的两个视角，不是两套相互同步的存储系统：
@@ -38,8 +39,9 @@ Requirement: captured → ready → in_delivery → validated → released
 完整入口规则见 [`sdlc`](skills/sdlc/SKILL.md#2-入口)。
 
 阶段 Agent 在约定范围内自主完成实现与必要验证，集中返回证据和反馈。已有连续执行授权在原范围内延续，
-不新增逐阶段审批；缺少用户决策或外部授权时仍需暂停。独立 Feature 使用精简上下文的新 Agent，
-同阶段修正复用原 Agent，评审保持独立。
+不新增逐阶段审批；缺少用户决策或外部授权时仍需暂停。默认主 Agent 到子 Agent 只有一层；主 Agent 只有在接口、
+写范围、依赖和验证独立时才允许额外有界分析或并行工作，并负责汇总和集成验收。同阶段修正复用原实现者；评审只有
+由实际不同的执行者完成时才称独立。
 
 仅当相关代码、配置与环境一致，且有实际执行的命令、结果及被测版本时，才可复用验证证据；
 输入变化、失败、证据缺失或阶段另有要求时执行相应检查。详见
@@ -58,6 +60,9 @@ Requirement: captured → ready → in_delivery → validated → released
 │       └── decisions.md
 └── <source code>
 ```
+
+暂停、跨对话恢复或换执行环境时，可按协议临时增加唯一的
+`.sdlc-v1/checkpoints/<feature-id>.md`。它不替代 state、Plan 或 Git，完成 Feature 后删除。
 
 `state.json` 只保存 Requirement、Feature、Task、上下文引用及验证/评审/发布摘要，不复制长篇需求和设计文档。
 每条 Requirement 的 `product_context_ref` 和每个 Feature 的 `engineering_context_ref` 都是必填项，只接受
@@ -231,6 +236,8 @@ git diff --check
 - `test_backlog.py`：需求树与看板；
 - `test_contrast_check.py`：设计对比度检查。
 
+它还检查阶段协议、brief/result 模板、检查点模板和已知冲突文案的机械形状；主 Agent 的语义判断仍不能由字符串检查替代。
+
 `eval-bench` 用于验证产品内 AI 功能效果；Web Review Live 用于本地文档批注。两者都是保留的普通能力。
 
 ## 从 0.x 升级
@@ -242,6 +249,7 @@ git diff --check
 ## 设计与维护
 
 - 当前设计：[`docs/specs/2026-08-10-lightweight-sdlc.md`](docs/specs/2026-08-10-lightweight-sdlc.md)
+- 跨模块编排演练：[`docs/agent-orchestration-rehearsal.md`](docs/agent-orchestration-rehearsal.md)
 - 蒸馏源地图：[`docs/distillation-source-map.md`](docs/distillation-source-map.md)
 - 维护契约：[`CLAUDE.md`](CLAUDE.md)
 

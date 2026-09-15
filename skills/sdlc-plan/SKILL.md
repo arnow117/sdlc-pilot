@@ -9,9 +9,10 @@ description: >
 
 ## Orchestrated mode
 
-遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。plan Agent 写工程上下文并按顺序返回
-`start-feature`、`add-task` 等请求；主 Agent 验证后执行。Feature 特有发现留在工程上下文，产品行为更新产品上下文，
-跨 Feature 规则作为 `project_candidates` 返回；只有明确跨项目的 SDLC 通用改进才提议 `/sdlc evolve`。
+遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。plan Agent 返回有界分析和工程上下文候选；
+主 Agent 解决冲突，形成唯一有效的统一 Plan，再验证并执行 `start-feature`、`add-task` 等请求。分析稿不独立生效。
+Feature 特有发现留在工程上下文，产品行为更新产品上下文，跨 Feature 规则作为 `project_candidates` 返回；只有明确跨项目的
+SDLC 通用改进才提议 `/sdlc evolve`。
 返回前检查 `lifecycle_state.py start-feature --help` 并只使用 brief 中的参数 contract：`start-feature` 不接受
 `title`；Task 标题只属于后续 `add-task` 请求。
 
@@ -32,7 +33,7 @@ description: >
    - 非简单功能最多比较三个可行候选，按需求覆盖、扩展方式、集成与迁移成本、维护活跃度、许可证与供应链风险、可测试性判断。
    - 选择 `复用现有实现`、`扩展现有依赖`、`引入成熟依赖` 或 `自研`；自研必须记录现有方案不能满足的具体缺口。
    - 小型局部修改不做广泛调研，但仍在研发上下文用一行记录“不适用”及原因。
-4. 创建 `.sdlc-v1/context/<feature-id>.engineering.md`，记录：
+4. 创建或实质更新 `.sdlc-v1/context/<feature-id>.engineering.md` 的 Plan，记录：
    - Requirement 与验收条件映射；
    - 长期方向来源与本 Feature 的预期结果；
    - 现状代码位置、约束、关键假设和低风险默认值；高风险歧义先确认；
@@ -42,8 +43,10 @@ description: >
    - Task、依赖和完成条件；
    - 测试策略、风险与回滚方式。
    - 发布后观察：指标/不可观测原因、基线和目标、观察窗口、负责人，以及反馈转为新 Requirement 的路径。
-5. 调用 `start-feature --engineering-context-ref .sdlc-v1/context/<feature-id>.engineering.md`，写入 Requirement、Feature、分支和上下文引用。
-6. 按可独立验证的增量调用 `add-task`；依赖使用 Task ID 明确表示。
+   派工、催补、调试和重跑日志不追加到 Plan；最终验证和验收证据使用现有独立章节或引用。
+5. 在 orchestrated mode 请求 `start-feature --engineering-context-ref .sdlc-v1/context/<feature-id>.engineering.md`；
+   standalone mode 才直接执行 CLI，写入 Requirement、Feature、分支和上下文引用。
+6. 按可独立验证的增量请求 `add-task`；依赖使用 Task ID 明确表示。
 
 ## Task 质量
 

@@ -19,7 +19,8 @@ description: >
 - 目标仓库必须明确。
 - 采集阶段只读源码、配置与项目说明；不要顺手修代码。
 - 不创建 Requirement、Feature 或 Task。
-- 可并行采集不同区域，但最终只有一个写入者合并 `project.md`。
+- 当前 onboard Agent 自行完成采集并只写 `project.md`；若主 Agent 需要额外有界分析，派工规则由
+  [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md) 决定。
 - `repo-context-creator` 是可选的长期工程上下文提供者；缺失、过期或格式不兼容时不阻塞 onboard，也不写入 `.repo-context/`。
 
 ## 流程

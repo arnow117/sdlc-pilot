@@ -1,6 +1,8 @@
 # role-routing — diff + project context → roles + validate modes
 
-角色和验证方式每次根据当前上下文与 Git diff 动态计算，不写入进度状态。
+角色和验证方式每次根据当前上下文与 Git diff 动态计算，不写入进度状态。它们只决定当前阶段需要的专业视角和
+验证方式；派工、子 Agent 层级、验收、检查点和 lifecycle mutation 唯一遵循
+[`stage-agent-protocol.md`](stage-agent-protocol.md)。
 
 ```text
 Decision = resolve(

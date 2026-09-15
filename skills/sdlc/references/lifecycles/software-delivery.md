@@ -4,7 +4,8 @@
 
 ## 0. 执行纪律
 
-以下规则适用于规划、实现和评审；本文件是唯一完整定义，阶段技能只引用或检查它们：
+以下是规划、实现和评审的阶段方法。派工、子 Agent 层级、验收、检查点和 transition 规则唯一见
+[`stage-agent-protocol.md`](../stage-agent-protocol.md)；本文件不重复定义它们：
 
 本节改编自 [multica-ai/andrej-karpathy-skills 的 `karpathy-guidelines`（MIT）](https://github.com/multica-ai/andrej-karpathy-skills)，保持自包含，不要求运行时安装外部 Skill。
 
@@ -67,7 +68,7 @@
 1. 每个 Task 有明确代码范围、完成条件和测试方式。
 2. 用 Task ID 表达依赖；保持依赖图无环。
 3. 优先按纵向可运行增量拆分，避免长时间只有基础设施而无可观察行为。
-4. 可能并行的 Task 必须写集基本不重叠，并提前明确接口。
+4. 记录接口与依赖；是否允许并行、如何隔离和怎样集成由主 Agent 按 canonical protocol 判断。
 5. 小改动可以只有一个 Task。
 
 ## 6. 实现（TDD）
