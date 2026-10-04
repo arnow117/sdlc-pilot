@@ -1,6 +1,6 @@
 # Stage agent protocol
 
-> updated: 2026-09-15
+> updated: 2026-10-03
 
 This is the sole authority for SDLC stage orchestration. It adds an execution
 convention only: lifecycle state remains `state_version=3`; it creates no event
@@ -66,11 +66,15 @@ The brief includes all of the following:
   tested revision and workspace status, unresolved items, requested transitions,
   and any context-update proposal.
 
-Use the current complete brief when dispatching. A material interface or scope
-change first updates the effective Plan, then the main Agent sends a complete
-replacement brief marked `supersedes`; it does not splice a changed contract into
-an earlier brief. A routine clarification may use a native follow-up message only
-when it does not change the contract.
+Use the current complete brief when dispatching. A material interface, scope, or
+evidence-backed change to the solution, execution method, or verification strategy
+first updates the effective Plan, then the main Agent sends a complete replacement
+brief marked `supersedes`; it does not splice a changed contract into an earlier
+brief. This protocol overrides the optional `TASK.md` direction to use
+`supersedes` only after a material scope or interface change: an evidence-backed
+material recovery change requires a complete `supersedes` brief even when scope and
+interfaces are unchanged. A routine clarification may use a native follow-up
+message only when it does not change the contract.
 
 The child completes ordinary implementation choices and necessary checks without
 asking for approval at each step. It stops for a material missing decision,
@@ -99,9 +103,15 @@ dispatch or status query.
 ### Plan
 
 Plan contents are the current solution, task boundary, interfaces, dependencies,
-and acceptance strategy. Update them only for a material design change. Product
+execution and verification strategy, and acceptance strategy. Update them for a
+material design change or when genuinely new causal localization evidence requires
+a different solution, execution method, or verification strategy. Product
 requirements remain in the Requirement product context. Dispatch records,
-reminders, debug notes, and rerun logs do not belong in a Plan.
+reminders, debug notes, and rerun logs do not belong in a Plan. A recovery update
+must change the actual solution, execution method, or verification strategy;
+supporting trace evidence stays in the existing evidence section and must meet
+section 5. `/sdlc evolve` uses its authorized brief instead of creating a Plan or
+lifecycle state.
 
 For implementation, split work by independently acceptable units, not by a fixed
 frontend/backend/domain pattern. Agree shared implementation interfaces first;
@@ -197,12 +207,10 @@ rules; it records non-passage and does not advance the stage. If the CLI rejects
 that record because its preconditions are not met, stop dispatch for that Feature;
 do not use an earlier passing validation to continue review or ship.
 
-If the same work item is not accepted twice, the main Agent diagnoses the boundary,
-interface, environment, or execution method before any further dispatch; it does
-not resend the same reminder. If those two attempts also provide no accepted
-condition and no new evidence that narrows the cause, the stricter mandatory stop
-rule below applies immediately. A diagnosis that changes the contract produces a
-new complete superseding brief.
+Nonconvergence triggers, bounded diagnosis, evidence requirements, recovery, and
+reporting are defined only in [section 5](#5-evidence-git-and-mandatory-stop). The
+main Agent follows that procedure before further execution; it does not resend the
+same reminder.
 
 ## 5. Evidence, Git, and mandatory stop
 
@@ -217,19 +225,68 @@ must say that work remains incomplete. Merge to the release branch or main line
 only after the overall acceptance and the authorization required for that release.
 This does not authorize push, merge, or an external release by itself.
 
-Two consecutive correction attempts on the same blocker that satisfy no acceptance
-condition and add no evidence narrowing its cause require a stop of the current
-delivery segment. The same stop applies to two redispatch/review/retest cycles that
-repeat work without changed inputs, a new finding, or a required lifecycle check.
-Do not reset the count by renaming Agents or splitting the blocker.
+For this procedure, a delivery segment is the affected work for one problem and
+acceptance objective; it does not include unrelated deliverables merely because
+they share a Feature. Two consecutive implementation or correction attempts on
+that problem which satisfy no acceptance condition and add no genuinely new causal
+localization evidence require a mandatory stop of blind changes and repetitive
+dispatch for that segment. The same stop applies to two redispatch/review/retest
+cycles that repeat work with unchanged inputs, no new finding, and no required
+lifecycle check.
+
+Preserve the attempt count, failure evidence, and one bounded-diagnosis allowance
+through evidence-backed Plan updates, complete `supersedes` briefs, renamed or
+split tasks, and implementer replacement. None starts a new segment or erases the
+history. If resumed work for the same problem and acceptance objective reaches a
+nonconvergence trigger after that allowance has been used, stop and report; do not
+label it a new segment to obtain another diagnosis. Independent work already
+authorized and outside the affected segment may continue.
 
 Stop new dispatch, interrupt active Agents for that segment when the runtime can,
 and cancel only identified task-owned test/build jobs when safe. Preserve the
 working tree and recovery evidence; never reset Git, delete data, stop shared
-services, or advance lifecycle state. Report the trigger, completed and unfinished
-work, interruption result or runtime limitation, and a recovery proposal. Then
-wait for explicit user direction. A timeout, elapsed time, token use, or an
-independent review alone does not trigger this stop.
+services, create a second progress store, or advance lifecycle state.
+
+Unless an active user pause or stop, approval refusal, or required authorization
+prevents it, the main Agent may run one—and only one—bounded diagnosis within the
+existing authorization. Before it starts, state a falsifiable hypothesis, limited
+minimal discriminating experiment(s), an explicit finite time limit, and a
+side-effect boundary. Do not repeat an identical failed action, append hypotheses
+or experiments indefinitely, or restart the time limit by rephrasing the
+diagnosis. A diagnosis does not permit a paused CI push or bypass any other
+external-operation authorization.
+
+Genuinely new causal localization evidence must be observed and reproducible, and
+must reduce the candidate cause set—for example, isolate input, configuration,
+code, or environment while ruling out an alternative. A renamed task, changed Plan
+wording, or added logging without an observed cause-narrowing result is not
+localization evidence. Reproducible trace output that eliminates an alternative is
+localization evidence.
+
+If the diagnosis produces that evidence, first update the effective Plan's actual
+solution, execution method, or verification strategy. Then, under the existing
+authorization and without step-by-step approval, send the same implementer a
+complete replacement brief marked `supersedes`. The brief records the material
+recovery and required verification change. It preserves prior attempts rather than
+using the revised Plan to justify a third identical retry. A diagnosis is not
+permission to bypass release or main-merge authorization, model-consuming or
+destructive-operation authorization, required tests or review, or lifecycle state
+ownership.
+
+If the diagnosis exhausts its time limit, finds no localization evidence, or
+requires a missing user decision or new permission, stop the affected segment and
+report the trigger; completed and unfinished work; hypothesis, experiment, and
+result; failure count; interruption result or runtime limitation; the precise
+missing evidence, decision, or permission; and the next action. A used allowance
+does not suppress a first successful evidence-backed recovery. Only a later renewed
+nonconvergence trigger for the same segment after that allowance was used stops and
+reports under this paragraph without another diagnosis. Await user direction after
+that report, while independent work already authorized and outside the affected
+segment may continue. A child `blocked` result is local to its work item, not a
+whole Goal status: follow actual Goal-tool preconditions and never clear, recreate,
+falsely resume, or falsely complete a Goal to evade them. A timeout, elapsed time,
+token use, necessary verification, or an independent review alone does not trigger
+this stop.
 
 ## 6. Context and checkpoints
 
