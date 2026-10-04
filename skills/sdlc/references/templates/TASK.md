@@ -30,8 +30,9 @@ allowed_transitions:
 # `--repo` is fixed by the main Agent and is never a child-provided argument.
 ```
 
-Use `supersedes` only after a material scope or interface change has updated the
-effective Plan and this whole brief replaces the earlier one.
+Use `supersedes` according to
+[stage-agent-protocol.md](../stage-agent-protocol.md#2-dispatch-contract).
+This whole brief replaces the earlier one.
 
 ## Child result
 
