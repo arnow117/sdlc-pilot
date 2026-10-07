@@ -16,7 +16,7 @@ does not define lifecycle, dispatch, result, acceptance, or checkpoint semantics
 | Routine clarification or constraint | `send_message` when it does not alter the brief | Include it in the next complete brief |
 | Wait for a result | `wait_agent` | Use the runtime's interruptible wait |
 | Stop an active child | `interrupt_agent` | Disclose that no stop control is available |
-| Inspect active agents | `list_agents` only for a user status request, interruption recovery, or necessary diagnosis | Do not poll after a normal wait timeout |
+| Inspect active agents | `list_agents` once only for recovery after an actual runtime restart or connection failure, as required by the protocol's waiting-and-recovery rule | A user status request uses known evidence; do not inspect after a normal timeout |
 | Read-only inspection | Parallel tool calls are allowed when independent | Run `rg`, `sed`, and `git` reads serially |
 | File edits | `apply_patch`; use project scripts for defined mechanical changes | Avoid ad hoc shell writes |
 | User choice | Structured input when exposed and appropriate | Numbered plain-text choices |

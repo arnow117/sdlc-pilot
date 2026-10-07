@@ -1,6 +1,6 @@
 # Stage agent protocol
 
-> updated: 2026-10-03
+> updated: 2026-10-07
 
 This is the sole authority for SDLC stage orchestration. It adds an execution
 convention only: lifecycle state remains `state_version=3`; it creates no event
@@ -101,8 +101,45 @@ actual runtime limitation instead of assuming a role file changed a loaded model
 Messages add a new constraint, correction, blocker resolution, or result; do not
 send acknowledgements, progress polls, or repeated “continue” requests. While a
 child runs, the main Agent does independent work or uses an event-aware wait
-(normally 60 seconds where supported); a timeout alone does not trigger a new
-dispatch or status query.
+(normally 60 seconds where supported). Waiting and recovery follow the rule below.
+
+### Waiting and recovery
+
+An ordinary wait keeps the original dispatched child's event mailbox as its target.
+If a wait returns only its normal timeout, with no new result, actual blocker or
+execution error, or user request, and the original handle has not been established
+as terminated or missing, wait on that same child again within the host's actual
+single-wait limit. Do not finish the work turn or return a final solely for that
+timeout; do not start Goal continuation, redo recovery, inspect the runtime tree,
+poll or message the child, replace it, or create a checkpoint. This rule applies
+whether or not a Goal exists. A timeout is not evidence that the child is still
+running.
+
+Give necessary user-facing commentary while waiting. For a user question, answer
+briefly from the evidence already available and then resume the same wait unless
+the user explicitly pauses, stops, or cancels the work. Honor an explicit
+pause/stop under the existing protocol; this rule cannot continue it. Treat actual
+execution or tool errors by their observed facts: they are not ordinary timeouts
+and do not automatically count as nonconvergence under section 5.
+
+Only an actual runtime restart or connection failure permits one authoritative
+runtime-tree check. Continue waiting only when that check confirms the original
+child is still executing and its event mailbox can wait. If it returns an existing
+result, including one not yet accepted, resume the existing result-acceptance
+process. If it confirms the handle is missing or the child has terminated without
+a result, first reconcile the original lifecycle status or projection, the
+effective Plan and relevant context, and necessary Git evidence for unaccepted
+work and its writer; then apply the existing replacement-brief and authorization
+rules. If the runtime cannot be queried, or a retained handle's current execution
+state cannot be confirmed, report that environment limitation: unknown is neither
+termination nor a reason to blindly wait or dispatch a second executor. A user
+status question uses known evidence and does not by itself start this recovery.
+
+Dispatch records, lifecycle `in_progress`, checkpoints, and historical handoffs do
+not prove real-time child liveness. The effective Plan remains the current-solution
+source; historical evidence remains separate. Read only the current, relevant
+parts when recovery needs them, rather than reloading all Plan or handoff history.
+This rule adds no schema, ledger, or runtime service.
 
 ## 3. Planning, implementation, integration, and review
 
