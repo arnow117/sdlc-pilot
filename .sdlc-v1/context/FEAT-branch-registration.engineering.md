@@ -260,3 +260,102 @@ fixture 与本地标准检查，不证明 live 部署、插件发布、网络服
 本 worker 只修改 README 和本证据段；未修改运行时、测试、state 或 `happycompany-markdown-catalog.md`。检查开始时
 工作树已有主 Agent 的 `.sdlc-v1/state.json` 与本工程上下文改动，以及未跟踪 catalog；这些均被保留。
 `git diff --check` 对本次 Build 工作快照实际返回 exit 0。
+
+## Validation — 64df6f3f1314e54b88f0a33565601c372fb62441
+
+### Correctness
+
+执行时间：2026-10-07T13:57:42Z。验证工作区为干净 detached checkout
+`/Users/arnow117/hansen_agent_team/workspace/20261007-sdlc-branch-validation-b2wse932`；开发登记仍为 `main`，未迁移。
+两个 Task 均为 `done`。开发工作区仅保留原有未跟踪 `happycompany-markdown-catalog.md`，两个 worktree 都没有 tracked 改动。
+
+| command | result | summary |
+|---|---|---|
+| `bash scripts/validate-skills` | PASS, exit 0 | 30 lifecycle、7 backlog、36 contrast tests 通过；本地 Markdown 引用检查通过。 |
+| `git diff --check` | PASS, exit 0 | 验证开始时工作树无差异。 |
+| `git diff --check d082f05a56f3c065d2a063ae6edfcf02c3ab90ac..64df6f3f1314e54b88f0a33565601c372fb62441` | PASS, exit 0 | 原验证提交到本次 README/证据提交无 whitespace 错误。 |
+| `python3 scripts/lifecycle_state.py --repo . migrate-feature-branch --help` | PASS, exit 0 | 实际帮助仍说明 open Feature、精确旧 branch、已 checkout 的显式本地 branch、完整 HEAD、原因和可选时间，且不 checkout/接受交付/编辑上下文。 |
+
+README 的 P2 导航以以下实际命令检查（exit 0）：
+
+本轮最初的 ad-hoc 导航探针因正则转义拼写错误退出 1，未完成 heading 检查，归为 INCONCLUSIVE。
+worker 修正探针后运行下列完整命令，退出 0；两次探针均未修改仓库内容，该失败记录保留。
+
+```bash
+python3 - <<'PY'
+from pathlib import Path
+import re
+
+product_path = Path('.sdlc-v1/context/REQ-branch-registration.product.md')
+readme_path = Path('README.md')
+runtime_path = Path('skills/sdlc/references/lightweight-runtime.md')
+product = product_path.read_text(encoding='utf-8')
+readme = readme_path.read_text(encoding='utf-8')
+runtime = runtime_path.read_text(encoding='utf-8')
+
+headings = [
+    line.split(maxsplit=1)[1]
+    for line in product.splitlines()
+    if re.match(r'^#{1,6}\s+', line)
+]
+
+def github_slug(heading: str) -> str:
+    normalized = heading.strip().lower()
+    normalized = re.sub(r'[^\w\-\u4e00-\u9fff\s]', '', normalized)
+    return re.sub(r'\s+', '-', normalized)
+
+expected_anchors = (
+    'scn-1确认身份后登记当前开发分支', 'scn-2写入前身份不成立',
+    'scn-3两个维护者使用同一个旧登记', 'scn-4同一-feature-的-active-writer-交接',
+    'scn-5状态替换后的结果不确定', 'scn-6非开发-checkout-的只读恢复', '验收条件',
+)
+product_anchors = {github_slug(heading) for heading in headings}
+for anchor in expected_anchors:
+    assert anchor in product_anchors, f'missing product anchor: {anchor}'
+    target = f'.sdlc-v1/context/REQ-branch-registration.product.md#{anchor}'
+    assert target in readme, f'missing README navigation: {target}'
+assert '**全局场景 ID：`SCN-branch-registration`。**' in readme
+assert '### 5.1 开发分支登记迁移' in runtime
+assert 'skills/sdlc/references/lightweight-runtime.md#51-开发分支登记迁移' in readme
+print('PASS: SCN-branch-registration -> SCN-1..SCN-6, acceptance conditions, and runtime migration guide')
+PY
+```
+
+| 产品验收条件 | status | 本轮证据 |
+|---|---|---|
+| 1. 匹配身份只更新目标登记并审计 | COVERED（复用） | `scripts/lifecycle_state.py` SHA-256 仍为 `a996fc86183101c29161776c87c42b9b2963b2b4d400cf1ac25d4e5766f8f74c`；复用本上下文 `d082f05` 的真实 Git/CLI 成功审计测试。 |
+| 2. prewrite rejection 不改 state | COVERED（复用） | 同一运行时 hash；复用 `d082f05` 的身份、state 安全性和 Git 环境拒绝测试。 |
+| 3. 同旧值并发至多一个成功 | COVERED（复用） | 同一运行时与测试 hash；复用 `d082f05` 双 CLI writer 的 `[0, 2]` 结果。 |
+| 4. active-writer 交接与新 brief | COVERED（复用） | 运行时和编排文档未变；本次仍在 detached Validate checkout，只读验证且未迁移开发登记。 |
+| 5. 替换后失败按结果不确定恢复 | COVERED（复用） | 同一运行时 hash；复用 `d082f05` fsync/输出失败注入和只读恢复证据。 |
+| 6. detached 查询兼容且不放宽交付规则 | COVERED（复用） | 同一运行时与测试 hash；复用 `d082f05` detached validation/release 和不同实现 review/release 拒绝测试。 |
+| 7. 范围、依赖和工程审计完整 | COVERED | 两个 Task 已 done；`d082..64df` 的公开行为差异只补 README 既有故事/AC 导航与工程/state 证据。 |
+| 8. help、说明、兼容性与确定性测试一致 | COVERED | 本轮实际 CLI help、上方完整 anchor 检查和 `validate-skills` 均通过；README 的 `SCN-branch-registration` 逐项链接既有 SCN-1 至 SCN-6、验收条件及运行时参数指南。 |
+
+本提交没有运行时、测试、配置或验证环境变化；`scripts/test_lifecycle_state.py` SHA-256 仍为
+`cb6ed47ac60b3cf66730c6ecc0e4b7d49f951d7ea924299e1cb84ba2494252ed`。因此复用前一轮在同一代码/测试哈希、同一
+correctness 环境得出的 70/71 changed executable lines（98.6%）和 27/28 changed branch arcs（96.4%）覆盖证据，
+不重跑 coverage。该复用不覆盖新的公开 README 差异，后者由本轮导航检查和标准文档检查实际覆盖。
+
+Outcome: `PASS`。`64df6f3` 已由主 Agent 推送到 `origin/main`，但此处只记录本地 detached 验证；没有插件 tag、Release、
+live 部署或真人使用验证。本 worker 未修改 state、调用 lifecycle mutation、commit 或 push；由主 Agent 验收后记录 validation。
+
+## Review — 64df6f3f1314e54b88f0a33565601c372fb62441
+
+独立 reviewer `branch_contract_review` 对应当前 validation commit 完成补正复审，主 Agent 接受 approved 请求。
+此前 P2 README 场景导航问题已解决，guide → story → parameter → actual-use evidence 链条完整；没有新增故事或运行时行为。
+提交与 validation 绑定一致，业务工作树干净，73 项标准检查及完整导航验证通过。
+复用同运行时/测试哈希的安全、兼容性和覆盖证据，原 507→508 覆盖缺口保持已记录状态。
+本次 diff 未发现有证据支持的重复实现或可避免工程债；没有未决阻塞项。
+结论仅限已声明的本地真实 Git/CLI 与文档验证范围。
+
+## 仓库同步与发布边界
+
+主 Agent 已正常推送功能提交 `d082f05`，随后正常推送导航修正提交 `64df6f3`；两次 `git push origin main` 均 exit 0。
+第一次推送还以 `git ls-remote origin refs/heads/main` 核对了完整 hash；最终证据提交推送后再次读取远端确认。
+本轮全部 Task 完成，正式 validation 与独立 review 通过；本次用户授权范围内的后续提交仅同步 `.sdlc-v1` 证据和状态。
+实现版本继续绑定 `64df6f3f1314e54b88f0a33565601c372fb62441`，证据提交不改变被验证的实现版本。
+
+本次完成仓库提交推送，CHANGELOG 仍为 Unreleased，插件三处版本仍为 2.0.0；不创建新 tag 或 GitHub Release。
+Feature release 保持 pending，插件 Ship 留待相应发布授权与真实发布检查，不把源码同步记为插件发布。
+原有未跟踪 catalog、HappyCompany 文件/状态/Goal 和其他对话均保持原样。
