@@ -14,7 +14,10 @@ Decision = resolve(
 )
 ```
 
-`.sdlc-v1/project.md` 的 surface map 是项目特化输入，优先于本文件的通用规则。本文件负责未覆盖路径和跨区域补充。
+`.sdlc-v1/project.md` 的 surface map 是项目特化输入，路径映射优先于本文件的通用规则。本文件负责未覆盖路径和跨区域补充。
+项目配置可以细化范围，但不能免除适用验证方式的必要检查或工具要求。改动实际影响 Web 或移动 App 用户旅程时，
+必须包含对应的 `e2e:Web` 或 `e2e:App`，并遵循 [Web 验证约束](validate-modes/e2e.md#web) 或
+[App 验证约束](validate-modes/e2e.md#app)；不能因项目已有其他测试工具而降级。
 
 当选择 `design` 时，按 [Impeccable 可选适配](integrations/impeccable.md) 在当前目标项目会话首次适用时检查一次能力；
 主 Agent 把结果、限制和已提醒状态传入 stage brief。该检查不新增角色、validate mode、state 字段或所有任务的前置条件。
@@ -44,7 +47,7 @@ Decision = resolve(
 | `**/api/**`、`**/handlers/**`、`**/routes/**`、`**/endpoints/**`、`**/controllers/**` | `server-dev` | `correctness`, `e2e:OpenAPI` | API 行为和接口兼容性 |
 | `**/models/**`、`**/strategy/**`、`**/prompts/**`、`**/ai/**`、`**/evals/**`、`**/llm/**` | `server-dev`, `qa` | `correctness`, `eval-bench` | AI、模型、提示或评估代码 |
 | `**/*.sql`、`**/pipelines/**`、`**/etl/**`、`**/dbt/**`、`**/warehouse/**`、`**/migrations/**` | `big-data` | `correctness` | 数据、回填、lineage 和一致性 |
-| `**/*.test.*`、`**/*.spec.*`、`**/test/**`、`**/tests/**`、`**/e2e/**` | `qa` | `correctness`，按被测面补 e2e | 测试本身发生变化 |
+| `**/*.test.*`、`**/*.spec.*`、`**/*.e2e.*`、`e2e.config.*`、`**/e2e.config.*`、`**/test/**`、`**/tests/**`、`**/e2e/**` | `qa` | `correctness`，按被测面补 e2e | 测试或测试配置发生变化 |
 | `**/agents/**/*.json`、`**/workflows/**/*.json`、`**/processes/**/*.json`、`**/employees/**/*.{yaml,yml}`、`**/SKILL.md` | `server-dev` | `correctness` | 声明式配置和技能定义；涉及权限矩阵时补 `security` |
 | `CLAUDE.md`、`AGENTS.md`、`.claude/**`、`justfile`、`Makefile`、`tsconfig.json`、`.github/**` | `ai-readiness` | `correctness` | AI 工程上下文、构建和自动化配置 |
 | 当前仓库的 `skills/**`、`.claude-plugin/**` | `skill-maintainer` | `correctness` | 维护 SDLC 技能体系自身 |

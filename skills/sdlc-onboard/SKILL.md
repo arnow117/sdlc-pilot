@@ -34,6 +34,9 @@ description: >
    - 目录约定、项目指令、敏感区域和已知风险。
 4. 将代码区域归纳为 surface map：`name → globs → roles → validate modes`。
 5. 按 [`role-routing.md`](../sdlc/references/role-routing.md) 检查角色和验证方式是否合法。
+   Web 或移动 App 项目同时按 [Web 验证约束](../sdlc/references/validate-modes/e2e.md#web) 或
+   [App 验证约束](../sdlc/references/validate-modes/e2e.md#app) 记录验证入口、测试资产 / 产物位置和环境准备缺口，
+   不将已有其他测试套件等同于满足该方式的要求。
 6. 按下节的项目上下文结构写入 `.sdlc-v1/project.md`；可复用
    [`PROJECT.md`](../sdlc/references/templates/PROJECT.md) 模板。
 7. 向用户展示 surface map、长期上下文来源和不确定项；确认后定稿。
@@ -45,6 +48,7 @@ description: >
 技术栈及选择原因
 启动与代码入口
 测试/构建/类型检查命令
+验证工具、测试资产、产物归档与准备缺口
 surface map
 工程约定与禁止事项
 已知风险

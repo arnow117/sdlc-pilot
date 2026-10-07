@@ -9,6 +9,8 @@ description: >
 
 本技能回答“如何可靠地实现、验证和发布产品意图”。详细方法见
 [`lifecycles/software-delivery.md`](../sdlc/references/lifecycles/software-delivery.md)。
+涉及用户可见操作时，各阶段还必须加载其中的
+[`Global usage-document, story, and parameter contract`](../sdlc/references/lifecycles/software-delivery.md#11-global-usage-document-story-and-parameter-contract)。
 
 ## Orchestrated mode
 
@@ -46,12 +48,12 @@ start-feature → add-task → set-task-status
 → record-validation → record-review → record-release
 ```
 
-1. 规划：先按 `sdlc-plan` 评估复用现有实现或成熟依赖，再按软件交付生命周期的执行纪律处理假设与歧义，把产品验收条件映射到设计和 Task，写入研发上下文。
-2. 实现：依赖就绪的 Task 才开始；默认先写失败测试，再实现最小改动。
+1. 规划：先按 `sdlc-plan` 评估复用现有实现或成熟依赖，再按软件交付生命周期的执行纪律处理假设与歧义，把产品验收条件映射到设计和 Task，写入研发上下文；同时标明 usage 入口、故事和参数来源是否受影响。
+2. 实现：依赖就绪的 Task 才开始；默认先写失败测试，再实现最小改动，并同步受影响的 usage 文档。
 3. 调试：用假设和最小实验定位问题，避免无依据地连续改动。
-4. 验证：运行与 diff 相符的检查，并把通过结果绑定到当前集成 commit。
-5. 评审：根据 surface map 和 diff 加载相关角色；必须修复项清零后批准。
-6. 发布：只发布评审对应的 commit；部署与回滚由 `sdlc-ship` 执行，并在工程上下文记录结果观察与反馈回流计划。
+4. 验证：运行与 diff 相符的检查；对于受影响的使用路径，按全局 usage 入口实际操作并记录范围，再把通过结果绑定到当前集成 commit。
+5. 评审：根据 surface map 和 diff 加载相关角色；必须修复项清零后批准，并核对使用文档、参数和实际结果一致。
+6. 发布：只发布评审对应的 commit；部署与回滚由 `sdlc-ship` 执行，并在工程上下文记录结果观察与反馈回流计划及目标版本的可用条件。
 
 ## 角色与方法
 

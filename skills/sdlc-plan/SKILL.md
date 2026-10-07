@@ -26,7 +26,7 @@ SDLC 通用改进才提议 `/sdlc evolve`。
 
 ## 流程
 
-1. 加载 `sdlc-software-delivery` 和 [`lifecycles/software-delivery.md`](../sdlc/references/lifecycles/software-delivery.md)。
+1. 加载 `sdlc-software-delivery` 和 [`lifecycles/software-delivery.md`](../sdlc/references/lifecycles/software-delivery.md#11-global-usage-document-story-and-parameter-contract)；用户可见改动标明受影响的 usage 入口、故事/场景、参数来源和实际使用验证范围，内部改动则记录不适用理由。
 2. 选择 Feature ID 与实际工作分支。
 3. 在自定义设计和 Task 拆分之前完成复用评估：
    - 依次检查当前代码库的相近实现、现有依赖已提供的能力、官方维护的扩展或框架；只有前三项不足时才扩大外部检索。
@@ -43,6 +43,10 @@ SDLC 通用改进才提议 `/sdlc evolve`。
    - Task、依赖和完成条件；
    - 测试策略、风险与回滚方式。
    - 发布后观察：指标/不可观测原因、基线和目标、观察窗口、负责人，以及反馈转为新 Requirement 的路径。
+
+   涉及 Web 或 App 用户旅程时，测试策略遵循 [Web 验证约束](../sdlc/references/validate-modes/e2e.md#web) 或
+   [App 验证约束](../sdlc/references/validate-modes/e2e.md#app)，将缺失的测试、环境及产物归档准备纳入有界 Task。
+
    派工、催补、调试和重跑日志不追加到 Plan；最终验证和验收证据使用现有独立章节或引用。
 5. 在 orchestrated mode 请求 `start-feature --engineering-context-ref .sdlc-v1/context/<feature-id>.engineering.md`；
    只有独立、不在主 Agent 编排中的 standalone mode 才直接执行 CLI，写入 Requirement、Feature、分支和上下文引用。

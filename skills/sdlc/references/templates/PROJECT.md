@@ -39,6 +39,21 @@ commands:
   build: "<command or none>"
 ```
 
+## Validation setup
+
+Record the actual setup for applicable validation modes; use `none` with a preparation gap when missing.
+This table documents repository facts, not a second lifecycle state. Do not include credentials.
+
+| Item | Verified setup / source or gap |
+|---|---|
+| Modes and tools | <applicable modes, framework / engine and runtime versions> |
+| Test assets | <config, tests, fixture / cleanup and any shared replay cache paths> |
+| Target environment | <URL / device, startup source and how the tested build is identified> |
+| Model and test identity | <provider / model when used, credential source or variable names, no secret values> |
+| Run outputs | <report / artifact paths, Git ignore policy and stable archive location / retention> |
+| CI | <workflow / job and artifact location, or none> |
+| Preparation gaps | <missing setup / coverage / evidence, or none> |
+
 ## Surface map
 
 Use repository-relative globs. Roles and modes must exist in `role-routing.md`.

@@ -99,6 +99,19 @@ review 每次还会检查本次 diff 中的重复实现、不必要抽象和冗�
 删除或替换建议需要具体证据并保持当前行为和工程约束；普通简化建议不阻塞发布。完整检查与处理规则见
 [`sdlc-review`](skills/sdlc-review/SKILL.md)。
 
+## Web / App 验证与 2.0 升级
+
+受影响的 Web 用户旅程使用 tester-army/e2e CLI 与 Web engine，App 用户旅程使用 Maestro CLI Flow。
+已有测试套件可补充检查；Plan / Build 准备对应资产和环境，Validate 独立运行并记录必要业务断言与当前构建证据。
+工具、环境或证据不足时保持未通过。具体资产、模型 / 缓存、归档与归因要求统一见
+[`e2e` 验证约束](skills/sdlc/references/validate-modes/e2e.md)。
+
+2.0 改变了必要验证条件；升级既有工程时在 Build 补齐框架 / Flow、fixture 与实际测试入口，再进行 Validate。
+插件更新不会自动安装测试框架或调用模型，lifecycle CLI、`state_version=3` 和 `.sdlc-v1/` 结构无需迁移。
+用户可见改动的指南与实际使用验证遵循
+[`usage contract`](skills/sdlc/references/lifecycles/software-delivery.md#11-global-usage-document-story-and-parameter-contract)。
+完整版本与升级说明见 [CHANGELOG](CHANGELOG.md)。
+
 ## 状态命令
 
 状态工具只有一个入口：

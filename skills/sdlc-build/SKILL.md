@@ -18,8 +18,12 @@ description: >
 1. 读取 `feature-projection --feature-id <feature-id>`。
 2. 读取 `engineering_context_ref` 与 `product_context_ref`。
 3. 对当前流程中新规划的非简单 Feature，确认研发上下文已经记录复用评估及决定；若缺失，或实现前发现候选框架、依赖能力与原评估明显不符，返回 `sdlc-plan` 更新设计，不在 build 阶段临时拍板引入框架。
-4. 选择一个依赖已完成的 Task；不要同时修改多个相互覆盖的 Task。
-5. 根据 `.sdlc-v1/project.md` 和 Git diff 加载相关角色卡与语言参考。
+4. 读取 [`Global usage-document, story, and parameter contract`](../sdlc/references/lifecycles/software-delivery.md#11-global-usage-document-story-and-parameter-contract)；若本 Task 影响用户可见操作，同步更新唯一 usage 入口及其详细参数/操作链接。
+5. 选择一个依赖已完成的 Task；不要同时修改多个相互覆盖的 Task。
+6. 根据 `.sdlc-v1/project.md` 和 Git diff 加载相关角色卡与语言参考。
+   涉及 Web 或 App 用户旅程时，按 [Web 验证约束](../sdlc/references/validate-modes/e2e.md#web) 或
+   [App 验证约束](../sdlc/references/validate-modes/e2e.md#app) 落实 Plan 中的测试资产、环境与产物归档准备，
+   供 Validate 独立执行；实际入口和资产位置作为 `project_candidates` 返回，由主 Agent 核对后更新 `project.md`。
 
 ## 实现循环
 

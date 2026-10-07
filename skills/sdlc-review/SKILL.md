@@ -21,6 +21,7 @@ updated: 2026-09-05
 - validation commit 到当前 HEAD 在 `.sdlc-v1/**` 之外不能有差异。
 - 当前业务代码工作树必须干净；仅 `.sdlc-v1/**` 可以有待提交的上下文或状态修改。
 - 读取项目、产品和研发上下文，但只加载与本次 diff 有关的部分。
+- 对用户可见改动，读取 [`Global usage-document, story, and parameter contract`](../sdlc/references/lifecycles/software-delivery.md#11-global-usage-document-story-and-parameter-contract)，核对 guide → story → parameter source → actual-use evidence；缺少真实范围不得被测试、截图或 doccheck 掩盖。
 
 可用以下检查确认实现未变化：
 

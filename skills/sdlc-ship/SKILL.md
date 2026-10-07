@@ -20,6 +20,7 @@ description: >
 - `.sdlc-v1/project.md` 已记录发布目标或用户明确给出目标；目标可以是明确
   约定的源码分发，也可以是环境部署。
 - 生产发布、外部消息、数据删除等不可逆动作仍需获得用户明确授权。
+- 对用户可见改动，读取 [`Global usage-document, story, and parameter contract`](../sdlc/references/lifecycles/software-delivery.md#11-global-usage-document-story-and-parameter-contract)，以所选目标版本的真实可用条件为准；本地 synthetic 结果不能替代部署、live 或真人试用要求。
 
 ## 流程
 
