@@ -50,6 +50,8 @@ Validate/Review/Ship 以被验证实现 commit 和现有代码差异规则判断
 
 证明查询在不一致和 detached checkout 上仍只读，现有 validated commit 在发布分支/detached 环境继续有效，而迁移到代码不同的分支不能绕过 review/release 版本检查。验证 CLI help 和文档实际命令。
 
+公开 README 的迁移入口使用稳定的全局 scenario ID，导航到本 Requirement 已有 SCN-1～6 与验收条件；参数继续引用权威 runtime 操作指南，不复制规格或新增产品故事。
+
 运行 `bash scripts/validate-skills` 与 `git diff --check`，按 dirty baseline 复核只追加本次增量，并用独立只读 reviewer 复核安全性和兼容性。必要更改后的受影响测试重跑。无额外格式化配置时保持现有 Python 风格。
 
 ### 风险与回退
@@ -106,3 +108,128 @@ reviewer 提出的单变量环境测试掩盖问题已由原 worker 修正，主
 原有未跟踪 `happycompany-markdown-catalog.md` 留在原工作区，不提交、不忽略、不删除。
 正式验证使用同一实现提交的干净 detached checkout，避免无关文件影响 Git 前置条件；这不是开发分支迁移。
 本次授权为仓库提交推送，CHANGELOG 保持 Unreleased，不创建插件版本 tag 或 GitHub Release。
+
+## Validation
+
+### Correctness — d082f05a56f3c065d2a063ae6edfcf02c3ab90ac
+
+执行时间：`2026-10-07T13:25:20Z`。验证在干净 detached linked worktree
+`/Users/arnow117/hansen_agent_team/workspace/20261007-sdlc-branch-validation-b2wse932` 运行；`git status --porcelain=v1`
+在写入本节前为空，开发登记仍为 `main`，执行用途仅 Validate，不触发分支迁移。运行环境为 Python `3.9.6`、Git
+`2.50.1 (Apple Git-155)`；无项目 typecheck、build、coverage 配置，也无本次改动涉及的 Web/App/模型旅程，因此
+`correctness` 是适用方式，e2e/eval-bench 不适用。
+
+| command | result | observed result |
+|---|---|---|
+| `bash scripts/validate-skills` | PASS (exit 0) | 30 lifecycle、7 backlog、36 contrast tests 通过；技能结构、Markdown 引用、编排与可移植性检查通过。 |
+| `git diff --check` | PASS (exit 0) | 检查写入本节前的干净验证 worktree；无当前工作树 whitespace error。 |
+| `git diff --check a034dc6cddf3784fb257890e1d09d2c79d4e65f3 d082f05a56f3c065d2a063ae6edfcf02c3ab90ac` | PASS (exit 0, main Agent) | 显式检查被测提交相对基线的 diff；无 whitespace error。 |
+| `python3 scripts/lifecycle_state.py migrate-feature-branch --help` | PASS (exit 0) | 显示五个必填身份/原因参数和可选 `--at`，并说明不 checkout、不验收、不改工程上下文。 |
+| `python3 scripts/lifecycle_state.py record-validation --help` | PASS (exit 0) | 显示 `--feature-id`、`--result` 必填，`--test-command`、`--commit`、`--at` 可选。 |
+| 完整 temporary coverage 流程（如下） | PASS (all exit 0) | 临时 `/private/tmp` 工具环境的 Coverage.py 7.16.2（Python 3.12）采集 30 个 lifecycle tests，含 CLI 子进程数据；不修改项目依赖、配置或报告。 |
+
+Coverage 只使用 `/private/tmp/sdlc-coverage-cache` 的 `uv` cache 和
+`/private/tmp/sdlc-branch-validation-coverage-v2` 的一次性 artifacts；它们不是仓库文件、lifecycle state 或第二进度记录。
+该目录的 `.coveragerc` 为：
+
+```ini
+[run]
+branch = True
+parallel = True
+source =
+    scripts
+relative_files = True
+```
+
+`sitecustomize/sitecustomize.py` 只有 `import coverage` 和 `coverage.process_startup()`，使测试的真实 CLI 子进程也向同一
+临时数据目录写入。实际运行、合并和 JSON 命令为：
+
+```bash
+UV_CACHE_DIR=/private/tmp/sdlc-coverage-cache \
+COVERAGE_PROCESS_START=/private/tmp/sdlc-branch-validation-coverage-v2/.coveragerc \
+COVERAGE_FILE=/private/tmp/sdlc-branch-validation-coverage-v2/.coverage \
+PYTHONDONTWRITEBYTECODE=1 \
+PYTHONPATH=/private/tmp/sdlc-branch-validation-coverage-v2/sitecustomize \
+uv run --isolated --with coverage coverage run \
+  --rcfile=/private/tmp/sdlc-branch-validation-coverage-v2/.coveragerc \
+  scripts/test_lifecycle_state.py
+
+UV_CACHE_DIR=/private/tmp/sdlc-coverage-cache \
+uv run --isolated --with coverage coverage combine \
+  --rcfile=/private/tmp/sdlc-branch-validation-coverage-v2/.coveragerc \
+  --data-file=/private/tmp/sdlc-branch-validation-coverage-v2/.coverage \
+  /private/tmp/sdlc-branch-validation-coverage-v2
+
+UV_CACHE_DIR=/private/tmp/sdlc-coverage-cache \
+uv run --isolated --with coverage coverage json \
+  --rcfile=/private/tmp/sdlc-branch-validation-coverage-v2/.coveragerc \
+  --data-file=/private/tmp/sdlc-branch-validation-coverage-v2/.coverage \
+  -o /private/tmp/sdlc-branch-validation-coverage-v2/coverage.json
+```
+
+统计读取这个 JSON，并将 `git diff --unified=0 a034dc6..d082f05 -- scripts/lifecycle_state.py` 的新增行交集限定为
+coverage statement lines；branch arc 只计 source line 在新增行的 arc。实际统计脚本方法为：
+
+```python
+import json, re, subprocess
+
+base = "a034dc6cddf3784fb257890e1d09d2c79d4e65f3"
+head = "d082f05a56f3c065d2a063ae6edfcf02c3ab90ac"
+patch = subprocess.run(
+    ["git", "diff", "--unified=0", base, head, "--", "scripts/lifecycle_state.py"],
+    check=True, text=True, capture_output=True,
+).stdout.splitlines()
+added, new_line = set(), None
+for line in patch:
+    match = re.match(r"^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@", line)
+    if match:
+        new_line = int(match.group(1))
+    elif new_line is not None and line.startswith("+") and not line.startswith("+++"):
+        added.add(new_line)
+        new_line += 1
+    elif new_line is not None and not line.startswith("-"):
+        new_line += 1
+
+report = json.load(open("/private/tmp/sdlc-branch-validation-coverage-v2/coverage.json"))
+details = report["files"]["scripts/lifecycle_state.py"]
+executed = set(details["executed_lines"])
+statements = executed | set(details["missing_lines"])
+arcs = details["executed_branches"] + details["missing_branches"]
+executed_arcs = set(map(tuple, details["executed_branches"]))
+changed_statements = added & statements
+changed_arcs = {tuple(arc) for arc in arcs if arc[0] in added}
+print(len(added), len(changed_statements), len(changed_statements & executed))
+print(len(changed_arcs), len(changed_arcs & executed_arcs))
+```
+
+Coverage 只计算 `a034dc6..d082f05` 中 `scripts/lifecycle_state.py` 的 189 个新增文本行里被 coverage 识别为可执行的
+71 行，以及源行位于新增分支点的 28 条 branch arc；不是全仓库覆盖率。执行 70/71 行（98.6%，默认 80% 以上）和
+27/28 branch arc（96.4%，默认 70% 以上）。唯一缺口是 `_current_branch_migration_identity` 中 `git rev-parse
+--show-toplevel` 失败后拒绝的 arc（507→508）；其余新增身份、环境、锁内复核、成功审计与 CLI 分支均被测试覆盖。
+
+| 产品验收条件 | status | 本轮证据 |
+|---|---|---|
+| 1. 匹配身份时仅更新目标登记并提供审计 | COVERED | `test_migrate_feature_branch_updates_only_the_open_feature_registration` 与 `…preserves_delivery_evidence_and_other_records` 在临时真实 Git repo 断言 branch/updated_at、审计输出和其余交付字段。 |
+| 2. prewrite rejection 确定且 state 不变 | COVERED | 身份/ref/HEAD/root、closed Feature、context、staged/unmerged、Git 环境重定向和锁内身份变化测试均断言拒绝；prewrite 路径断言 state bytes 不变。 |
+| 3. 同旧值并发只有一个成功 | COVERED | `test_migrate_feature_branch_cli_help_audit_and_two_writers` 在同一临时 checkout 启动两个真实 CLI，观察到 return codes `[0, 2]`。 |
+| 4. active-writer 交接和新 brief | COVERED | 实现的可执行边界为编排文档：`lightweight-runtime.md`、`stage-agent-protocol.md`、Plan/Build 均要求先交接同 Feature writer，再以实际 root/branch/HEAD/用途重发完整 brief；本 Validate brief 本身使用 detached worktree，未迁移开发登记。 |
+| 5. 替换后失败按结果不确定恢复 | COVERED | `…marks_postreplace_failures_as_recovery_cases` 与 `…marks_output_failures_as_recovery_cases` 注入 fsync/输出失败，证明 state 可能已写入；README/runtime 规定只读恢复、禁止自动重试。 |
+| 6. 非开发或 detached 查询保持可用，版本规则不变 | COVERED | `test_branch_migration_does_not_add_global_branch_rules_to_queries_or_delivery` 覆盖 detached validation/release 和查询；`…cannot_bypass_approved_delivery` 分别拒绝不同实现后的 review/release。 |
+| 7. 范围、依赖和工程审计完整 | COVERED | 产品上下文列明无未决问题；已接受 Plan、此 Task 和本次固定 detached Validate brief 均保持同一范围。 |
+| 8. help、说明、兼容性与确定性测试一致 | COVERED | 本轮实际 help、README/runtime/Plan/Build/protocol 的引用检查，以及 `validate-skills` 与 30 个 lifecycle tests 通过；state 仍为 version 3。 |
+
+Outcome: `PASS`。未发现实现缺陷或环境阻塞；覆盖缺口低于默认阈值但已精确记录。以上仅证明临时真实 Git/CLI
+fixture 与本地标准检查，不证明 live 部署、插件发布、网络服务或真人使用。主 Agent 已将同一被测提交正常推送到
+`origin/main` 并用 `git ls-remote` 核对完整 hash；这不创建插件版本、tag 或 Release。此 worker 尚未调用
+`record-validation`、修改 `state.json`、commit 或 push；由主 Agent 在验收后执行允许的状态转换。
+
+## Review — d082f05a56f3c065d2a063ae6edfcf02c3ab90ac
+
+独立 reviewer `branch_contract_review` 核对了提交与 validation 绑定、干净的业务工作树、运行时与最终测试哈希。
+原四项风险已解决，单变量环境与不同实现拒绝测试有效；独立重算 coverage 为 70/71 行、27/28 branch arc。
+本次 diff 未发现有证据支持的重复实现或可避免工程债，验证范围及唯一覆盖缺口均已明确记录。
+
+发现一项 P2 公开使用契约缺口：README 新命令入口缺少稳定 scenario ID 到既有产品故事和验收条件的导航。
+参数与 CLI 一致，但 guide → story → parameter → actual-use evidence 链条未完整；依据 software-delivery 的全局 usage 契约，
+返回 Build，在现有 README 章节补稳定 ID、已有 SCN-1～6 和 AC 链接，随后重新验证对应提交。
+主 Agent 接受 `changes_requested`，保留本次验证与评审事实，不修改运行时、测试或产品故事范围。
