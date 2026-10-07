@@ -2,6 +2,18 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [1.9.0] — 2026-10-07
+
+### Added
+
+- `design` 角色可按需接入已安装的 Impeccable 方法；产品阶段的页面、组件、表单、导航、状态、响应式、无障碍或视觉方向需求，
+  即使尚无代码 diff 也会选择设计视角并形成可验证的体验约束。
+
+### Compatibility
+
+- Impeccable 未安装时，每个目标项目会话只提醒一次并继续现有设计、组件库和 E2E 流程；不新增 lifecycle CLI、state schema、
+  运行时依赖或自动安装/授权。validate/review 对实现保持只读，必要验证要求不因该可选能力缺失而豁免。
+
 ## [1.8.1] — 2026-10-04
 
 ### Changed

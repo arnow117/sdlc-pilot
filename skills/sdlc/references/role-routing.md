@@ -16,17 +16,22 @@ Decision = resolve(
 
 `.sdlc-v1/project.md` 的 surface map 是项目特化输入，优先于本文件的通用规则。本文件负责未覆盖路径和跨区域补充。
 
+当选择 `design` 时，按 [Impeccable 可选适配](integrations/impeccable.md) 在当前目标项目会话首次适用时检查一次能力；
+主 Agent 把结果、限制和已提醒状态传入 stage brief。该检查不新增角色、validate mode、state 字段或所有任务的前置条件。
+
 ## 1. 解析算法
 
-1. 取得改动文件：工作区使用 `git diff --name-only HEAD`；已提交分支使用 `git diff --name-only <base>...HEAD`。
-2. 每个路径先匹配 `project.md` surface map，合并其 roles 与 modes。
-3. 未匹配的路径使用下表；一条路径可命中多条规则，结果取并集。
-4. 任意代码 diff 至少加入 `qa + correctness`。
-5. 命中两个以上不同 surface，或需要 full-chain e2e 时加入 `architect`。
-6. 认证、授权、支付、密钥、个人数据、原始 SQL、文件系统或外部输入发生变化时加入 `security`。
-7. 产品澄清阶段默认加入 `product-owner`；术语、业务规则或归属复杂时加入 `domain-expert`。
-8. 去重后只加载选中的角色卡、验证方式和与扩展名匹配的语言参考。
-9. 未归类路径应提示刷新 `project.md` 的 surface map，但不阻止当前工作。
+1. 产品澄清阶段先读取原始请求和产品上下文。请求包含页面、组件、表单、导航、空态、loading/error 反馈、响应式、
+   无障碍或视觉方向时加入 `design`，即使还没有代码 diff；纯后端且不影响用户可见交互时不加入。
+2. 取得改动文件：工作区使用 `git diff --name-only HEAD`；已提交分支使用 `git diff --name-only <base>...HEAD`。
+3. 每个路径先匹配 `project.md` surface map，合并其 roles 与 modes。
+4. 未匹配的路径使用下表；一条路径可命中多条规则，结果取并集。
+5. 任意代码 diff 至少加入 `qa + correctness`。
+6. 命中两个以上不同 surface，或需要 full-chain e2e 时加入 `architect`。
+7. 认证、授权、支付、密钥、个人数据、原始 SQL、文件系统或外部输入发生变化时加入 `security`。
+8. 产品澄清阶段默认加入 `product-owner`；术语、业务规则或归属复杂时加入 `domain-expert`。
+9. 去重后只加载选中的角色卡、验证方式和与扩展名匹配的语言参考。
+10. 未归类路径应提示刷新 `project.md` 的 surface map，但不阻止当前工作。
 
 解析结果只用于当前执行。下一次 diff 变化后重新计算。
 
