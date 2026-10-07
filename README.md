@@ -171,6 +171,8 @@ python3 scripts/lifecycle_state.py --repo <target-repo> retract-release \
 
 ### 修正 Feature 开发分支登记
 
+**全局场景 ID：`SCN-branch-registration`。** 此入口依次导航到既有产品场景：[SCN-1](.sdlc-v1/context/REQ-branch-registration.product.md#scn-1确认身份后登记当前开发分支)、[SCN-2](.sdlc-v1/context/REQ-branch-registration.product.md#scn-2写入前身份不成立)、[SCN-3](.sdlc-v1/context/REQ-branch-registration.product.md#scn-3两个维护者使用同一个旧登记)、[SCN-4](.sdlc-v1/context/REQ-branch-registration.product.md#scn-4同一-feature-的-active-writer-交接)、[SCN-5](.sdlc-v1/context/REQ-branch-registration.product.md#scn-5状态替换后的结果不确定)、[SCN-6](.sdlc-v1/context/REQ-branch-registration.product.md#scn-6非开发-checkout-的只读恢复)和[验收条件](.sdlc-v1/context/REQ-branch-registration.product.md#验收条件)；参数、执行规则和恢复流程以[运行时操作指南](skills/sdlc/references/lightweight-runtime.md#51-开发分支登记迁移)为准。
+
 当未关闭 Feature 的登记 branch 与实际开发 worktree 不一致时，主 Agent 或独立维护者先让同一 Feature 的写入者完成
 交接，并在该 Feature 工程上下文预先记录决定、完整参数、原因和预期 HEAD。随后在实际 worktree 执行：
 

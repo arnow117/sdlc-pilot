@@ -44,6 +44,8 @@ Validate/Review/Ship 以被验证实现 commit 和现有代码差异规则判断
 
 保留初始 staged/unstaged 改动，尤其 Plan/Build、README、CHANGELOG 的既有 2.0.0 内容；只追加必要段落，不改 index、不 commit/push/checkout、不改版本元数据。新增能力在 Unreleased 说明兼容性；发布时再按真实远端版本和既有 SemVer 流程决定 minor 或纳入尚未发布的版本。源码主工作区当前为 main；本任务不切换共享工作区。
 
+`TASK-branch-registration-usage`：依据正式 Review 的 P2 发现，只在 README 现有迁移章节补稳定全局 scenario ID 与既有产品场景/AC 的导航，并在工程上下文记录修正与必要检查。保留 runtime 参数指南引用，不新增故事、依赖或实现；这是同一交付段的补正任务。
+
 ### 验收与测试
 
 使用现有 unittest 临时 Git repo 与真实 CLI，无模型或网络依赖。覆盖成功和审计输出、Task/失败/通过验证及 review 保留、其他 Feature/Requirement 保留、旧值冲突/重复迁移/同旧值两个 writer、非法分支/未实际检出/detached/HEAD 冲突/unborn/错误 repo root、closed Feature、staged/冲突 state、缺失/符号链接工程上下文、linked worktree、Git 仓库与 index 环境重定向。所有写入前校验拒绝路径 state 字节不变；注入替换后 fsync/输出失败，证明恢复必须先查实际状态。
@@ -233,3 +235,28 @@ fixture 与本地标准检查，不证明 live 部署、插件发布、网络服
 参数与 CLI 一致，但 guide → story → parameter → actual-use evidence 链条未完整；依据 software-delivery 的全局 usage 契约，
 返回 Build，在现有 README 章节补稳定 ID、已有 SCN-1～6 和 AC 链接，随后重新验证对应提交。
 主 Agent 接受 `changes_requested`，保留本次验证与评审事实，不修改运行时、测试或产品故事范围。
+
+状态转换核对：主 Agent 尝试将原 done Task 恢复 in_progress，CLI 实际以
+`invalid-task-transition:done->in_progress` 拒绝（exit 2），未改 state；没有绕过状态机或手写 JSON。
+改用既有 `add-task` 建立依赖原 Task 的文档补正 Task，原实现 Task 与失败证据保持不变。
+补正仍属于本 Feature 的同一交付段，不重置失败历史或诊断额度。
+
+## Build correction — README usage navigation
+
+针对 Review 的 P2，README 的既有“修正 Feature 开发分支登记”章节现在用稳定全局场景
+`SCN-branch-registration` 导航到既有产品 `SCN-1` 至 `SCN-6`、验收条件和运行时参数/恢复指南。
+它没有新增产品故事、验收条件、参数来源或运行时行为。
+
+在开发登记工作区 `/Users/arnow117/hansen_agent_team/workspace/20260603-sdlc-pilot` 的 `main`、
+`70ef6bc684fc6d7270ebe6abb5d9b473d09668ff` 上实际检查：
+
+- `python3 scripts/lifecycle_state.py migrate-feature-branch --help`（exit 0）显示已登记 branch、完整 HEAD、
+  原因和可选时间的现有契约，且明确不会 checkout 或编辑工程上下文。
+- 定向 Python anchor 检查（exit 0）确认 README 的全局 ID 链接到产品中实际存在的 `SCN-1` 至 `SCN-6` 与
+  “验收条件” anchors，并仍链接 `lightweight-runtime.md#51-开发分支登记迁移`。
+- `bash scripts/validate-skills`（exit 0）通过；包含 30 个 lifecycle、7 个 backlog、36 个 contrast 测试，
+  本地 Markdown 引用检查也通过。
+
+本 worker 只修改 README 和本证据段；未修改运行时、测试、state 或 `happycompany-markdown-catalog.md`。检查开始时
+工作树已有主 Agent 的 `.sdlc-v1/state.json` 与本工程上下文改动，以及未跟踪 catalog；这些均被保留。
+`git diff --check` 对本次 Build 工作快照实际返回 exit 0。

@@ -12,9 +12,9 @@
       },
       "requirement_id": "REQ-branch-registration",
       "review": {
-        "at": "2026-10-07T13:42:36Z",
-        "by": "branch_contract_review",
-        "decision": "changes_requested"
+        "at": null,
+        "by": null,
+        "decision": "pending"
       },
       "status": "in_progress",
       "tasks": {
@@ -24,14 +24,23 @@
           "status": "done",
           "title": "实现受控分支登记迁移命令、测试与阶段约束",
           "updated_at": "2026-10-07T12:18:14Z"
+        },
+        "TASK-branch-registration-usage": {
+          "depends_on": [
+            "TASK-branch-registration"
+          ],
+          "id": "TASK-branch-registration-usage",
+          "status": "done",
+          "title": "补齐公开使用入口的既有故事与验收导航",
+          "updated_at": "2026-10-07T13:52:03Z"
         }
       },
-      "updated_at": "2026-10-07T13:42:36Z",
+      "updated_at": "2026-10-07T13:52:03Z",
       "validation": {
-        "at": "2026-10-07T13:34:29Z",
-        "command": "bash scripts/validate-skills && git diff --check",
-        "commit": "d082f05a56f3c065d2a063ae6edfcf02c3ab90ac",
-        "result": "pass"
+        "at": null,
+        "command": null,
+        "commit": null,
+        "result": "pending"
       }
     }
   },
@@ -47,7 +56,7 @@
       "product_context_ref": ".sdlc-v1/context/REQ-branch-registration.product.md",
       "status": "in_delivery",
       "title": "显式迁移 Feature 开发分支登记",
-      "updated_at": "2026-10-07T13:42:36Z"
+      "updated_at": "2026-10-07T13:52:03Z"
     }
   },
   "state_format": "sdlc-lightweight-state-v1",
