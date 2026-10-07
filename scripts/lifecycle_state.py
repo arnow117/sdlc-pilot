@@ -56,6 +56,27 @@ _TASK_TRANSITIONS = {
     "done": frozenset({"todo"}),
     "cancelled": frozenset(),
 }
+_GIT_LOCAL_ENVIRONMENT_VARIABLES = frozenset({
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_CONFIG",
+    "GIT_CONFIG_COUNT",
+    "GIT_CONFIG_PARAMETERS",
+    "GIT_DIR",
+    "GIT_GRAFT_FILE",
+    "GIT_IMPLICIT_WORK_TREE",
+    "GIT_INDEX_FILE",
+    "GIT_NAMESPACE",
+    "GIT_NO_REPLACE_OBJECTS",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_PREFIX",
+    "GIT_REPLACE_REF_BASE",
+    "GIT_SHALLOW_FILE",
+    "GIT_WORK_TREE",
+    "GIT_COMMON_DIR",
+})
+_GIT_CONFIG_ENVIRONMENT_PREFIXES = ("GIT_CONFIG_KEY_", "GIT_CONFIG_VALUE_")
+
+
 class LifecycleStateError(RuntimeError):
     """The lightweight lifecycle state is missing, invalid, or inconsistent."""
 
@@ -446,6 +467,63 @@ def _git(root: Path, *args: str) -> subprocess.CompletedProcess[str]:
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         raise LifecycleStateError("git-is-required-for-lightweight-state") from exc
+
+
+def _reject_git_local_environment_for_branch_migration() -> None:
+    """Keep one migration's Git identity bound to its supplied checkout.
+
+    The explicit names come from ``git rev-parse --local-env-vars`` in the
+    supported Git version. ``GIT_NAMESPACE`` and numbered config entries also
+    change ref or config resolution, so the migration rejects them as well.
+    Other lifecycle commands retain their existing environment behavior.
+    """
+    redirected = [
+        name
+        for name in os.environ
+        if name in _GIT_LOCAL_ENVIRONMENT_VARIABLES
+        or name.startswith(_GIT_CONFIG_ENVIRONMENT_PREFIXES)
+    ]
+    if redirected:
+        raise LifecycleStateError(
+            "branch-migration-rejects-git-local-environment:" + ",".join(sorted(redirected)),
+        )
+
+
+def _require_explicit_local_branch(root: Path, branch: str) -> str:
+    """Return a validated local branch name without accepting Git shorthand."""
+    if branch in {"@", "HEAD"} or branch.startswith("refs/"):
+        raise LifecycleStateError("invalid-feature-branch")
+    result = _git(root, "check-ref-format", "--branch", branch)
+    if result.returncode != 0 or result.stdout.strip() != branch:
+        raise LifecycleStateError("invalid-feature-branch")
+    return f"refs/heads/{branch}"
+
+
+def _current_branch_migration_identity(
+    root: Path, *, branch: str, expected_head: str,
+) -> dict[str, str]:
+    """Read the current attached checkout identity for a branch migration."""
+    actual_root = _git(root, "rev-parse", "--show-toplevel")
+    if actual_root.returncode != 0 or not actual_root.stdout.strip():
+        raise LifecycleStateError("branch-migration-requires-git-worktree")
+    canonical_root = Path(actual_root.stdout.strip()).resolve()
+    if canonical_root != root:
+        raise LifecycleStateError("branch-migration-repository-root-mismatch")
+
+    expected_ref = _require_explicit_local_branch(root, branch)
+    symbolic_head = _git(root, "symbolic-ref", "--quiet", "HEAD")
+    if symbolic_head.returncode != 0 or not symbolic_head.stdout.strip():
+        raise LifecycleStateError("branch-migration-requires-attached-local-branch")
+    if symbolic_head.stdout.strip() != expected_ref:
+        raise LifecycleStateError("branch-migration-branch-not-current-checkout")
+
+    head = _git(root, "rev-parse", "--verify", "HEAD^{commit}")
+    if head.returncode != 0 or not head.stdout.strip():
+        raise LifecycleStateError("branch-migration-requires-head-commit")
+    actual_head = head.stdout.strip()
+    if actual_head != expected_head:
+        raise LifecycleStateError("branch-migration-head-mismatch")
+    return {"head": actual_head, "repo_root": str(canonical_root)}
 
 
 def _require_git_repository(root: Path) -> None:
@@ -927,6 +1005,71 @@ def start_feature(
     return _mutate(root, operation, at=at)
 
 
+def migrate_feature_branch(
+    *,
+    repo: str | os.PathLike[str] = ".",
+    feature_id: str,
+    expected_branch: str,
+    branch: str,
+    expected_head: str,
+    reason: str,
+    at: str | None = None,
+) -> dict[str, object]:
+    """Move one open Feature's branch registration to its current checkout.
+
+    This does not checkout code, change delivery progress, or write engineering
+    context. The caller records intent and recovery evidence in that context.
+    """
+    _reject_git_local_environment_for_branch_migration()
+    root = _repo_root(repo)
+    feature_id = _id(feature_id, label="feature-id")
+    expected_branch = _text(expected_branch, label="expected-feature-branch")
+    branch = _text(branch, label="feature-branch")
+    expected_head = _text(expected_head, label="expected-feature-head")
+    reason = _text(reason, label="feature-branch-migration-reason")
+    _require_explicit_local_branch(root, branch)
+    _current_branch_migration_identity(root, branch=branch, expected_head=expected_head)
+
+    def operation(state: dict[str, object], timestamp: str) -> dict[str, object]:
+        feature = _feature(state, feature_id)
+        if feature["status"] in {"released", "cancelled"}:
+            raise LifecycleStateError(f"feature-not-open-for-branch-migration:{feature_id}")
+        old_branch = str(feature["branch"])
+        if old_branch != expected_branch:
+            raise LifecycleStateError(f"feature-branch-does-not-match-expected:{feature_id}")
+        if branch == old_branch:
+            raise LifecycleStateError("feature-branch-migration-requires-new-branch")
+
+        engineering_context_ref = _context_ref(
+            str(feature["engineering_context_ref"]), label="feature-engineering-context-ref",
+        )
+        _require_context_file(root, engineering_context_ref, label="engineering-context")
+        identity = _current_branch_migration_identity(
+            root, branch=branch, expected_head=expected_head,
+        )
+        feature["branch"] = branch
+        feature["updated_at"] = timestamp
+        final_identity = _current_branch_migration_identity(
+            root, branch=branch, expected_head=expected_head,
+        )
+        if final_identity != identity:
+            raise LifecycleStateError("branch-migration-identity-changed-during-operation")
+        return {
+            "operation": "migrate-feature-branch",
+            "feature_id": feature_id,
+            "feature": deepcopy(feature),
+            "old_branch": old_branch,
+            "new_branch": branch,
+            "reason": reason,
+            "head": final_identity["head"],
+            "repo_root": final_identity["repo_root"],
+            "at": timestamp,
+            "engineering_context_ref": engineering_context_ref,
+        }
+
+    return _mutate(root, operation, at=at)
+
+
 def add_task(
     *, repo: str | os.PathLike[str] = ".", feature_id: str, task_id: str, title: str,
     depends_on: Sequence[str] = (), at: str | None = None,
@@ -1381,6 +1524,40 @@ def build_parser() -> argparse.ArgumentParser:
     retract.add_argument("--feature-id", required=True)
     retract.add_argument("--reason", required=True)
     retract.add_argument("--at")
+    migrate_branch = commands.add_parser(
+        "migrate-feature-branch",
+        help="update an open Feature registration for its current checkout branch",
+        description=(
+            "Update only an open Feature's stored branch registration. This command does not "
+            "checkout code, accept delivery work, or edit engineering context."
+        ),
+    )
+    migrate_branch.add_argument(
+        "--feature-id",
+        required=True,
+        help="open Feature whose registration changes",
+    )
+    migrate_branch.add_argument(
+        "--expected-branch",
+        required=True,
+        help="exact branch value currently stored for that Feature",
+    )
+    migrate_branch.add_argument(
+        "--branch",
+        required=True,
+        help="explicit local branch already checked out in this worktree",
+    )
+    migrate_branch.add_argument(
+        "--expected-head",
+        required=True,
+        help="full current commit ID expected in this worktree",
+    )
+    migrate_branch.add_argument(
+        "--reason",
+        required=True,
+        help="pre-recorded migration decision in the Feature engineering context",
+    )
+    migrate_branch.add_argument("--at", help="optional operation timestamp")
     commands.add_parser("readyqueue", help="list requirements ready for delivery")
     commands.add_parser("next", help="show the next lifecycle stage")
     product = commands.add_parser("product-projection", help="show one requirement and its feature")
@@ -1446,6 +1623,16 @@ def main(argv: Sequence[str] | None = None) -> int:
             result = retract_release(
                 repo=args.repo, feature_id=args.feature_id, reason=args.reason, at=args.at,
             )
+        elif args.command == "migrate-feature-branch":
+            result = migrate_feature_branch(
+                repo=args.repo,
+                feature_id=args.feature_id,
+                expected_branch=args.expected_branch,
+                branch=args.branch,
+                expected_head=args.expected_head,
+                reason=args.reason,
+                at=args.at,
+            )
         elif args.command == "readyqueue":
             result = readyqueue(args.repo)
         elif args.command == "next":
@@ -1468,6 +1655,7 @@ if __name__ == "__main__":
 __all__ = [
     "LifecycleStateError", "STATE_DIRECTORY", "STATE_FILENAME", "STATE_FORMAT", "STATE_VERSION",
     "add_task", "cancel_requirement", "capture_requirement", "feature_projection", "initialize", "load", "main",
-    "mark_requirement_ready", "next_action", "product_projection", "readyqueue", "record_release", "retract_release",
+    "mark_requirement_ready", "migrate_feature_branch", "next_action", "product_projection", "readyqueue",
+    "record_release", "retract_release",
     "record_review", "record_validation", "revise_requirement", "set_task_status", "start_feature", "state_path", "status",
 ]

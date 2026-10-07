@@ -1,0 +1,55 @@
+{
+  "features": {
+    "FEAT-branch-registration": {
+      "branch": "main",
+      "created_at": "2026-10-07T11:33:03Z",
+      "engineering_context_ref": ".sdlc-v1/context/FEAT-branch-registration.engineering.md",
+      "id": "FEAT-branch-registration",
+      "release": {
+        "at": null,
+        "commit": null,
+        "status": "pending"
+      },
+      "requirement_id": "REQ-branch-registration",
+      "review": {
+        "at": null,
+        "by": null,
+        "decision": "pending"
+      },
+      "status": "in_progress",
+      "tasks": {
+        "TASK-branch-registration": {
+          "depends_on": [],
+          "id": "TASK-branch-registration",
+          "status": "done",
+          "title": "实现受控分支登记迁移命令、测试与阶段约束",
+          "updated_at": "2026-10-07T12:18:14Z"
+        }
+      },
+      "updated_at": "2026-10-07T12:18:14Z",
+      "validation": {
+        "at": null,
+        "command": null,
+        "commit": null,
+        "result": "pending"
+      }
+    }
+  },
+  "requirements": {
+    "REQ-branch-registration": {
+      "created_at": "2026-10-07T11:18:28Z",
+      "depends_on": [],
+      "description": "",
+      "domain": "tooling",
+      "feature_id": "FEAT-branch-registration",
+      "id": "REQ-branch-registration",
+      "priority": "P1",
+      "product_context_ref": ".sdlc-v1/context/REQ-branch-registration.product.md",
+      "status": "in_delivery",
+      "title": "显式迁移 Feature 开发分支登记",
+      "updated_at": "2026-10-07T12:18:14Z"
+    }
+  },
+  "state_format": "sdlc-lightweight-state-v1",
+  "state_version": 3
+}

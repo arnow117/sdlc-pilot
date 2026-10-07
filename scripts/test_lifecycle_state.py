@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 
 HERE = Path(__file__).resolve().parent
@@ -89,6 +91,43 @@ class LifecycleStateTest(unittest.TestCase):
             repo=self.repo, feature_id=feature_id, task_id="TASK-one", status="done",
             at="2026-08-10T00:06:00Z",
         )
+
+    def prepare_branch_migration(
+        self,
+        *,
+        requirement_id: str = "REQ-migrate",
+        feature_id: str = "FEAT-migrate",
+        branch: str = "feature/migrated",
+    ) -> tuple[str, str, str]:
+        self.initialize_state()
+        self.capture(requirement_id)
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id=requirement_id)
+        engineering_ref = self.start(requirement_id, feature_id)
+        self.git("checkout", "-b", branch)
+        head = self.git("rev-parse", "HEAD").stdout.strip()
+        return engineering_ref, head, f"feature/{feature_id}"
+
+    def state_bytes(self, *, root: Path | None = None) -> bytes:
+        target_root = self.repo if root is None else root
+        return (target_root / ".sdlc-v1/state.json").read_bytes()
+
+    def migration_arguments(
+        self,
+        *,
+        feature_id: str = "FEAT-migrate",
+        expected_branch: str = "feature/FEAT-migrate",
+        branch: str = "feature/migrated",
+        expected_head: str | None = None,
+    ) -> dict[str, str | Path]:
+        head = expected_head or self.git("rev-parse", "HEAD").stdout.strip()
+        return {
+            "repo": self.repo,
+            "feature_id": feature_id,
+            "expected_branch": expected_branch,
+            "branch": branch,
+            "expected_head": head,
+            "reason": "continue implementation in the current checkout",
+        }
 
     def test_state_updates_can_be_batched_before_a_git_handoff(self) -> None:
         self.initialize_state()
@@ -555,6 +594,521 @@ class LifecycleStateTest(unittest.TestCase):
         routed = subprocess.run([*command, "next"], capture_output=True, text=True)
         self.assertEqual(routed.returncode, 0, routed.stderr)
         self.assertEqual(json.loads(routed.stdout)["stage"], "spec")
+
+    def test_migrate_feature_branch_updates_only_the_open_feature_registration(self) -> None:
+        self.initialize_state()
+        self.capture("REQ-migrate")
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-migrate")
+        engineering_ref = self.start("REQ-migrate", "FEAT-migrate")
+        self.git("checkout", "-b", "feature/migrated")
+        head = self.git("rev-parse", "HEAD").stdout.strip()
+
+        before = lifecycle_state.load(self.repo)
+        result = lifecycle_state.migrate_feature_branch(
+            repo=self.repo,
+            feature_id="FEAT-migrate",
+            expected_branch="feature/FEAT-migrate",
+            branch="feature/migrated",
+            expected_head=head,
+            reason="continue implementation in the current checkout",
+            at="2026-10-07T00:00:00Z",
+        )
+        after = lifecycle_state.load(self.repo)
+
+        self.assertEqual(result["operation"], "migrate-feature-branch")
+        self.assertEqual(result["feature_id"], "FEAT-migrate")
+        self.assertEqual(result["old_branch"], "feature/FEAT-migrate")
+        self.assertEqual(result["new_branch"], "feature/migrated")
+        self.assertEqual(result["head"], head)
+        self.assertEqual(result["engineering_context_ref"], engineering_ref)
+        self.assertEqual(after["features"]["FEAT-migrate"]["branch"], "feature/migrated")
+        self.assertEqual(after["features"]["FEAT-migrate"]["updated_at"], "2026-10-07T00:00:00Z")
+        self.assertEqual(after["requirements"], before["requirements"])
+        self.assertEqual(after["features"]["FEAT-migrate"]["tasks"], before["features"]["FEAT-migrate"]["tasks"])
+        self.assertEqual(
+            after["features"]["FEAT-migrate"]["validation"],
+            before["features"]["FEAT-migrate"]["validation"],
+        )
+        self.assertEqual(
+            after["features"]["FEAT-migrate"]["review"],
+            before["features"]["FEAT-migrate"]["review"],
+        )
+        self.assertEqual(
+            after["features"]["FEAT-migrate"]["release"],
+            before["features"]["FEAT-migrate"]["release"],
+        )
+
+    def test_migrate_feature_branch_preserves_delivery_evidence_and_other_records(self) -> None:
+        self.initialize_state()
+        self.capture("REQ-migrate")
+        self.capture("REQ-other")
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-migrate")
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-other")
+        self.start("REQ-migrate", "FEAT-migrate")
+        self.start("REQ-other", "FEAT-other")
+        lifecycle_state.add_task(
+            repo=self.repo, feature_id="FEAT-migrate", task_id="TASK-blocked", title="Blocked work",
+        )
+        lifecycle_state.add_task(
+            repo=self.repo, feature_id="FEAT-migrate", task_id="TASK-done", title="Completed work",
+        )
+        lifecycle_state.set_task_status(
+            repo=self.repo, feature_id="FEAT-migrate", task_id="TASK-blocked", status="blocked",
+        )
+        lifecycle_state.set_task_status(
+            repo=self.repo, feature_id="FEAT-migrate", task_id="TASK-done", status="in_progress",
+        )
+        lifecycle_state.set_task_status(
+            repo=self.repo, feature_id="FEAT-migrate", task_id="TASK-done", status="done",
+        )
+        self.git("checkout", "-b", "feature/migrated")
+        head = self.git("rev-parse", "HEAD").stdout.strip()
+
+        fixture = lifecycle_state.load(self.repo)
+        target = fixture["features"]["FEAT-migrate"]
+        target["validation"] = {
+            "result": "fail", "command": "python -m unittest", "commit": head,
+            "at": "2026-10-07T00:00:00Z",
+        }
+        target["review"] = {
+            "decision": "approved", "by": "reviewer", "at": "2026-10-07T00:01:00Z",
+        }
+        lifecycle_state.state_path(self.repo).write_text(
+            json.dumps(fixture, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        before = lifecycle_state.load(self.repo)
+
+        lifecycle_state.migrate_feature_branch(
+            **self.migration_arguments(expected_head=head), at="2026-10-07T00:02:00Z",
+        )
+        after = lifecycle_state.load(self.repo)
+
+        self.assertEqual(after["requirements"], before["requirements"])
+        self.assertEqual(after["features"]["FEAT-other"], before["features"]["FEAT-other"])
+        for field in ("id", "requirement_id", "status", "tasks", "engineering_context_ref", "validation", "review", "release", "created_at"):
+            self.assertEqual(after["features"]["FEAT-migrate"][field], before["features"]["FEAT-migrate"][field])
+        self.assertEqual(after["features"]["FEAT-migrate"]["branch"], "feature/migrated")
+        self.assertEqual(after["features"]["FEAT-migrate"]["updated_at"], "2026-10-07T00:02:00Z")
+
+    def test_migrate_feature_branch_rejects_closed_unknown_stale_and_repeated_requests(self) -> None:
+        self.prepare_branch_migration()
+        before = self.state_bytes()
+        with self.assertRaisesRegex(lifecycle_state.LifecycleStateError, "feature-not-found:FEAT-unknown"):
+            lifecycle_state.migrate_feature_branch(
+                **self.migration_arguments(feature_id="FEAT-unknown"),
+            )
+        with self.assertRaisesRegex(
+            lifecycle_state.LifecycleStateError, "feature-branch-does-not-match-expected:FEAT-migrate",
+        ):
+            lifecycle_state.migrate_feature_branch(
+                **self.migration_arguments(expected_branch="feature/stale"),
+            )
+        self.git("branch", "feature/FEAT-migrate")
+        self.git("checkout", "feature/FEAT-migrate")
+        with self.assertRaisesRegex(
+            lifecycle_state.LifecycleStateError, "feature-branch-migration-requires-new-branch",
+        ):
+            lifecycle_state.migrate_feature_branch(
+                **self.migration_arguments(branch="feature/FEAT-migrate"),
+            )
+        self.git("checkout", "feature/migrated")
+        self.assertEqual(self.state_bytes(), before)
+
+        lifecycle_state.migrate_feature_branch(**self.migration_arguments())
+        after_success = self.state_bytes()
+        with self.assertRaisesRegex(
+            lifecycle_state.LifecycleStateError, "feature-branch-does-not-match-expected:FEAT-migrate",
+        ):
+            lifecycle_state.migrate_feature_branch(**self.migration_arguments())
+        self.assertEqual(self.state_bytes(), after_success)
+
+        closed = lifecycle_state.load(self.repo)
+        closed["features"]["FEAT-migrate"]["status"] = "cancelled"
+        closed["requirements"]["REQ-migrate"]["status"] = "cancelled"
+        lifecycle_state.state_path(self.repo).write_text(
+            json.dumps(closed, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        self.git("checkout", "-b", "feature/next")
+        closed_before = self.state_bytes()
+        with self.assertRaisesRegex(
+            lifecycle_state.LifecycleStateError, "feature-not-open-for-branch-migration:FEAT-migrate",
+        ):
+            lifecycle_state.migrate_feature_branch(
+                **self.migration_arguments(expected_branch="feature/migrated", branch="feature/next"),
+            )
+        self.assertEqual(self.state_bytes(), closed_before)
+
+        released = lifecycle_state.load(self.repo)
+        current_head = self.git("rev-parse", "HEAD").stdout.strip()
+        released["features"]["FEAT-migrate"].update({
+            "status": "released",
+            "validation": {
+                "result": "pass", "command": "python -m unittest", "commit": current_head,
+                "at": "2026-10-07T00:03:00Z",
+            },
+            "review": {"decision": "approved", "by": "reviewer", "at": "2026-10-07T00:04:00Z"},
+            "release": {"status": "released", "commit": current_head, "at": "2026-10-07T00:05:00Z"},
+        })
+        released["requirements"]["REQ-migrate"]["status"] = "released"
+        lifecycle_state.state_path(self.repo).write_text(
+            json.dumps(released, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        released_before = self.state_bytes()
+        with self.assertRaisesRegex(
+            lifecycle_state.LifecycleStateError, "feature-not-open-for-branch-migration:FEAT-migrate",
+        ):
+            lifecycle_state.migrate_feature_branch(
+                **self.migration_arguments(expected_branch="feature/migrated", branch="feature/next"),
+            )
+        self.assertEqual(self.state_bytes(), released_before)
+
+    def test_migrate_feature_branch_rejects_unsafe_branch_identity_before_write(self) -> None:
+        self.prepare_branch_migration()
+        self.git("branch", "feature/not-current")
+        before = self.state_bytes()
+        for invalid_branch in ("invalid..branch", "@{-1}", "HEAD", "refs/heads/explicit"):
+            with self.assertRaisesRegex(lifecycle_state.LifecycleStateError, "invalid-feature-branch"):
+                lifecycle_state.migrate_feature_branch(
+                    **self.migration_arguments(branch=invalid_branch),
+                )
+        with self.assertRaisesRegex(
+            lifecycle_state.LifecycleStateError, "branch-migration-branch-not-current-checkout",
+        ):
+            lifecycle_state.migrate_feature_branch(
+                **self.migration_arguments(branch="feature/not-current"),
+            )
+        with self.assertRaisesRegex(lifecycle_state.LifecycleStateError, "branch-migration-head-mismatch"):
+            lifecycle_state.migrate_feature_branch(
+                **self.migration_arguments(expected_head="0" * 40),
+            )
+        nested = self.repo / "nested"
+        nested.mkdir()
+        arguments = self.migration_arguments()
+        arguments["repo"] = nested
+        with self.assertRaisesRegex(
+            lifecycle_state.LifecycleStateError, "branch-migration-repository-root-mismatch",
+        ):
+            lifecycle_state.migrate_feature_branch(**arguments)
+        self.assertEqual(self.state_bytes(), before)
+
+    def test_migrate_feature_branch_rejects_detached_and_unborn_checkouts_before_write(self) -> None:
+        self.prepare_branch_migration()
+        before = self.state_bytes()
+        self.git("checkout", "--detach")
+        with self.assertRaisesRegex(
+            lifecycle_state.LifecycleStateError, "branch-migration-requires-attached-local-branch",
+        ):
+            lifecycle_state.migrate_feature_branch(**self.migration_arguments())
+        self.assertEqual(self.state_bytes(), before)
+
+        unborn = self.base / "unborn"
+        unborn.mkdir()
+        subprocess.run(["git", "-C", str(unborn), "init"], check=True, capture_output=True, text=True)
+        context = ".sdlc-v1/context/engineering-unborn.md"
+        (unborn / context).parent.mkdir(parents=True)
+        (unborn / context).write_text("# engineering\n", encoding="utf-8")
+        lifecycle_state.initialize(unborn)
+        lifecycle_state.capture_requirement(
+            repo=unborn,
+            requirement_id="REQ-unborn",
+            title="Unborn repository",
+            product_context_ref=context,
+        )
+        lifecycle_state.mark_requirement_ready(repo=unborn, requirement_id="REQ-unborn")
+        lifecycle_state.start_feature(
+            repo=unborn,
+            requirement_id="REQ-unborn",
+            feature_id="FEAT-unborn",
+            branch="feature/FEAT-unborn",
+            engineering_context_ref=context,
+        )
+        unborn_branch = subprocess.run(
+            ["git", "-C", str(unborn), "symbolic-ref", "--short", "HEAD"],
+            check=True, capture_output=True, text=True,
+        ).stdout.strip()
+        unborn_before = (unborn / ".sdlc-v1/state.json").read_bytes()
+        with self.assertRaisesRegex(
+            lifecycle_state.LifecycleStateError, "branch-migration-requires-head-commit",
+        ):
+            lifecycle_state.migrate_feature_branch(
+                repo=unborn,
+                feature_id="FEAT-unborn",
+                expected_branch="feature/FEAT-unborn",
+                branch=unborn_branch,
+                expected_head="0" * 40,
+                reason="unborn checkout is not migratable",
+            )
+        self.assertEqual((unborn / ".sdlc-v1/state.json").read_bytes(), unborn_before)
+
+    def test_migrate_feature_branch_rejects_git_local_environment_before_write(self) -> None:
+        self.prepare_branch_migration()
+        arguments = self.migration_arguments()
+        redirects = (
+            ("GIT_INDEX_FILE", str(self.base / "other-index")),
+            ("GIT_DIR", str(self.base / "other-git")),
+            ("GIT_NAMESPACE", "other-namespace"),
+            ("GIT_CONFIG_COUNT", "1"),
+            ("GIT_CONFIG_KEY_0", "core.worktree"),
+            ("GIT_CONFIG_VALUE_0", str(self.base / "other-worktree")),
+        )
+        for name, value in redirects:
+            before = self.state_bytes()
+            with mock.patch.dict(os.environ, {name: value}, clear=True):
+                with self.assertRaisesRegex(
+                    lifecycle_state.LifecycleStateError,
+                    f"branch-migration-rejects-git-local-environment:{name}",
+                ):
+                    lifecycle_state.migrate_feature_branch(**arguments)
+            self.assertEqual(self.state_bytes(), before)
+
+        without_index_guard = lifecycle_state._GIT_LOCAL_ENVIRONMENT_VARIABLES - {"GIT_INDEX_FILE"}
+        before_mutation_check = self.state_bytes()
+        with mock.patch.object(lifecycle_state, "_GIT_LOCAL_ENVIRONMENT_VARIABLES", without_index_guard):
+            with mock.patch.dict(
+                os.environ,
+                {"GIT_INDEX_FILE": str(self.base / "other-index")},
+                clear=True,
+            ):
+                with mock.patch.object(
+                    lifecycle_state,
+                    "_repo_root",
+                    side_effect=RuntimeError("index guard was bypassed"),
+                ):
+                    with self.assertRaisesRegex(RuntimeError, "index guard was bypassed"):
+                        lifecycle_state.migrate_feature_branch(**arguments)
+        self.assertEqual(self.state_bytes(), before_mutation_check)
+
+    def test_migrate_feature_branch_rejects_missing_context_staged_or_unmerged_state(self) -> None:
+        self.prepare_branch_migration()
+        valid_context = lifecycle_state.load(self.repo)
+        missing_context = lifecycle_state.load(self.repo)
+        missing_context["features"]["FEAT-migrate"]["engineering_context_ref"] = (
+            ".sdlc-v1/context/missing.md"
+        )
+        lifecycle_state.state_path(self.repo).write_text(
+            json.dumps(missing_context, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        before_missing = self.state_bytes()
+        with self.assertRaisesRegex(lifecycle_state.LifecycleStateError, "engineering-context-not-found"):
+            lifecycle_state.migrate_feature_branch(**self.migration_arguments())
+        self.assertEqual(self.state_bytes(), before_missing)
+
+        lifecycle_state.state_path(self.repo).write_text(
+            json.dumps(valid_context, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        context_path = self.repo / ".sdlc-v1/context/engineering-FEAT-migrate.md"
+        context_path.unlink()
+        context_path.symlink_to(self.repo / "README.md")
+        before_symlink = self.state_bytes()
+        with self.assertRaisesRegex(
+            lifecycle_state.LifecycleStateError, "engineering-context-cannot-be-symlink",
+        ):
+            lifecycle_state.migrate_feature_branch(**self.migration_arguments())
+        self.assertEqual(self.state_bytes(), before_symlink)
+
+    def test_migrate_feature_branch_rejects_staged_or_unmerged_state_before_write(self) -> None:
+        self.prepare_branch_migration()
+        self.git("add", ".sdlc-v1/state.json")
+        before_staged = self.state_bytes()
+        with self.assertRaisesRegex(
+            lifecycle_state.LifecycleStateError, "state-is-staged-commit-or-unstage-before-update",
+        ):
+            lifecycle_state.migrate_feature_branch(**self.migration_arguments())
+        self.assertEqual(self.state_bytes(), before_staged)
+
+        self.git("read-tree", "HEAD")
+        blob = self.git("hash-object", "-w", ".sdlc-v1/state.json").stdout.strip()
+        entries = "".join(
+            f"100644 {blob} {stage}\t.sdlc-v1/state.json\n" for stage in (1, 2, 3)
+        )
+        subprocess.run(
+            ["git", "-C", str(self.repo), "update-index", "--index-info"],
+            input=entries, text=True, check=True, capture_output=True,
+        )
+        before_unmerged = self.state_bytes()
+        with self.assertRaisesRegex(lifecycle_state.LifecycleStateError, "state-has-unmerged-index-entries"):
+            lifecycle_state.migrate_feature_branch(**self.migration_arguments())
+        self.assertEqual(self.state_bytes(), before_unmerged)
+
+    def test_migrate_feature_branch_supports_a_linked_worktree(self) -> None:
+        self.prepare_branch_migration()
+        self.commit_state("share branch migration fixture")
+        linked = self.base / "linked"
+        self.git("worktree", "add", "-b", "feature/linked", str(linked))
+        head = subprocess.run(
+            ["git", "-C", str(linked), "rev-parse", "HEAD"],
+            check=True, capture_output=True, text=True,
+        ).stdout.strip()
+
+        result = lifecycle_state.migrate_feature_branch(
+            repo=linked,
+            feature_id="FEAT-migrate",
+            expected_branch="feature/FEAT-migrate",
+            branch="feature/linked",
+            expected_head=head,
+            reason="continue in the linked worktree",
+        )
+
+        self.assertEqual(result["repo_root"], str(linked.resolve()))
+        self.assertEqual(result["new_branch"], "feature/linked")
+        self.assertEqual(lifecycle_state.load(linked)["features"]["FEAT-migrate"]["branch"], "feature/linked")
+
+    def test_migrate_feature_branch_rechecks_identity_inside_the_locked_operation(self) -> None:
+        self.prepare_branch_migration()
+        head = self.git("rev-parse", "HEAD").stdout.strip()
+        identity = {"head": head, "repo_root": str(self.repo.resolve())}
+        changed = {"head": "f" * 40, "repo_root": str(self.repo.resolve())}
+        before = self.state_bytes()
+        with mock.patch.object(
+            lifecycle_state,
+            "_current_branch_migration_identity",
+            side_effect=[identity, identity, changed],
+        ):
+            with self.assertRaisesRegex(
+                lifecycle_state.LifecycleStateError,
+                "branch-migration-identity-changed-during-operation",
+            ):
+                lifecycle_state.migrate_feature_branch(**self.migration_arguments(expected_head=head))
+        self.assertEqual(self.state_bytes(), before)
+
+    def test_migrate_feature_branch_marks_postreplace_failures_as_recovery_cases(self) -> None:
+        self.prepare_branch_migration()
+        with mock.patch.object(lifecycle_state, "_sync_directory", side_effect=OSError("disk failure")):
+            with self.assertRaisesRegex(lifecycle_state.LifecycleStateError, "cannot-write-state"):
+                lifecycle_state.migrate_feature_branch(**self.migration_arguments())
+        self.assertEqual(lifecycle_state.load(self.repo)["features"]["FEAT-migrate"]["branch"], "feature/migrated")
+
+    def test_migrate_feature_branch_marks_output_failures_as_recovery_cases(self) -> None:
+        self.prepare_branch_migration()
+        arguments = self.migration_arguments()
+        argv = [
+            "--repo", str(self.repo), "migrate-feature-branch",
+            "--feature-id", str(arguments["feature_id"]),
+            "--expected-branch", str(arguments["expected_branch"]),
+            "--branch", str(arguments["branch"]),
+            "--expected-head", str(arguments["expected_head"]),
+            "--reason", str(arguments["reason"]),
+        ]
+        with mock.patch.object(lifecycle_state, "_emit", side_effect=OSError("output failure")):
+            with self.assertRaisesRegex(OSError, "output failure"):
+                lifecycle_state.main(argv)
+        self.assertEqual(lifecycle_state.load(self.repo)["features"]["FEAT-migrate"]["branch"], "feature/migrated")
+
+    def test_migrate_feature_branch_cli_help_audit_and_two_writers(self) -> None:
+        self.prepare_branch_migration()
+        command = [sys.executable, str(HERE / "lifecycle_state.py"), "--repo", str(self.repo)]
+        help_result = subprocess.run(
+            [*command, "migrate-feature-branch", "--help"], capture_output=True, text=True,
+        )
+        self.assertEqual(help_result.returncode, 0, help_result.stderr)
+        for option in ("--feature-id", "--expected-branch", "--branch", "--expected-head", "--reason", "--at"):
+            self.assertIn(option, help_result.stdout)
+        self.assertIn("not checkout code", help_result.stdout)
+        self.assertIn("exact branch value currently stored", help_result.stdout)
+        self.assertIn("already checked out", help_result.stdout)
+        self.assertIn("full current commit ID", help_result.stdout)
+        self.assertIn("pre-recorded migration decision", help_result.stdout)
+
+        arguments = self.migration_arguments()
+        migration_command = [
+            *command,
+            "migrate-feature-branch",
+            "--feature-id", str(arguments["feature_id"]),
+            "--expected-branch", str(arguments["expected_branch"]),
+            "--branch", str(arguments["branch"]),
+            "--expected-head", str(arguments["expected_head"]),
+            "--reason", str(arguments["reason"]),
+            "--at", "2026-10-07T00:00:00Z",
+        ]
+        first = subprocess.Popen(migration_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        second = subprocess.Popen(migration_command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        results = [process.communicate() + (process.returncode,) for process in (first, second)]
+        return_codes = sorted(result[2] for result in results)
+        self.assertEqual(return_codes, [0, 2])
+        successful_output = next(stdout for stdout, _stderr, code in results if code == 0)
+        audit = json.loads(successful_output)
+        self.assertEqual(audit["operation"], "migrate-feature-branch")
+        self.assertEqual(audit["old_branch"], "feature/FEAT-migrate")
+        self.assertEqual(audit["new_branch"], "feature/migrated")
+        self.assertEqual(audit["repo_root"], str(self.repo.resolve()))
+        self.assertEqual(lifecycle_state.load(self.repo)["features"]["FEAT-migrate"]["branch"], "feature/migrated")
+
+    def test_branch_migration_does_not_add_global_branch_rules_to_queries_or_delivery(self) -> None:
+        self.initialize_state()
+        self.capture("REQ-delivery")
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-delivery")
+        self.start("REQ-delivery", "FEAT-delivery")
+        self.complete_one_task("FEAT-delivery")
+        self.commit_state("ready for delivery checks")
+        validated_head = self.git("rev-parse", "HEAD").stdout.strip()
+        self.git("checkout", "--detach")
+        lifecycle_state.record_validation(repo=self.repo, feature_id="FEAT-delivery", result="pass")
+        self.git("checkout", "-b", "release/FEAT-delivery")
+        self.assertEqual(lifecycle_state.status(self.repo)["features"], 1)
+        self.assertEqual(
+            lifecycle_state.feature_projection(repo=self.repo, feature_id="FEAT-delivery")["feature"]["branch"],
+            "feature/FEAT-delivery",
+        )
+        lifecycle_state.record_review(repo=self.repo, feature_id="FEAT-delivery", decision="approved")
+        self.git("checkout", "--detach")
+        self.assertEqual(lifecycle_state.next_action(self.repo)["stage"], "ship")
+        lifecycle_state.record_release(repo=self.repo, feature_id="FEAT-delivery", commit=validated_head)
+        self.assertEqual(
+            lifecycle_state.feature_projection(repo=self.repo, feature_id="FEAT-delivery")["feature"]["status"],
+            "released",
+        )
+
+    def test_migration_to_a_different_implementation_cannot_bypass_approved_delivery(self) -> None:
+        self.initialize_state()
+        self.capture("REQ-protection")
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-protection")
+        self.start("REQ-protection", "FEAT-protection")
+        self.complete_one_task("FEAT-protection")
+        self.commit_state("ready for implementation protection")
+        lifecycle_state.record_validation(repo=self.repo, feature_id="FEAT-protection", result="pass")
+        lifecycle_state.record_review(repo=self.repo, feature_id="FEAT-protection", decision="approved")
+        self.git("checkout", "-b", "feature/migrated")
+        (self.repo / "implementation.txt").write_text("different implementation\n", encoding="utf-8")
+        self.git("add", "implementation.txt")
+        self.git("commit", "-m", "implement different feature branch")
+        different_head = self.git("rev-parse", "HEAD").stdout.strip()
+
+        before_migration = lifecycle_state.feature_projection(
+            repo=self.repo, feature_id="FEAT-protection",
+        )["feature"]
+
+        lifecycle_state.migrate_feature_branch(
+            repo=self.repo,
+            feature_id="FEAT-protection",
+            expected_branch="feature/FEAT-protection",
+            branch="feature/migrated",
+            expected_head=different_head,
+            reason="continue on the branch with the implementation",
+        )
+        after_migration = lifecycle_state.feature_projection(
+            repo=self.repo, feature_id="FEAT-protection",
+        )["feature"]
+        for field in ("status", "tasks", "validation", "review", "release"):
+            self.assertEqual(after_migration[field], before_migration[field])
+
+        before_review = self.state_bytes()
+        with self.assertRaisesRegex(
+            lifecycle_state.LifecycleStateError, "review-commit-does-not-match-validation",
+        ):
+            lifecycle_state.record_review(repo=self.repo, feature_id="FEAT-protection", decision="approved")
+        self.assertEqual(self.state_bytes(), before_review)
+
+        before_release = self.state_bytes()
+        with self.assertRaisesRegex(
+            lifecycle_state.LifecycleStateError, "release-commit-does-not-match-validation",
+        ):
+            lifecycle_state.record_release(repo=self.repo, feature_id="FEAT-protection")
+        self.assertEqual(self.state_bytes(), before_release)
 
 
 if __name__ == "__main__":

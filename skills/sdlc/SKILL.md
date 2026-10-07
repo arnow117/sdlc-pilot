@@ -90,6 +90,11 @@ record-release
 retract-release
 ```
 
+`migrate-feature-branch` 是受控的 Feature 分支登记修正，不是普通阶段转换。仅在登记与实际开发
+worktree 不一致时使用；主 Agent 先按[开发分支登记迁移](references/lightweight-runtime.md#51-开发分支登记迁移)
+完成同一 Feature 写入者交接和工程上下文审计，核对当前 `--help` 参数并执行迁移，再派发新的完整 brief。它不替代
+Task、validation、review 或 release 的转换。
+
 `revise-requirement` 只修改尚未绑定 Feature 的 `captured` Requirement；
 `cancel-requirement` 只取消未绑定且没有活动依赖方的 backlog 项。两者保留
 原 ID 和 Git 历史，不能用来改写已进入交付的需求。
@@ -105,6 +110,9 @@ Requirement 恢复为 `validated`。正文证据写入 Feature 工程上下文�
 ## 5. 恢复与交接
 
 - 恢复工作时先读 `status` 或具体 projection，再读它引用的上下文。
+- 若当前 worktree 与 Feature 登记 branch 不一致，查询仍保持只读；Build 前按
+  [开发分支登记迁移](references/lightweight-runtime.md#51-开发分支登记迁移)核对或受控修正，不能自行 checkout
+  或把登记值当作全局 Git 分支一致性检查。
 - `record-validation` 记录测试时的业务代码 commit；评审和发布始终对应这个实现版本。
 - 验证后允许提交仅修改 `.sdlc-v1/**` 的状态、上下文和证据。若 validation commit 到当前 HEAD 在该目录之外有差异，或业务代码工作树不干净，则回到 build/validate。
 - `project.md` 只索引长期工程上下文，不复制其正文；`.sdlc-v1/context/*.md` 只记录当前 Requirement/Feature 的决定、证据和发布后观察。二者通过路径引用协作，不共享状态文件。

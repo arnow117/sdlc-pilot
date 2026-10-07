@@ -98,6 +98,8 @@ Task:    todo ↔ in_progress → done
 ```
 
 - `start-feature` 把一个 ready Requirement 绑定到实际开发分支和已有的 `.sdlc-v1/context/*.md` 工程上下文；
+- `migrate-feature-branch` 在实际开发 worktree 已变化时受控修正未关闭 Feature 的 branch 登记；完整身份、审计、
+  写入与恢复约束以 [`lightweight-runtime.md`](../../skills/sdlc/references/lightweight-runtime.md#51-开发分支登记迁移) 为准。
 - `add-task` / `set-task-status` 维护实现任务与依赖；
 - SDD/TDD 的正文和测试仍在普通项目文件中；
 - `record-validation`、`record-review`、`record-release` 只记录最小结果；
@@ -171,6 +173,10 @@ state 是普通 JSON。如果两条分支修改不同记录但产生文本冲突
 同一工作会话内可以连续更新 state，不要求每次状态变化都提交。需要跨机器交接、团队同步或形成代码里程碑时，
 再和相关代码/文档一起 commit。这样 Git 历史保持有意义，而不是充满机械状态事件。
 
+实际开发 branch 与 Feature 登记不一致时，先由主 Agent 交接同一 Feature 的活动写入者，在工程上下文保存决定和参数，
+再按[开发分支登记迁移](../../skills/sdlc/references/lightweight-runtime.md#51-开发分支登记迁移)受控更新登记。它不 checkout
+代码、不重置交付证据，也不把 branch 一致性施加到只读查询或现有 validation/review/release。
+
 ## 7. 一致性规则
 
 保留以下轻量规则：
@@ -188,6 +194,8 @@ state 是普通 JSON。如果两条分支修改不同记录但产生文本冲突
 - validation/review/release 时业务代码工作树必须干净，state 和当前 context 必须已追踪且无冲突；
 - 写入采用本机文件锁和原子替换，避免同一 clone 的并发进程破坏 JSON；
 - 已 staged 的 state 不被后台写入覆盖。
+- 分支登记迁移只修改目标开放 Feature 的 `branch` 与 `updated_at`；写入前拒绝保持 state 不变，原子替换后的 fsync 或
+  输出失败则先查询恢复，不以错误退出推断未写入。
 
 这些规则保护当前事实，不创造第二套历史系统。
 

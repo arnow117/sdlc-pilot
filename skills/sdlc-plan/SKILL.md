@@ -27,7 +27,10 @@ SDLC 通用改进才提议 `/sdlc evolve`。
 ## 流程
 
 1. 加载 `sdlc-software-delivery` 和 [`lifecycles/software-delivery.md`](../sdlc/references/lifecycles/software-delivery.md#11-global-usage-document-story-and-parameter-contract)；用户可见改动标明受影响的 usage 入口、故事/场景、参数来源和实际使用验证范围，内部改动则记录不适用理由。
-2. 选择 Feature ID 与实际工作分支。
+2. 选择 Feature ID 与实际工作分支。登记 branch 后若需改到另一实际开发 worktree，遵循
+   [`lightweight-runtime.md` 的开发分支登记迁移](../sdlc/references/lightweight-runtime.md#51-开发分支登记迁移)：
+   先记录工程决定和预期 HEAD，由主 Agent 在同一 Feature 写入者交接后受控执行；不要在 Plan 中把 branch
+   写成 checkout 指令或另设进度状态。
 3. 在自定义设计和 Task 拆分之前完成复用评估：
    - 依次检查当前代码库的相近实现、现有依赖已提供的能力、官方维护的扩展或框架；只有前三项不足时才扩大外部检索。
    - 非简单功能最多比较三个可行候选，按需求覆盖、扩展方式、集成与迁移成本、维护活跃度、许可证与供应链风险、可测试性判断。

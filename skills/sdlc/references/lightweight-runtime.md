@@ -83,6 +83,42 @@ lifecycle_state.py --repo <repo> set-task-status \
 
 Task 可带 `--depends-on <TASK-id>`。依赖未完成时不能开始下游 Task。
 
+### 5.1 开发分支登记迁移
+
+Feature 的 `branch` 是协作登记，不是 checkout 指令。登记与实际开发 worktree 不一致时，主 Agent 或独立维护者先让同一
+Feature 的活动写入者交接或停止，并在该 Feature 工程上下文的实施决定/证据中预先保存迁移决定、完整参数、原因和预期
+HEAD；随后才可在实际目标 worktree 执行：
+
+```bash
+python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> \
+  migrate-feature-branch --feature-id <FEAT-id> \
+  --expected-branch <stored-old-branch> --branch <checked-out-local-branch> \
+  --expected-head <full-current-commit-id> --reason <pre-recorded-decision>
+```
+
+命令不 checkout 代码、不接受 Task、不修改 Markdown。它只对未 `released`/`cancelled` 的 Feature 生效：旧登记必须精确匹配
+`--expected-branch`，新 branch 必须是不同的、已检出的显式本地分支，`--repo` 必须是实际 Git worktree 根目录，且当前附着
+branch 和完整 HEAD 必须与参数匹配。它拒绝 detached/unborn checkout、Git 的仓库/index/对象/config 重定向环境，以及缺失或
+符号链接的工程上下文；普通 linked worktree 可以使用。
+
+既有 state 锁、staged/unmerged 拒绝、文件身份检查和原子替换继续适用；锁内再次检查旧登记与 worktree 身份。成功时只修改
+目标 Feature 的 `branch` 和 `updated_at`，返回旧/新 branch、实际 HEAD、规范根目录、原因、时间和工程上下文引用，不重置
+Task、validation、review 或 release。写入前的拒绝保持 state 不变；原子替换后的目录 fsync 或 CLI 输出失败可能已经写入，必须
+先只读查询 state 与 Git 再恢复，不能把错误退出自动重试为旧值迁移。成功后把返回的实际结果追加到同一工程上下文。
+
+查询和现有 validation/review/release 不要求登记 branch 与当前 checkout 一致；它们仍按被验证实现 commit 的既有规则判断。
+若迁移后的实现不同，review/release 仍会要求适用的重新验证，不能借迁移绕过版本检查。
+
+| 执行用途 | 分支与版本如何核对 |
+|---|---|
+| 只读查询/恢复定位 | 读取 state 和上下文；当前分支不同或 detached 不阻止查询，也不自动迁移。 |
+| 开发/Build | 登记 branch 表示本 Feature 的开发位置；核对实际 root、branch、HEAD，必要时交接并显式迁移后再派工。 |
+| 发布目标 | 是声明的源码分发或部署目标；目标分支可以不同于开发分支，按 validation commit、代码差异和 smoke/观测要求验收，不为发布统一改历史 branch。 |
+| detached 验证/评审环境 | 使用明确的实现 commit，继续满足 tracked/clean-worktree 等既有条件；不把 detached 当成待登记的开发分支。 |
+
+派工 brief 分别写明登记的开发分支、实际执行 root/branch（或 detached）/HEAD、执行用途和发布目标；不要用一个 branch 字段替代这些信息。
+迁移前保持目标 worktree 身份稳定，等待或停止同 Feature 写入者并处理未验收结果；现有 state 文件锁不锁 Git，也不提供跨 clone 的事务。
+
 ## 6. 验证、评审与发布
 
 ```bash

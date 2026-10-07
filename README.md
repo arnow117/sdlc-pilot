@@ -169,6 +169,27 @@ python3 scripts/lifecycle_state.py --repo <target-repo> retract-release \
   --feature-id FEAT-001 --reason "recorded after merge without deployment smoke"
 ```
 
+### 修正 Feature 开发分支登记
+
+当未关闭 Feature 的登记 branch 与实际开发 worktree 不一致时，主 Agent 或独立维护者先让同一 Feature 的写入者完成
+交接，并在该 Feature 工程上下文预先记录决定、完整参数、原因和预期 HEAD。随后在实际 worktree 执行：
+
+```bash
+python3 scripts/lifecycle_state.py --repo <target-repo> migrate-feature-branch \
+  --feature-id FEAT-001 \
+  --expected-branch feature/old-name \
+  --branch feature/current-name \
+  --expected-head <full-current-commit-id> \
+  --reason "recorded migration decision"
+```
+
+`--expected-branch` 是 state 中必须精确匹配的旧值；`--branch` 必须是当前已检出的显式本地分支；`--expected-head`
+必须是当前 worktree 的完整 commit ID。该命令只更新目标 Feature 的 branch 登记和时间，不 checkout 代码、不接受 Task、
+不改 Markdown，也不重置 validation/review/release。成功后将 CLI 返回的实际 branch、HEAD、根目录和时间追加到同一工程
+上下文。写入前的拒绝不会修改 state；若原子替换后的 fsync 或输出失败，结果可能已经写入，先只读查询 state 与 Git，
+不要按旧参数自动重试。完整安全与恢复规则见
+[`lightweight-runtime.md`](skills/sdlc/references/lightweight-runtime.md#51-开发分支登记迁移)。
+
 公开查询命令为 `status`、`next`、`readyqueue`、`product-projection` 和 `feature-projection`。`next` 在只有一个
 候选时返回下一阶段；存在多个活动 Feature/Requirement 时返回 `needs_selection` 和候选列表，不替用户猜测。
 

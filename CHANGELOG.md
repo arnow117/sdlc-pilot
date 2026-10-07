@@ -2,6 +2,18 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [Unreleased]
+
+### Added
+
+- `migrate-feature-branch` 为开放 Feature 提供受控的开发分支登记修正：验证实际 worktree、显式本地 branch 和完整 HEAD，
+  保留 Task 与交付证据，并在原子替换后失败时要求只读恢复。
+
+### Compatibility
+
+- `state_version=3`、既有 lifecycle 命令与 validation/review/release 的实现 commit 规则保持不变；新增命令不会 checkout
+  代码、自动编辑工程上下文或改变现有查询的 branch 要求。
+
 ## [2.0.0] — 2026-10-07
 
 ### Changed（Breaking）

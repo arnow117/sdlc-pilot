@@ -58,6 +58,12 @@ The brief includes all of the following:
   paths, and an observable acceptance scenario before implementation.
 - Write scope, dependencies, branch/worktree constraints, completion conditions,
   and required verification.
+- For a Feature whose registered development branch must change, use the authoritative
+  [branch-registration migration contract](lightweight-runtime.md#51-开发分支登记迁移).
+  The main Agent first receives or stops the same Feature's active writer, records
+  the actual worktree/root/HEAD and execution purpose, and dispatches a complete
+  replacement brief after migration. Other Features retain their existing parallel
+  eligibility; the protocol adds no worker registry.
 - `allowed_transitions`: the ordered lifecycle operation allow-list for this brief.
   Use `[]` when no lifecycle mutation is allowed. For every allowed operation, list
   the exact required and optional long option names emitted by that operation's
