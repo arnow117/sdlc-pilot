@@ -1,5 +1,9 @@
 # sdlc-pilot — Design Spec
 
+> **历史设计（0.x）**：旧状态路径、工具与完成条件已被取代，本文保留原始决策，不用于当前执行。
+> 当前入口：[轻量基础模型](2026-08-10-lightweight-sdlc.md)、[路由技能](../../skills/sdlc/SKILL.md)、
+> [Web / App 验证](../../skills/sdlc/references/validate-modes/e2e.md)。
+
 > Date: 2026-06-03
 > Status: Design APPROVED → build (scope locked 2026-06-04, see §14). Source map: `docs/distillation-source-map.md`
 > Location: `workspace/20260603-sdlc-pilot/` (future standalone GitHub repo)

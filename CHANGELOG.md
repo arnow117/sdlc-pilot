@@ -14,6 +14,11 @@
 - `state_version=3`、既有 lifecycle 命令与 validation/review/release 的实现 commit 规则保持不变；新增命令不会 checkout
   代码、自动编辑工程上下文或改变现有查询的 branch 要求。
 
+### Documentation
+
+- 刷新当前规范索引、Onboard 项目上下文示例和框架蒸馏来源；区分已发布的 2.0.0 与 Unreleased 分支登记迁移。
+- 旧设计和吸收审计标明历史范围；看板文档记录当前只读卡片实现，保留旧视觉方案而不将其宣称为已实现能力。
+
 ## [2.0.0] — 2026-10-07
 
 ### Changed（Breaking）

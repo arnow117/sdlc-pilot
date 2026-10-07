@@ -4,7 +4,22 @@
 > 产出方式：8 个并行 agent 各深读一组源 skill 的**完整** SKILL.md + references（非摘录），
 > 覆盖 ~40 个源。本文是综合判定，不是原始转录。
 
-## 0. 跨切面结论（先看这个）
+## 当前适配与权威入口（2026-10-07）
+
+下方初期研究保留原始取舍与来源，不代表当前安装环境、状态 schema 或执行工具。现行规则以技能正文为准，
+已发布与 Unreleased 的范围见 [CHANGELOG](../CHANGELOG.md)。
+
+| 当前能力 | 权威入口与取舍 |
+|---|---|
+| 项目与进度 | [轻量基础模型](specs/2026-08-10-lightweight-sdlc.md)：`project.md`、产品 / 工程上下文与唯一 `state.json`；不再使用 PROFILE / STATE 旧协议 |
+| Web 用户旅程 | [`e2e:Web`](../skills/sdlc/references/validate-modes/e2e.md#web)：tester-army/e2e CLI 与 Web engine；Playwright 等可补充检查，MCP 探索不替代提交测试的验收执行 |
+| App 用户旅程 | [`e2e:App`](../skills/sdlc/references/validate-modes/e2e.md#app)：Maestro CLI 与已提交 Flow / 引用资产；工具准备及实际运行证据属于目标工程 |
+| 失败恢复 | [验证归因](../skills/sdlc-validate/SKILL.md#验证归因)：区分实现失败、环境受阻与证据不足；需要修改实现或测试资产时才返回 Build |
+| 设计方法 | [Impeccable 可选适配](../skills/sdlc/references/integrations/impeccable.md)：1.9.0 起按需使用，缺失时继续既有设计与必要验证 |
+| 维护与发布 | [evolve](../skills/sdlc/references/evolve-loop.md)：局部维护、结构改动、版本与远端发布检查分别按现行约束执行 |
+| 分支登记迁移 | [运行时操作指南](../skills/sdlc/references/lightweight-runtime.md#51-开发分支登记迁移)：当前 Unreleased 能力，保留已交付证据，未自动发布到 2.0.0 tag |
+
+## 0. 初期跨切面结论（历史研究）
 
 **"我们是不是在重造 gsd？" —— 不是。** 每个 sdlc 目标的"补什么"都被两类东西主导：
 (a) **剥离运行时**（把方法论从依赖里拆出来），(b) **我们的三条差异化**（路由/surface-map、可移植、拥有权）。
@@ -22,7 +37,7 @@
 
 ---
 
-## 1. 各目标蒸馏映射
+## 1. 初期目标蒸馏映射（历史研究）
 
 ### sdlc-onboard — 覆盖：中-强
 | 维度 | 内容 |
@@ -123,7 +138,7 @@
 
 ---
 
-## 5. Canonical 源速查
+## 5. 初期 Canonical 源速查（历史研究）
 
 | sdlc 目标 | 第一 canonical 源 |
 |---|---|
@@ -175,3 +190,15 @@
 | 适配 | 复用 SDLC 现有评审分级、去重与返修流程；替代方案需要当前版本的能力证据及行为保持依据，有据的保留或延期进入现有研发上下文。 |
 | 不采用 | 最少文件、单行实现、单实现接口或测试规模等机械限制；不以删行量衡量质量，不引入 Ponytail hooks、独立审计/债务流程或运行时依赖。 |
 | 权威定义 | 完整行为仅定义在 [`sdlc-review`](../skills/sdlc-review/SKILL.md)，README 只介绍并链接；不复制整套 Ponytail 方法。 |
+
+## 8. 补充源：tester-army/e2e 与 Maestro（2026-10-07，2.0.0）
+
+来源：[tester-army/e2e](https://github.com/tester-army/e2e)、[Maestro](https://github.com/mobile-dev-inc/Maestro)。
+本次接入基于框架源码 / 文档研究与 SDLC 约束审查；不宣称已经完成目标业务项目的浏览器、设备或模型运行。
+
+| 维度 | 取舍 |
+|---|---|
+| 借鉴 | Web 的目标驱动操作、确定性断言、动作回放与运行报告；App 的可提交 YAML Flow 与 CLI 回归执行。 |
+| 适配 | Plan / Build 准备资产与环境，Validate 独立执行；Web 只读缓存、当前构建与报告核对、失败证据归档及按原因恢复。 |
+| 不采用 | 不用 e2e 的移动 engine 替代 Maestro；不以 MCP、生成测试、截图或 Agent 自评代替必要业务断言，不另建 SDLC runner / 状态。 |
+| 权威定义 | [`e2e`](../skills/sdlc/references/validate-modes/e2e.md)；资产和具体运行入口留在目标工程，框架行为以固定安装版本为准。 |

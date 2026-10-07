@@ -1,34 +1,128 @@
-# 示例:sdlc-onboard 的产出长什么样(脱敏通用样例)
+# 示例：sdlc-onboard 的项目上下文
 
-> 这是 `sdlc-onboard` 跑在一个**虚构** web+API 项目 `acme-shop` 上后写出的 `.sdlc/PROFILE.md` 样子。
-> 仅供理解产出形态;**真实项目的 dogfood 产物不入库**(`docs/dogfood/` 已 gitignore,只在本地跑)。
+> 这是虚构 Web + API 项目 `acme-shop` 的 `.sdlc-v1/project.md` 示例，展示已有源码但测试准备尚不完整的情况。
+> 所有路径和事实均为示例设定，不是实际工程的运行证据；真实 Onboard 必须从目标仓库核对后填写。
 
-```markdown
-# Project Profile: acme-shop
+结构来自 [PROJECT 模板](../skills/sdlc/references/templates/PROJECT.md)。Onboard 记录事实与缺口；Plan 明确验收策略，
+Build 准备环境和测试资产，Validate 执行当前 commit 的必要检查。Web / App 工具约束见
+[e2e](../skills/sdlc/references/validate-modes/e2e.md)。
 
-tech-stack: [next.js(TS), fastapi(python), postgres]
-test-commands: { unit: "pytest -q", e2e: "playwright test", typecheck: "tsc --noEmit", coverage: "pytest --cov=app --cov-fail-under=80", build: "pnpm build" }
+~~~markdown
+# Project Context: acme-shop
 
-## Surface map        # 模块 → globs → 默认角色 → validate 模式
-- web-frontend:  globs[ web/**, components/** ]      roles[client-dev, design]   modes[correctness, e2e:Web]
-- api:           globs[ services/api/** ]             roles[server-dev]           modes[correctness, e2e:OpenAPI]
-- domain-model:  globs[ services/api/models/**, migrations/** ]  roles[server-dev, architect]  modes[correctness]
-- (跨 web+api 改动时 R8 自动叠加 architect:看前端类型↔API schema↔DB model 端到端是否对齐)
+## Purpose
 
-## Tech stack（带"原因"）
-- Next.js(TS):团队前端栈;SSR + 类型安全。
-- FastAPI:Python 后端,自动 OpenAPI(e2e:OpenAPI 模态可直接用)。
-- Postgres:关系型 + 迁移可控。
+面向消费者的购物站点。Web 负责商品浏览与结算，API 负责商品、订单和库存；输入为用户请求，输出为页面与业务响应。
 
-## Conventions
-- 前端走 CSS token(见 DESIGN.md);后端 handler 薄、逻辑入 service 层。
+## Tech stack
+
+| Area | Technology | Why / source |
+|---|---|---|
+| Runtime | TypeScript、Python | web/package.json、services/api/pyproject.toml |
+| Framework | Next.js、FastAPI | 依赖声明与对应源码入口 |
+| Storage | Postgres | services/api/db.py；示例项目的关系型存储 |
+| External systems | none | 示例项目未配置支付、邮件等外部集成 |
 
 ## Entry points
-- 前端:web/app/layout.tsx;后端:services/api/main.py(uvicorn);迁移:alembic upgrade head。
 
-## Known risks
-- services/api/legacy/ 无测试覆盖(覆盖率缺口,建 baseline 优先)。
+| Purpose | Path or command | Notes |
+|---|---|---|
+| Start | none | 尚无经过运行验证的启动命令 |
+| Web | web/app/layout.tsx | 页面根入口 |
+| API | services/api/main.py | 应用与路由注册 |
+| Configuration | web/package.json、services/api/pyproject.toml | 依赖与工程配置 |
+
+## Commands
+
+```yaml
+commands:
+  unit: "none"
+  coverage: "none"
+  e2e: "none"
+  typecheck: "none"
+  lint: "none"
+  build: "none"
 ```
 
-> 要点:产出是**单一聚合 PROFILE.md**,核心是 `## Surface map`(改动代码路由的可追踪输入)。
-> 跑法:对目标项目 `/sdlc` → 无 PROFILE 自动进 onboard;或独立 `/sdlc validate --mode=e2e --scope=full-chain` 做现状体检。
+当前没有可引用的运行验证结果，不能将依赖名称推断为可用命令。Build 必须核对并实际运行相关入口后刷新此节。
+
+## Validation setup
+
+| Item | Verified setup / source or gap |
+|---|---|
+| Modes and tools | correctness、e2e:Web、e2e:OpenAPI；Web 必须使用 tester-army/e2e CLI + Web engine，当前尚未安装或固定版本 |
+| Test assets | none；尚缺 e2e 配置、已提交测试、fixture / 清理方案；没有共享回放缓存 |
+| Target environment | none；启动方式、隔离测试 URL 和被测构建与 commit 的对应关系尚未确认 |
+| Model and test identity | none；Plan 尚未选择 provider / model、测试身份与外部凭据来源，不在本文存放凭据值 |
+| Run outputs | none；Build 需准备框架报告 / 附件目录、Git ignore 及稳定归档位置；Validate 显式使用只读缓存 |
+| CI | none；尚无测试工作流或产物归档 |
+| Preparation gaps | 启动、工具版本、测试覆盖、隔离数据、确定性业务断言、模型预算与报告归档均待准备 |
+
+## Surface map
+
+```yaml
+surfaces:
+  - name: web-frontend
+    globs: ["web/**"]
+    roles: [client-dev, design]
+    modes: [correctness, "e2e:Web"]
+  - name: api
+    globs: ["services/api/**"]
+    roles: [server-dev]
+    modes: [correctness, "e2e:OpenAPI"]
+  - name: database-migrations
+    globs: ["migrations/**"]
+    roles: [server-dev, architect]
+    modes: [correctness]
+```
+
+跨 Web / API 等多个 surface 的改动按 role-routing 补充 architect；命令缺失不免除相应的必要验证。
+
+## Conventions
+
+- 前端设计约定见 DESIGN.md；API handler 负责协议转换，业务逻辑放在 service 层。
+- 工程指令见 AGENTS.md；共享或生产环境不执行会修改业务数据的测试。
+- project.md 记录项目事实，当前 Feature 的测试策略与运行证据写入其 engineering context。
+
+## Known risks
+
+| Risk | Affected area | Current handling |
+|---|---|---|
+| 自动化入口和覆盖尚未建立 | web、api | 在 Plan 明确所需检查，Build 准备并验证入口 |
+| 结算涉及可变数据 | web、api、migrations | 隔离测试数据与清理方式尚未确定，必要旅程保持未验证 |
+
+## Deployment
+
+```yaml
+target: none
+config_paths: []
+environments:
+  dev: none
+  staging: none
+  canary: none
+  full: none
+health_check: none
+```
+
+尚无部署配置或经过确认的运行环境；实际发布前按目标工程补齐。
+
+## Repository context sources
+
+```yaml
+root_guidance: AGENTS.md
+scoped_guidance: []
+canonical_documents: [README.md, DESIGN.md]
+repo_context:
+  status: none
+  analyzed_commit: none
+```
+
+示例设定中上述文件存在；未提供 repo-context 已验证索引。真实工程应按当前 commit 核对路径，只索引文档，不复制正文。
+
+## AI readiness
+
+已有项目指令和清晰的 Web / API 入口；自动化命令、测试发现、构建版本标识与验证环境仍缺失，不能宣称验证通过。
+~~~
+
+Onboard 的唯一交付物是 `project.md`；它不安装测试框架，不创建 Requirement / Feature，也不推进 lifecycle state。
+缺口补齐后局部刷新本文件，测试配置、测试资产与框架产物仍按目标工程约定存放。

@@ -1,8 +1,23 @@
-# Lightweight SDLC 1.1
+# Lightweight SDLC — 现行基础模型
 
-- **日期**：2026-08-17
+- **基础设计日期**：2026-08-17
 - **状态**：Accepted
-- **版本**：1.1.0
+- **基础设计版本**：1.1.0；后续规范索引更新于 2026-10-07
+
+## 0. 当前规范入口
+
+轻量状态模型继续有效。本文保留基础设计，阶段行为与工具细节以当前技能及参考为准；插件版本和未发布能力见
+[CHANGELOG](../../CHANGELOG.md)，不能把本地 Unreleased 命令视为已包含在 2.0.0 tag 中。
+
+| 主题 | 权威入口 |
+|---|---|
+| 阶段路由与状态权限 | [`sdlc`](../../skills/sdlc/SKILL.md)、[阶段协议](../../skills/sdlc/references/stage-agent-protocol.md) |
+| 项目上下文与测试准备 | [PROJECT 模板](../../skills/sdlc/references/templates/PROJECT.md)、[Onboard 示例](../../examples/onboard-output-sample.md) |
+| Web / App 工具、资产、缓存、证据与归因 | [`e2e`](../../skills/sdlc/references/validate-modes/e2e.md)；2.0.0 起采用新的必要验证条件 |
+| 使用文档与实际操作验证 | [usage contract](../../skills/sdlc/references/lifecycles/software-delivery.md#11-global-usage-document-story-and-parameter-contract) |
+| 设计方法 | [`design` 角色](../../skills/sdlc/references/roles/design.md)、[Impeccable 可选适配](../../skills/sdlc/references/integrations/impeccable.md) |
+| 工具自身维护与发布 | [`evolve`](../../skills/sdlc/references/evolve-loop.md) |
+| 开发分支登记迁移（当前 Unreleased） | [运行时操作指南](../../skills/sdlc/references/lightweight-runtime.md#51-开发分支登记迁移) |
 
 ## 1. 问题
 
@@ -30,6 +45,7 @@
 ```text
 <target-repo>/.sdlc-v1/
 ├── state.json               # sdlc-lightweight-state-v1, state_version=3
+├── project.md               # 项目入口、测试准备与长期文档索引
 └── context/                 # Requirement/Feature 必填引用只能落在这里
     ├── product.md
     ├── engineering.md
@@ -138,12 +154,13 @@ server-dev；跨多个面加载 architect；验证阶段按 correctness/e2e/eval
 - 多个活动 Feature 或同状态 Requirement 并存时返回 `needs_selection` 和稳定排序的 candidates；
 - 全部 Requirement 终态时返回 `done`。
 
-### 5.2 阶段 Agent 编排（1.5.0）
+### 5.2 阶段 Agent 编排
 
 阶段协作的唯一规范为 `skills/sdlc/references/stage-agent-protocol.md`。主 Agent 读取 `next`、创建一个阶段 brief、
 验证该阶段返回的 changed files、命令证据、上下文候选和有序 `requested_transitions`，再使用现有
-`lifecycle_state.py` 更新状态并继续。阶段 Agent 不编辑 `state.json`、不执行 lifecycle mutation；直接调用阶段
-skill 时仍可 standalone。review 优先由与实现者不同的新 Agent 执行，无法提供时按相同规则串行评审并披露 fallback。
+`lifecycle_state.py` 更新状态并继续。阶段 Agent 不编辑 `state.json`、不执行 lifecycle mutation；只有独立且不处于主 Agent
+编排中的直接调用才是 standalone，已开始的编排内直接调用阶段 skill 仍继承 orchestrated mode。
+review 优先由与实现者不同的新 Agent 执行，无法提供时按相同规则串行评审并披露 fallback。
 
 产品行为进入 Requirement context，Feature 实现与验证进入 engineering context；跨 Feature 的目标项目规则作为
 `project_candidates` 提议写入长期项目文档。只有明确跨项目且可复用的 SDLC 改进才提议 `/sdlc evolve`。本约定不新增
@@ -213,7 +230,7 @@ state 是普通 JSON。如果两条分支修改不同记录但产生文本冲突
 
 ## 9. 验证策略
 
-提交前只运行：
+提交前至少运行：
 
 ```bash
 bash scripts/validate-skills
@@ -230,6 +247,8 @@ git diff --check
 6. lifecycle state、backlog/board、contrast 三组测试。
 
 产品内 AI 功能的 `eval-bench` 与本地 Web Review Live 仍是有效方法论/体验。
+结构检查不替代规则的行为审查、命令验证或外部框架的实际运行；按修改范围补充必要检查，并如实标明证据范围。
+工具维护及发布检查统一遵循 [evolve](../../skills/sdlc/references/evolve-loop.md)。
 
 ## 10. 验收标准
 

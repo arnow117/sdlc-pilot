@@ -1,5 +1,9 @@
 # 设计:sdlc-loop —— 测试驱动的自治特性循环(子系统 B)
 
+> **历史设计（0.x）**：旧叶状态、STATE / PROFILE 与 append-only 维护规则不用于当前执行。
+> 当前行为见 [build loop](../../skills/sdlc/references/build-loop.md)、[阶段协议](../../skills/sdlc/references/stage-agent-protocol.md)
+> 和 [evolve](../../skills/sdlc/references/evolve-loop.md)；本文保留演进背景。
+
 > Date: 2026-06-26
 > Status: approved
 > 形态结论:**不新增顶层 skill**。用「playbook(`references/build-loop.md`)+ driver 子命令(`/sdlc loop`)」表达,复用既有 8 阶段,不重写。

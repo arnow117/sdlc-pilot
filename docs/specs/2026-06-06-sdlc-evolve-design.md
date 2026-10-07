@@ -1,5 +1,9 @@
 # 设计:sdlc-evolve —— 时用时新的自更新回流能力
 
+> **历史设计（0.x）**：本文的 append-only、固定分支、逐次升版及回流规则保留为历史；当前维护与发布行为唯一见
+> [evolve](../../skills/sdlc/references/evolve-loop.md)。结构改动按既有完整 SDLC 执行，当前基础模型见
+> [轻量设计](2026-08-10-lightweight-sdlc.md)。
+
 > Date: 2026-06-06
 > Status: approved
 > 形态结论:**不新增顶层 skill**。用「角色卡 + playbook + 驱动入口」表达(两轴模型)。

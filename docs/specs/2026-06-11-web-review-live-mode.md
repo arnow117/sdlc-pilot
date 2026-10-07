@@ -1,5 +1,9 @@
 # 设计:web-review Live Mode (notify) —— 把单向复核升级成实时双向
 
+> **历史设计（0.x）**：本文保留当时的需求与实验，不代表当前阶段或状态协议；现行可选能力见
+> [Web Review playbook](../../skills/sdlc/references/web-review/playbook.md)，生命周期见
+> [轻量基础模型](2026-08-10-lightweight-sdlc.md)。
+
 > Date: 2026-06-11
 > Status: approved
 > 形态结论:**不新增顶层 skill / 不新增资产**。扩 `references/web-review/playbook.md` 一节「Live mode (notify)」+ build.py 模板加 ~6 行自动刷新 poller。

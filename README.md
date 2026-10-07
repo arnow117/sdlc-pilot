@@ -284,10 +284,16 @@ git diff --check
 
 ## 设计与维护
 
-- 当前设计：[`docs/specs/2026-08-10-lightweight-sdlc.md`](docs/specs/2026-08-10-lightweight-sdlc.md)
+- 当前基础模型及规范索引：[`docs/specs/2026-08-10-lightweight-sdlc.md`](docs/specs/2026-08-10-lightweight-sdlc.md)
+- Web / App 验证与工程资产：[`e2e`](skills/sdlc/references/validate-modes/e2e.md)
+- 工具自身维护与发布：[`evolve`](skills/sdlc/references/evolve-loop.md)
+- Onboard 产出示例：[`examples/onboard-output-sample.md`](examples/onboard-output-sample.md)
+- 看板当前实现与历史视觉设计：[`DESIGN.md`](DESIGN.md)
 - 跨模块编排演练：[`docs/agent-orchestration-rehearsal.md`](docs/agent-orchestration-rehearsal.md)
-- 蒸馏源地图：[`docs/distillation-source-map.md`](docs/distillation-source-map.md)
+- 当前适配与历史蒸馏来源：[`docs/distillation-source-map.md`](docs/distillation-source-map.md)
+- 初期方法论吸收审计（历史）：[`docs/absorption-completeness.md`](docs/absorption-completeness.md)
 - 维护契约：[`CLAUDE.md`](CLAUDE.md)
 
 `docs/specs/2026-06-*.md` 全部是 0.x 历史设计，只用于理解演进背景；其中的状态路径、hook、命令和完成条件
-均已被 2026-08-10 active contract 取代，不得作为 1.0 实现依据。
+已被轻量基础模型及当前 stage / reference 取代，不能作为当前实现依据。已发布能力与本地新增能力的范围见
+[CHANGELOG](CHANGELOG.md)：2.0.0 已发布，`migrate-feature-branch` 当前记录在 Unreleased。

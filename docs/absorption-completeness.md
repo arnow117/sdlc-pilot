@@ -1,5 +1,11 @@
 # SDLC-Pilot 吸收完整性审计
 
+> **历史评估**：下方数字、缺口与产物描述对应初期方法论研究，不是当前版本的覆盖率或运行验证结果。
+> 2026-10-07 刷新文档定位；没有重新审计上游或重新计算原始分数。
+> 现行能力见 [README](../README.md)、[当前适配与蒸馏来源](distillation-source-map.md) 和
+> [轻量基础模型](specs/2026-08-10-lightweight-sdlc.md)。Web / App 验证与 evolve 已有独立的现行参考，
+> 初期关于工具待选型、PROFILE / STATE 或额外报告的建议不能直接作为当前流程。
+
 > 针对 sdlc-pilot v1 从三个上游系统(superpowers / gstack / GSD)蒸馏方法论的完整性评估。
 > 范围限定为 SDLC 方法论核心:understand → spec → plan → build → validate → review。
 > ship/release/部署/会话安全工具/纯环境 plumbing 均按 source-map 规则判为 out-of-scope。
