@@ -27,7 +27,7 @@ python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> readyqueue
 
 1. 队列非空时取优先级最高且依赖已满足的 Requirement。
 2. 读取其 `product_context_ref`。
-3. 主 Agent 运行 plan 阶段，验证其结果后执行请求的 `start-feature` 和 `add-task` mutation。
+3. 主 Agent 运行规划阶段（`plan`），验证其结果后执行请求的 `start-feature` 和 `add-task` mutation。
 4. 完成单 Feature 内循环。
 5. 发布成功后重新读取 ready queue。
 
@@ -49,7 +49,7 @@ plan
 
 每一轮按 [`stage-agent-protocol.md`](stage-agent-protocol.md) 派工、等待、验收和推进状态；该协议也唯一规定
 同阶段修正、跨 Feature 交接、证据复用、检查点和并行资格。研发上下文保存设计、Task 细节、测试策略、失败教训和
-决策；`state.json` 只保存状态和引用。Plan 不记录派工、催补、调试或重跑日志。
+决策；`state.json` 只保存状态和引用。当前有效方案不记录派工、催补、调试或重跑日志。
 
 ### completion check
 

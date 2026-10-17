@@ -27,19 +27,19 @@ contexts retain their current roles.
   Agent orchestration. Once the main Agent orchestrates a Feature or stage, every
   stage skill invocation inherits orchestrated mode, even if called directly. It
   cannot use standalone mode to bypass child execution or main acceptance. This
-  protocol does not change any CLI, Spec/Plan/Build/Validate/Review/Ship stage, or
+  protocol does not change any CLI, Spec / planning (`plan`) / Build / Validate / Review / Ship stage, or
   state schema.
 - If the runtime cannot create a child, the main Agent performs the same steps
   serially inline and discloses that fallback. An inline pass is not an
   independent review.
 
-Before Spec becomes Plan, the main Agent chooses bounded analysis by domain,
+Before Spec enters the planning stage (`plan`), the main Agent chooses bounded analysis by domain,
 existing module, or key risk. One analysis is the default; it may fan out
 independent read-only analysis only when the actual need warrants it. Each analysis
 returns current-state evidence, reuse recommendations, interface needs, risks, and
 unresolved decisions. Those notes are inputs only: they do not write the unified
-Plan, change scope, or authorize implementation. The main Agent resolves conflicts
-and records the one effective unified Plan.
+current effective solution, change scope, or authorize implementation. The main
+Agent resolves conflicts and records the one current effective solution.
 
 ## 2. Dispatch contract
 
@@ -49,7 +49,7 @@ optional prompt template, never a stored task card or another progress record.
 
 The brief includes all of the following:
 
-- Feature ID and Plan Task ID when tracked; for `/sdlc evolve`, state that no
+- Feature ID and Task ID when tracked; for `/sdlc evolve`, state that no
   lifecycle ID applies.
 - Goal, explicit out-of-scope work, and the current user authorization.
 - Settled interfaces and relevant context references. For cross-client/server
@@ -72,15 +72,25 @@ The brief includes all of the following:
   tested revision and workspace status, unresolved items, requested transitions,
   and any context-update proposal.
 
-Use the current complete brief when dispatching. A material interface, scope, or
-evidence-backed change to the solution, execution method, or verification strategy
-first updates the effective Plan, then the main Agent sends a complete replacement
-brief marked `supersedes`; it does not splice a changed contract into an earlier
-brief. This protocol overrides the optional `TASK.md` direction to use
-`supersedes` only after a material scope or interface change: an evidence-backed
-material recovery change requires a complete `supersedes` brief even when scope and
-interfaces are unchanged. A routine clarification may use a native follow-up
-message only when it does not change the contract.
+Use the current complete brief when dispatching. `supersedes` replaces an earlier
+dispatch brief only after a material change to scope, settled interfaces, the
+current effective solution, execution method, or verification strategy. An
+evidence-backed material recovery change also requires it, even when scope and
+interfaces are unchanged; section 5 still preserves the failure history and attempt
+limits. The main Agent first updates the current effective solution, then sends a
+complete replacement brief instead of splicing a changed contract into the earlier
+one.
+
+A replacement brief remains complete for current execution: preserve the current
+authorization, write scope, interfaces, completion conditions, required
+verification, and allowed transitions. State the material change briefly and use
+precise existing `context_refs` to the relevant requirement, design, or evidence
+sections. Do not repeat the product text, entire solution, conversation, failure
+logs, or prior brief. Replacing a brief does not delete the child's existing
+messages; do not resend that history or create a history store. A routine
+clarification, local correction, or repair already within the existing acceptance
+scope uses a short native follow-up instead. If it materially changes the listed
+contract, send the replacement brief.
 
 The child completes ordinary implementation choices and necessary checks without
 asking for approval at each step. It stops for a material missing decision,
@@ -128,7 +138,7 @@ child is still executing and its event mailbox can wait. If it returns an existi
 result, including one not yet accepted, resume the existing result-acceptance
 process. If it confirms the handle is missing or the child has terminated without
 a result, first reconcile the original lifecycle status or projection, the
-effective Plan and relevant context, and necessary Git evidence for unaccepted
+current effective solution and relevant context, and necessary Git evidence for unaccepted
 work and its writer; then apply the existing replacement-brief and authorization
 rules. If the runtime cannot be queried, or a retained handle's current execution
 state cannot be confirmed, report that environment limitation: unknown is neither
@@ -136,32 +146,35 @@ termination nor a reason to blindly wait or dispatch a second executor. A user
 status question uses known evidence and does not by itself start this recovery.
 
 Dispatch records, lifecycle `in_progress`, checkpoints, and historical handoffs do
-not prove real-time child liveness. The effective Plan remains the current-solution
-source; historical evidence remains separate. Read only the current, relevant
-parts when recovery needs them, rather than reloading all Plan or handoff history.
+not prove real-time child liveness. The current effective solution remains
+authoritative for the present design; historical evidence remains separate. Read
+only the current, relevant parts when recovery needs them, rather than reloading
+all historical changes to the current effective solution or handoffs.
 This rule adds no schema, ledger, or runtime service.
 
 ## 3. Planning, implementation, integration, and review
 
-### Plan
+### Planning stage (规划阶段) and current effective solution (当前有效方案)
 
-Plan contents are the current solution, task boundary, interfaces, dependencies,
-execution and verification strategy, and acceptance strategy. Update them for a
+The existing runtime stage `plan` is the planning stage (规划阶段). The current
+solution held in its engineering context is the current effective solution
+(当前有效方案). It contains the task boundary, interfaces, dependencies,
+execution and verification strategy, and acceptance strategy. Update it for a
 material design change or when genuinely new causal localization evidence requires
 a different solution, execution method, or verification strategy. Product
 requirements remain in the Requirement product context. Dispatch records,
-reminders, debug notes, and rerun logs do not belong in a Plan. A recovery update
-must change the actual solution, execution method, or verification strategy;
-supporting trace evidence stays in the existing evidence section and must meet
-section 5. `/sdlc evolve` uses its authorized brief instead of creating a Plan or
-lifecycle state.
+reminders, debug notes, and rerun logs do not belong in the current effective
+solution. A recovery update must change the actual solution, execution method, or
+verification strategy; supporting trace evidence stays in the existing evidence
+section and must meet section 5. `/sdlc evolve` uses its authorized brief instead
+of creating a current effective solution or lifecycle state.
 
 For implementation, split work by independently acceptable units, not by a fixed
 frontend/backend/domain pattern. Agree shared implementation interfaces first;
 serial execution is required while one of those interfaces or a dependency remains
 unresolved. This does not prevent the main Agent from first obtaining independent,
-read-only Spec-to-Plan analysis. The main Agent may allow parallel implementation
-work only after verifying all of these conditions:
+read-only analysis from Spec into the planning stage. The main Agent may allow
+parallel implementation work only after verifying all of these conditions:
 
 1. the interface is stable;
 2. write scopes do not overlap;
@@ -179,7 +192,9 @@ run them serially instead of mechanically splitting roles. A child supplies
 reproducible evidence and coverage gaps; the main Agent chooses the repair order.
 Review is read-only with respect to implementation. When the runtime can create an
 actually independent reviewer, the main Agent dispatches one after implementation.
-If it cannot, it records a serial fallback and never labels it independent.
+If it cannot, it records a serial fallback and never labels it independent. Review
+input scope, procedure and record content are owned by
+[`sdlc-review`](../../sdlc-review/SKILL.md#review-input-and-scope).
 
 Validate is also read-only with respect to implementation. Ship may prepare release
 and smoke evidence, but external effects and release mutations remain with the
@@ -233,6 +248,24 @@ satisfied. `incomplete` and `blocked` explain what remains or what prevents it.
 Historic `completed` or `failed` messages are evidence to reinterpret, not a state
 schema migration or an alternative state transition.
 
+### Results for corrections and other issues
+
+A simple successful first pass keeps the concise result format above. When the same
+acceptance objective returns for correction, or another issue affects the completion
+judgment, the result briefly states whether acceptance has progressed, moved
+backward, or not progressed, with its evidence. It distinguishes work required for
+acceptance from a follow-up that does not block acceptance through the existing
+`evidence`, `unresolved_items`, and `context_updates` sections; it adds no YAML
+fields, a fixed list of status values, counters, per-tool reports, or a separate
+store. Compatibility, security, correctness, and recovery requirements cannot be
+described as follow-ups to avoid a necessary check.
+
+For a batch of review or user opinions, use
+[`receiving-feedback.md`](receiving-feedback.md) for the canonical handling and
+recording discipline. The nonconvergence rule and its history preservation remain
+solely in [section 5](#5-evidence-git-and-mandatory-stop): a correction label,
+another issue, or `supersedes` brief does not change that rule.
+
 `requested_transitions` stay ordered. Before every lifecycle request, the main
 Agent compares it with this brief's `allowed_transitions`: operation, required
 arguments, and unknown arguments must all match. It creates that allow-list from
@@ -278,7 +311,7 @@ cycles that repeat work with unchanged inputs, no new finding, and no required
 lifecycle check.
 
 Preserve the attempt count, failure evidence, and one bounded-diagnosis allowance
-through evidence-backed Plan updates, complete `supersedes` briefs, renamed or
+through evidence-backed current effective solution updates, complete `supersedes` briefs, renamed or
 split tasks, and implementer replacement. None starts a new segment or erases the
 history. If resumed work for the same problem and acceptance objective reaches a
 nonconvergence trigger after that allowance has been used, stop and report; do not
@@ -301,17 +334,17 @@ external-operation authorization.
 
 Genuinely new causal localization evidence must be observed and reproducible, and
 must reduce the candidate cause set—for example, isolate input, configuration,
-code, or environment while ruling out an alternative. A renamed task, changed Plan
+code, or environment while ruling out an alternative. A renamed task, changed solution
 wording, or added logging without an observed cause-narrowing result is not
 localization evidence. Reproducible trace output that eliminates an alternative is
 localization evidence.
 
-If the diagnosis produces that evidence, first update the effective Plan's actual
+If the diagnosis produces that evidence, first update the current effective solution's actual
 solution, execution method, or verification strategy. Then, under the existing
 authorization and without step-by-step approval, send the same implementer a
 complete replacement brief marked `supersedes`. The brief records the material
 recovery and required verification change. It preserves prior attempts rather than
-using the revised Plan to justify a third identical retry. A diagnosis is not
+using the updated solution to justify a third identical retry. A diagnosis is not
 permission to bypass release or main-merge authorization, model-consuming or
 destructive-operation authorization, required tests or review, or lifecycle state
 ownership.
@@ -331,17 +364,33 @@ falsely resume, or falsely complete a Goal to evade them. A timeout, elapsed tim
 token use, necessary verification, or an independent review alone does not trigger
 this stop.
 
+### Context prose and evidence applicability
+
+The lifecycle CLI does not automatically interpret a semantic change to product or
+engineering-context prose, or invalidate an earlier validation because that prose
+changed. A current business commit that is unchanged is therefore neither proof that
+the evidence still covers the current requirements nor proof that it does not.
+
+Before reusing validation for review or ship, the main Agent compares the current
+binding requirements and current effective solution with what the recorded evidence
+actually covered. If a changed requirement, design, contract, environment fact, or
+planned verification creates an obligation the evidence did not cover, it must use
+the existing planning, build and validation actions and their permitted lifecycle
+transitions before advancing. If the change does not affect coverage, record the
+reason in the existing context and retain the evidence reference. Do not invent an
+automatic state transition, context-prose detector, cache, or new evidence store.
+
 ## 6. Context and checkpoints
 
 Product behavior, scenarios, and rules belong in the Requirement product context.
 Feature design, task boundary, interfaces, dependencies, and acceptance strategy
-belong in the effective Plan section of the engineering context. Final validation
+belong in the current effective solution section of the engineering context. Final validation
 and acceptance evidence use their existing engineering-context section or a
 reference. Keep those sections distinct. Do not put a current handoff or a stream
-of dispatch/debug/rerun notes in the Plan.
+of dispatch/debug/rerun notes in the current effective solution.
 
-The effective Plan is authoritative for the current solution; `state.json` is
-authoritative for lifecycle progress; Git history and the actual working-tree code
+The current effective solution is authoritative for the present design;
+`state.json` is authoritative for lifecycle progress; Git history and the actual working-tree code
 are authoritative for what is present. An on-demand checkpoint is allowed only for
 pause, cross-conversation recovery, or execution-environment change. Its only path is
 `.sdlc-v1/checkpoints/<feature-id>.md`; use
@@ -350,15 +399,15 @@ Feature, it has at most 60 lines, and only the main Agent creates, updates, or
 deletes it. A child may return a candidate, but never writes the checkpoint. It has
 exactly these five sections:
 
-1. `定位` — Feature, branch, HEAD, workspace, Plan Task;
+1. `定位` — Feature, branch, HEAD, workspace, Task ID;
 2. `已确认` — main-Agent accepted work, commands, results, versions;
 3. `未完成` — active, unaccepted, failed, or blocked work;
 4. `下一步` — first action, completion condition, necessary verification, and
    constraints that must remain;
-5. `必要引用` — only the required state, Plan, context, Git, code, or evidence
+5. `必要引用` — only the required state, current effective solution, context, Git, code, or evidence
    references.
 
-The checkpoint is not a Spec, Plan, chat transcript, full log, state replacement,
+The checkpoint is not a Spec, current effective solution, chat transcript, full log, state replacement,
 or credential, private material, or unnecessary local-path store. On recovery,
 first verify branch, HEAD, and workspace. If the recorded version differs,
 reassess the evidence before continuing. The main Agent updates the single file in

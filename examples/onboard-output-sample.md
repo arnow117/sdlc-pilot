@@ -3,7 +3,7 @@
 > 这是虚构 Web + API 项目 `acme-shop` 的 `.sdlc-v1/project.md` 示例，展示已有源码但测试准备尚不完整的情况。
 > 所有路径和事实均为示例设定，不是实际工程的运行证据；真实 Onboard 必须从目标仓库核对后填写。
 
-结构来自 [PROJECT 模板](../skills/sdlc/references/templates/PROJECT.md)。Onboard 记录事实与缺口；Plan 明确验收策略，
+结构来自 [PROJECT 模板](../skills/sdlc/references/templates/PROJECT.md)。Onboard 记录事实与缺口；规划阶段明确验收策略，
 Build 准备环境和测试资产，Validate 执行当前 commit 的必要检查。Web / App 工具约束见
 [e2e](../skills/sdlc/references/validate-modes/e2e.md)。
 
@@ -53,7 +53,7 @@ commands:
 | Modes and tools | correctness、e2e:Web、e2e:OpenAPI；Web 必须使用 tester-army/e2e CLI + Web engine，当前尚未安装或固定版本 |
 | Test assets | none；尚缺 e2e 配置、已提交测试、fixture / 清理方案；没有共享回放缓存 |
 | Target environment | none；启动方式、隔离测试 URL 和被测构建与 commit 的对应关系尚未确认 |
-| Model and test identity | none；Plan 尚未选择 provider / model、测试身份与外部凭据来源，不在本文存放凭据值 |
+| Model and test identity | none；规划阶段尚未选择 provider / model、测试身份与外部凭据来源，不在本文存放凭据值 |
 | Run outputs | none；Build 需准备框架报告 / 附件目录、Git ignore 及稳定归档位置；Validate 显式使用只读缓存 |
 | CI | none；尚无测试工作流或产物归档 |
 | Preparation gaps | 启动、工具版本、测试覆盖、隔离数据、确定性业务断言、模型预算与报告归档均待准备 |
@@ -88,7 +88,7 @@ surfaces:
 
 | Risk | Affected area | Current handling |
 |---|---|---|
-| 自动化入口和覆盖尚未建立 | web、api | 在 Plan 明确所需检查，Build 准备并验证入口 |
+| 自动化入口和覆盖尚未建立 | web、api | 在规划阶段明确所需检查，Build 准备并验证入口 |
 | 结算涉及可变数据 | web、api、migrations | 隔离测试数据与清理方式尚未确定，必要旅程保持未验证 |
 
 ## Deployment

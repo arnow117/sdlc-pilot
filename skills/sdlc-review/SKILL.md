@@ -3,11 +3,14 @@ name: sdlc-review
 description: >
   评审阶段。根据已验证 commit 的 diff 动态加载产品、架构、客户端、服务端、数据、设计、
   质量与安全角色，检查重复实现与可避免工程债，合并发现并记录评审决定。
-distilled-from: [DietrichGebert/ponytail]
+distilled-from: [DietrichGebert/ponytail, Zts0hg/codexspec]
 updated: 2026-09-05
 ---
 
 # sdlc-review — 多角色代码评审
+
+> CodexSpec 的评审输入与范围方法改编自其固定版本
+> [change-review.md](https://github.com/Zts0hg/codexspec/blob/d76d358a9f79a9b131bb2eccb85670e5d81b7dca/templates/review-code/change-review.md)。
 
 ## Orchestrated mode
 
@@ -15,12 +18,27 @@ updated: 2026-09-05
 新 review Agent；否则按相同检查串行完成并披露 fallback。review Agent 不修改实现或 state，只返回发现、证据和
 `record-review` 请求，由主 Agent 验证后执行。
 
+## Review input and scope
+
+主 Agent 给独立 review Agent（或串行 fallback）提供已确认的产品 artifact、当前有效方案中的实际设计理由和适用契约、
+validation commit/diff，以及选定的原始环境、配置和变更事实。它同时列出中性的未完成验证义务或已知证据缺口，并引用现有
+Validation/证据位置。
+
+不提供实现对话中的推理过程、早先的正确性结论，或“修复已经成功”的声明来预设结论。评审者自己依据当前 artifact 和原始事实
+判断；运行时 fallback 不改变这项输入纪律，也不能称为独立评审。
+
+只读评审记录本次相关契约、调用链和正常失败场景的覆盖情况与实质缺口，并引用现有 Validation 结果或缺口；不重建验收条件、
+结果和证据表，也不新增独立评审报告或评分。
+
 ## 入口
 
 - Feature 必须已通过验证。
 - validation commit 到当前 HEAD 在 `.sdlc-v1/**` 之外不能有差异。
 - 当前业务代码工作树必须干净；仅 `.sdlc-v1/**` 可以有待提交的上下文或状态修改。
 - 读取项目、产品和研发上下文，但只加载与本次 diff 有关的部分。
+- 读取 [`sdlc-validate`](../sdlc-validate/SKILL.md#验收条件与证据对应) 对研发上下文验证/证据部分的要求，核对当前有效验收条件的覆盖缺口与实现版本；不复制或重建验收条件/结果/证据表。
+- 依照 [context-prose-and-evidence-applicability](../sdlc/references/stage-agent-protocol.md#context-prose-and-evidence-applicability)
+  由主 Agent 先判断验证证据是否仍覆盖当前产品决定和当前有效方案；不把未变的业务 commit 当作自动证明。
 - 对用户可见改动，读取 [`Global usage-document, story, and parameter contract`](../sdlc/references/lifecycles/software-delivery.md#11-global-usage-document-story-and-parameter-contract)，核对 guide → story → parameter source → actual-use evidence；缺少真实范围不得被测试、截图或 doccheck 掩盖。
 
 可用以下检查确认实现未变化：
@@ -63,12 +81,16 @@ test -z "$(git status --porcelain --untracked-files=all -- . ':(exclude).sdlc-v1
 证据不足时明确缺口，不直接断言应删除。普通简化归为建议改进；只有违反明确约束或存在可证实影响时，
 才按影响列为必须修复，不能让个人风格偏好阻塞发布。没有发现时明确写一句“本次 diff 未发现有证据支持的重复实现或可避免工程债”。
 
+若 finding 显示可重复的根因，围绕本次 diff 的契约、模块或调用链做有界的相关实例搜索，并记录搜索范围、命中或未命中和它对结论的影响。不要把这类搜索扩大为全仓清理；只有有证据的相关实例进入本次评审或后续有界工作。
+
+批量处置评审意见和返修时，遵循共享的 [`receiving-feedback`](../sdlc/references/receiving-feedback.md) 纪律。它是意见的核实、归类和证据记录权威来源；本评审不复制其流程。
+
 有依据的保留或延期决定随评审处理结果写入现有研发上下文，说明理由、适用局限和明确的重访触发条件；
 不得借延期绕过阻塞正确性或安全的问题。采纳建议并修改业务代码后，仍按 build → validate → review 重新验证和评审。
 
 ## 合并结论
 
-1. 按稳定指纹去重同一问题，包括上述检查与各角色重复报告的发现。
+1. 检查问题的位置、触发条件和根因，合并同一问题的重复报告，包括上述检查与各角色的发现。
 2. 区分必须修复、建议改进和信息项；检查每项业务代码改动是否能映射到 Task 或验收条件，将无关的重构、格式化或清理作为 scope drift 报告。
 3. 把结论与处理结果写入研发上下文。
 4. 存在必须修复项时，在 orchestrated mode 请求；只有独立、不在主 Agent 编排中的 standalone mode 才执行：

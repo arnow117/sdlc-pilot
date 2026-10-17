@@ -40,12 +40,25 @@ description: >
 相关配置与脱敏环境信息，以及下一动作。超时、非零退出码或连接错误本身不足以断言是环境问题。
 混合问题分别记录；已确认的实现缺陷不能被环境阻塞覆盖。所有必要检查通过才可汇总为 `PASS`。
 
+## 验收条件与证据对应
+
+在现有研发上下文的验证/证据部分，对当前有效的验收条件写明结果与证据或缺口。取消或延后 Task 不会移除其验收条件；已授权的条件替换需保留变更依据，再对应替换后的当前条件，不把已被替代的旧文本冻结成历史必选项。
+
+- 单一简单条件可用一句话同时写出结果和证据。若既有报告或检查清单已清楚对应，引用它即可，不重抄、不重新排版，也不需为验收条件新增编号。
+- 跨客户端、服务端、兼容性、持久化/并发/恢复情景，或多条件需要各自证据时，使用紧凑的“验收条件 | 结果 | 证据或缺口”表。共享的被测版本、配置或环境信息可写在表前，但不能取代上述必须记录的实际命令、exit 结果、时间和相关配置。
+
+对应方式服从本节既有的 `PASS`、`IMPLEMENTATION_FAILED`、`ENV_BLOCKED` 和 `INCONCLUSIVE` 语义；表格只在确有区分证据的需要时才使用，不是新的通过前提。
+
+验证之后如果产品或工程上下文的文字发生实质语义变化，主 Agent 按
+[context-prose-and-evidence-applicability](../sdlc/references/stage-agent-protocol.md#context-prose-and-evidence-applicability)
+判断既有结果对当前要求是否仍适用；本节不创建额外状态或自动失效规则。
+
 ## 流程
 
 1. 确认所有非取消 Task 均为 `done`。
 2. 读取 [`Global usage-document, story, and parameter contract`](../sdlc/references/lifecycles/software-delivery.md#11-global-usage-document-story-and-parameter-contract)，并为受影响的故事按当前文档选择代表目标、参数来源和实际操作证据。
 3. 根据 [`role-routing.md`](../sdlc/references/role-routing.md) 选择验证方式，并读取对应 `validate-modes/*.md`。
-4. 逐条验证产品验收条件；同时运行相关单元测试、类型检查、构建和必要的端到端检查。实际使用为未运行或失败时，不能写成通过。合成或局部真实目标是环境/数据范围：相关检查可在明确该范围时通过，但不得外推为 live、部署或真人试用通过。
+4. 逐条验证产品验收条件，并按“验收条件与证据对应”记录；同时运行相关单元测试、类型检查、构建和必要的端到端检查。实际使用为未运行或失败时，不能写成通过。合成或局部真实目标是环境/数据范围：相关检查可在明确该范围时通过，但不得外推为 live、部署或真人试用通过。
 5. 按上面的归因规则记录本轮证据到研发上下文。
 6. 任一必要检查失败、受阻或证据不足，都请求 `record-validation --result fail`；实际执行过时附 `--test-command <command>`，全部未运行时省略该参数并在上下文写明原因。这里的 `fail` 只表示未通过必要验证，不代表已证明代码有错。主 Agent 按允许的 lifecycle 命令记录后，按归因决定修复实现、解决环境或补证据；不要仅凭 `fail` 自动重做实现。Task 均为 done 时，当前 `next` 仍选择 validate。需要实现修复时由主 Agent 将相关 Task 恢复为 in_progress，再进入 build。
 7. 全部必要检查通过，且 `.sdlc-v1/**` 之外的业务代码工作树干净时，在 orchestrated mode 请求；只有独立、

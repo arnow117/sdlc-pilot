@@ -34,9 +34,9 @@ fixture 中的最后一项是 `.sdlc-v1/**` 证据提交，因此 validation 的
 
 以下内容说明协议应如何使用。它不是额外的运行时记录。
 
-### 1. 从领域分析到唯一有效 Plan
+### 1. 从领域分析到当前有效方案
 
-主 Agent 按领域、现有模块和关键风险选择有界分析。本 fixture 选择了两个串行分析；这不是要求每个 Plan
+主 Agent 按领域、现有模块和关键风险选择有界分析。本 fixture 选择了两个串行分析；这不是要求每个规划阶段
 都拆成两个角色或等待共享实现接口先稳定的规则。
 
 | 分析边界 | 返回事实 | 主 Agent 结论 |
@@ -44,7 +44,7 @@ fixture 中的最后一项是 `.sdlc-v1/**` 证据提交，因此 validation 的
 | 客户端 | 客户端只需要稳定的取消结果；不拥有权限判断 | 调用服务端，不在本地推断 owner |
 | 服务端/风险 | `task_id`、`actor_id` 和 `status` 是共享接口；失败路径必须保持任务 active | 服务端拥有权限与状态转换；`PermissionError` 是权限隔离证据 |
 
-主 Agent 将冲突消解为一个 Plan：`TaskService.cancel(task_id, actor_id)` 返回
+主 Agent 将冲突消解为当前有效方案：`TaskService.cancel(task_id, actor_id)` 返回
 `{task_id, status}`；`TaskClient.cancel_task(task_id)` 只显示 `status`；验收覆盖 owner 旅程、拒绝后状态不变和恢复时
 版本核对。两份分析稿不会独立生效。
 
@@ -78,7 +78,7 @@ Agent 在接受证据后才执行 `set-task-status`。本节是书面编排情�
 
 ### 3. 接口变化时替换完整 brief
 
-若主 Agent 决定接口还需返回 `cancelled_at`，它先更新有效 Plan，再发送下列完整替换 brief，而不是追加一条消息：
+若主 Agent 决定接口还需返回 `cancelled_at`，它先更新当前有效方案，再发送下列完整替换 brief，而不是追加一条消息：
 
 ```yaml
 stage: build
@@ -89,7 +89,7 @@ out_of_scope: [task deletion, retry queue, production release]
 settled_interfaces: [TaskService.cancel(task_id, actor_id) -> {task_id, status, cancelled_at}]
 context_refs: [.sdlc-v1/context/REQ-001.product.md, .sdlc-v1/context/FEAT-001.engineering.md]
 write_scope: [client.py, server.py, tests/test_cancellation.py]
-dependencies: [updated FEAT-001 Plan]
+dependencies: [updated FEAT-001 current effective solution]
 completion_conditions: [owner sees cancelled status and timestamp, other user is rejected without state change]
 required_verification: [python3 -m unittest discover -s tests -v]
 expected_result: [changed_files, commands, revision, workspace_status, unresolved_items]
@@ -124,8 +124,8 @@ fixture 的 checkpoint 只有 `定位`、`已确认`、`未完成`、`下一步`
 应由主 Agent 创建、更新和删除，子 Agent 最多返回候选；本次兼容性 fixture 最初由执行者生成。首次恢复检查还发现
 Git 分支 `main` 与 state/checkpoint 的 `feature/cancel-task` 不一致，因此拒绝
 恢复。分支修正后，恢复者仍先比较 Feature 分支、HEAD 和 workspace。checkpoint 的 `a50525d` 与当前 `42e633e` 不同，
-因此先重新判断测试和 validation 证据，再决定是否进入只读 review。Feature 完成后主 Agent 删除该 checkpoint；有效
-Plan、state 和 Git/实际工作树代码仍分别是方案、生命周期和代码历史/现状的权威。
+因此先重新判断测试和 validation 证据，再决定是否进入只读 review。Feature 完成后主 Agent 删除该 checkpoint；
+当前有效方案、state 和 Git/实际工作树代码仍分别是方案、生命周期和代码历史/现状的权威。
 
 ## 主 Agent 的有界验收结论
 

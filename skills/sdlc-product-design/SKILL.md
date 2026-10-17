@@ -3,6 +3,7 @@ name: sdlc-product-design
 description: >
   产品设计生命周期。用 BDD、领域建模、体验设计和质量属性把原始请求收敛为可验证的产品上下文，
   并通过 lightweight state 管理 Requirement 进度。
+distilled-from: [Zts0hg/codexspec]
 ---
 
 # sdlc-product-design
@@ -38,10 +39,12 @@ description: >
 体验约束
 非功能要求
 验收条件
-依赖、未决问题和产品决策
+依赖、产品决策、假设和未决问题
 ```
 
 稳定 ID 可以用于复杂需求：`SCN-*` 表示场景，`TERM-*` 表示术语，`RULE-*` 表示规则，`NFR-*` 表示质量要求。简单需求不必为了格式制造大量 ID。
+产品决策的来源、变更和未确认事项按[产品决策来源与变更](../sdlc/references/lifecycles/product-design.md#7-产品决策来源与变更)
+记录；需要起草时可参考可选的 [PRODUCT.md](../sdlc/references/templates/PRODUCT.md)，但不要求回填模板或另建进度来源。
 
 ## 工作顺序
 
@@ -53,7 +56,8 @@ description: >
    反馈、响应式、无障碍或视觉方向时，即使没有代码 diff 也选择 `design`；按
    [`design` 角色卡](../sdlc/references/roles/design.md) 和其引用的可选适配复用既有事实，只补会改变体验或验收的缺口。
 6. 质量设计：明确性能、可靠性、安全、隐私、可观测和评估要求，以及可在发布后观察的结果信号。
-7. 产品确认：检查方向来源、场景、规则、验收条件和结果指标无矛盾，处理未决问题。
+7. 产品确认：按[产品决策来源与变更](../sdlc/references/lifecycles/product-design.md#7-产品决策来源与变更)
+   区分已确认的当前决定、假设和开放替代项；再检查方向来源、场景、规则、验收条件和结果指标无矛盾，处理未决问题。
 
 ## 角色
 

@@ -35,9 +35,9 @@ web-review 是产品或研发 Markdown 的可选复核界面。它只改善用�
 3. **本地打开**：在临时目录启动 `server.py`，只绑定 `127.0.0.1`。
 4. **用户批注**：用户选中文字、写评论并选择 `approve` 或 `changes`。
 5. **回收反馈**：读取临时目录的 `feedback.json`。
-6. **统一修改**：按 `section + quote` 在唯一来源 Markdown 中精确定位，集中应用已理解的修改。
+6. **统一处理意见**：按 [`receiving-feedback`](../receiving-feedback.md) 批量阅读、核实和回应；对已采纳且已理解的修改，按 `section + quote` 在唯一来源 Markdown 中精确定位。
 7. **处理歧义**：quote 找不到或 comment 有多种解释时，向用户澄清，不猜测。
-8. **回复批注**：可将每条处理结果写到临时目录 `replies.json`，供页面展示。
+8. **回复批注**：可将每条处理结果写到临时目录 `replies.json`，供页面展示；保持其现有格式，重要决定仍写回来源 Markdown。
 9. **再次复核**：有修改时按需重新渲染；批准后由拥有该文档的阶段技能继续正常流程。
 10. **收尾**：停止本地服务器；临时产物可清理，不写入 Git。
 
@@ -80,6 +80,7 @@ web-review 是产品或研发 Markdown 的可选复核界面。它只改善用�
 
 - 只绑定 localhost，不出网。
 - 临时 `feedback.json` 和 `replies.json` 不是项目事实来源。
+- `replies.json` 仅是页面展示，不改变其格式；重要决定写回唯一来源 Markdown。
 - 来源 Markdown 始终只有一份。
 - 批注匹配失败时不臆改。
 - 无浏览器时直接使用对话复核，不创建替代进度文件。

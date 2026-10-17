@@ -1,112 +1,110 @@
 <!--
-Project context template.
-Copy the body to <target-repo>/.sdlc-v1/project.md and replace every placeholder
-with facts verified from the repository. Remove this comment after copying.
+可选的项目上下文模板。复制正文到 <target-repo>/.sdlc-v1/project.md 后，只保留
+已由仓库事实验证的内容，并删除本注释。不要把凭据、长期文档全文或第二份生命周期进度写进来。
 -->
 
-# Project Context: <project-name>
+# 项目上下文：[填写：项目名称]
 
-## Purpose
+## 项目概览
 
-<What this project does, who uses it, its main inputs and outputs.>
+[填写：项目解决什么问题、谁使用、主要输入和输出是什么；用已验证的仓库事实说明。]
 
-## Tech stack
+## 技术栈
 
-| Area | Technology | Why / source |
+| 领域 | 使用技术 | 用途与仓库依据 |
 |---|---|---|
-| Runtime | <value> | <repository evidence> |
-| Framework | <value> | <repository evidence> |
-| Storage | <value or none> | <repository evidence> |
-| External systems | <value or none> | <repository evidence> |
+| 运行时 | [填写：语言、版本或 none] | [填写：配置/文件路径] |
+| 框架 | [填写：框架或 none] | [填写：配置/文件路径] |
+| 存储 | [填写：数据库、文件或 none] | [填写：配置/文件路径] |
+| 外部系统 | [填写：服务或 none] | [填写：集成位置或文档路径] |
 
-## Entry points
+## 入口与配置
 
-| Purpose | Path or command | Notes |
+| 用途 | 路径或命令 | 说明 |
 |---|---|---|
-| Start | <path/command> | <notes> |
-| Main flow | <path/symbol> | <notes> |
-| Configuration | <path> | <notes> |
+| 启动 | [填写：启动命令或入口文件] | [填写：适用环境] |
+| 主流程 | [填写：路径/符号] | [填写：调用者和结果] |
+| 配置 | [填写：配置路径] | [填写：来源；不记录 secret] |
 
-## Commands
+## 常用命令
+
+只填写已实际确认的命令；没有对应能力时保留 `none`。YAML 键名供阶段技能读取，不要改名。
 
 ```yaml
 commands:
-  unit: "<command or none>"
-  coverage: "<command or none>"
-  e2e: "<command or none>"
-  typecheck: "<command or none>"
-  lint: "<command or none>"
-  build: "<command or none>"
+  unit: "[填写：单元测试命令；没有则写 none]"
+  coverage: "[填写：覆盖率命令；没有则写 none]"
+  e2e: "[填写：端到端测试命令；没有则写 none]"
+  typecheck: "[填写：类型检查命令；没有则写 none]"
+  lint: "[填写：静态检查命令；没有则写 none]"
+  build: "[填写：构建命令；没有则写 none]"
 ```
 
-## Validation setup
+## 验证准备
 
-Record the actual setup for applicable validation modes; use `none` with a preparation gap when missing.
-This table documents repository facts, not a second lifecycle state. Do not include credentials.
+记录实际适用的验证方式和资源；没有准备时明确写 `none` 与缺口。简单项目可用短句说明。这里记录仓库事实和准备状态，不写凭据，也不创建第二份进度。
 
-| Item | Verified setup / source or gap |
+| 项目 | 已验证的准备、来源或缺口 |
 |---|---|
-| Modes and tools | <applicable modes, framework / engine and runtime versions> |
-| Test assets | <config, tests, fixture / cleanup and any shared replay cache paths> |
-| Target environment | <URL / device, startup source and how the tested build is identified> |
-| Model and test identity | <provider / model when used, credential source or variable names, no secret values> |
-| Run outputs | <report / artifact paths, Git ignore policy and stable archive location / retention> |
-| CI | <workflow / job and artifact location, or none> |
-| Preparation gaps | <missing setup / coverage / evidence, or none> |
+| 方式与工具 | [填写：适用 mode、框架/engine 与版本] |
+| 测试资产 | [填写：配置、测试、fixture、清理或共享回放缓存路径] |
+| 目标环境 | [填写：URL/设备、启动来源和被测构建识别方式] |
+| 模型与测试身份 | [填写：provider/model、凭据变量名或来源；不填 secret] |
+| 运行产物 | [填写：报告/产物路径、Git ignore 与稳定归档策略] |
+| CI | [填写：workflow/job/产物位置，或 none] |
+| 准备缺口 | [填写：缺少的环境、覆盖或证据，或 none] |
 
-## Surface map
+## 变更面映射
 
-Use repository-relative globs. Roles and modes must exist in `role-routing.md`.
+使用仓库相对 glob；实际代码区域必须保留对应的 `roles` 和 `modes`，且它们必须已在 `role-routing.md` 中存在。改动面简单时可只写一项；没有代码区域时明确写 `none`。
 
 ```yaml
 surfaces:
-  - name: <surface-name>
-    globs: ["<path/**>"]
-    roles: [<role>]
+  - name: "[填写：变更面名称]"
+    globs: ["[填写：仓库相对 glob，例如 src/**]"]
+    roles: ["[填写：已登记角色]"]
     modes: [correctness]
 ```
 
-## Conventions
+## 约定
 
-- <Naming, module, testing and error-handling conventions verified in the repository.>
-- <Important project instructions and prohibited actions.>
+- [填写：已验证的命名、模块、测试、错误处理或格式化约定。]
+- [填写：适用的项目指令和禁止操作。]
 
-## Known risks
+## 已知风险（按需）
 
-| Risk | Affected area | Current handling |
+| 风险 | 影响区域 | 当前处理或缺口 |
 |---|---|---|
-| <risk> | <path/surface> | <handling or gap> |
+| [填写：风险] | [填写：路径/变更面] | [填写：现有处理或缺口] |
 
-## Deployment
+## 部署（按需）
+
+仅记录可从仓库确认的目标和配置来源；不要写 secret。
 
 ```yaml
 target: <static-site | container | vps | other | none>
-config_paths: [<paths>]
+config_paths: ["[填写：配置路径；没有则留空列表]"]
 environments:
-  dev: <meaning or none>
-  staging: <meaning or none>
-  canary: <meaning or none>
-  full: <meaning or none>
-health_check: <path/command or none>
+  dev: "[填写：含义或 none]"
+  staging: "[填写：含义或 none]"
+  canary: "[填写：含义或 none]"
+  full: "[填写：含义或 none]"
+health_check: "[填写：检查路径/命令或 none]"
 ```
 
-Do not include secrets. Record where configuration comes from, not secret values.
+## 仓库上下文来源（Repository context sources）
 
-## Repository context sources
+只列出当前仓库状态已验证的索引路径。这里用于导航，不复制长期架构、目标、产品或开发文档的正文，也不把 `.sdlc-v1/` 当作 repo-context 输入。
 
 ```yaml
-root_guidance: <AGENTS.md path or none>
-scoped_guidance: [<applicable AGENTS.md paths>]
-canonical_documents: [<long-lived architecture, goal, product, or development document paths>]
+root_guidance: "[填写：AGENTS.md 路径或 none]"
+scoped_guidance: ["[填写：适用的 AGENTS.md 路径]"]
+canonical_documents: ["[填写：长期架构/目标/产品/开发文档路径]"]
 repo_context:
   status: <ready | stale | none>
-  analyzed_commit: <commit or none>
+  analyzed_commit: "[填写：commit 或 none]"
 ```
 
-List only source paths verified for the current repository state. This section is an index: do not copy
-long-lived document prose into `project.md`, and do not treat `.sdlc-v1/` as repo-context input.
+## AI 可读性
 
-## AI readiness
-
-<Short factual summary of project instructions, scoped commands, test discoverability,
-type information, generated-file noise and remaining gaps.>
+[填写：项目指令、范围内命令、测试可发现性、类型信息、生成文件噪声和剩余缺口的简短事实摘要。]

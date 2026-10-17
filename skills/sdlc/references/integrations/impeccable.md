@@ -56,12 +56,12 @@ setup 加载一次 context；能力检查本身不应触发可能下载引擎的
 | 阶段 | 适配方法 | 输出与边界 |
 |---|---|---|
 | product-design / spec | 借用 `shape` 的任务发现和体验方向：用户、结果、信息架构、旅程、状态、响应式与无障碍。只补充会改变体验方向或验收的缺口。 | 需求正文唯一写入 `.sdlc-v1/context/<REQ>.product.md`；方向确认并入现有产品确认。 |
-| plan | 读取已确认方向、设计系统、组件/token 与 surface brief，把体验约束转换为 Task、可检查验收和验证策略。 | Feature 正文唯一写入 `.sdlc-v1/context/<FEAT>.engineering.md`；不另开产品访谈。 |
+| 规划阶段（`plan`） | 读取已确认方向、设计系统、组件/token 与 surface brief，把体验约束转换为 Task、可检查验收和验证策略。 | Feature 正文唯一写入 `.sdlc-v1/context/<FEAT>.engineering.md`；不另开产品访谈。 |
 | build | UI 编辑前读取当前 Skill 的 `craft-floor`；以现有组件和设计系统为先，按实际缺陷选择 `clarify`、`adapt`、`harden` 或 `polish` 等方法。 | 页面修改、`init`、`document`、`polish` 和需要生成产物的操作只在 build 或已授权的上下文准备阶段进行，并进入验证基线。 |
 | validate | 借用 `audit` 的技术检查维度，并结合真实 E2E、键盘、断点、对比、状态和设备检查。原生 App 读取原生参考，不以 Web detector 代替。 | validate 只读实现；实际运行才标 `TESTED`，无浏览器/设备时标 `INFERRED` 并给出人工步骤。 |
 | review | 借用 `critique` 的设计判断维度，检查当前 UI diff、产品意图、设计系统一致性和已有渲染证据。 | review 只记录发现；需要改代码或设计产物时回到 build，然后重新进行适用的 validate/review。 |
 
-产品行为、场景、规则和体验约束只在 Requirement 产品正文；Feature 的 Plan、设计发现、`Validation / Design` 和
+产品行为、场景、规则和体验约束只在 Requirement 产品正文；Feature 的当前有效方案、设计发现、`Validation / Design` 和
 `Review / Design` 只在工程正文。截图、trace 与 Impeccable 原始产物可保留在项目既有目录并由工程正文引用，不创建
 并行的设计结论报告。
 

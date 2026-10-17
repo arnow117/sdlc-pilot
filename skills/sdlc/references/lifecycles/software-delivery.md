@@ -1,5 +1,7 @@
 # Software delivery lifecycle
 
+> distilled-from: [Zts0hg/codexspec](https://github.com/Zts0hg/codexspec/tree/d76d358a9f79a9b131bb2eccb85670e5d81b7dca/templates/docs)
+
 软件交付把 ready Requirement 转为 `.sdlc-v1/context/<feature-id>.engineering.md`、代码和可验证的 Git commit。按改动风险选择方法，不要求小改动复制完整架构文档。
 
 ## 0. 执行纪律
@@ -16,15 +18,19 @@
 
 ## 1. Engineering specification
 
-研发上下文应把产品验收条件映射到实现：
+研发上下文的一个当前有效方案应把当前产品验收条件映射到实现：
 
 - 当前代码入口、数据流和约束；
 - 拟修改的模块与接口；
 - 数据结构、兼容性和部署影响；
-- 每条验收条件对应的设计与测试；
+- 每条当前验收条件对应的设计或契约、Task 和计划验证；新 Feature 在 `add-task` 前可先写计划 Task，登记后替换为实际 Task ID；更新 Feature 时引用既有 Task；
 - 明确不改的区域、关键假设和低风险默认值。
 
-重要接口或决策可使用 `ARCH-*`、`API-*`、`DATA-*` 标识。引用应指向普通文件路径、符号或测试，而不是复制正文。
+有实质取舍时，可以增加轻量设计决定：问题与约束、选择、重要替代方案及取舍、适用的 Requirement/验收条件，以及何时需要重新评估。重要接口或决策可使用 `ARCH-*`、`API-*`、`DATA-*` 标识，但不要求简单改动增加 ID 或表格。
+
+简单场景可以用一行“验收条件 → 设计/契约 → Task → 计划检查”说明关联；跨客户端、API、兼容性或恢复行为需要分别说明时，使用紧凑映射。架构说明和实现顺序可以分节描述，但都属于同一个当前有效方案，不能形成第二份权威计划。验证的实际结果留在现有验证/证据部分，评审只引用这些结果和缺口。
+
+可参考 [ENGINEERING.md](../templates/ENGINEERING.md) 起草；它不是必填 schema、独立 ADR 库或进度记录。产品侧的决定来源仍以[产品决策来源与变更](product-design.md#7-产品决策来源与变更)为准。
 
 ## 2. 架构设计
 
@@ -93,6 +99,9 @@
 根据 project surface map 和 diff 选择单元测试、类型检查、构建、端到端、契约、视觉或评估检查。逐条核对产品验收条件，记录实际命令和结果。
 
 通过结果必须绑定到业务代码工作树干净时的当前 Git commit。之后可以只修改或提交 `.sdlc-v1/**`；该目录之外的代码变化需要重新验证。
+`.sdlc-v1` 上下文文字的语义变化是否仍可复用既有证据，按
+[stage-agent-protocol 的 context-prose-and-evidence-applicability](../stage-agent-protocol.md#context-prose-and-evidence-applicability)
+由主 Agent 判断；它不是 CLI 自动推断的状态变化。
 
 ## 9. 评审
 
@@ -111,7 +120,7 @@ story/scenario ID 导航到既有产品故事和验收条件，而不是复制�
 actor、当前入口、前置的身份/权限/环境、参数由哪个 owner 或既有 schema/指南提供、默认
 范围、正常步骤和可观察业务结果、失败/撤权/未知结果的恢复，以及当前支持范围。
 
-Plan 先判断文档、故事和参数来源是否受影响；内部实现改动可记录为不适用及理由，但不得
+规划阶段（`plan`）先判断文档、故事和参数来源是否受影响；内部实现改动可记录为不适用及理由，但不得
 虚构用户故事。Build 同步更新该入口和它所链接的详细操作说明。参数的权威仍在受控 schema、
 部署配置或详细操作指南；usage 文档只引用来源，绝不记录 secret。
 
@@ -127,6 +136,6 @@ Validate 和 Review 保持对实现与 usage 文档的只读纪律：若实际�
 返回 Build 更新指南并重新运行受影响验证；不要以验证或评审阶段直接改写指南来规避
 validation-commit 绑定。
 
-能力废弃或失效时，及时改正当前指南并保留历史诊断和原有 AC；不得因文档检查通过而推进
+能力废弃或失效时，及时改正当前指南并保留历史诊断和原有验收条件；不得因文档检查通过而推进
 lifecycle。全局 usage 入口和实际使用验证是已有验收/发布证据的导航与联动，不降低其原有
 条件。

@@ -25,7 +25,7 @@ description: >
 6. 选择一个依赖已完成的 Task；不要同时修改多个相互覆盖的 Task。
 7. 根据 `.sdlc-v1/project.md` 和 Git diff 加载相关角色卡与语言参考。
    涉及 Web 或 App 用户旅程时，按 [Web 验证约束](../sdlc/references/validate-modes/e2e.md#web) 或
-   [App 验证约束](../sdlc/references/validate-modes/e2e.md#app) 落实 Plan 中的测试资产、环境与产物归档准备，
+   [App 验证约束](../sdlc/references/validate-modes/e2e.md#app) 落实当前有效方案中的测试资产、环境与产物归档准备，
    供 Validate 独立执行；实际入口和资产位置作为 `project_candidates` 返回，由主 Agent 核对后更新 `project.md`。
 
 ## 实现循环

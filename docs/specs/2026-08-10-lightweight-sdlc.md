@@ -2,12 +2,12 @@
 
 - **基础设计日期**：2026-08-17
 - **状态**：Accepted
-- **基础设计版本**：1.1.0；后续规范索引更新于 2026-10-07
+- **基础设计版本**：1.1.0；后续规范索引更新于 2026-10-17
 
 ## 0. 当前规范入口
 
 轻量状态模型继续有效。本文保留基础设计，阶段行为与工具细节以当前技能及参考为准；插件版本和未发布能力见
-[CHANGELOG](../../CHANGELOG.md)，不能把本地 Unreleased 命令视为已包含在 2.0.0 tag 中。
+[CHANGELOG](../../CHANGELOG.md)；开发分支登记迁移从 2.1.0 起发布，未包含在 2.0.0 tag 中。
 
 | 主题 | 权威入口 |
 |---|---|
@@ -17,7 +17,7 @@
 | 使用文档与实际操作验证 | [usage contract](../../skills/sdlc/references/lifecycles/software-delivery.md#11-global-usage-document-story-and-parameter-contract) |
 | 设计方法 | [`design` 角色](../../skills/sdlc/references/roles/design.md)、[Impeccable 可选适配](../../skills/sdlc/references/integrations/impeccable.md) |
 | 工具自身维护与发布 | [`evolve`](../../skills/sdlc/references/evolve-loop.md) |
-| 开发分支登记迁移（当前 Unreleased） | [运行时操作指南](../../skills/sdlc/references/lightweight-runtime.md#51-开发分支登记迁移) |
+| 开发分支登记迁移（2.1.0 起） | [运行时操作指南](../../skills/sdlc/references/lightweight-runtime.md#51-开发分支登记迁移) |
 
 ## 1. 问题
 

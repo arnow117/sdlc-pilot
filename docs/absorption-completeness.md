@@ -52,7 +52,7 @@
 
 **Missed(2)**
 
-- **receiving-code-review** — **最高价值缺口**。受评方接收纪律全缺:禁表演式同意("你说得对")、改前先核对代码库、先澄清全部不清项、带理由技术反驳、对"实现得更完整"做 YAGNI grep、一次一修各自验。SDLC 在 build 自检 / debug / review fix-first 反复回环过 fix cycle,这正是防止盲目/过度修复的纪律。**应补一节进 sdlc-build 或 sdlc-review。**
+- **receiving-code-review** — **最高价值缺口**。受评方接收纪律全缺:禁表演式同意("你说得对")、改前先核对代码库、先澄清全部不清项、带理由技术反驳、对"实现得更完整"做 YAGNI grep、一次一修各自验。SDLC 在 build 自检 / debug / review 处理评审意见时反复回环修正,这正是防止盲目/过度修复的纪律。**应补一节进 sdlc-build 或 sdlc-review。**
 - **finishing-a-development-branch** — 集成/收尾(verify→4 选项 merge/PR/keep/discard→执行→清理)被 source-map 路由到 "ship",**out-of-scope,不值得补**;唯一重叠的"完成前测试须过"已被 validate/review 覆盖。
 
 ### 2.2 gstack(88%)

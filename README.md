@@ -4,8 +4,8 @@
 
 ## 核心模型
 
-1. **产品上下文**用 Markdown 记录问题、范围、行为场景、领域判断和验收标准。
-2. **工程上下文**用 Markdown 记录设计、任务拆分、测试策略、评审结论和发布说明。
+1. **产品上下文**用 Markdown 记录问题、范围、行为场景、领域判断、当前绑定决定的来源和验收标准。
+2. **工程上下文**用 Markdown 在一个当前有效方案中记录设计、Task 拆分和计划验证；实际验证、评审和发布证据使用既有独立章节或引用。
 3. **共享进度**只写目标仓库的 `.sdlc-v1/state.json`。
 4. **协作与历史**使用普通 Git branch、commit、push、pull/merge；不再维护第二套版本历史。
 5. **长期工程上下文**可由仓库自己的 `AGENTS.md`、架构/产品文档及可选的 repo-context 索引提供；SDLC 只在 `project.md` 记录已验证路径，不复制它们的正文或状态。
@@ -46,6 +46,9 @@ Requirement: captured → ready → in_delivery → validated → released
 仅当相关代码、配置与环境一致，且有实际执行的命令、结果及被测版本时，才可复用验证证据；
 输入变化、失败、证据缺失或阶段另有要求时执行相应检查。详见
 [`阶段协作协议`](skills/sdlc/references/stage-agent-protocol.md#5-evidence-git-and-mandatory-stop)。
+生命周期 CLI 不会因 `.sdlc-v1` 上下文文字的语义变化自动失效既有验证；主 Agent 必须按
+[evidence applicability 规则](skills/sdlc/references/stage-agent-protocol.md#context-prose-and-evidence-applicability)
+重新判断当前要求是否仍被覆盖。
 
 ## 文件放在哪里
 
@@ -62,7 +65,7 @@ Requirement: captured → ready → in_delivery → validated → released
 ```
 
 暂停、跨对话恢复或换执行环境时，可按协议临时增加唯一的
-`.sdlc-v1/checkpoints/<feature-id>.md`。它不替代 state、Plan 或 Git，完成 Feature 后删除。
+`.sdlc-v1/checkpoints/<feature-id>.md`。它不替代 state、当前有效方案或 Git，完成 Feature 后删除。
 
 `state.json` 只保存 Requirement、Feature、Task、上下文引用及验证/评审/发布摘要，不复制长篇需求和设计文档。
 每条 Requirement 的 `product_context_ref` 和每个 Feature 的 `engineering_context_ref` 都是必填项，只接受
@@ -102,7 +105,7 @@ review 每次还会检查本次 diff 中的重复实现、不必要抽象和冗�
 ## Web / App 验证与 2.0 升级
 
 受影响的 Web 用户旅程使用 tester-army/e2e CLI 与 Web engine，App 用户旅程使用 Maestro CLI Flow。
-已有测试套件可补充检查；Plan / Build 准备对应资产和环境，Validate 独立运行并记录必要业务断言与当前构建证据。
+已有测试套件可补充检查；规划阶段（`plan`）/ Build 准备对应资产和环境，Validate 独立运行并记录必要业务断言与当前构建证据。
 工具、环境或证据不足时保持未通过。具体资产、模型 / 缓存、归档与归因要求统一见
 [`e2e` 验证约束](skills/sdlc/references/validate-modes/e2e.md)。
 
@@ -287,6 +290,7 @@ git diff --check
 - 当前基础模型及规范索引：[`docs/specs/2026-08-10-lightweight-sdlc.md`](docs/specs/2026-08-10-lightweight-sdlc.md)
 - Web / App 验证与工程资产：[`e2e`](skills/sdlc/references/validate-modes/e2e.md)
 - 工具自身维护与发布：[`evolve`](skills/sdlc/references/evolve-loop.md)
+- 当前产品和工程上下文的可选起草结构：[PRODUCT.md](skills/sdlc/references/templates/PRODUCT.md)、[ENGINEERING.md](skills/sdlc/references/templates/ENGINEERING.md)
 - Onboard 产出示例：[`examples/onboard-output-sample.md`](examples/onboard-output-sample.md)
 - 看板当前实现与历史视觉设计：[`DESIGN.md`](DESIGN.md)
 - 跨模块编排演练：[`docs/agent-orchestration-rehearsal.md`](docs/agent-orchestration-rehearsal.md)
@@ -296,4 +300,4 @@ git diff --check
 
 `docs/specs/2026-06-*.md` 全部是 0.x 历史设计，只用于理解演进背景；其中的状态路径、hook、命令和完成条件
 已被轻量基础模型及当前 stage / reference 取代，不能作为当前实现依据。已发布能力与本地新增能力的范围见
-[CHANGELOG](CHANGELOG.md)：2.0.0 已发布，`migrate-feature-branch` 当前记录在 Unreleased。
+[CHANGELOG](CHANGELOG.md)：2.1.0 新增 `migrate-feature-branch`，并完善产品决定、工程设计、评审输入和五份中文模板。

@@ -1,32 +1,29 @@
 <!--
-Optional recovery checkpoint. Canonical rules:
-../stage-agent-protocol.md#6-context-and-checkpoints
-Path: .sdlc-v1/checkpoints/<feature-id>.md
-Keep this file to 60 lines or fewer. It is updated in place and deleted when the
-Feature completes. Only the main Agent creates, updates, or deletes it; a child may
-return a candidate but never writes it. Do not put credentials, private material,
-unnecessary local paths, chat history, a Spec, a Plan, or full logs here.
+可选的恢复检查点。仅用于暂停、跨会话恢复或执行环境变化；复制后删除本注释，避免来源相对路径进入目标仓库。
+路径：.sdlc-v1/checkpoints/<feature-id>.md。全文不超过 60 行，原位更新，Feature 完成后删除。
+只有主 Agent 可以创建、更新或删除；子 Agent 只能返回候选。不要记录凭据、私密信息、不必要本地路径、聊天记录、Spec、当前有效方案全文或完整日志。
+权威来源：../stage-agent-protocol.md#6-context-and-checkpoints
 -->
 
-# Checkpoint: <feature-id>
+# 恢复检查点：[填写：Feature ID]
 
 ## 定位
 
-- Feature / branch / HEAD / workspace: <values>
-- Plan Task: <id or none>
+- Feature / branch / HEAD / workspace：[填写：恢复前必须核对的实际值]
+- Task ID：[填写：当前 Task；没有则 none]
 
 ## 已确认
 
-- <main-Agent accepted work; command result; tested version>
+- [填写：主 Agent 已接受的工作、实际命令及结果、已验证版本。]
 
 ## 未完成
 
-- <in-progress, unaccepted, failed, or blocked item>
+- [填写：进行中、未接受、失败或受阻的工作及直接原因。]
 
 ## 下一步
 
-- <first action; completion condition; required verification; constraints that must remain>
+- [填写：第一步操作、完成条件、必要验证和不能改变的约束。]
 
 ## 必要引用
 
-- <required state, Plan, context, Git, code, or evidence reference>
+- [填写：恢复所需的 state、当前有效方案、上下文、Git、代码或证据路径。]

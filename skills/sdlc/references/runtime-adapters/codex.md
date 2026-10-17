@@ -12,8 +12,8 @@ does not define lifecycle, dispatch, result, acceptance, or checkpoint semantics
 | SDLC need | Codex implementation | Fallback |
 |---|---|---|
 | Start one bounded child | `spawn_agent` with the complete current brief | Main Agent runs the stage serially inline and discloses it |
-| Correct a child contract | `followup_task` with a complete `supersedes` brief after a material change | Start a later serial child only after the prior result is summarized |
-| Routine clarification or constraint | `send_message` when it does not alter the brief | Include it in the next complete brief |
+| Material child-contract change | `followup_task` with the concise, complete `supersedes` brief | Start a later serial child only after the prior result is summarized |
+| Routine clarification, local correction, or in-scope repair | `send_message` to an active child; use `followup_task` when an idle child needs another turn | No `supersedes`; use the next normal message |
 | Wait for a result | `wait_agent` | Use the runtime's interruptible wait |
 | Stop an active child | `interrupt_agent` | Disclose that no stop control is available |
 | Inspect active agents | `list_agents` once only for recovery after an actual runtime restart or connection failure, as required by the protocol's waiting-and-recovery rule | A user status request uses known evidence; do not inspect after a normal timeout |
@@ -30,7 +30,8 @@ default; a child never creates its own children. The main Agent, not the child,
 applies the canonical protocol when it permits bounded analysis or parallel work.
 
 [`templates/TASK.md`](../templates/TASK.md) is an optional brief/result message
-shape. Pass it directly to a child; do not persist it as a Plan, task card, or
+shape. Pass it directly to a child; do not persist it as a current effective
+solution, task card, or
 progress file.
 
 ## User choices
@@ -50,9 +51,10 @@ When structured input is unavailable, use:
 
 ## Handoff and discovery
 
-The authoritative recovery sources are the state CLI, Plan/context, and Git. A
-handoff message is only a short summary; use the protocol's checkpoint only when
-its pause/recovery conditions apply.
+The authoritative recovery sources are the state CLI, the current effective
+solution, relevant project/product/engineering context, and Git. A handoff message
+is only a short summary; use the protocol's checkpoint only when its
+pause/recovery conditions apply.
 
 For repository-local Codex discovery, maintain `.agents/skills/sdlc*` symlinks
 pointing to the writable source or installed skill directories. Verify their

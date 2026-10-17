@@ -94,7 +94,7 @@
 ### sdlc-review — 覆盖：强
 | 维度 | 内容 |
 |---|---|
-| **Canonical** | `review`（gstack /review）：scope-drift + **plan-completion 审计**（验证模式分类 DIFF-VERIFIABLE/CROSS-REPO/EXTERNAL-STATE/CONTENT-SHAPE × 状态 DONE/PARTIAL/NOT-DONE/UNVERIFIABLE + 诚实规则）+ **confidence 校准表(1-10)** + fix-first + 多专家并行 + 对抗 pass |
+| **Canonical** | `review`（gstack /review）：scope-drift + **plan-completion 审计**（验证模式分类 DIFF-VERIFIABLE/CROSS-REPO/EXTERNAL-STATE/CONTENT-SHAPE × 状态 DONE/PARTIAL/NOT-DONE/UNVERIFIABLE + 诚实规则）+ **confidence 校准表(1-10)** + 先核实再处理 + 多专家并行 + 对抗 pass |
 | **取什么** | review 整套方法论；`gsd-code-review` 的 **深度分层**(quick/standard/deep) + **per-language pitfall 表** + REVIEW.md schema；安全=`security-review` 10 域 FAIL/PASS + `gsd-secure-phase` 的 **verify-mitigation-exists（非盲扫）+ disposition(mitigate/accept/transfer) + open=0 硬门**；`plan-eng-review` 的 **15 资深工程认知模式** + test-coverage tracing + scope-challenge 阈值；`codex` 的对抗外脑角色 + prompt-injection 加固（**可选**，sdlc 在 Codex 下跑时调 codex 是循环/冗余） |
 | **补什么** | 非交互/headless 变体（源都假设 AskUserQuestion）；stack-agnostic 化；去所有 runtime deps；统一 severity+confidence 模型（源混用 P0-P3 / Critical-Warning-Info / 1-10） |
 
@@ -199,6 +199,6 @@
 | 维度 | 取舍 |
 |---|---|
 | 借鉴 | Web 的目标驱动操作、确定性断言、动作回放与运行报告；App 的可提交 YAML Flow 与 CLI 回归执行。 |
-| 适配 | Plan / Build 准备资产与环境，Validate 独立执行；Web 只读缓存、当前构建与报告核对、失败证据归档及按原因恢复。 |
+| 适配 | 规划阶段 / Build 准备资产与环境，Validate 独立执行；Web 只读缓存、当前构建与报告核对、失败证据归档及按原因恢复。 |
 | 不采用 | 不用 e2e 的移动 engine 替代 Maestro；不以 MCP、生成测试、截图或 Agent 自评代替必要业务断言，不另建 SDLC runner / 状态。 |
 | 权威定义 | [`e2e`](../skills/sdlc/references/validate-modes/e2e.md)；资产和具体运行入口留在目标工程，框架行为以固定安装版本为准。 |
