@@ -2,7 +2,8 @@
 
 > distilled-from: [Zts0hg/codexspec](https://github.com/Zts0hg/codexspec/tree/d76d358a9f79a9b131bb2eccb85670e5d81b7dca/templates/docs)
 
-产品设计把原始请求收敛为 `.sdlc-v1/context/<requirement-id>.product.md`。按需求复杂度选择下面的方法，不要求简单需求机械地执行全部章节。
+产品设计把原始请求收敛为 `.sdlc-v1/context/<requirement-id>.product.md`。新建或实质更新的上下文按
+[PRODUCT.md](../templates/PRODUCT.md) 保留源 requirements 与详细 spec 的章节和必填/条件可选区分；简单需求可以简写适用内容。
 
 ## 1. 问题发现
 
@@ -29,6 +30,9 @@ Then <可观察结果>
 至少覆盖主路径、权限或身份差异、空值/边界、失败与恢复、重复操作和并发影响。复杂规则可使用 Example Mapping：Rule → Example → Question。
 
 场景必须描述业务行为，不嵌入类名、表结构或内部算法。需要稳定引用时使用 `SCN-*` 和 `RULE-*`。
+
+复杂用户旅程、业务分支或状态转换按[图示辅助对齐](software-delivery.md#图示辅助对齐)选择表达，
+放在对应用户故事中，与 Given/When/Then 场景共同审阅；产品确认时沿用同一约定，不增加确认步骤。
 
 ## 3. 领域澄清
 
@@ -80,5 +84,5 @@ Requirement 进入 ready 前检查：
 
 当前决定改变时，更新为新决定，并简短说明它取代的决定或来源及其对范围、验收条件或已规划工作的影响。只有仍有效的要求需要在后续设计、Task 和验证中保持覆盖；被明确取代的旧验收条件保留其变更依据，不成为永久必选项。
 
-简单需求用一段文字即可。只有来源、选择或影响容易混淆时才使用稳定 ID、表格或额外元数据。可选的
-[PRODUCT.md](../templates/PRODUCT.md) 仅提供起草结构，不是必填章节或第二份进度记录。
+简单需求可以使用短句和少量条目；只有来源、选择或影响容易混淆时才增加稳定 ID 或元数据。
+[PRODUCT.md](../templates/PRODUCT.md) 保留源模板的可审阅结构，不要求批量迁移历史上下文，也不成为第二份进度记录。

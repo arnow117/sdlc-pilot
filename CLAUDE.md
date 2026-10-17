@@ -77,8 +77,8 @@ git diff --check
   业务代码工作树必须干净；之后只提交 `.sdlc-v1/**` 不使验证失效，其他路径变化后必须重新验证。
 - `project.md` 可索引当前 commit 已验证的 `AGENTS.md`、架构、目标、产品和开发文档；缺失或过期的 `.repo-context/`
   索引不阻塞 onboard，且 SDLC 不读取或写入 repo-context 的状态。
-- `.sdlc-v1/context/*.product.md` / `*.engineering.md` 只承载当前 Requirement/Feature；产品上下文记录方向来源和结果指标，
-  工程上下文记录发布后观察、负责人、时间窗口和新 Requirement 回流。长期文档不复制进 lifecycle context。
+- `.sdlc-v1/context/*.product.md` / `*.engineering.md` 只承载当前 Requirement/Feature；产品上下文维护方向来源、结果观察计划及 Requirement 回流，
+  工程上下文引用该计划，记录技术发布准备、实际发布/观测结果、反馈证据与缺口。长期文档不复制进 lifecycle context。
 - repo-context 的文档或指导改动不属于 `.sdlc-v1/**`，所以 validation 后修改它们必须建立独立维护 Requirement 或重新验证。
 - `init` 检出旧 sdlc-pilot copied hooks 时必须停止并给出路径；只能人工检查/清理，不能自动覆盖团队 hooks。
 - 多人冲突按普通 Git 冲突处理；同步并解决冲突后重跑测试和状态检查。

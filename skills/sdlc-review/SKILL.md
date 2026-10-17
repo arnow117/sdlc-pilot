@@ -36,6 +36,7 @@ Validation/证据位置。
 - validation commit 到当前 HEAD 在 `.sdlc-v1/**` 之外不能有差异。
 - 当前业务代码工作树必须干净；仅 `.sdlc-v1/**` 可以有待提交的上下文或状态修改。
 - 读取项目、产品和研发上下文，但只加载与本次 diff 有关的部分。
+- 上下文含相关图示时，按[图示辅助对齐](../sdlc/references/lifecycles/software-delivery.md#图示辅助对齐)核对图、正文、实现与已有证据；不以图的数量代替覆盖判断。
 - 读取 [`sdlc-validate`](../sdlc-validate/SKILL.md#验收条件与证据对应) 对研发上下文验证/证据部分的要求，核对当前有效验收条件的覆盖缺口与实现版本；不复制或重建验收条件/结果/证据表。
 - 依照 [context-prose-and-evidence-applicability](../sdlc/references/stage-agent-protocol.md#context-prose-and-evidence-applicability)
   由主 Agent 先判断验证证据是否仍覆盖当前产品决定和当前有效方案；不把未变的业务 commit 当作自动证明。

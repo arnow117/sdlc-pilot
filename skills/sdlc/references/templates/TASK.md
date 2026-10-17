@@ -1,13 +1,19 @@
 <!--
-可选的派工消息结构。直接发送给子 Agent；它不是持久化的 Task 卡、inbox、结果文件、当前有效方案章节或第二份进度记录。
-使用前阅读阶段协议；复制到消息后删除本注释，避免来源相对路径进入目标仓库。
+派工消息模板。直接发送给子 Agent；它不是持久化的 Task 卡、inbox、结果文件、当前有效方案章节或第二份进度记录。
+用一份完整 brief 描述此次派工，不再复制一份相同的散文说明。复制到消息后删除本注释，避免来源相对路径进入目标仓库。
 
 权威来源：../stage-agent-protocol.md
 -->
 
 ## 派工：[填写：stage] / [填写：工作项]
 
-用一份完整消息写清目标、范围、已定接口、写入边界、完成条件和必要验证。只列已获授权的 lifecycle transition；没有时保留空列表。
+### 使用说明
+
+- `goal` 写可观察结果；`out_of_scope` 明确未授权范围；`settled_interfaces` 只写已定 API、DTO、所有权或兼容性合同。
+- `context_refs` 指向当前项目、产品、工程上下文和已有证据；详细背景放在这些权威位置，不在 brief 重复粘贴。
+- `allowed_transitions` 只列当前已获授权的、有序 lifecycle 请求；没有时保留空列表。`--repo` 由主 Agent 固定，子 Agent 不提供或覆盖。
+
+### 派工合同
 
 ```yaml
 stage: <onboard|backlog|product-design|spec|plan|build|validate|review|ship|evolve>
@@ -33,12 +39,22 @@ allowed_transitions:
 # `--repo` 由主 Agent 固定，子 Agent 不能提供或覆盖。
 ```
 
+### 需要展开时的补充
+
+仅在 YAML 字段不足以解释已定接口、风险、验证样例或局部限制时增加这一节；每条必须引用上面的字段或 `context_refs`，
+不得再写一份完整派工正文。
+
+| 字段或引用 | 仅补充的事实、限制或示例 |
+|---|---|
+| [填写：`settled_interfaces` / `context_refs` / `required_verification`] | [填写：必要细节；没有则 `none`。] |
+
 仅在阶段协议定义的实质 contract 变化时使用 `supersedes`：
-[stage-agent-protocol.md](../stage-agent-protocol.md#2-dispatch-contract)。替换消息仍须完整，简短说明变化，并用 `context_refs` 指向已有细节和证据。
+[stage-agent-protocol.md](../stage-agent-protocol.md#2-dispatch-contract)。替换消息仍须完整，简短说明变化，并用
+`context_refs` 指向已有细节和证据。
 
 ## 子 Agent 结果
 
-结果应报告实际改了什么、运行了什么、在哪个版本验证、工作区状态和未解项。只有主 Agent 接受结果；子 Agent 不使用 `completed`。
+结果只报告实际观察到的变更和证据。只有主 Agent 接受结果；子 Agent 不使用 `completed`。
 
 ```yaml
 stage: <stage>

@@ -78,9 +78,9 @@ Requirement: captured → ready → in_delivery → validated → released
 `.repo-context/manifest.yaml`，会将其中的 canonical 文档路径写入 `project.md` 的索引。两份 repo-context
 文件缺失、过期或无法读取时，onboard 继续从源码和配置建立项目上下文，不产生运行时依赖。
 
-职责保持分离：长期目标、产品、架构与开发说明由仓库文档维护；`.sdlc-v1/context/*.product.md` 和
-`*.engineering.md` 仅维护当前 Requirement/Feature 的行为、实现、验证、发布后观察和新需求回流。研发上下文需要
-记录预期结果、可观察指标（或不可观测原因）、观察窗口、负责人和反馈应创建或更新的 Requirement。
+职责保持分离：长期目标、产品、架构与开发说明由仓库文档维护；`.sdlc-v1/context/*.product.md` 维护当前
+Requirement 的产品行为、结果观察计划和 Requirement 回流；`*.engineering.md` 维护当前 Feature 的实现、验证、技术发布准备、
+实际发布/观测结果、反馈证据和缺口。工程上下文引用产品观察计划，不复制产品指标、基线、目标、观察窗口或负责人。
 
 repo-context 的 `sync`/`refine` 若会改动业务路径或长期文档，应在当前 Feature 的 validation 前完成；若在 validation
 之后进行，则建立单独的维护 Requirement，或在评审/发布前重新验证。SDLC 的 state 校验规则不为这些路径提供例外。
@@ -290,7 +290,8 @@ git diff --check
 - 当前基础模型及规范索引：[`docs/specs/2026-08-10-lightweight-sdlc.md`](docs/specs/2026-08-10-lightweight-sdlc.md)
 - Web / App 验证与工程资产：[`e2e`](skills/sdlc/references/validate-modes/e2e.md)
 - 工具自身维护与发布：[`evolve`](skills/sdlc/references/evolve-loop.md)
-- 当前产品和工程上下文的可选起草结构：[PRODUCT.md](skills/sdlc/references/templates/PRODUCT.md)、[ENGINEERING.md](skills/sdlc/references/templates/ENGINEERING.md)
+- 五份可审阅模板：[PROJECT.md](skills/sdlc/references/templates/PROJECT.md)、[PRODUCT.md](skills/sdlc/references/templates/PRODUCT.md)、[ENGINEERING.md](skills/sdlc/references/templates/ENGINEERING.md)、[TASK.md](skills/sdlc/references/templates/TASK.md)、[CHECKPOINT.md](skills/sdlc/references/templates/CHECKPOINT.md)；PRODUCT/ENGINEERING 分别保留其源模板的核心与条件可选区分。
+- 按需图示与场景对齐：[图示辅助对齐](skills/sdlc/references/lifecycles/software-delivery.md#图示辅助对齐)，在原有章节解释复杂关系，并在实现和评审时检查一致性。
 - Onboard 产出示例：[`examples/onboard-output-sample.md`](examples/onboard-output-sample.md)
 - 看板当前实现与历史视觉设计：[`DESIGN.md`](DESIGN.md)
 - 跨模块编排演练：[`docs/agent-orchestration-rehearsal.md`](docs/agent-orchestration-rehearsal.md)
@@ -300,4 +301,4 @@ git diff --check
 
 `docs/specs/2026-06-*.md` 全部是 0.x 历史设计，只用于理解演进背景；其中的状态路径、hook、命令和完成条件
 已被轻量基础模型及当前 stage / reference 取代，不能作为当前实现依据。已发布能力与本地新增能力的范围见
-[CHANGELOG](CHANGELOG.md)：2.1.0 新增 `migrate-feature-branch`，并完善产品决定、工程设计、评审输入和五份中文模板。
+[CHANGELOG](CHANGELOG.md)：3.0.0 对齐 CodexSpec 原始模板并加入按需图示对齐。新建或实质更新 PRODUCT/ENGINEERING 时遵循固定核心章节；旧文档无需批量迁移，状态、路径和 CLI 保持兼容。

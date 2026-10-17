@@ -47,12 +47,15 @@ SDLC 通用改进才提议 `/sdlc evolve`。
    - API、数据或兼容性变化；
    - Task、依赖和完成条件；
    - 测试策略、风险与回滚方式。
-   - 发布后观察：指标/不可观测原因、基线和目标、观察窗口、负责人，以及反馈转为新 Requirement 的路径。
+   - 发布后观察：引用产品结果观察计划；技术发布准备、实际发布/观测结果、反馈证据和缺口。产品指标、基线、目标、观察窗口、负责人和
+     Requirement 回流路径只在产品上下文中维护。
 
    涉及 Web 或 App 用户旅程时，测试策略遵循 [Web 验证约束](../sdlc/references/validate-modes/e2e.md#web) 或
    [App 验证约束](../sdlc/references/validate-modes/e2e.md#app)，将缺失的测试、环境及产物归档准备纳入有界 Task。
 
    派工、催补、调试和重跑日志不追加到当前有效方案；最终验证和验收证据使用现有独立章节或引用。
+   复杂交互和边界按[图示辅助对齐](../sdlc/references/lifecycles/software-delivery.md#图示辅助对齐)表达并核对场景，
+   图与正文共同属于当前有效方案。
 5. 在 orchestrated mode 请求 `start-feature --engineering-context-ref .sdlc-v1/context/<feature-id>.engineering.md`；
    只有独立、不在主 Agent 编排中的 standalone mode 才直接执行 CLI，写入 Requirement、Feature、分支和上下文引用。
 6. 按可独立验证的增量请求 `add-task`；依赖使用 Task ID 明确表示。
@@ -67,7 +70,8 @@ SDLC 通用改进才提议 `/sdlc evolve`。
 - 若验证后修改了产品/工程上下文的语义，按[context-prose-and-evidence-applicability](../sdlc/references/stage-agent-protocol.md#context-prose-and-evidence-applicability)
   重新判断证据能否覆盖当前要求，而不将未变的业务 commit 视为自动结论。
 
-需要起草结构时可使用可选的 [ENGINEERING.md](../sdlc/references/templates/ENGINEERING.md)。它不要求迁移历史上下文，也不取代当前有效方案。
+新建或实质更新的工程上下文使用 [ENGINEERING.md](../sdlc/references/templates/ENGINEERING.md)：设计固定核心、条件可选设计、
+详细实施计划和详细 Task 按源模板顺序共同构成同一个当前有效方案。简单改动可简写适用内容，不要求迁移历史上下文，也不取代当前有效方案。
 
 ## Task 质量
 
