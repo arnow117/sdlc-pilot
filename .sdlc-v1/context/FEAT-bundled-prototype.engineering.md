@@ -261,3 +261,25 @@ Terra worker 完整实施并返回命令、版本、工作树与缺口。正式 
 - 本次 diff 未发现有证据支持的重复实现或可避免工程债，未发现阻塞发布的源码可读性问题。上述原生/CLI/新会话/生产证据限制保持，不扩大已验证范围。
 - 入口检查 `git diff --quiet <validation-commit>..HEAD -- . ':(exclude).sdlc-v1/**'` exit0；业务树clean与diff-check exit0，只读安装字节/链接/快照hash核对exit0。仅工程上下文/state已有变动。
 - 主 Agent执行 `record-review --feature-id FEAT-bundled-prototype --decision approved --by review_sdlc_prototype_release_final` exit0，Feature变为reviewed。发布目标明确为origin/main、v3.1.0及公开GitHub Release；尚未记released。
+
+### 源码发布准备与 last-good
+
+- ship Agent `/root/ship_sdlc_prototype_release` 完成只读发布前检查，主 Agent接受：Feature reviewed、validation commit业务未变、当前HEAD `89900e561a5840f3448461c9763a77d2291bdd1f` 仅追加SDLC记录。安装78文件与版本/链接一致，Release notes范围准确。
+- 发布目标：`https://github.com/arnow117/sdlc-pilot.git` 的 main、annotated v3.1.0 与公开GitHub Release。last-good 为公开 `v3.0.0` / `0c6ebdc104cccf7d6fa97b65618f35ddedf4c847`；主 Agent远端API与ls-remote已核对。用户已授权，本次为源码分发，不部署在线服务、数据库或外部产品能力。
+- 产物使用已验证实现commit `981a849f7dc1247b7bb9c034b5d5c4d44845aa9e`；后续纯上下文HEAD不作为实现版本。发布后检查tag解引用、main包含关系、公开Release、远端原件与安装78文件/版本/发现链接；同字节复用两轮实际使用证据。
+- 失败时不记released、不继续扩大发布；消费端可固定last-good v3.0.0。公开tag不移动、main不强推，需修复时走后续版本。本次尚无回滚动作。
+
+### 公开发布与远端安装 smoke（实际）
+
+- 主 Agent执行 `git fetch origin --tags` exit0，远端main仍为last-good `0c6ebdc`。执行 `git tag -a v3.1.0 981a849f7dc1247b7bb9c034b5d5c4d44845aa9e -m 'v3.1.0: bundled product prototype'` exit0；`git push --atomic origin HEAD:refs/heads/main refs/tags/v3.1.0` exit0，main从0c6ebdc正常前进至 `89900e561a5840f3448461c9763a77d2291bdd1f`，新增v3.1.0。没有强推、覆盖tag或合入无关脏改动。
+- 发布后 `git ls-remote origin refs/heads/main refs/tags/v3.1.0 'refs/tags/v3.1.0^{}'` exit0：main=`89900e561a5840f3448461c9763a77d2291bdd1f`，annotated tag对象=`4e72dc895eebe0c7fa60f4f466706af524f12a07`，解引用实现=`981a849f7dc1247b7bb9c034b5d5c4d44845aa9e`。`git merge-base --is-ancestor <implementation> origin/main` exit0。
+- 本地更新按native CLI执行：`codex plugin marketplace remove sdlc-pilot --json`、`codex plugin marketplace add arnow117/sdlc-pilot --ref main --json`、`codex plugin add sdlc-pilot@sdlc-pilot --json`均exit0；只替换该marketplace来源，不卸载其他插件。远端marketplace checkout HEAD为89900e5，插件3.1.0 installed/enabled=true，marketplaceSource为git/https://github.com/arnow117/sdlc-pilot.git，不再依赖本地发布工作树。
+- 安装smoke exit0：对发布tag和安装cache的78个skills/metadata文件逐字节比较，无差异；三处版本3.1.0；Codex/Claude/父项目三组共36发现链接全部正确。结果保留于临时 evidence/published-install-smoke.json。当前宿主已发现sdlc-pilot:sdlc-prototype。源、配置和运行时字节与两轮实际使用版本一致，复用其有效证据，不机械重跑模型。
+- 主 Agent执行 `gh release create v3.1.0 --repo arnow117/sdlc-pilot --verify-tag --title 'v3.1.0 — 内置产品交互原型与设计迭代' --notes-file <本轮release notes> --latest` exit0。公开Release：[v3.1.0](https://github.com/arnow117/sdlc-pilot/releases/tag/v3.1.0)。远端API回查exit0：tag_name=v3.1.0、draft=false、prerelease=false、published_at=2026-10-21T08:40:49Z；target_commitish=main，真实实现仍由已核对的tag固定为981a849。
+- 观察信号：源码/tag/Release可读、native安装发现及内容匹配、首次与同项目迭代的实际使用证据。无线上服务/用户遥测；CLI账号模型路径仍ENV_BLOCKED。引用产品既有发布后观察计划，本次不虚构用户增长或生产指标。下一技术检查为下次插件更新或复现问题时核对安装来源/版本/入口；未发生需回滚的发布失败，未执行回滚。
+
+### 发布验收与生命周期收尾
+
+- 同一ship Agent对实际发布收据及本地smoke完成只读验收；tag为annotated并固定981a849、main含实现、native插件3.1.0已安装启用且来自GitHub；再次核对78文件零差异及36链接正确，业务源相对validation commit无差异，diff-check通过。主 Agent接受交付，无未决阻塞。
+- 主 Agent执行 `record-release --feature-id FEAT-bundled-prototype --commit 981a849f7dc1247b7bb9c034b5d5c4d44845aa9e` exit0，记录源码公开分发及本机安装交付完成。未发布另一个FEAT-branch-registration，未改动原源码工作区的其他脏改动。
+- 本次有效实现、确认来源、实际验证和残余限制均见前文；以下仅提交发布上下文/state，不改变tag或插件源码，不再次扩展验证。测试资源已全部收尾，必要日志/hash/截图仍作本轮验证证据，临时业务demo不进入分发物。

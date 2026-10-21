@@ -49,9 +49,9 @@
       "engineering_context_ref": ".sdlc-v1/context/FEAT-bundled-prototype.engineering.md",
       "id": "FEAT-bundled-prototype",
       "release": {
-        "at": null,
-        "commit": null,
-        "status": "pending"
+        "at": "2026-10-21T08:43:43Z",
+        "commit": "981a849f7dc1247b7bb9c034b5d5c4d44845aa9e",
+        "status": "released"
       },
       "requirement_id": "REQ-bundled-prototype",
       "review": {
@@ -59,7 +59,7 @@
         "by": "review_sdlc_prototype_release_final",
         "decision": "approved"
       },
-      "status": "reviewed",
+      "status": "released",
       "tasks": {
         "TASK-bundled-prototype": {
           "depends_on": [],
@@ -76,7 +76,7 @@
           "updated_at": "2026-10-21T07:37:44Z"
         }
       },
-      "updated_at": "2026-10-21T08:35:37Z",
+      "updated_at": "2026-10-21T08:43:43Z",
       "validation": {
         "at": "2026-10-21T08:30:53Z",
         "command": "bash scripts/validate-skills",
@@ -108,9 +108,9 @@
       "id": "REQ-bundled-prototype",
       "priority": "P2",
       "product_context_ref": ".sdlc-v1/context/REQ-bundled-prototype.product.md",
-      "status": "validated",
+      "status": "released",
       "title": "统一原型入口与分发",
-      "updated_at": "2026-10-21T08:35:37Z"
+      "updated_at": "2026-10-21T08:43:43Z"
     }
   },
   "state_format": "sdlc-lightweight-state-v1",
