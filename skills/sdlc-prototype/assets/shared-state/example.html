@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>共享状态示例</title>
+    <style>
+      body { font: 16px/1.5 system-ui, sans-serif; margin: 2rem; max-width: 42rem; }
+      section { border: 1px solid #ccd5cf; border-radius: 10px; margin-block: 1rem; padding: 1rem; }
+      button { font: inherit; padding: .4rem .7rem; }
+    </style>
+  </head>
+  <body>
+    <h1>读者和馆员看到同一份申请</h1>
+    <section>
+      <h2>读者端</h2>
+      <p id="reader-view"></p>
+      <button id="request-button" type="button">申请借阅</button>
+    </section>
+    <section>
+      <h2>管理端</h2>
+      <p id="admin-view"></p>
+      <button id="approve-button" type="button">确认申请</button>
+    </section>
+    <p id="feedback" role="status"></p>
+    <button id="reset-button" type="button">重置演示</button>
+    <script src="./runtime.js"></script>
+    <script>
+      const store = PrototypeRuntime.createStore({
+        createInitialState: () => ({ request: "未申请" }),
+        reducer(state, action) {
+          if (action.type === "request" && state.request === "未申请") {
+            return { request: "待确认" };
+          }
+          if (action.type === "approve" && state.request === "待确认") {
+            return { request: "已确认" };
+          }
+
+          const error = new Error("当前状态不能执行此操作。");
+          error.code = "INVALID_TRANSITION";
+          throw error;
+        },
+      });
+
+      function render(state) {
+        document.querySelector("#reader-view").textContent = `当前状态：${state.request}`;
+        document.querySelector("#admin-view").textContent = `待办状态：${state.request}`;
+      }
+
+      store.subscribe(render);
+      render(store.getState());
+      function dispatchWithFeedback(action) {
+        const result = store.dispatch(action);
+        document.querySelector("#feedback").textContent = result.ok ? "已更新。" : result.error.message;
+      }
+
+      document.querySelector("#request-button").addEventListener("click", () => dispatchWithFeedback({ type: "request" }));
+      document.querySelector("#approve-button").addEventListener("click", () => dispatchWithFeedback({ type: "approve" }));
+      document.querySelector("#reset-button").addEventListener("click", () => {
+        store.reset();
+        document.querySelector("#feedback").textContent = "已恢复初始状态。";
+      });
+    </script>
+  </body>
+</html>

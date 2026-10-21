@@ -13,8 +13,9 @@ distilled-from: [Zts0hg/codexspec]
 
 ## Orchestrated mode
 
-遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。产品设计 Agent 只更新产品正文并请求
-必要的 Requirement transition；主 Agent 验证后更新 state。缺少会改变范围的产品决定时返回问题，不猜测推进。
+遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。产品设计 Agent 更新产品正文并请求
+必要的 Requirement transition；仅在 brief 明确允许时，可在项目约定目录创建或更新有界原型产物。主 Agent 验证后更新
+state。缺少会改变范围的产品决定时返回问题，不猜测推进。
 
 ## 输入
 
@@ -43,6 +44,8 @@ distilled-from: [Zts0hg/codexspec]
 5. 体验设计：明确状态、反馈、空态、错误、无障碍和跨端差异。涉及页面、组件、表单、导航、空态、loading/error
    反馈、响应式、无障碍或视觉方向时，即使没有代码 diff 也选择 `design`；按
    [`design` 角色卡](../sdlc/references/roles/design.md) 和其引用的可选适配复用既有事实，只补会改变体验或验收的缺口。
+   按 [sdlc-prototype 包内适配](../sdlc/references/integrations/product-prototype.md) 的唯一选择策略制作有界 demo；
+   它不替代产品上下文或当前阶段。
 6. 质量设计：明确性能、可靠性、安全、隐私、可观测和评估要求，以及可在发布后观察的结果信号。
 7. 产品确认：按[产品决策来源与变更](../sdlc/references/lifecycles/product-design.md#7-产品决策来源与变更)
    区分已确认的当前决定、假设和开放替代项；再检查方向来源、场景、规则、验收条件和结果指标无矛盾，处理未决问题。

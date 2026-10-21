@@ -1,0 +1,4 @@
+interface:
+  display_name: "SDLC 产品交互原型"
+  short_description: "从零创建或迭代客户端与管理平台原型，交付可供 SDLC 使用的行为规格"
+  default_prompt: "使用 $sdlc-prototype，把我的需求或已有 HTML 做成可交互的客户端与管理平台原型，并整理状态、规则和 SDLC 验收场景。"

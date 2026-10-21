@@ -42,6 +42,47 @@
         "commit": "64df6f3f1314e54b88f0a33565601c372fb62441",
         "result": "pass"
       }
+    },
+    "FEAT-bundled-prototype": {
+      "branch": "codex/bundled-prototype-release",
+      "created_at": "2026-10-21T06:48:24Z",
+      "engineering_context_ref": ".sdlc-v1/context/FEAT-bundled-prototype.engineering.md",
+      "id": "FEAT-bundled-prototype",
+      "release": {
+        "at": null,
+        "commit": null,
+        "status": "pending"
+      },
+      "requirement_id": "REQ-bundled-prototype",
+      "review": {
+        "at": null,
+        "by": null,
+        "decision": "pending"
+      },
+      "status": "in_progress",
+      "tasks": {
+        "TASK-bundled-prototype": {
+          "depends_on": [],
+          "id": "TASK-bundled-prototype",
+          "status": "done",
+          "title": "内置原型能力并统一路由，清理旧入口与测试 demo",
+          "updated_at": "2026-10-21T07:05:02Z"
+        },
+        "TASK-bundled-prototype-release": {
+          "depends_on": [],
+          "id": "TASK-bundled-prototype-release",
+          "status": "done",
+          "title": "准备 v3.1.0 原型能力发布包与版本说明",
+          "updated_at": "2026-10-21T07:37:44Z"
+        }
+      },
+      "updated_at": "2026-10-21T07:37:44Z",
+      "validation": {
+        "at": null,
+        "command": null,
+        "commit": null,
+        "result": "pending"
+      }
     }
   },
   "requirements": {
@@ -57,6 +98,19 @@
       "status": "validated",
       "title": "显式迁移 Feature 开发分支登记",
       "updated_at": "2026-10-07T14:06:34Z"
+    },
+    "REQ-bundled-prototype": {
+      "created_at": "2026-10-21T06:37:09Z",
+      "depends_on": [],
+      "description": "",
+      "domain": "general",
+      "feature_id": "FEAT-bundled-prototype",
+      "id": "REQ-bundled-prototype",
+      "priority": "P2",
+      "product_context_ref": ".sdlc-v1/context/REQ-bundled-prototype.product.md",
+      "status": "in_delivery",
+      "title": "统一原型入口与分发",
+      "updated_at": "2026-10-21T07:37:44Z"
     }
   },
   "state_format": "sdlc-lightweight-state-v1",

@@ -71,6 +71,13 @@ Git 保存历史并负责跨 clone 同步。状态变化可以与相关文档或
 - `/sdlc loop`：加载 [`build-loop.md`](references/build-loop.md)，串行消费 ready Requirement。
 - `/sdlc evolve`：加载 [`evolve-loop.md`](references/evolve-loop.md) 和 `skill-maintainer`，改进 SDLC 技能体系自身。
 
+## 3.1 包内原型方法
+
+[`sdlc-prototype`](../sdlc-prototype/SKILL.md) 是产品和规格阶段可按需加载的方法，不是新的 lifecycle stage 或
+`/sdlc` 主路由。首次设计、实质交互迭代、复用或跳过的唯一选择策略、阶段写入边界和证据归属见
+[包内原型适配](references/integrations/product-prototype.md)。直接调用 `sdlc-prototype` 可以独立制作原型；若它已经属于
+tracked 工作，则必须服从当前 stage 和 brief，不能绕过生命周期。
+
 ## 4. 状态写入
 
 不要直接编辑 `state.json`。只有不在主 Agent 编排中的 standalone mode 下阶段技能才调用以下命令完成状态变化；

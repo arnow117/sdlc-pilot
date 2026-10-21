@@ -2,6 +2,21 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [3.1.0] — 2026-10-21
+
+### Added
+
+- 内置 `sdlc-prototype`：随 sdlc-pilot 分发可交互产品原型方法、客户端和管理平台参考及共享状态示例，无需单独安装外部原型技能。
+
+### Changed
+
+- `/sdlc` 在首次 UI/交互设计没有充分 confirmed baseline 时默认选择原型方法；信息架构、导航、核心旅程、角色、状态反馈或跨端联动发生实质变化时，只迭代受影响范围。明确跳过、充分复用、后端、普通实现、文案和小样式不强制原型。
+- `sdlc-prototype` 仍可独立创建、分析或迭代原型；已跟踪工作遵循当前 stage、brief 与产物目录，原型证据不替代生产验证。
+
+### Migration
+
+- 此前独立使用 `product-prototype` 的工作流改用包内 `sdlc-prototype`；本包不提供旧名称兼容入口，临时业务测试 demo 不随技能包分发。插件身份为 `sdlc-pilot:sdlc-prototype`。
+
 ## [3.0.0] — 2026-10-17
 
 ### Changed（Breaking）

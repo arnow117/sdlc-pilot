@@ -12,6 +12,9 @@ updated: 2026-08-10
 当前任务选择 `design` 后，按 [Impeccable 可选适配](../integrations/impeccable.md) 检查和使用该可选方法。Impeccable
 不可用时，继续执行本卡、项目设计系统、现有组件库和真实 E2E；不阻断阶段，也不重复安装提醒。
 
+当 [sdlc-prototype 包内适配](../integrations/product-prototype.md) 的唯一选择策略要求时，使用独立原型方法。它不替代 Impeccable、当前 stage
+或 SDLC 状态归属。
+
 ## 关注点
 
 1. **明确设计方向**：页面体现项目自己的信息层级和视觉决策，不是默认组件模板的简单组合。
@@ -65,7 +68,7 @@ updated: 2026-08-10
 
 | 阶段 | design 视角 |
 |---|---|
-| product-design / spec | 明确体验方向、surface 模式、信息架构、关键旅程和可访问性要求；复用既有确认，只补体验缺口。 |
+| product-design / spec | 明确体验方向、surface 模式、信息架构、关键旅程和可访问性要求；仅在适用时用原型澄清未定交互，复用既有确认，只补体验缺口。 |
 | plan | 把确认的体验与项目设计系统转成 Task、验收条件和验证策略。 |
 | build | 检查 token、语义结构、交互状态和响应式实现；UI 编辑前遵守适配中引用的 `craft-floor`。 |
 | validate | 借用技术检查维度并在 e2e 中运行真实页面或设备检查；实际未运行的项目明确标为 `INFERRED`。 |
@@ -73,12 +76,14 @@ updated: 2026-08-10
 
 ## 记录方式
 
-所有详细证据进入当前 `.sdlc-v1/context/<FEAT>.engineering.md`：
+产品阶段的体验意图、场景映射、原型 baseline 及实际 demo 证据/限制进入当前
+`.sdlc-v1/context/<REQ>.product.md`。Feature 阶段的正式验证和 review 证据进入当前
+`.sdlc-v1/context/<FEAT>.engineering.md`：
 
 - `## Validation` / `### Design`：断点、旅程、键盘、对比度、截图引用和限制。
 - `## Review` / `### Design`：文件与行、类别、严重级别、证据等级和建议修复。
 
-测试 runner 的截图或 trace 可留在项目原有产物目录并由研发上下文引用。design 与 E2E 的正文只写研发上下文，角色不定义进度字段。外层 `sdlc-validate` 或 `sdlc-review` 汇总后分别调用 `record-validation` 或 `record-review`。
+原型、测试 runner 的截图或 trace 可留在项目约定产物目录并由相应上下文引用，不复制为并行报告。角色不定义进度字段；外层 `sdlc-validate` 或 `sdlc-review` 汇总后分别调用 `record-validation` 或 `record-review`。
 
 ## 常见错误
 

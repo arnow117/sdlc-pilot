@@ -10,9 +10,9 @@ distilled-from: [Zts0hg/codexspec]
 
 ## Orchestrated mode
 
-遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。spec Agent 只写产品上下文并返回
-`mark-requirement-ready` 请求；由主 Agent 在验收条件和用户决定已完整时执行。只有没有当前主 Agent 编排的独立
-调用才使用 standalone mode。
+遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。spec Agent 写产品上下文并返回
+`mark-requirement-ready` 请求；仅在 brief 明确允许时，可在项目约定目录创建或更新有界原型产物。由主 Agent 在验收条件
+和用户决定已完整时执行。只有没有当前主 Agent 编排的独立调用才使用 standalone mode。
 
 ## 输入
 
@@ -31,6 +31,7 @@ distilled-from: [Zts0hg/codexspec]
 6. 将结论直接写回 `product_context_ref` 指向的 Markdown；按
    [`sdlc-product-design` 的产品决策来源规则](../sdlc-product-design/SKILL.md#产品上下文结构)
    保留当前决定的确认来源、未决问题与结果指标。
+   按 [sdlc-prototype 包内适配](../sdlc/references/integrations/product-prototype.md) 的唯一选择策略，使用它作为本阶段方法。
 7. 与用户确认范围和验收条件；未确认的建议、假设或开放替代项不能升格为 Requirement 或验收条件。
 8. 条件满足后在 orchestrated mode 请求 `mark-requirement-ready`；只有独立、不在主 Agent 编排中的 standalone
    mode 才直接调用 CLI。

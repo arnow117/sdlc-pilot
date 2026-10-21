@@ -92,6 +92,7 @@ repo-context 的 `sync`/`refine` 若会改动业务路径或长期文档，应�
 | Driver | `sdlc` | 根据当前状态和用户意图恢复、路由、编排与推进 |
 | 生命周期 | `sdlc-product-design`、`sdlc-software-delivery` | 分别组织产品澄清和研发交付 |
 | 阶段技能 | onboard、backlog、spec、plan、build、validate、review、ship | 在需要时只加载当前阶段 |
+| 原型方法 | `sdlc-prototype` | 可独立制作交互原型，也可由产品/规格阶段按需加载；不是新阶段 |
 | 角色卡 | product-owner、domain-expert、architect、client-dev、server-dev、qa、design、security 等 | 按改动面补充检查视角 |
 | 验证模式 | correctness、e2e、eval-bench | 由 validate 阶段按项目类型选用 |
 
@@ -101,6 +102,31 @@ repo-context 的 `sync`/`refine` 若会改动业务路径或长期文档，应�
 review 每次还会检查本次 diff 中的重复实现、不必要抽象和冗余配置或依赖，帮助预防可避免的工程债。
 删除或替换建议需要具体证据并保持当前行为和工程约束；普通简化建议不阻塞发布。完整检查与处理规则见
 [`sdlc-review`](skills/sdlc-review/SKILL.md)。
+
+## 原型：首次设计、迭代与独立使用
+
+`/sdlc` 仍只选择一个主阶段。产品或规格阶段按[包内原型适配](skills/sdlc/references/integrations/product-prototype.md)
+决定是否加载 [`sdlc-prototype`](skills/sdlc-prototype/SKILL.md)：首次 UI/交互设计没有充分 confirmed baseline 时默认使用；
+信息架构、导航、核心旅程、角色、状态反馈或跨端联动发生实质变化时，只更新受影响原型。明确跳过、可复用的充分 baseline、
+后端或普通实现、文案和小样式改动不强制原型。
+
+产品故事导航：首次设计、迭代、跳过和复用见 [用户故事 1](.sdlc-v1/context/REQ-bundled-prototype.product.md#用户故事-1---从-sdlc-完成首次设计与迭代优先级p1)，
+单包和独立使用见
+[用户故事 2](.sdlc-v1/context/REQ-bundled-prototype.product.md#用户故事-2---安装一个包并直接使用原型优先级p1)。
+
+**全局场景 ID：`SCN-sdlc-prototype`。** 原型 helper 的工作模式、产品端、终端形态、参考继承、演示目标和交付方式以
+[`sdlc-prototype` 的识别任务表](skills/sdlc-prototype/SKILL.md#识别任务)为权威参数来源；当它属于 tracked 工作时，
+由[包内原型适配](skills/sdlc/references/integrations/product-prototype.md)定义阶段、写入和证据边界，不增加 CLI 参数或状态模型。
+
+```text
+/sdlc 为一个没有已确认设计的新交互项目完成首次设计
+/sdlc 迭代现有产品：调整导航和角色完成后的跨端状态反馈
+/sdlc-prototype 把这份 PRD 做成可点击的客户端与管理平台原型
+```
+
+插件安装后，宿主以 `sdlc-pilot:sdlc-prototype` 识别该包内技能；本地 `/sdlc-prototype` 只有在宿主已发现
+`skills/sdlc-prototype/` 后才可用。新目录刚加入或本地以软链加载时，按宿主的索引刷新或新会话规则重载；本仓不声称
+当前运行时已经加载该前缀。独立原型不初始化 state；已跟踪工作仍受当前 stage、brief 和原型产物目录约束。
 
 ## Web / App 验证与 2.0 升级
 
@@ -301,4 +327,4 @@ git diff --check
 
 `docs/specs/2026-06-*.md` 全部是 0.x 历史设计，只用于理解演进背景；其中的状态路径、hook、命令和完成条件
 已被轻量基础模型及当前 stage / reference 取代，不能作为当前实现依据。已发布能力与本地新增能力的范围见
-[CHANGELOG](CHANGELOG.md)：3.0.0 对齐 CodexSpec 原始模板并加入按需图示对齐。新建或实质更新 PRODUCT/ENGINEERING 时遵循固定核心章节；旧文档无需批量迁移，状态、路径和 CLI 保持兼容。
+[CHANGELOG](CHANGELOG.md)：3.1.0 内置 `sdlc-prototype`；3.0.0 对齐 CodexSpec 原始模板并加入按需图示对齐。新建或实质更新 PRODUCT/ENGINEERING 时遵循固定核心章节；旧文档无需批量迁移，状态、路径和 CLI 保持兼容。
