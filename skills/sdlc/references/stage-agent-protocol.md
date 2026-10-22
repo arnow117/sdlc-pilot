@@ -1,6 +1,6 @@
 # Stage agent protocol
 
-> updated: 2026-10-07
+> updated: 2026-10-22
 
 This is the sole authority for SDLC stage orchestration. It adds an execution
 convention only: lifecycle state remains `state_version=3`; it creates no event
@@ -151,6 +151,74 @@ authoritative for the present design; historical evidence remains separate. Read
 only the current, relevant parts when recovery needs them, rather than reloading
 all historical changes to the current effective solution or handoffs.
 This rule adds no schema, ledger, or runtime service.
+
+### Interaction while work is active
+
+While an actual stage child or long-running command is executing, the main Agent
+may answer a user question, clarify a later decision, or do independent work that
+does not interfere with the active writer's scope. A normal question or feedback
+does not pause the child, redispatch its work, or turn a status request into a
+liveness check. Answer status questions from the evidence already known, then
+resume the original work.
+
+Send a routine clarification or correction that remains within the current
+acceptance scope as a short native follow-up only to the affected current
+executor. For a material change to the contract, the main Agent first updates the
+one current effective solution, then sends the affected executor a complete
+replacement brief marked `supersedes`, following the existing writer-handoff and
+review rules. Do not let an old and replacement writer edit the same work, and do
+not use feedback to bypass independent review. `/sdlc evolve` keeps its existing
+authorized-brief exception because it has no lifecycle engineering context.
+
+An explicit user pause, stop, or cancellation takes precedence and is handled by
+the existing pause, recovery, and authorization rules. If the host has no
+asynchronous execution capability, execute serially with the available configured
+child and role routing. Only a runtime that cannot create a child uses the section
+1 serial inline fallback and discloses it; absence of asynchronous execution or
+intermediate messaging is not absence of child capability. Do not promise that
+work will continue after the conversation ends, that a persistent background
+worker exists, or that the host will wake itself later.
+
+### Continuation within existing authorization
+
+After the main Agent accepts a stage result, applies only its allowed lifecycle
+transition, and reads `next`, it continues to the next Task or stage when the
+user's existing authorization covers that objective. Completing one stage, an
+ordinary wait timeout, a user question, or an early increment does not itself
+require a new “continue?” request or end the orchestration.
+
+This continuation remains bounded by the original objective and external-impact
+boundary. Authorization for one stage does not authorize an entire Feature, and
+authorization for one Feature does not authorize another. Do not consume or
+enable external services, commit, push, publish, or deploy without the existing
+authorization required for that action. `needs_selection`, an unresolved material
+decision, a missing external authorization, an explicit pause or stop, missing or
+failed evidence, and the mandatory nonconvergence rule still stop progression.
+The same stage owner keeps its implementation, tests, and corrections until the
+main Agent accepts the result; ordinary repairs already inside the accepted
+contract do not create an additional user-approval step.
+
+### Earliest real increment
+
+The current effective solution and its Task order should put the smallest runnable
+core user journey first. Identify only the dependencies that journey actually
+needs, and validate an external dependency that determines feasibility early when
+the required access and budget are already authorized. Unrelated foundation work,
+full research, and every cross-cutting concern do not block that first increment.
+For an internal capability with no user interface, use a reproducible experiment,
+CLI result, or contract result instead of inventing a UI. If no independently
+showable increment exists, record the concrete dependency that prevents one.
+
+When Build has a stable, evidence-supported increment that a user can inspect, it
+reports its entry point or artifact reference, actual verification scope, tested
+revision and workspace facts, and remaining gaps to the main Agent without adding
+a result field or progress store. The main Agent promptly presents that stable
+increment and those facts to the user while the existing authorized work continues;
+this presentation requires no separate trial confirmation, approval, or lifecycle
+transition. It does not mark an unfinished Task done, replace Validate, Review, or
+Ship, or make a mock or prototype a production-path pass. If a real provider,
+device, or other dependency is unavailable, say so; a mock-only result is not a
+real pass.
 
 ## 3. Planning, implementation, integration, and review
 

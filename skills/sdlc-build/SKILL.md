@@ -12,6 +12,7 @@ description: >
 遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。build Agent 可以修改本 Task 的代码和
 工程上下文，但不更新 lifecycle state；它返回 `set-task-status` 请求和命令证据。Feature 特有发现留在工程上下文，
 产品行为更新产品上下文，跨 Feature 规则作为 `project_candidates` 返回；明确跨项目的 SDLC 通用改进才提议 evolve。
+用户交流、原授权内连续推进和增量展示的边界由该协议唯一规定；本阶段只在下述实现循环提供真实增量的报告入口。
 
 ## 入口
 
@@ -38,9 +39,13 @@ description: >
 5. 实现满足当前完成条件的最小改动，不为推测的未来需求新增抽象或扩展点。
 6. 运行受影响区域的静态检查和测试。
 7. 必要时重构，再运行相同检查；只修改本 Task 范围内的代码，不顺带格式化、重构或清理无关区域，只删除本次改动产生的无用代码。
-8. 把有长期价值的设计决定、代码位置变化和风险更新到研发上下文；涉及已有图示时遵循
+8. 若已经有稳定、证据支持且可查看的阶段增量，按[最早真实增量协议](../sdlc/references/stage-agent-protocol.md#earliest-real-increment)
+   通过宿主已有消息能力做中途汇报：提供入口或产物引用、实际验证范围、被测版本和工作区事实及已知缺口，并继续当前已授权执行。
+   该中途汇报不结束阶段、不重派 Task、不新增结果字段或进度记录，也不把未完成 Task 标为 `done`。若宿主不能中途发送消息，
+   仅将同一报告延后到最近可响应点；执行者和降级条件仍唯一遵循该协议，不强制新消息工具。
+9. 把有长期价值的设计决定、代码位置变化和风险更新到研发上下文；涉及已有图示时遵循
    [图示辅助对齐](../sdlc/references/lifecycles/software-delivery.md#图示辅助对齐)的同步约定。
-9. 逐条核对完成条件与验收条件，记录实际检查命令和结果；满足后在 orchestrated mode 请求
+10. 逐条核对完成条件与验收条件，记录实际检查命令和结果；满足后在 orchestrated mode 请求
    `set-task-status ... --status done`，只有独立、不在主 Agent 编排中的 standalone mode 才直接调用 CLI。
 
 ## 调试
@@ -55,4 +60,4 @@ description: >
 
 ## 完成输出
 
-返回已完成 Task、变更摘要、测试结果、尚未完成或被阻塞的 Task。全部 Task 为 `done` 后进入 `sdlc-validate`。
+返回已完成 Task、变更摘要、测试结果、尚未完成或被阻塞的 Task；若存在可查看的真实增量，附上上述入口和证据事实。全部 Task 为 `done` 后进入 `sdlc-validate`。

@@ -327,4 +327,4 @@ git diff --check
 
 `docs/specs/2026-06-*.md` 全部是 0.x 历史设计，只用于理解演进背景；其中的状态路径、hook、命令和完成条件
 已被轻量基础模型及当前 stage / reference 取代，不能作为当前实现依据。已发布能力与本地新增能力的范围见
-[CHANGELOG](CHANGELOG.md)：3.1.0 内置 `sdlc-prototype`；3.0.0 对齐 CodexSpec 原始模板并加入按需图示对齐。新建或实质更新 PRODUCT/ENGINEERING 时遵循固定核心章节；旧文档无需批量迁移，状态、路径和 CLI 保持兼容。
+[CHANGELOG](CHANGELOG.md)：4.0.0 支持执行中继续交流、在既有授权内连续推进，并在最小可检验结果稳定后展示真实增量；3.1.0 内置 `sdlc-prototype`；3.0.0 对齐 CodexSpec 原始模板并加入按需图示对齐。新建或实质更新 PRODUCT/ENGINEERING 时遵循固定核心章节；旧文档无需批量迁移，状态、路径和 CLI 保持兼容。

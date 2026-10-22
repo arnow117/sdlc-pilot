@@ -8,8 +8,8 @@ description: >
 
 # sdlc — router / handoff
 
-`/sdlc` 读取当前状态、选择阶段、编排一次执行、验证结果并推进。实际工作仍由阶段技能完成；阶段子 Agent
-协作规则唯一见 [`stage-agent-protocol.md`](references/stage-agent-protocol.md)。
+`/sdlc` 读取当前状态、选择阶段、编排受控的阶段执行、验证结果并推进。实际工作仍由阶段技能完成；阶段子 Agent
+协作规则唯一见 [`stage-agent-protocol.md`](references/stage-agent-protocol.md)。单个阶段结果不是在已有授权目标内结束编排的信号。
 
 ## 1. 唯一目录
 
@@ -44,7 +44,8 @@ Git 保存历史并负责跨 clone 同步。状态变化可以与相关文档或
 
 默认以 orchestrated mode 执行。主 Agent 先读取 `next`，再按唯一的
 [`stage-agent-protocol.md`](references/stage-agent-protocol.md) 形成完整 brief、串行派发一个子 Agent、验收其证据、
-执行已有 lifecycle CLI，并重新读取 `next`。本 router 不重复 brief、结果、检查点、并行资格或纠偏规则。
+执行已有 lifecycle CLI，并重新读取 `next`。执行期间的用户交流、原授权内连续推进和最早真实增量展示均遵循该协议；本 router
+不重复 brief、结果、检查点、并行资格、纠偏或这些行为规则。
 
 `onboard` 需要 `init` 时由主 Agent 先完成。`needs_selection`、缺少用户决策或外部授权、未通过验收、或证据不足时，
 按 protocol 暂停而不推进状态。只有未处于主 Agent 编排中的独立直接调用才是 standalone mode；已开始的
