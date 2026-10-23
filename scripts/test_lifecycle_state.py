@@ -2,6 +2,7 @@
 """Contract tests for the Git-tracked lightweight lifecycle state."""
 from __future__ import annotations
 
+import io
 import json
 import os
 from pathlib import Path
@@ -594,6 +595,335 @@ class LifecycleStateTest(unittest.TestCase):
         routed = subprocess.run([*command, "next"], capture_output=True, text=True)
         self.assertEqual(routed.returncode, 0, routed.stderr)
         self.assertEqual(json.loads(routed.stdout)["stage"], "spec")
+
+    def test_set_task_status_cli_rejection_reports_semantic_details(self) -> None:
+        self.initialize_state()
+        self.capture("REQ-transition")
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-transition")
+        self.start("REQ-transition", "FEAT-transition")
+        lifecycle_state.add_task(
+            repo=self.repo,
+            feature_id="FEAT-transition",
+            task_id="TASK-transition",
+            title="Implement transition details",
+        )
+        before = self.state_bytes()
+        command = [sys.executable, str(HERE / "lifecycle_state.py"), "--repo", str(self.repo)]
+        result = subprocess.run(
+            [
+                *command,
+                "set-task-status",
+                "--feature-id",
+                "FEAT-transition",
+                "--task-id",
+                "TASK-transition",
+                "--status",
+                "done",
+            ],
+            capture_output=True,
+            text=True,
+        )
+
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(result.stdout, "")
+        lines = result.stderr.splitlines()
+        self.assertEqual(lines[0], "lifecycle-state-error: invalid-task-transition:todo->done")
+        self.assertTrue(lines[1].startswith("error-details: "))
+        details = json.loads(lines[1].removeprefix("error-details: "))
+        self.assertEqual(details["operation"], "set-task-status")
+        self.assertEqual(details["feature_id"], "FEAT-transition")
+        self.assertEqual(details["task_id"], "TASK-transition")
+        self.assertEqual(details["current_status"], "todo")
+        self.assertEqual(details["requested_status"], "done")
+        self.assertEqual(details["allowed_next"], ["blocked", "cancelled", "in_progress"])
+        self.assertFalse(details["state_changed"])
+        self.assertIn("任务", details["message"])
+        self.assertIn("无影响", details["effect"])
+        self.assertEqual(self.state_bytes(), before)
+
+    def test_task_reopen_resets_delivery_checks_and_routes_build(self) -> None:
+        self.initialize_state()
+        self.capture("REQ-reopen")
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-reopen")
+        self.start("REQ-reopen", "FEAT-reopen")
+        self.complete_one_task("FEAT-reopen")
+        self.commit_state("ready to validate reopened task")
+        lifecycle_state.record_validation(repo=self.repo, feature_id="FEAT-reopen", result="pass")
+        lifecycle_state.record_review(
+            repo=self.repo,
+            feature_id="FEAT-reopen",
+            decision="approved",
+            by="reviewer",
+        )
+        before_rejection = self.state_bytes()
+        command = [sys.executable, str(HERE / "lifecycle_state.py"), "--repo", str(self.repo)]
+        rejected = subprocess.run(
+            [
+                *command,
+                "set-task-status",
+                "--feature-id",
+                "FEAT-reopen",
+                "--task-id",
+                "TASK-one",
+                "--status",
+                "in_progress",
+            ],
+            capture_output=True,
+            text=True,
+        )
+        rejection_details = json.loads(rejected.stderr.splitlines()[1].removeprefix("error-details: "))
+        self.assertEqual(rejected.returncode, 2)
+        self.assertIn("done 转为 todo", rejection_details["hint"])
+        self.assertIn("validation", rejection_details["effect"])
+        self.assertEqual(self.state_bytes(), before_rejection)
+
+        lifecycle_state.set_task_status(
+            repo=self.repo,
+            feature_id="FEAT-reopen",
+            task_id="TASK-one",
+            status="todo",
+        )
+
+        feature = lifecycle_state.feature_projection(
+            repo=self.repo,
+            feature_id="FEAT-reopen",
+        )["feature"]
+        self.assertEqual(feature["status"], "in_progress")
+        self.assertEqual(feature["validation"]["result"], "pending")
+        self.assertEqual(feature["review"]["decision"], "pending")
+        self.assertEqual(feature["release"]["status"], "pending")
+        self.assertEqual(lifecycle_state.next_action(self.repo)["stage"], "build")
+        lifecycle_state.set_task_status(
+            repo=self.repo,
+            feature_id="FEAT-reopen",
+            task_id="TASK-one",
+            status="in_progress",
+        )
+        self.assertEqual(
+            lifecycle_state.feature_projection(
+                repo=self.repo,
+                feature_id="FEAT-reopen",
+            )["feature"]["tasks"]["TASK-one"]["status"],
+            "in_progress",
+        )
+
+    def test_set_task_status_rejections_filter_available_transitions(self) -> None:
+        self.initialize_state()
+        self.capture("REQ-dependencies")
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-dependencies")
+        self.start("REQ-dependencies", "FEAT-dependencies")
+        lifecycle_state.add_task(
+            repo=self.repo,
+            feature_id="FEAT-dependencies",
+            task_id="TASK-prerequisite",
+            title="Finish prerequisite",
+        )
+        lifecycle_state.add_task(
+            repo=self.repo,
+            feature_id="FEAT-dependencies",
+            task_id="TASK-dependent",
+            title="Run dependent work",
+            depends_on=["TASK-prerequisite"],
+        )
+        command = [sys.executable, str(HERE / "lifecycle_state.py"), "--repo", str(self.repo)]
+        blocked = subprocess.run(
+            [
+                *command,
+                "set-task-status",
+                "--feature-id",
+                "FEAT-dependencies",
+                "--task-id",
+                "TASK-dependent",
+                "--status",
+                "in_progress",
+            ],
+            capture_output=True,
+            text=True,
+        )
+        blocked_details = json.loads(blocked.stderr.splitlines()[1].removeprefix("error-details: "))
+        self.assertEqual(blocked.returncode, 2)
+        self.assertEqual(blocked_details["allowed_next"], ["blocked", "cancelled"])
+        self.assertEqual(blocked_details["unmet_dependencies"], ["TASK-prerequisite"])
+
+        lifecycle_state.set_task_status(
+            repo=self.repo,
+            feature_id="FEAT-dependencies",
+            task_id="TASK-dependent",
+            status="cancelled",
+        )
+        cancelled = subprocess.run(
+            [
+                *command,
+                "set-task-status",
+                "--feature-id",
+                "FEAT-dependencies",
+                "--task-id",
+                "TASK-dependent",
+                "--status",
+                "todo",
+            ],
+            capture_output=True,
+            text=True,
+        )
+        cancelled_details = json.loads(cancelled.stderr.splitlines()[1].removeprefix("error-details: "))
+        self.assertEqual(cancelled.returncode, 2)
+        self.assertEqual(cancelled_details["current_status"], "cancelled")
+        self.assertEqual(cancelled_details["allowed_next"], [])
+
+    def test_closed_feature_rejection_has_no_available_task_transition(self) -> None:
+        self.initialize_state()
+        self.capture("REQ-closed")
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-closed")
+        self.start("REQ-closed", "FEAT-closed")
+        lifecycle_state.add_task(
+            repo=self.repo,
+            feature_id="FEAT-closed",
+            task_id="TASK-closed",
+            title="Closed feature task",
+        )
+        state = lifecycle_state.load(self.repo)
+        state["features"]["FEAT-closed"]["status"] = "cancelled"
+        state["requirements"]["REQ-closed"]["status"] = "cancelled"
+        lifecycle_state.state_path(self.repo).write_text(
+            json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        command = [sys.executable, str(HERE / "lifecycle_state.py"), "--repo", str(self.repo)]
+        result = subprocess.run(
+            [
+                *command,
+                "set-task-status",
+                "--feature-id",
+                "FEAT-closed",
+                "--task-id",
+                "TASK-closed",
+                "--status",
+                "in_progress",
+            ],
+            capture_output=True,
+            text=True,
+        )
+
+        details = json.loads(result.stderr.splitlines()[1].removeprefix("error-details: "))
+        self.assertEqual(result.returncode, 2)
+        self.assertEqual(details["current_status"], "todo")
+        self.assertEqual(details["allowed_next"], [])
+        self.assertEqual(details["feature_status"], "cancelled")
+        self.assertFalse(details["state_changed"])
+        self.assertNotIn("重开", details["hint"])
+        self.assertNotIn("retract", details["hint"])
+
+    def test_task_status_errors_do_not_change_other_command_output_or_api_code(self) -> None:
+        self.initialize_state()
+        self.capture("REQ-compatibility")
+        command = [sys.executable, str(HERE / "lifecycle_state.py"), "--repo", str(self.repo)]
+        successful = subprocess.run([*command, "next"], capture_output=True, text=True)
+        self.assertEqual(successful.returncode, 0, successful.stderr)
+        self.assertEqual(successful.stderr, "")
+        self.assertEqual(json.loads(successful.stdout)["stage"], "spec")
+
+        rejected = subprocess.run(
+            [*command, "product-projection", "--requirement-id", "REQ-missing"],
+            capture_output=True,
+            text=True,
+        )
+        self.assertEqual(rejected.returncode, 2)
+        self.assertEqual(rejected.stdout, "")
+        self.assertEqual(rejected.stderr, "lifecycle-state-error: requirement-not-found:REQ-missing\n")
+
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-compatibility")
+        self.start("REQ-compatibility", "FEAT-compatibility")
+        lifecycle_state.add_task(
+            repo=self.repo,
+            feature_id="FEAT-compatibility",
+            task_id="TASK-compatibility",
+            title="Compatibility",
+        )
+        with self.assertRaises(lifecycle_state.LifecycleStateError) as raised:
+            lifecycle_state.set_task_status(
+                repo=self.repo,
+                feature_id="FEAT-compatibility",
+                task_id="TASK-compatibility",
+                status="done",
+            )
+        self.assertEqual(str(raised.exception), "invalid-task-transition:todo->done")
+
+    def test_cli_accepts_the_documented_task_status_sequence(self) -> None:
+        self.initialize_state()
+        self.capture("REQ-cli-task")
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-cli-task")
+        self.start("REQ-cli-task", "FEAT-cli-task")
+        lifecycle_state.add_task(
+            repo=self.repo,
+            feature_id="FEAT-cli-task",
+            task_id="TASK-cli-task",
+            title="Run the documented sequence",
+        )
+        command = [sys.executable, str(HERE / "lifecycle_state.py"), "--repo", str(self.repo)]
+        for status in ("in_progress", "done"):
+            result = subprocess.run(
+                [
+                    *command,
+                    "set-task-status",
+                    "--feature-id",
+                    "FEAT-cli-task",
+                    "--task-id",
+                    "TASK-cli-task",
+                    "--status",
+                    status,
+                ],
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertEqual(result.stderr, "")
+            self.assertEqual(json.loads(result.stdout)["task"]["status"], status)
+
+    def test_task_status_postreplace_failure_reports_unknown_state_change(self) -> None:
+        self.initialize_state()
+        self.capture("REQ-recovery")
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-recovery")
+        self.start("REQ-recovery", "FEAT-recovery")
+        lifecycle_state.add_task(
+            repo=self.repo,
+            feature_id="FEAT-recovery",
+            task_id="TASK-recovery",
+            title="Recover after replacement",
+        )
+        before = self.state_bytes()
+        argv = [
+            "--repo",
+            str(self.repo),
+            "set-task-status",
+            "--feature-id",
+            "FEAT-recovery",
+            "--task-id",
+            "TASK-recovery",
+            "--status",
+            "in_progress",
+        ]
+        with (
+            mock.patch.object(
+                lifecycle_state,
+                "_sync_directory",
+                side_effect=lifecycle_state.LifecycleStateError("cannot-sync-state-directory"),
+            ),
+            mock.patch("sys.stderr", new_callable=io.StringIO) as captured_stderr,
+        ):
+            self.assertEqual(lifecycle_state.main(argv), 2)
+
+        lines = captured_stderr.getvalue().splitlines()
+        details = json.loads(lines[1].removeprefix("error-details: "))
+        self.assertEqual(lines[0], "lifecycle-state-error: cannot-sync-state-directory")
+        self.assertEqual(details["state_changed"], "unknown")
+        self.assertIsNone(details["current_status"])
+        self.assertIsNone(details["allowed_next"])
+        self.assertIn("feature-projection", details["hint"])
+        self.assertNotEqual(self.state_bytes(), before)
+        self.assertEqual(
+            lifecycle_state.load(self.repo)["features"]["FEAT-recovery"]["tasks"]["TASK-recovery"]["status"],
+            "in_progress",
+        )
 
     def test_migrate_feature_branch_updates_only_the_open_feature_registration(self) -> None:
         self.initialize_state()

@@ -179,6 +179,8 @@ python3 scripts/lifecycle_state.py --repo <target-repo> start-feature \
 python3 scripts/lifecycle_state.py --repo <target-repo> add-task \
   --feature-id FEAT-001 --task-id TASK-001 --title "实现导出接口"
 python3 scripts/lifecycle_state.py --repo <target-repo> set-task-status \
+  --feature-id FEAT-001 --task-id TASK-001 --status in_progress
+python3 scripts/lifecycle_state.py --repo <target-repo> set-task-status \
   --feature-id FEAT-001 --task-id TASK-001 --status done
 python3 scripts/lifecycle_state.py --repo <target-repo> record-validation \
   --feature-id FEAT-001 --result pass --test-command "pytest"
@@ -187,6 +189,9 @@ python3 scripts/lifecycle_state.py --repo <target-repo> record-review \
 python3 scripts/lifecycle_state.py --repo <target-repo> record-release \
   --feature-id FEAT-001
 ```
+
+Task 状态转换必须遵循允许的下一状态；失败时的 stderr 详情、恢复查询和重开 Task 对交付检查的影响见
+[轻量运行时的 Task 状态错误输出与恢复](skills/sdlc/references/lightweight-runtime.md#task-状态错误输出与恢复)。
 
 `released` 只表示声明的发布目标及该目标要求的 smoke、观测已经完成；
 发布目标可以是明确约定的源码分发，也可以是环境部署。它不表示代码仅仅

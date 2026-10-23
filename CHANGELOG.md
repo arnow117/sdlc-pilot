@@ -2,6 +2,12 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [Unreleased]
+
+### Fixed
+
+- `set-task-status` 在保持既有错误码、退出码和成功输出的同时，为状态转换拒绝及写入结果未知情形提供可恢复的结构化 stderr 详情。
+
 ## [4.0.0] — 2026-10-22
 
 ### Changed（Breaking）
