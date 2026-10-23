@@ -2,6 +2,14 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [4.0.1] — 2026-10-23
+
+### Fixed
+
+- `set-task-status` 在保持既有错误码、退出码和成功输出的同时，为状态转换拒绝及写入结果未知情形提供可恢复的结构化 stderr 详情。
+- 明确 `done → todo → in_progress` 的合法恢复步骤及重开 Task 对 validation、review 和 release 的影响；同步运行时、验证技能和 README，并补充写入后失败等回归测试。
+- `state_version=3`、公共命令参数和状态结构保持不变，无需状态或数据迁移。
+
 ## [4.0.0] — 2026-10-22
 
 ### Changed（Breaking）

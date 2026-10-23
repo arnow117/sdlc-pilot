@@ -80,6 +80,10 @@ _GIT_CONFIG_ENVIRONMENT_PREFIXES = ("GIT_CONFIG_KEY_", "GIT_CONFIG_VALUE_")
 class LifecycleStateError(RuntimeError):
     """The lightweight lifecycle state is missing, invalid, or inconsistent."""
 
+    def __init__(self, code: str, *, details: Mapping[str, object] | None = None) -> None:
+        super().__init__(code)
+        self.details = None if details is None else dict(details)
+
 
 def _now() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
@@ -1106,6 +1110,81 @@ def _reset_delivery_checks(feature: dict[str, object]) -> None:
     feature["release"] = {"status": "pending", "commit": None, "at": None}
 
 
+def _unmet_task_dependencies(task: Mapping[str, object], tasks: Mapping[str, object]) -> list[str]:
+    dependencies = task["depends_on"]
+    assert isinstance(dependencies, list)
+    unmet: list[str] = []
+    for dependency in dependencies:
+        dependency_task = tasks[str(dependency)]
+        assert isinstance(dependency_task, Mapping)
+        if dependency_task["status"] != "done":
+            unmet.append(str(dependency))
+    return sorted(unmet)
+
+
+def _available_task_transitions(
+    feature: Mapping[str, object], task: Mapping[str, object], tasks: Mapping[str, object],
+) -> list[str]:
+    if feature["status"] in {"released", "cancelled"}:
+        return []
+
+    current_status = str(task["status"])
+    available = set(_TASK_TRANSITIONS[current_status])
+    if _unmet_task_dependencies(task, tasks):
+        available.difference_update({"in_progress", "done"})
+    return sorted(available)
+
+
+def _task_status_rejection(
+    code: str,
+    *,
+    feature_id: str,
+    task_id: str,
+    current_status: str | None,
+    requested_status: str,
+    allowed_next: list[str],
+    message: str,
+    hint: str,
+    effect: str,
+    feature_status: str | None = None,
+    unmet_dependencies: list[str] | None = None,
+) -> LifecycleStateError:
+    details: dict[str, object] = {
+        "message": message,
+        "hint": hint,
+        "effect": effect,
+        "operation": "set-task-status",
+        "feature_id": feature_id,
+        "task_id": task_id,
+        "current_status": current_status,
+        "requested_status": requested_status,
+        "allowed_next": allowed_next,
+        "state_changed": False,
+    }
+    if feature_status is not None:
+        details["feature_status"] = feature_status
+    if unmet_dependencies:
+        details["unmet_dependencies"] = unmet_dependencies
+    return LifecycleStateError(code, details=details)
+
+
+def _unknown_task_status_details(
+    *, feature_id: str, task_id: str, requested_status: str,
+) -> dict[str, object]:
+    return {
+        "message": "无法确认 Task 状态写入是否完成。",
+        "hint": "先运行 feature-projection 和 next 只读查询当前状态，再决定是否继续操作。",
+        "effect": "本次操作的写入结果未知；不要根据退出码或错误名称推断状态未变化。",
+        "operation": "set-task-status",
+        "feature_id": feature_id,
+        "task_id": task_id,
+        "current_status": None,
+        "requested_status": requested_status,
+        "allowed_next": None,
+        "state_changed": "unknown",
+    }
+
+
 def set_task_status(
     *, repo: str | os.PathLike[str] = ".", feature_id: str, task_id: str, status: str,
     at: str | None = None,
@@ -1117,22 +1196,66 @@ def set_task_status(
 
     def operation(state: dict[str, object], timestamp: str) -> dict[str, object]:
         feature = _feature(state, feature_id)
-        if feature["status"] in {"released", "cancelled"}:
-            raise LifecycleStateError(f"feature-not-open-for-task:{feature_id}")
         tasks = feature["tasks"]
         assert isinstance(tasks, dict)
         task = tasks.get(task_id)
+        current_status = str(task["status"]) if isinstance(task, dict) else None
+        if feature["status"] in {"released", "cancelled"}:
+            raise _task_status_rejection(
+                f"feature-not-open-for-task:{feature_id}",
+                feature_id=feature_id,
+                task_id=task_id,
+                current_status=current_status,
+                requested_status=status,
+                allowed_next=[],
+                message="Feature 已关闭，不能修改其中的 Task。",
+                hint="先运行 feature-projection 和 next 只读确认历史状态与后续工作。",
+                effect="本次拒绝未写入状态，对现有状态和交付检查无影响。",
+                feature_status=str(feature["status"]),
+            )
         if not isinstance(task, dict):
             raise LifecycleStateError(f"task-not-found:{feature_id}/{task_id}")
         old_status = str(task["status"])
         if status == old_status:
             return {"operation": "set-task-status", "idempotent": True, "task": deepcopy(task), "feature_id": feature_id}
         if status not in _TASK_TRANSITIONS[old_status]:
-            raise LifecycleStateError(f"invalid-task-transition:{old_status}->{status}")
+            reopens_completed_task = old_status == "done" and status == "in_progress"
+            hint = "请从 allowed_next 选择下一状态；必要时先读取 feature-projection 和 next。"
+            effect = "本次拒绝未写入状态，对现有状态和交付检查无影响。"
+            if reopens_completed_task:
+                hint = "请先将 Task 从 done 转为 todo，读取 next 并确认依赖完成后，才能转为 in_progress。"
+                effect = (
+                    "本次拒绝未写入状态。若改为 done → todo，会清除该 Feature 的 validation、review "
+                    "和 release 记录，之后需重新完成交付检查。"
+                )
+            raise _task_status_rejection(
+                f"invalid-task-transition:{old_status}->{status}",
+                feature_id=feature_id,
+                task_id=task_id,
+                current_status=old_status,
+                requested_status=status,
+                allowed_next=_available_task_transitions(feature, task, tasks),
+                message="任务状态转换不被允许。",
+                hint=hint,
+                effect=effect,
+                feature_status=str(feature["status"]),
+            )
         if status in {"in_progress", "done"}:
-            unmet = [item for item in task["depends_on"] if tasks[item]["status"] != "done"]
+            unmet = _unmet_task_dependencies(task, tasks)
             if unmet:
-                raise LifecycleStateError("task-dependencies-not-done:" + feature_id + "/" + ",".join(sorted(unmet)))
+                raise _task_status_rejection(
+                    "task-dependencies-not-done:" + feature_id + "/" + ",".join(unmet),
+                    feature_id=feature_id,
+                    task_id=task_id,
+                    current_status=old_status,
+                    requested_status=status,
+                    allowed_next=_available_task_transitions(feature, task, tasks),
+                    message="任务依赖尚未完成。",
+                    hint="先完成 unmet_dependencies 中的 Task，读取 next 后再启动或完成当前 Task。",
+                    effect="本次拒绝未写入状态，对现有状态和交付检查无影响。",
+                    feature_status=str(feature["status"]),
+                    unmet_dependencies=unmet,
+                )
         task["status"] = status
         task["updated_at"] = timestamp
         if status != "done" or old_status == "done":
@@ -1453,6 +1576,11 @@ def _emit(value: object) -> None:
     print(json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True))
 
 
+def _emit_error_details(details: Mapping[str, object]) -> None:
+    rendered = json.dumps(details, ensure_ascii=False, sort_keys=True)
+    print(f"error-details: {rendered}", file=sys.stderr)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Git-tracked lightweight SDLC lifecycle state")
     parser.add_argument("--repo", default=".", help="target repository root")
@@ -1643,6 +1771,13 @@ def main(argv: Sequence[str] | None = None) -> int:
             result = feature_projection(repo=args.repo, feature_id=args.feature_id)
     except LifecycleStateError as exc:
         print(f"lifecycle-state-error: {exc}", file=sys.stderr)
+        if args.command == "set-task-status":
+            details = exc.details or _unknown_task_status_details(
+                feature_id=args.feature_id,
+                task_id=args.task_id,
+                requested_status=args.status,
+            )
+            _emit_error_details(details)
         return 2
     _emit(result)
     return 0

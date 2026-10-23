@@ -83,6 +83,28 @@ lifecycle_state.py --repo <repo> set-task-status \
 
 Task 可带 `--depends-on <TASK-id>`。依赖未完成时不能开始下游 Task。
 
+### Task 状态错误输出与恢复
+
+`set-task-status` 的 `LifecycleStateError` 继续在 stderr 首行输出既有错误码，格式为
+`lifecycle-state-error: <existing-code>`，退出码仍为 `2`，且不写 stdout。该命令的失败会紧随其后输出一行
+`error-details: <JSON>`，供人和调用方判断恢复步骤；其他命令的成功 JSON 和错误输出不因此改变。
+
+JSON 始终包含 `message`、`hint`、`effect`、`operation`、`feature_id`、`task_id`、`current_status`、
+`requested_status`、`allowed_next` 与 `state_changed`。可选的 `feature_status` 和 `unmet_dependencies` 分别说明
+Feature 已关闭和未完成的前置 Task。Python API 继续以原错误码作为 `str(exc)`，详情仅是附加信息。
+
+- `state_changed: false` 只表示明确的写入前拒绝：非法 Task 转换、未完成依赖或关闭的 Feature。`allowed_next` 是当前
+  Feature 状态和依赖约束下可行的下一状态，按字母顺序排列，不包含幂等的当前状态；未完成依赖会排除 `in_progress` 和
+  `done`，已关闭 Feature 或已取消 Task 则为 `[]`。这类拒绝不会写入 state。
+- `state_changed: "unknown"` 表示写入结果无法确认，例如原子替换已经完成后目录同步失败。它不是“没有可行转换”：
+  `current_status` 和 `allowed_next` 会是 `null`。先执行 `feature-projection` 和 `next` 的只读查询，再决定是否继续；
+  不要根据退出码或错误码名称推断 state 未变化，也不要按旧参数盲目重试。
+
+Task 从 `done` 重新开始必须先走合法的 `done → todo → in_progress`。`done → todo` 会清除该 Feature 的
+validation、review 和 release 记录，之后需要重新完成交付检查。review 返回 `changes_requested` 时，`next` 会进入
+build，但不应自动重开 Task；只有确认需要实现修复时才按上述转换重开相关 Task。validation 为 `fail` 而所有有效
+Task 仍为 `done` 时，`next` 仍是 validate，用于补充证据或解决环境问题；`ENV_BLOCKED` 不自动要求重做实现。
+
 ### 5.1 开发分支登记迁移
 
 Feature 的 `branch` 是协作登记，不是 checkout 指令。登记与实际开发 worktree 不一致时，主 Agent 或独立维护者先让同一
