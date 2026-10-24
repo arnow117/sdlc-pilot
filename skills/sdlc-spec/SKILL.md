@@ -25,14 +25,16 @@ distilled-from: [Zts0hg/codexspec]
 
 1. 加载 `sdlc-product-design` 和 [`lifecycles/product-design.md`](../sdlc/references/lifecycles/product-design.md)。
 2. 先核对产品上下文中的方向来源、预期结果和成功指标；长期文档只作为约束来源，不复制为当前需求正文。
-3. 澄清问题、目标用户、期望结果和不做什么。
+3. 先复用已确认的来源和明确委托的选择，再按[尽早处理实质产品选择](../sdlc/references/lifecycles/product-design.md#尽早处理实质产品选择)
+   提出会影响范围、行为或验收的少量问题；不把普通实现默认值或已经给出的答案重问一遍。
 4. 用 Given/When/Then 或具体例子覆盖主路径、失败路径和边界。
 5. 明确术语、业务规则、不变量、体验约束和非功能要求。
 6. 将结论直接写回 `product_context_ref` 指向的 Markdown；按
    [`sdlc-product-design` 的产品决策来源规则](../sdlc-product-design/SKILL.md#产品上下文结构)
-   保留当前决定的确认来源、未决问题与结果指标。
-   按 [sdlc-prototype 包内适配](../sdlc/references/integrations/product-prototype.md) 的唯一选择策略，使用它作为本阶段方法。
-7. 与用户确认范围和验收条件；未确认的建议、假设或开放替代项不能升格为 Requirement 或验收条件。
+   保留当前决定的确认或委托来源、未决问题与结果指标。
+   按 [sdlc-prototype 包内适配](../sdlc/references/integrations/product-prototype.md) 的唯一选择策略，使用它作为本阶段方法；适用时展示候选版本、
+   定向反馈动作、实际检查范围和模拟边界，并把反馈造成的决定/版本变化写回当前产品上下文。
+7. 仅对尚未有确认来源或明确委托、且会阻塞产品行为或验收的选择请求用户回答；未确认的建议、假设或开放替代项不能升格为 Requirement 或验收条件。
 8. 条件满足后在 orchestrated mode 请求 `mark-requirement-ready`；只有独立、不在主 Agent 编排中的 standalone
    mode 才直接调用 CLI。
 
@@ -43,7 +45,7 @@ distilled-from: [Zts0hg/codexspec]
 - 范围内、范围外、异常行为和依赖均明确。
 - 方向来源或其缺失已明确，预期结果包含可观察指标或明确的不可观测原因。
 - 验收条件足以指导研发和测试。
-- 当前绑定要求有明确的用户确认或可追溯的已确认来源；推断、假设和开放替代项仍保持分离。
+- 当前绑定要求有明确的用户确认、明确委托及实际采用项，或可追溯的已确认来源；推断、假设和开放替代项仍保持分离。
 - 产品上下文路径仍与 `state.json` 中的 `product_context_ref` 一致。
 
 未满足时保持 `captured` 并列出下一项澄清；不要为了推进状态而补猜答案。
