@@ -92,6 +92,13 @@ clarification, local correction, or repair already within the existing acceptanc
 scope uses a short native follow-up instead. If it materially changes the listed
 contract, send the replacement brief.
 
+For a small tracked project, use the same complete brief and result shape with
+short current facts and precise context references. Do not repeat unchanged
+product text, full handoff history, or complete test output in each pass. The
+short form must still identify the actual acceptance condition, relevant design,
+Task boundary, and necessary verification; it is not a lifecycle mode or a reason
+to skip a stage, child, acceptance, validation, or review.
+
 The child completes ordinary implementation choices and necessary checks without
 asking for approval at each step. It stops for a material missing decision,
 interface conflict, authorization gap, or write-scope conflict. A runtime with
@@ -197,6 +204,64 @@ failed evidence, and the mandatory nonconvergence rule still stop progression.
 The same stage owner keeps its implementation, tests, and corrections until the
 main Agent accepts the result; ordinary repairs already inside the accepted
 contract do not create an additional user-approval step.
+
+### Early product choices
+
+Before a product or spec stage expands a long specification or dispatches work
+that depends on a choice, reuse facts from the user request and accessible
+confirmed sources. Ask early only when a user journey, product form,
+permission/privacy rule, key business rule, scope, or acceptance condition has
+material alternatives. Keep it targeted: normally one to three questions, each
+with a recommendation, principal trade-off, and the work it affects. Routine,
+reversible implementation defaults remain within the existing authorization and
+do not become a product questionnaire.
+
+The product child returns its verified facts, options, recommendation, affected
+work, and an explicit missing decision through its existing native message or
+result (normally `unresolved_items`). It does not add a result status, field,
+inbox, or waiting state. The main Agent asks the user, then passes the answer to
+the current product/spec context writer through the existing native message or
+follow-up dispatch so that writer records it. The main Agent edits that context
+itself only after the writer has handed off and the write scopes are confirmed
+not to overlap. Where no intermediate-message capability exists, retain the
+existing serial handoff. Work that does not depend on the answer may continue;
+dependent acceptance or implementation does not advance from silence, an ordinary
+timeout, or a generic instruction to keep working.
+
+An explicit delegation such as “use the recommendation for these choices” is a
+valid product source for the named choices. Record both the delegation source and
+the choice actually adopted; do not describe it as the user's personal selection.
+Authorization to continue a Feature, stage, or all currently authorized work is
+not by itself delegation or confirmation of every unknown product decision.
+
+### User-visible progress from existing evidence
+
+The main Agent gives concise progress at recovery/start, when a material choice
+or failure appears, when a candidate artifact or earliest real increment is ready,
+and after it is accepted or corrected. It derives the update from the current
+state/projection, referenced product and engineering contexts, project facts, Git,
+and actual current-stage evidence. It does not create `STATUS.md`, `progress.json`,
+an event record, or another progress table.
+
+A useful update states only the current known Requirement/Feature/Task and stage;
+completed or verified behavior with its revision or workspace fact; an opening
+artifact or entry point; unresolved choice, failed evidence, or remaining scope;
+and the next authorized action or the specific user answer needed. Mark a
+prototype, mock, or simulated result as such. A product candidate, an unfinished
+Task, or a passing local check does not become a production validation/review/ship
+pass through progress wording.
+
+For a multi-Task snapshot, show a completed/total value only as a count. Do not
+derive a product-completion percentage from it: remaining work may contain
+validation or a critical integration.
+
+`in_progress`, an old dispatch, or a checkpoint is not evidence of current child
+liveness. Report live execution only from current host evidence, and do not poll
+or replace a child merely to fill a progress update. A missing state remains a
+read-only fact: report it without initializing a lifecycle. For a multi-item
+snapshot, the existing `backlog board` may generate static read-only HTML from
+`state.json`; state its snapshot time and do not imply search, live refresh, chat,
+or state write-back.
 
 ### Earliest real increment
 

@@ -43,6 +43,12 @@ Requirement: captured → ready → in_delivery → validated → released
 写范围、依赖和验证独立时才允许额外有界分析或并行工作，并负责汇总和集成验收。同阶段修正复用原实现者；评审只有
 由实际不同的执行者完成时才称独立。
 
+小型 tracked Feature 可以用紧凑上下文和短交接减少重复：仍保留 PRODUCT / ENGINEERING 的核心与原顺序、当前验收条件到
+设计/Task/计划验证的关联，以及必要阶段和证据。产品阶段只尽早询问会改变产品行为或验收的选择；明确委托的选择记录委托来源和
+实际采用项，普通继续执行授权不会确认未知决定。完整规则和从已有 state、上下文、Git 与实际证据生成的进展说明见
+[`stage-agent-protocol.md`](skills/sdlc/references/stage-agent-protocol.md)；紧凑填写例子见
+[`examples/small-project-context.md`](examples/small-project-context.md)。
+
 仅当相关代码、配置与环境一致，且有实际执行的命令、结果及被测版本时，才可复用验证证据；
 输入变化、失败、证据缺失或阶段另有要求时执行相应检查。详见
 [`阶段协作协议`](skills/sdlc/references/stage-agent-protocol.md#5-evidence-git-and-mandatory-stop)。
@@ -239,7 +245,7 @@ python3 scripts/backlog.py tree --root <target-repo>
 python3 scripts/backlog.py board --root <target-repo> --out ./_board.html
 ```
 
-`board` 只写可重新生成的 HTML；其余命令不写文件。`lint` 会检查 state 和所有 context ref 是否存在且已被 Git
+`board` 只写可重新生成、静态只读的 HTML；其余命令不写文件。它没有搜索、实时刷新、聊天或状态回写能力。`lint` 会检查 state 和所有 context ref 是否存在且已被 Git
 追踪。validation 保存测试时的 Git HEAD 作为实现版本；在 validation 前，state 必须已被 Git 追踪、没有
 unmerged index entry 且未 staged（先 commit 或 unstage），当前产品/研发上下文也必须已追踪且无冲突，业务代码
 工作树必须干净。之后可以单独提交 `.sdlc-v1/**` 来同步状态和证据；如果其他路径相对 validation commit 有变化，
@@ -322,6 +328,7 @@ git diff --check
 - Web / App 验证与工程资产：[`e2e`](skills/sdlc/references/validate-modes/e2e.md)
 - 工具自身维护与发布：[`evolve`](skills/sdlc/references/evolve-loop.md)
 - 五份可审阅模板：[PROJECT.md](skills/sdlc/references/templates/PROJECT.md)、[PRODUCT.md](skills/sdlc/references/templates/PRODUCT.md)、[ENGINEERING.md](skills/sdlc/references/templates/ENGINEERING.md)、[TASK.md](skills/sdlc/references/templates/TASK.md)、[CHECKPOINT.md](skills/sdlc/references/templates/CHECKPOINT.md)；PRODUCT/ENGINEERING 分别保留其源模板的核心与条件可选区分。
+- 小项目紧凑上下文与产品选择/候选原型/进展示例：[`examples/small-project-context.md`](examples/small-project-context.md)
 - 按需图示与场景对齐：[图示辅助对齐](skills/sdlc/references/lifecycles/software-delivery.md#图示辅助对齐)，在原有章节解释复杂关系，并在实现和评审时检查一致性。
 - Onboard 产出示例：[`examples/onboard-output-sample.md`](examples/onboard-output-sample.md)
 - 看板当前实现与历史视觉设计：[`DESIGN.md`](DESIGN.md)
