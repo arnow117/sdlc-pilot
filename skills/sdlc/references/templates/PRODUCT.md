@@ -3,8 +3,8 @@
 文档/确认状态不替代 state.json 的 lifecycle 进度；条件可选部分仅在适用时出现。复制后删除本注释。
 文内 REQ-* 是功能规格条目编号，不要求新建 state Requirement。
 SDLC 起草提示：复杂用户旅程或状态转换按[图示辅助对齐](../lifecycles/software-delivery.md#图示辅助对齐)放入对应用户故事；保留原有场景与章节。
-小型需求仍保留本模板的核心和顺序，只用短句或少量条目消除重复。可参考[小项目上下文示例](../../../../examples/small-project-context.md)，
-但它不是另一份模板或字数要求。
+小型需求仍保留本模板的核心和顺序，只用短句或少量条目消除重复。每项规则、schema、接口和验收条件只在一个权威位置定义，后续章节引用它。
+可参考[小项目上下文示例](../../../../examples/small-project-context.md)；其中同类 greenfield 产品 3–5 KB 只是工作量诊断，绝不替代语义完整性、验收或验证。
 -->
 
 # 产品上下文：[填写：Requirement ID 与简短标题]

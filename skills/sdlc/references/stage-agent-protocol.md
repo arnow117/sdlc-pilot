@@ -92,6 +92,12 @@ clarification, local correction, or repair already within the existing acceptanc
 scope uses a short native follow-up instead. If it materially changes the listed
 contract, send the replacement brief.
 
+The main Agent may reuse an unchanged lifecycle CLI `--help` contract only in its
+current context; it creates no cache or store for that contract. A semantic or
+material brief change still requires the complete `supersedes` brief above. A
+routine correction that leaves the contract unchanged remains a short native
+follow-up.
+
 For a small tracked project, use the same complete brief and result shape with
 short current facts and precise context references. Do not repeat unchanged
 product text, full handoff history, or complete test output in each pass. The
@@ -118,7 +124,10 @@ actual runtime limitation instead of assuming a role file changed a loaded model
 Messages add a new constraint, correction, blocker resolution, or result; do not
 send acknowledgements, progress polls, or repeated “continue” requests. While a
 child runs, the main Agent does independent work or uses an event-aware wait
-(normally 60 seconds where supported). Waiting and recovery follow the rule below.
+(normally 60 seconds where supported). It may prepare the next stage's read-only
+scope without writing the active writer's files, and uses scoped target/ancestor
+searches instead of broad home-directory scans. Waiting and recovery follow the
+rule below.
 
 ### Waiting and recovery
 
@@ -333,6 +342,14 @@ Validate is also read-only with respect to implementation. Ship may prepare rele
 and smoke evidence, but external effects and release mutations remain with the
 main Agent after the required user authorization.
 
+After accepted implementation and validation evidence are available, and the
+Feature has passed the existing independent Review and reached its `reviewed`
+entry condition, Ship may be a fresh, minimal-context packaging or delivery unit.
+Its brief names the approved source, validation/review evidence, authorization,
+and explicit artifact/evidence write scope. It is independent delivery work only:
+it cannot replace the original implementer for unfinished implementation, tests,
+or corrections. The configured role routing still applies.
+
 After a child returns, the main Agent verifies the declared diff, required checks,
 revision, workspace state, and lifecycle-request contract before accepting it.
 Missing or failed required verification prevents acceptance. On stage completion,
@@ -381,6 +398,16 @@ satisfied. `incomplete` and `blocked` explain what remains or what prevents it.
 Historic `completed` or `failed` messages are evidence to reinterpret, not a state
 schema migration or an alternative state transition.
 
+The main Agent may mechanically normalize only presentation-only indentation,
+quoting, or list rendering when operation order, scalar and repeated values,
+required and unknown arguments, fixed repository binding, and evidence are
+unambiguous and unchanged. It never accepts aliases such as `transition_request`,
+guesses missing parameters or versions, drops values, or relaxes authorization or
+state checks. When verified facts need only a canonical request-shape correction,
+request the minimal corrected portion from the same child and combine it only for
+the same snapshot and an unambiguous result; otherwise do not accept or mutate
+state.
+
 ### Results for corrections and other issues
 
 A simple successful first pass keeps the concise result format above. When the same
@@ -423,10 +450,18 @@ same reminder.
 
 ## 5. Evidence, Git, and mandatory stop
 
-Reuse verification only when the relevant code, configuration, environment, and
-tested revision still match. Evidence names the command, exit result, revision, and
-relevant workspace/configuration facts. A changed input, missing evidence, failed
-check, or stage-specific requirement requires appropriate new verification.
+Reuse verification only when its purpose and the relevant code, configuration,
+environment, and tested revision still match. Evidence names the command, exit
+result, revision, and relevant workspace/configuration facts. A coverage command
+that actually runs the full relevant unit suite can evidence both purposes in that
+same independent Validate; do not demand a second identical unit run solely to
+format the report. Implementer evidence does not substitute for independent
+Validate. A changed input, missing evidence, failed check, or stage-specific
+requirement requires appropriate new verification.
+
+Timing diagnostics may locate work but never justify cancelling on timeout,
+replacing an active writer, omitting required reports or checks, or claiming a
+speed result that was not measured.
 
 After a complete change segment passes its required checks, commit it on the
 Feature branch when existing authorization permits. A partial checkpoint commit
