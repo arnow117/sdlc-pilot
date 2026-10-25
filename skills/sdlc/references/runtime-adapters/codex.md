@@ -11,7 +11,7 @@ does not define lifecycle, dispatch, result, acceptance, or checkpoint semantics
 
 | SDLC need | Codex implementation | Fallback |
 |---|---|---|
-| Start one bounded child | `spawn_agent` with the complete current brief | Main Agent runs the stage serially inline and discloses it |
+| Start one bounded child | `spawn_agent` with the complete current brief | Only when the runtime cannot create a child, use the protocol's disclosed serial inline fallback, subject to target role requirements |
 | Material child-contract change | `followup_task` with the concise, complete `supersedes` brief | Start a later serial child only after the prior result is summarized |
 | Routine clarification, local correction, or in-scope repair | `send_message` to an active child; use `followup_task` when an idle child needs another turn | No `supersedes`; use the next normal message |
 | Wait for a result | `wait_agent` | Use the runtime's interruptible wait |
@@ -33,6 +33,33 @@ applies the canonical protocol when it permits bounded analysis or parallel work
 shape. Pass it directly to a child; do not persist it as a current effective
 solution, task card, or
 progress file.
+
+## Configured model routing
+
+Read the target repository's active Codex configuration before dispatching. The
+following mapping applies only when that configuration provides these roles and
+model settings; an installation of this skill alone does not provide them.
+
+| SDLC responsibility | Codex role | Configured model and effort |
+|---|---|---|
+| Product decisions, Plan acceptance, lifecycle acceptance, final acceptance | primary Agent | `gpt-6.1-sol` / `xhigh` |
+| Actual Backlog → Spec → Plan preparation batch | fresh Sol stage child | `gpt-6.1-sol` / `xhigh` |
+| One complete Build Task and its in-scope corrections | `worker` | `gpt-5.6-terra` / `xhigh` |
+| Independent Validate of the current candidate | fresh `worker` distinct from the implementer | `gpt-5.6-terra` / `xhigh` |
+| Independent read-only Review | `reviewer` | `gpt-6.1-sol` / `xhigh` |
+| Ship execution after the required approval | Terra execution Agent selected for the accepted delivery unit | `gpt-5.6-terra` / `xhigh` |
+
+The main Agent explicitly requests these roles when the runtime supports them and
+records any deviation from the configured model or effort. If a required Terra
+implementer or independent Terra validator cannot be created, it reports that
+concrete limitation and does not silently substitute Sol work or call the outcome
+independent. If an independent Sol reviewer is unavailable, it likewise discloses a
+non-independent fallback. Authorized read-only analysis and simple documentation
+work may still continue. The portable serial fallback describes topology only when
+child creation is unavailable; it does not override the target's model routing or
+formal independence requirement. A specialist card such as `qa` or `security`
+remains an inspection lens; it is never a substitute for the runtime role or model
+assignment above.
 
 ## User choices
 

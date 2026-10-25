@@ -12,8 +12,12 @@
 
 进入生命周期后，主 Agent 使用 `next` 选择阶段、界定完整工作合同、派发一个实际执行的子 Agent、验收其文件与命令证据，
 再更新 state 并继续。子 Agent 不编辑 `state.json` 或调用 lifecycle mutation；它只能返回“待验收 / 未完成 / 受阻”。
-运行时没有子 Agent 能力时，主 Agent 按相同顺序串行执行并披露 fallback；这不能称为独立评审。完整约定只见
+运行时没有子 Agent 能力时，主 Agent 按相同顺序串行执行并披露 fallback；这只说明派工拓扑，不能取代项目要求的 Terra 职责或称为独立评审。
+所需 Terra 或独立 Sol 不可用时如实报告限制，只继续已授权的只读或简单文档工作。完整约定只见
 [`stage-agent-protocol.md`](skills/sdlc/references/stage-agent-protocol.md)，它不引入新的 runtime、事件记录、行为 Eval 或自动 retrospective。
+对已授权、单仓单模块且产品与交付边界均已明确的小项目，主 Agent 默认优先在该协议的资格范围内一次派给同一准备执行者
+Backlog → Spec → Plan 的连续候选；主 Agent 仍逐块接受并按原 CLI 顺序执行。已有 ready Requirement 只准备 Plan，已有
+Feature 继续其真实下一阶段。未决选择、原型确认、外部授权或复杂接口、迁移、并发与恢复风险继续走普通阶段，不能借批次跳过。
 
 产品与研发是同一个生命周期的两个视角，不是两套相互同步的存储系统：
 
@@ -48,10 +52,14 @@ Requirement: captured → ready → in_delivery → validated → released
 实际采用项，普通继续执行授权不会确认未知决定。完整规则和从已有 state、上下文、Git 与实际证据生成的进展说明见
 [`stage-agent-protocol.md`](skills/sdlc/references/stage-agent-protocol.md)；紧凑填写例子见
 [`examples/small-project-context.md`](examples/small-project-context.md)。
+小项目优先由同一实现者完成一个完整 Task；真实早期增量可以在 Task 未完成时展示，但不请求 done 或替代独立 Validate、Review。
+`project.md` 只随稳定入口、命令、配置、环境、资源、surface 或长期来源的实际变化刷新；修复、测试数、覆盖率、commit、HEAD 和
+Feature 阶段变化本身不触发 Onboard。
 
 仅当相关代码、配置与环境一致，且有实际执行的命令、结果及被测版本时，才可复用验证证据；
 输入变化、失败、证据缺失或阶段另有要求时执行相应检查。详见
 [`阶段协作协议`](skills/sdlc/references/stage-agent-protocol.md#5-evidence-git-and-mandatory-stop)。
+完整 coverage 若实际运行同一相关 unit suite，可以记录一次满足两个目的；提交身份变化本身不要求重跑。独立 Validate 仍须对当前候选实际执行。
 生命周期 CLI 不会因 `.sdlc-v1` 上下文文字的语义变化自动失效既有验证；主 Agent 必须按
 [evidence applicability 规则](skills/sdlc/references/stage-agent-protocol.md#context-prose-and-evidence-applicability)
 重新判断当前要求是否仍被覆盖。

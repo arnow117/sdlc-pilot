@@ -45,7 +45,7 @@ description: >
 
 ## Build 后的局部刷新
 
-`project.md` 的指定写者仍是 onboard Agent。Build 只能通过现有结果中的 `project_candidates` 提出已变化的入口、命令、surface 或验证资源；主 Agent 在明确的后续 onboard brief 中交给该写者。该 Agent 用同一 revision、配置与环境的证据刷新受影响事实并保持显式 stage handoff，不为复述已经证明的 correctness 再跑完整套检查。证据缺失、已过期，或命令/环境确有不确定性时，运行与缺口相称的新检查。
+`project.md` 的指定写者仍是 onboard Agent。Build 只能通过现有结果中的 `project_candidates` 提出已变化的入口、命令、配置、环境、资源、surface 或长期来源；主 Agent 在明确的后续 onboard brief 中交给该写者。代码修复、测试数、覆盖率、候选 commit、HEAD 或 Feature 阶段变化不触发刷新。该 Agent 用同一 revision、配置与环境的证据刷新受影响事实并保持显式 stage handoff，不为复述已经证明的 correctness 再跑完整套检查。证据缺失、已过期，或命令/环境确有不确定性时，运行与缺口相称的新检查。
 
 ## project.md 必备内容
 

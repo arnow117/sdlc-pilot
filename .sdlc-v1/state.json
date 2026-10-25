@@ -83,6 +83,40 @@
         "commit": "981a849f7dc1247b7bb9c034b5d5c4d44845aa9e",
         "result": "pass"
       }
+    },
+    "FEAT-dispatch-workload": {
+      "branch": "codex/sdlc-dispatch-evolve",
+      "created_at": "2026-10-25T10:51:15Z",
+      "engineering_context_ref": ".sdlc-v1/context/FEAT-dispatch-workload.engineering.md",
+      "id": "FEAT-dispatch-workload",
+      "release": {
+        "at": "2026-10-25T12:06:56Z",
+        "commit": "a17ce7d67ad05e67a92a3e2adfac9d4228914691",
+        "status": "released"
+      },
+      "requirement_id": "REQ-dispatch-workload",
+      "review": {
+        "at": "2026-10-25T11:59:04Z",
+        "by": "dispatch_review (gpt-6.1-sol/xhigh)",
+        "decision": "approved"
+      },
+      "status": "released",
+      "tasks": {
+        "TASK-dispatch-workload": {
+          "depends_on": [],
+          "id": "TASK-dispatch-workload",
+          "status": "done",
+          "title": "落实编排与证据减量并同步使用说明",
+          "updated_at": "2026-10-25T11:37:29Z"
+        }
+      },
+      "updated_at": "2026-10-25T12:06:56Z",
+      "validation": {
+        "at": "2026-10-25T11:55:46Z",
+        "command": "bash scripts/validate-skills && git diff --check",
+        "commit": "a17ce7d67ad05e67a92a3e2adfac9d4228914691",
+        "result": "pass"
+      }
     }
   },
   "requirements": {
@@ -111,6 +145,19 @@
       "status": "released",
       "title": "统一原型入口与分发",
       "updated_at": "2026-10-21T08:43:43Z"
+    },
+    "REQ-dispatch-workload": {
+      "created_at": "2026-10-25T10:42:30Z",
+      "depends_on": [],
+      "description": "合并合格小项目准备派工，减少完整 Task 交接及无事实变化的 Onboard，复用适用验证与交付证据，保留现有状态结构、Sol/Terra 分工和独立质量检查。",
+      "domain": "sdlc-orchestration",
+      "feature_id": "FEAT-dispatch-workload",
+      "id": "REQ-dispatch-workload",
+      "priority": "P1",
+      "product_context_ref": ".sdlc-v1/context/REQ-dispatch-workload.product.md",
+      "status": "released",
+      "title": "SDLC 小项目派工与证据减量",
+      "updated_at": "2026-10-25T12:06:56Z"
     }
   },
   "state_format": "sdlc-lightweight-state-v1",

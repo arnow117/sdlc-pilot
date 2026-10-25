@@ -14,6 +14,7 @@ description: >
 遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。Agent 创建或修订产品上下文，返回
 有序 `requested_transitions`；主 Agent 验证后执行 Requirement mutation。只有没有当前主 Agent 编排的独立直接调用
 才保留本技能的 standalone 命令；编排中的直接调用仍遵循 orchestrated mode。
+当主 Agent 已按协议判定准备批次合格时，本阶段只返回自己的 canonical 候选块；不得将 Spec 或 Plan 候选当成已接受状态。
 
 ## 捕获需求
 

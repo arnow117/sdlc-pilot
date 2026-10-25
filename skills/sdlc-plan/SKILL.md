@@ -12,10 +12,12 @@ distilled-from: [Zts0hg/codexspec]
 
 遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。规划阶段的 Agent（`plan`）返回有界分析和工程上下文候选；
 主 Agent 解决冲突，形成唯一的当前有效方案，再验证并执行 `start-feature`、`add-task` 等请求。分析稿不独立生效。
-Feature 特有发现留在工程上下文，产品行为更新产品上下文，跨 Feature 规则作为 `project_candidates` 返回；只有明确跨项目的
-SDLC 通用改进才提议 `/sdlc evolve`。
+Feature 特有发现留在工程上下文，产品行为更新产品上下文；只有已变化的稳定项目事实才作为 `project_candidates` 返回，
+其余跨 Feature 的 SDLC 通用改进才提议 `/sdlc evolve`。
 返回前检查 `lifecycle_state.py start-feature --help` 并只使用 brief 中的参数 contract：`start-feature` 不接受
 `title`；Task 标题只属于后续 `add-task` 请求。
+准备批次中，本阶段只形成候选 Feature 与完整计划 Task 集合。主 Agent 接受并应用前面的块后，仍须逐项核对并登记全部 Task、
+标题和依赖，不能因 `next` 已出现 build 而提前实现。
 
 ## 输入
 
