@@ -11,7 +11,8 @@ description: >
 
 遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。build Agent 可以修改本 Task 的代码和
 工程上下文，但不更新 lifecycle state；它返回 `set-task-status` 请求和命令证据。Feature 特有发现留在工程上下文，
-产品行为更新产品上下文，跨 Feature 规则作为 `project_candidates` 返回；明确跨项目的 SDLC 通用改进才提议 evolve。
+产品行为更新产品上下文。只有入口、命令、配置、环境、资源、surface 或长期来源等稳定项目事实实际变化时，才返回
+`project_candidates`；否则返回 `[]`。明确跨项目的 SDLC 通用改进才提议 evolve。
 用户交流、原授权内连续推进和增量展示的边界由该协议唯一规定；本阶段只在下述实现循环提供真实增量的报告入口。
 
 ## 入口
@@ -27,7 +28,8 @@ description: >
 7. 根据 `.sdlc-v1/project.md` 和 Git diff 加载相关角色卡与语言参考。
    涉及 Web 或 App 用户旅程时，按 [Web 验证约束](../sdlc/references/validate-modes/e2e.md#web) 或
    [App 验证约束](../sdlc/references/validate-modes/e2e.md#app) 落实当前有效方案中的测试资产、环境与产物归档准备，
-   供 Validate 独立执行；实际入口和资产位置作为 `project_candidates` 返回，由主 Agent 核对后更新 `project.md`。
+   供 Validate 独立执行；只有实际入口或资产位置因此改变时，才作为 `project_candidates` 返回，由主 Agent 核对后更新
+   `project.md`。代码修复、测试数、覆盖率、候选 commit 或 HEAD 变化本身返回 `[]`。
 
 ## 实现循环
 

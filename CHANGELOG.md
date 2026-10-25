@@ -2,6 +2,18 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [4.2.0] — 2026-10-25
+
+### Changed
+
+- 为合格的小项目默认优先增加 Backlog → Spec → Plan 的有界准备批次：仅返回尚未接受的连续阶段、仍逐块接受 canonical 结果并按原 CLI 顺序执行；部分失败或上游输入变化从首个未接受的受影响阶段恢复。
+- 小项目优先由同一 Terra 完成一个完整 Task；早期真实增量可展示但不结束 Task。稳定项目索引、验证/旅程资产和交付证据按适用性复用。
+- Codex adapter 明确 Sol/Terra 运行时映射、独立 Validate 与 Sol Review；角色卡仍仅提供专业检查视角。
+
+### Compatibility
+
+- 公共 lifecycle CLI、`state_version=3`、JSON/result schema 和 roles/modes 字典保持不变；无需迁移。插件发布元数据同步为 `4.2.0`，本轮模型性能实跑为 `NOT_RUN`。
+
 ## [4.1.1] — 2026-10-25
 
 ### Fixed

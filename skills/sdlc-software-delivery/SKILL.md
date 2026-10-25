@@ -16,6 +16,8 @@ description: >
 
 各阶段按 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md) 依次执行：主 Agent 拥有状态，
 阶段 Agent 返回 artifact、证据、上下文候选和有序 transition 请求。无子 Agent 能力时按相同顺序串行 inline 执行。
+合格小项目的 Backlog、Spec、Plan 准备派工及其逐块接受均按协议执行并使用原 CLI。Build 的完整 Task、独立 Validate
+与 Review 的职责和 Codex 运行时映射见该协议及 [runtime adapter](../sdlc/references/runtime-adapters/codex.md)。
 
 ## 输入
 

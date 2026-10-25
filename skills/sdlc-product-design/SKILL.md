@@ -15,7 +15,8 @@ distilled-from: [Zts0hg/codexspec]
 
 遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。产品设计 Agent 更新产品正文并请求
 必要的 Requirement transition；仅在 brief 明确允许时，可在项目约定目录创建或更新有界原型产物。主 Agent 验证后更新
-state。缺少会改变范围的产品决定时返回问题，不猜测推进。
+state。缺少会改变范围的产品决定时返回问题，不猜测推进。准备批次只在协议资格成立时返回本阶段的候选块；未确认决定或
+原型反馈仍保留在产品边界。
 
 ## 输入
 

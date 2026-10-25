@@ -12,6 +12,8 @@
 - `goal` 写可观察结果；`out_of_scope` 明确未授权范围；`settled_interfaces` 只写已定 API、DTO、所有权或兼容性合同。
 - `context_refs` 指向当前项目、产品、工程上下文和已有证据；详细背景放在这些权威位置，不在 brief 重复粘贴。
 - `allowed_transitions` 只列当前已获授权的、有序 lifecycle 请求；没有时保留空列表。`--repo` 由主 Agent 固定，子 Agent 不提供或覆盖。
+- 模型选择与独立性由宿主 adapter 记录，不把 `qa`、`security` 等专业视角当作运行时角色。canonical 结果仍只使用本模板和阶段协议已有字段。
+- 准备批次在同一原生消息中为每个阶段各附一份本合同；共享事实可引用，但每块保留自身的 `stage`、`write_scope` 和 `allowed_transitions`。完整规则见[阶段协议](../stage-agent-protocol.md#bounded-preparation-batch-for-small-projects)。
 
 ### 派工合同
 
@@ -27,7 +29,7 @@ write_scope: ["[填写：允许写入的仓库相对路径]"]
 dependencies: ["[填写：已解决的前置条件或外部依赖]"]
 completion_conditions: ["[填写：可检查的完成结果]"]
 required_verification: ["[填写：验收前必须执行的命令或证据]"]
-expected_result: [changed_files, commands, revision, workspace_status, unresolved_items]
+expected_result: [changed_files, commands, revision, workspace_status, context_updates, unresolved_items, requested_transitions]
 authorization: "[填写：已存在的授权，以及排除的外部操作]"
 supersedes: <brief identifier or none>
 allowed_transitions:
@@ -37,6 +39,8 @@ allowed_transitions:
 #   required_arguments: [<exact-required-long-option-name>]
 #   optional_arguments: [<exact-optional-long-option-name>]
 # `--repo` 由主 Agent 固定，子 Agent 不能提供或覆盖。
+# 请求中的 `arguments` 键只去掉当前 `--help` 长选项开头的 `--`，保留内部连字符（例如 `feature-id`、`task-id`）。
+# 必填参数必须齐全，可选参数只有实际需要时才传入；不能猜别名、占位值或未知参数。
 ```
 
 ### 需要展开时的补充

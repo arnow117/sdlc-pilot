@@ -41,6 +41,22 @@ unresolved decisions. Those notes are inputs only: they do not write the unified
 current effective solution, change scope, or authorize implementation. The main
 Agent resolves conflicts and records the one current effective solution.
 
+### Model responsibilities and specialist lenses
+
+The portable protocol assigns responsibilities, not model names. The main Agent
+owns product decisions, the current effective solution, acceptance, lifecycle
+mutations, and the final review decision; a stage Agent prepares candidates and one
+implementation Agent owns its Task and corrections. A different execution context
+performs independent validation when that is required; an independent review
+context performs review when available. A runtime adapter maps those
+responsibilities to configured models and reports any unavailable role or fallback.
+
+Professional role cards such as `qa`, `security`, and `architect` add an inspection
+lens. They do not select a runtime model, satisfy implementation/validation
+independence, or turn a main Agent into an independent reviewer.
+Product confirmation and prototype restrictions remain under
+[Early product choices](#early-product-choices).
+
 ## 2. Dispatch contract
 
 Every child receives a complete current brief. Use
@@ -128,6 +144,75 @@ child runs, the main Agent does independent work or uses an event-aware wait
 scope without writing the active writer's files, and uses scoped target/ancestor
 searches instead of broad home-directory scans. Waiting and recovery follow the
 rule below.
+
+### Bounded preparation batch for small projects
+
+For a qualified small project, preparation defaults to one actual preparation
+Agent dispatch rather than three separate Backlog, Spec, and Plan dispatches. The
+main Agent still makes product decisions and accepts results; the preparation Agent
+does the actual stage work using the target repository's configured Sol role when
+that routing applies. Qualification requires one repository and module, explicit
+user authorization, a settled product direction, and a bounded delivery scope.
+There must be no unresolved `needs_selection` result for the selected target,
+unanswered material product choice, pending prototype confirmation, missing
+external authorization, or complex interface, migration, concurrency, recovery, or
+compatibility decision. Those concrete conditions keep their normal stages and may
+not be inferred away because a batch would be shorter.
+
+One native preparation dispatch message contains the existing complete stage brief
+for each consecutive, not-yet-accepted stage it includes, in order. It may state
+shared settled facts and context references once and let each brief reference them,
+but every brief separately declares its own `stage`, `write_scope`, and
+`allowed_transitions`, together with the existing target-identity and authorization
+constraints. This remains a group of existing briefs in one message, not an outer
+result schema or persistent batch format.
+
+The preparation Agent returns one independently complete canonical stage-result
+block for every consecutive, not-yet-accepted preparation stage, in normal
+Backlog, Spec, Plan order. It does not create a batch result schema, persistent
+result file, transaction, or new lifecycle mode. A later block is only a candidate
+until the preceding block has been accepted. The main Agent reads the selected
+target's actual projection: an already ready Requirement needs only its Plan
+candidate, and an existing Feature continues from its actual next stage without
+recreating accepted Backlog or Spec work. A global `next` for another target cannot
+select this target or expand its batch.
+
+Every canonical result matches its own stage brief. The main Agent accepts each
+block separately and checks its requested operations only against that block's
+ordered allow-list, never the union of batch permissions. Before mutation, it
+checks the current projection, contexts, Git facts, user decision, exact `--help`
+parameter contract, and the brief's allow-list, then invokes the existing CLI in
+that block's original order. A known ID may be supplied by the brief; any newly
+created ID may be used later only after the preceding accepted result returns that
+exact value. A missing, unclear, out-of-order, or cross-stage request is rejected
+for correction before mutation. Aliases, guessed values, and future placeholders
+are rejected. If an acceptance or CLI operation fails, the main Agent stops the
+suffix immediately. This is not an atomic transaction.
+
+If an accepted upstream product decision, candidate input, or source context
+changes during separate acceptance, first determine a lawful target under
+[Early product choices](#early-product-choices) and the existing
+[`sdlc-backlog` state rules](../../sdlc-backlog/SKILL.md#修订合并与取消).
+An actual scope change to a ready or in-delivery Requirement creates a new
+Requirement with its dependency; it does not revise or recapture the old
+Requirement, reuse its Feature, or regenerate only its Plan. The old target's
+dependent suffix stops advancing. Do not infer a missing product choice or
+authorization from a general instruction to continue. Preserve accepted prefixes
+and history; only a lawful target's still-unaccepted affected suffix may be
+regenerated, and an old Plan candidate is never reused. For a captured Requirement
+without a Feature, use the existing revise rule; this batch adds no fallback or
+cancellation operation.
+
+Recovery starts with a read-only reconciliation of state, context, Git, and the
+original results. It resumes at the first unaccepted block or unapplied operation;
+it never repeats a successful capture, ready, feature, or Task operation. If the
+operation outcome is uncertain, inspect the resulting state before deciding whether
+to retry it. Once `start-feature` or any `add-task` has succeeded, the main Agent
+compares the effective Plan's complete Task IDs, titles, and dependencies with the
+Feature projection before Build or Validate. It registers every planned Task first,
+even if `next` already reports `build` or `validate`. A global `next` for another
+Requirement or Feature is not a precondition for the selected target and must not
+be executed.
 
 ### Waiting and recovery
 
@@ -292,7 +377,9 @@ this presentation requires no separate trial confirmation, approval, or lifecycl
 transition. It does not mark an unfinished Task done, replace Validate, Review, or
 Ship, or make a mock or prototype a production-path pass. If a real provider,
 device, or other dependency is unavailable, say so; a mock-only result is not a
-real pass.
+real pass. The same implementation Agent continues that complete Task through its
+necessary checks and corrections; split a small project only when a later unit has
+a genuinely independent delivery boundary.
 
 ## 3. Planning, implementation, integration, and review
 
@@ -462,6 +549,40 @@ requirement requires appropriate new verification.
 Timing diagnostics may locate work but never justify cancelling on timeout,
 replacing an active writer, omitting required reports or checks, or claiming a
 speed result that was not measured.
+
+The same purpose may reuse evidence across an equivalent pre- and post-commit
+snapshot only after checking source, tests, runner, configuration, environment, and
+the relevant usage contract. A different Git identity alone does not require a
+second run. Changed inputs, an earlier failure, missing evidence, or a distinct
+stage obligation does. Build evidence never substitutes for the independently
+executed Validate evidence required for the current candidate.
+
+Reuse a real subprocess, journey, fixture script, or scenario definition when it
+covers the current boundary. Add an asset only for a demonstrated gap, and preserve
+a failing probe's attribution while rerunning only the affected check after
+correction. Each independent check may create new isolated mutable test data or a
+working directory; never reuse already mutated data to manufacture a pass. Do not
+recreate an equivalent fixture definition per revision or duplicate a full
+suite/coverage report in each handoff.
+
+`project.md` indexes stable repository facts, rather than live execution. Build
+returns `project_candidates: []` when entry points, commands, configuration,
+environment, resources, surfaces, and long-lived source references have not
+changed. A code repair, test count, coverage result, candidate commit, HEAD change,
+or Feature stage does not by itself require Onboard. When a stable fact changes,
+the designated Onboard writer updates only the affected fact using current evidence.
+An historical source commit can explain a fact but cannot claim that the current
+candidate passed a check.
+
+Ship uses the current approval source and latest applicable formal evidence, checks
+the delivered content against that source, and performs its required smoke. Source
+distribution uses a freshly unpacked delivery directory. Deployment verifies the
+actual version in its existing authorized target and runs the necessary health or
+smoke checks; it does not imply a new target, environment, or external
+authorization. A compact delivery summary references the approval, content check,
+smoke result, and one recorded evidence location; it does not copy or reread the
+entire history. Equivalent suite evidence does not remove approval, content, smoke,
+or formal commit-binding requirements.
 
 After a complete change segment passes its required checks, commit it on the
 Feature branch when existing authorization permits. A partial checkpoint commit

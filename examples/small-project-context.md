@@ -204,7 +204,7 @@
 
 ###### 背景
 
-按完整用户价值和共享写入边界切成两个纵向 Task，不按每个子命令机械拆分。两项由同一实现者持续负责；这只是本样例的切分，不是固定 Task 数量。
+按完整用户价值和共享写入边界使用一个纵向 Task，不按每个子命令机械拆分。同一实现者持续负责；这只是本样例的切分，不是固定 Task 数量。
 
 ###### 目标 / 非目标
 
@@ -217,29 +217,29 @@
 
 ###### 实施层决定
 
-- **选择**：Task 1 交付安全的 add/list 全路径；Task 2 交付其余命令和回归。**理由**：Task 1 有跨进程可见价值，两个 Task 都围绕同一 store，避免并发写同一文件。
+- **选择**：一个完整 Task 交付所有命令和回归；安全的 add/list 全路径作为该 Task 的最早真实增量。**理由**：所有命令共享同一 store 和文件保护边界，拆分会制造交接而不增加独立交付价值。
 
 ###### 风险 / 取舍
 
 | 风险 | 可能性 | 影响 | 缓解措施 |
 |---|---|---|---|
-| 先展示增量时跳过文件保护 | 中 | 高 | Task 1 的读/写保护和相关失败测试先完成；覆盖率汇总、格式化和提交收尾可在展示后完成 |
+| 先展示增量时跳过文件保护 | 中 | 高 | add/list 的读/写保护和相关失败测试先完成；覆盖率汇总、格式化和提交收尾可在展示后完成 |
 | 重新跑同一检查只为报告 | 中 | 低 | Build 保留受影响检查；独立 Validate 在最终快照运行必要套件，一次全量覆盖命令可同时作为套件证据 |
 
 ###### 实施阶段
 
-- **阶段 1 / Task 1**：创建 `todo.py`、严格 store、`add`/`list` 和其数据文件的 UTF-8、JSON、surrogate、输入/数据路径、原子失败测试。最早可检验结果是两个进程的 add/list；可在覆盖率汇总、格式化和提交收尾前展示，但中途消息必须给出实际命令、版本、工作树和剩余限制，不能把 Task 标为 done。
-- **阶段 2 / Task 2**：完成 `complete`、状态筛选、Markdown export、重复完成不写入，以及导出路径/symlink/hardlink 保护，并加入命令回归和全部 AC 的测试。
-- **阶段 3**：Build 保留有意义的 TDD/累计检查；独立 Validate 在最终源码/配置快照执行所需测试、覆盖/类型/构建检查。相同独立覆盖率命令若实际跑完整相关 unit suite，可记录一次；Build 通过不是 Validate 证据。
+- **阶段 1 / 完整 Task 的首增量**：创建 `todo.py`、严格 store、`add`/`list` 和其数据文件的 UTF-8、JSON、surrogate、输入/数据路径、原子失败测试。最早可检验结果是两个进程的 add/list；可在覆盖率汇总、格式化和提交收尾前展示，但中途消息必须给出实际命令、版本、工作树和剩余限制，不能把 Task 标为 done。
+- **阶段 2 / 同一 Task 的完成范围**：完成 `complete`、状态筛选、Markdown export、重复完成不写入，以及导出路径/symlink/hardlink 保护，并加入命令回归和全部 AC 的测试。
+- **阶段 3 / 完整 Task 后**：Build 保留有意义的 TDD/累计检查；独立 Validate 在最终源码/配置快照执行所需测试、覆盖/类型/构建检查。相同独立覆盖率命令若实际跑完整相关 unit suite，可记录一次；Build 通过不是 Validate 证据。
 
 ###### 需求覆盖
 
 | 验收条件 | 设计组件 | 计划覆盖 |
 |---|---|---|
-| AC-001 | CLI、TodoStore | Task 1：跨进程 add/list 检查 |
-| AC-002 | CLI、TodoStore | Task 2：complete/filter/export、重复完成不写入、导出别名保护检查 |
-| AC-003 | TodoStore | Task 1：add/list 数据文件风险检查；Task 2 回归；独立 Validate |
-| AC-004 | 标准库单文件决定 | Task 1 依赖检查；独立 Validate |
+| AC-001 | CLI、TodoStore | 完整 Task：跨进程 add/list 检查 |
+| AC-002 | CLI、TodoStore | 完整 Task：complete/filter/export、重复完成不写入、导出别名保护检查 |
+| AC-003 | TodoStore | 完整 Task：add/list 数据文件风险检查与全命令回归；独立 Validate |
+| AC-004 | 标准库单文件决定 | 完整 Task 依赖检查；独立 Validate |
 
 ##### 工程任务
 
@@ -251,13 +251,12 @@
 
 ###### 阶段、依赖与执行顺序
 
-- **Task 1 [US1]**：实现 `todo.py` 的安全 JSON store、`add` 与 `list`，以及这两个操作的数据文件读写保护失败测试。完成条件：AC-001 的跨进程旅程和 AC-003 所需的 add/list 数据文件失败断言实际通过。
-- **Task 2 [US2]**：实现 `complete`、`list --status`、`export`、导出别名保护和全回归。完成条件：AC-002、Task 2 所需的 AC-003 回归及 AC-004 有实际测试映射；依赖 Task 1。
+- **Task [US1, US2]**：实现 `todo.py` 的安全 JSON store、全部四个命令、文件保护和全回归。首增量在 add/list 的跨进程旅程及其 AC-003 读写保护失败断言实际通过后展示；完整 Task 的完成条件是 AC-001–AC-004 均有实际测试映射，`complete`、筛选、导出与别名保护回归通过。
 
 ###### 执行策略
 
-1. Task 1 的计划首增量命令为 `python3 todo.py --data /tmp/todos.json add "买牛奶"` 后由新进程执行 `list`；这些命令、版本、工作树和结果均为 NOT_RUN，不能充当证据。
-2. 首增量只用于展示真实稳定结果；不结束 Task、不替代数据保护、独立 Validate、Review 或 Ship。
+1. 完整 Task 的计划首增量命令为 `python3 todo.py --data /tmp/todos.json add "买牛奶"` 后由新进程执行 `list`；这些命令、版本、工作树和结果均为 NOT_RUN，不能充当证据。
+2. 首增量只用于展示真实稳定结果；不结束 Task、不替代数据保护、独立 Validate、Review 或 Ship；同一实现者继续完成其余命令和回归。
 3. 正式证据在工程上下文的既有验证部分保存一次，handoff 仅返回实际命令、exit、版本、工作树、缺口和既有引用。
 
 #### 实现记录（实际）

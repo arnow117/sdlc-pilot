@@ -13,6 +13,7 @@ distilled-from: [Zts0hg/codexspec]
 遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。spec Agent 写产品上下文并返回
 `mark-requirement-ready` 请求；仅在 brief 明确允许时，可在项目约定目录创建或更新有界原型产物。由主 Agent 在验收条件
 和用户决定已完整时执行。只有没有当前主 Agent 编排的独立调用才使用 standalone mode。
+准备批次中，本阶段保留同样的产品确认和原型边界，并只返回自己的 canonical 候选块；未接受的 Plan 产物不得据此开始研发。
 
 ## 输入
 
