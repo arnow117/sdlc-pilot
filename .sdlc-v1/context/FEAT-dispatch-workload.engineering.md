@@ -178,11 +178,32 @@ Requirement 已 ready；主 Agent 接受本方案后按 start-feature→add-task
 
 ## 发布与观察记录（实际）
 
-- 产品观察计划引用：[工作量结果与观察计划](REQ-dispatch-workload.product.md#工作量结果与观察计划)。技术准备、反馈与实际结果待后续证据；真实模型性能对照 NOT_RUN。
+- 产品观察计划引用：[工作量结果与观察计划](REQ-dispatch-workload.product.md#工作量结果与观察计划)。技术发布证据按实际发生顺序记录如下；真实模型性能对照 NOT_RUN。
 - 实施阶段只交付隔离源码中的未提交改动及验证/评审结论，当时未执行 commit/push/PR/tag/release、插件升级或 Ship。
-- 后续授权：用户已明确要求提交、发布并更新本机 SDLC 插件，原文及边界见产品上下文“发布授权补充”。本次声明目标为
-  GitHub `arnow117/sdlc-pilot` 的公开 `v4.2.0` 源码 Release，以及本机 Codex 中该插件的安装/启用；不部署用户项目。
+- 后续授权：用户已明确要求提交、发布并更新本机 SDLC 插件，原文及边界见产品上下文“发布授权补充”。本次 Ship 声明目标为
+  GitHub `arnow117/sdlc-pilot` 的公开 `v4.2.0` 源码 Release；随后按同一授权将已发布源码和发布记录合入 main，更新本机 Codex 中
+  该插件的安装/启用。后者作为本机配置操作独立核对，不部署用户项目。
 - 发布前远端 `main` 与最后可用版本 `v4.1.1` 均为 `db023de9d64aeb92ddb1e064e88bdaf9353e49f3`。采用兼容能力的 minor 版本，
   同步 plugin.json、marketplace metadata/entry 与 CHANGELOG；CLI/schema 无迁移。仅本 Feature 的上下文和 state 随对应源码提交。
-- 发布准备：当前授权源、正式 commit 验证/评审绑定、新解包源码 smoke、远端 PR/Release 及本机安装版本核对尚待完成；
+- 发布准备时，当前授权源、正式 commit 验证/评审绑定、新解包源码 smoke、远端 PR/Release 及本机安装版本核对尚待完成；
   后续实际证据追加于本节。失败时停止扩大范围，保留旧发布和工作区，提出按最后可用版本定向回退；尚未执行回滚。
+- 发布候选独立验证：原独立 Terra 实际运行 `bash scripts/validate-skills`（37 lifecycle、7 backlog、36 contrast 共 80 项）
+  和 `git diff --check`，exit 0；三处版本、发布说明、自包含 context、26 个授权路径及 CLI/schema/角色兼容性均通过。
+  主 Agent 提交 `a17ce7d67ad05e67a92a3e2adfac9d4228914691` 后逐项核对 26 个 Git blob 与被测文件完全一致，工作树与 index 干净，
+  据此复用同内容独立验证证据并执行正式 `record-validation --result pass --commit a17ce7d67ad05e67a92a3e2adfac9d4228914691`。
+  本次未因提交身份出现重跑套件；已有 CLI 隔离场景仍适用于未改变的 runtime，模型性能实跑仍为 NOT_RUN。
+- 正式评审：同一独立 Sol 只读复算上述 26 个文件与提交的字节数、SHA-256 和 Git blob，核对新发布元数据与原评审，
+  未发现新增必要问题并批准。主 Agent 已执行 `record-review --decision approved --by 'dispatch_review (gpt-6.1-sol/xhigh)'`；
+  Feature 为 reviewed，发布实现版本仍为 `a17ce7d67ad05e67a92a3e2adfac9d4228914691`，source smoke 与公开发布仍待实际完成。
+- 2026-10-25：独立 Terra 为该批准 commit 新建 `git archive` 解包目录并实际 smoke；内嵌 commit ID、三处
+  `4.2.0` 版本和 8 个关键文件均匹配，归档 SHA-256 为
+  `86a0b903062ed1b0e82ebf9dc2fbd3a8d98d6ac149dfe20968cd1880c7744a59`。仅由解包副本驱动的新合成 Git fixture 完成
+  `init → capture → ready → start → add-task → in_progress → done`，投影返回 `validate`，命令和 fixture
+  `git diff --check` 均 exit 0。完整命令、时间、归档与日志保留在本地工作区 `SHIP_SMOKE_v4.2.0_a17ce7d.md`，
+  不随源码分发。smoke 完成时，此证据仅准备 source Release，GitHub Release 和本机安装尚未执行；部署、模型性能实跑及回滚未执行。
+- 实际发布：2026-10-25T12:06:26Z，[v4.2.0 Release](https://github.com/arnow117/sdlc-pilot/releases/tag/v4.2.0) 已公开，
+  `isDraft=false`、`isPrerelease=false`，标签精确指向 validation commit `a17ce7d67ad05e67a92a3e2adfac9d4228914691`。
+  已上传 smoke 通过的 `sdlc-pilot-v4.2.0-a17ce7d.tar`，GitHub 返回的制品 digest 与上述归档 SHA-256 相同，大小为 1,628,160 bytes。
+  主 Agent 在读取这些远端结果后执行 `record-release`，本 Requirement/Feature 均为 released；未触发回滚。
+  [PR #14](https://github.com/arnow117/sdlc-pilot/pull/14) 的发布源码与这些记录将一起合入 main，随后按同一用户授权更新本机插件；
+  本机安装和保护核对证据保留在本地工作区，不冒充部署或模型性能结果。
