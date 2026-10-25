@@ -41,6 +41,12 @@ description: >
    [`PROJECT.md`](../sdlc/references/templates/PROJECT.md) 模板。
 7. 向用户展示 surface map、长期上下文来源和不确定项；确认后定稿。
 
+空仓库可以记录当前已验证的文件、目录、HEAD 和缺口；计划入口必须在正文中明确标为 `planned` 或 `NOT_RUN`，不能充当实际命令、通过结果或 surface 事实。`project.md` 的六个 `commands` 键仍保留，尚未确认的值为 `none`。
+
+## Build 后的局部刷新
+
+`project.md` 的指定写者仍是 onboard Agent。Build 只能通过现有结果中的 `project_candidates` 提出已变化的入口、命令、surface 或验证资源；主 Agent 在明确的后续 onboard brief 中交给该写者。该 Agent 用同一 revision、配置与环境的证据刷新受影响事实并保持显式 stage handoff，不为复述已经证明的 correctness 再跑完整套检查。证据缺失、已过期，或命令/环境确有不确定性时，运行与缺口相称的新检查。
+
 ## project.md 必备内容
 
 ```text
@@ -63,7 +69,7 @@ surface map 中的角色取值来自角色卡目录，验证方式来自 `valida
 - `project.md` 中没有占位符和未经标记的猜测。
 - 每个主要代码目录已归入一个 surface，或明确列为未归类。
 - 每个 surface 都有有效 globs、角色和验证方式。
-- 实际存在的测试、构建与类型检查命令均已记录；不存在时明确写 `none` 并记为风险。
+- 实际存在并已确认的测试、构建与类型检查命令均以实际命令记录；空仓库或未验证能力的六个 `commands` 值为 `none`，计划/`NOT_RUN` 在正文单列并记为风险。
 - 长期工程上下文只记录已验证路径与 commit，不复制正文；不可用时明确原因。
 - 只修改了 `.sdlc-v1/project.md`。
 

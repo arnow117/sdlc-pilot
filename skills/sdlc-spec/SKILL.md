@@ -34,6 +34,7 @@ distilled-from: [Zts0hg/codexspec]
    保留当前决定的确认或委托来源、未决问题与结果指标。
    按 [sdlc-prototype 包内适配](../sdlc/references/integrations/product-prototype.md) 的唯一选择策略，使用它作为本阶段方法；适用时展示候选版本、
    定向反馈动作、实际检查范围和模拟边界，并把反馈造成的决定/版本变化写回当前产品上下文。
+   小项目以语义完整且无重复为准：每项规则、数据 schema、接口和验收条件只保留一个权威定义，设计、计划和 Task 引用它，不复述它。
 7. 仅对尚未有确认来源或明确委托、且会阻塞产品行为或验收的选择请求用户回答；未确认的建议、假设或开放替代项不能升格为 Requirement 或验收条件。
 8. 条件满足后在 orchestrated mode 请求 `mark-requirement-ready`；只有独立、不在主 Agent 编排中的 standalone
    mode 才直接调用 CLI。
@@ -45,6 +46,7 @@ distilled-from: [Zts0hg/codexspec]
 - 范围内、范围外、异常行为和依赖均明确。
 - 方向来源或其缺失已明确，预期结果包含可观察指标或明确的不可观测原因。
 - 验收条件足以指导研发和测试。
+- 每项规则、schema、接口和验收条件都有一个权威定义，后续内容只作必要引用；精简不删除失败边界或数据保护。
 - 当前绑定要求有明确的用户确认、明确委托及实际采用项，或可追溯的已确认来源；推断、假设和开放替代项仍保持分离。
 - 产品上下文路径仍与 `state.json` 中的 `product_context_ref` 一致。
 

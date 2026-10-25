@@ -58,7 +58,7 @@ description: >
 1. 确认所有非取消 Task 均为 `done`。
 2. 读取 [`Global usage-document, story, and parameter contract`](../sdlc/references/lifecycles/software-delivery.md#11-global-usage-document-story-and-parameter-contract)，并为受影响的故事按当前文档选择代表目标、参数来源和实际操作证据。
 3. 根据 [`role-routing.md`](../sdlc/references/role-routing.md) 选择验证方式，并读取对应 `validate-modes/*.md`。
-4. 逐条验证产品验收条件，并按“验收条件与证据对应”记录；同时运行相关单元测试、类型检查、构建和必要的端到端检查。实际使用为未运行或失败时，不能写成通过。合成或局部真实目标是环境/数据范围：相关检查可在明确该范围时通过，但不得外推为 live、部署或真人试用通过。
+4. 逐条验证产品验收条件，并按“验收条件与证据对应”记录；同时运行相关单元测试、类型检查、构建和必要的端到端检查。实际使用为未运行或失败时，不能写成通过。合成或局部真实目标是环境/数据范围：相关检查可在明确该范围时通过，但不得外推为 live、部署或真人试用通过。若本次独立 Validate 的覆盖率命令确实运行了完整相关单元套件，它可同时证明覆盖率和该套件；在同一证据条目记录一次即可，不为报告格式重跑相同命令。Build 的通过不能替代这次独立运行；源码或配置改变、失败、缺少证据或阶段特有需要时，仍按影响重验。
 5. 按上面的归因规则记录本轮证据到研发上下文。
 6. 任一必要检查失败、受阻或证据不足，都请求 `record-validation --result fail`；实际执行过时附 `--test-command <command>`，全部未运行时省略该参数并在上下文写明原因。这里的 `fail` 只表示未通过必要验证，不代表已证明代码有错。主 Agent 按允许的 lifecycle 命令记录后，按归因决定修复实现、解决环境或补证据；不要仅凭 `fail` 自动重做实现。Task 均为 done 时，当前 `next` 仍选择 validate。只有已确认需要实现修复时，才按[Task 状态错误输出与恢复](../sdlc/references/lightweight-runtime.md#task-状态错误输出与恢复)将相关 Task 合法地恢复为 `in_progress`，再进入 build；`ENV_BLOCKED` 本身不触发该转换。
 7. 全部必要检查通过，且 `.sdlc-v1/**` 之外的业务代码工作树干净时，在 orchestrated mode 请求；只有独立、

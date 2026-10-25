@@ -78,6 +78,8 @@ requested_transitions:
 ```
 
 当完整 brief 已允许非空且有序的请求时，使用现有 CLI 值格式；不要新增字段或重新定义标量/重复值语义。
+字段的机械排版归一、缺项更正和接受限制唯一遵循
+[stage-agent-protocol.md](../stage-agent-protocol.md#4-results-transitions-and-correction)；不要用别名猜补参数或覆盖主 Agent 固定的仓库。
 
 ```yaml
 requested_transitions:

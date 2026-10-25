@@ -4,7 +4,7 @@
 [P] 仅表示候选，实际并行资格由 stage-agent-protocol.md 判断。复制后删除本注释。
 SDLC 起草提示：按[图示辅助对齐](../lifecycles/software-delivery.md#图示辅助对齐)在原有架构、时序或数据模型章节选择图示；不改变下文的可选性。
 小型 Feature 仍保留下列设计、实施计划和工程任务的顺序；用同一处“验收条件 → 设计/契约 → Task → 计划检查”关联即可，
-不复制成多轮交接或另建简化模板。可参考[小项目上下文示例](../../../../examples/small-project-context.md)。
+不复制成多轮交接或另建简化模板。可参考[小项目上下文示例](../../../../examples/small-project-context.md)；其中同类工程 5–8 KB 只是工作量诊断，超出时说明新增契约或风险，绝不删减必要语义。
 -->
 
 # 工程上下文：[填写：Feature ID 与简短标题]

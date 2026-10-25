@@ -10,7 +10,7 @@ description: >
 ## Orchestrated mode
 
 遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。ship Agent 准备发布和 smoke 证据，
-但外部副作用及 `record-release`/`retract-release` 均由取得用户授权的主 Agent 执行；未授权时返回阻塞原因。
+但外部副作用及 `record-release`/`retract-release` 均由取得用户授权的主 Agent 执行；未授权时返回阻塞原因。协议允许把已经验收的源码交付/打包单元交给拥有明确写入范围的新最小上下文执行者；它不能取代原实现者完成未验收的实现或修正。
 
 ## 入口条件
 
@@ -55,5 +55,5 @@ python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> \
 
 ## 完成输出
 
-返回实现版本（validation commit）、环境、产物版本、smoke 结果、技术观测结果、产品观察计划引用、证据缺口和回滚状态。`record-release`
+返回一份紧凑交付摘要：入口、实现版本（validation commit）、环境/产物版本、测试与 smoke、技术观测、产品观察计划引用、证据缺口、回滚状态和下一步。分别标明最早增量、交付成立和全部请求完成所依据的实际证据；不把必要报告或检查移出已记录的经过时间。`record-release`
 记录 validation commit 作为发布实现版本，且只记录成功发布；失败或只完成发布准备时保持原状态。
