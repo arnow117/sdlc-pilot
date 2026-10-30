@@ -26,6 +26,7 @@ for path in \
   scripts/test_lifecycle_state.py \
   scripts/test_backlog.py \
   scripts/test_contrast_check.py \
+  scripts/test_hallmark_catalog.py \
   "$REF/role-routing.md" \
   "$REF/lightweight-runtime.md" \
   "$REF/lifecycles/product-design.md" \
@@ -297,7 +298,8 @@ echo "== 9. Focused tests =="
 for test_file in \
   scripts/test_lifecycle_state.py \
   scripts/test_backlog.py \
-  scripts/test_contrast_check.py; do
+  scripts/test_contrast_check.py \
+  scripts/test_hallmark_catalog.py; do
   if PYTHONDONTWRITEBYTECODE=1 python3 "$test_file"; then
     ok "$test_file"
   else
