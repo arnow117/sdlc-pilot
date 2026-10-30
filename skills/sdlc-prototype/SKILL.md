@@ -33,6 +33,7 @@ description: 从需求、PRD 或已有 HTML 创建和迭代可交互的产品交
 - 制作管理平台：读 [platform.md](references/platform.md)。
 - 创建或修改交互：读 [interaction-contract.md](references/interaction-contract.md)，统一状态、模拟数据与迭代方式。
 - 需要建立或改进视觉语言：读 [visual-system.md](references/visual-system.md)，输出本产品的 token、版式与组件状态约定。
+- 新的产品界面尚无已确认设计，或用户明确要求风格灵感：读 [hallmark-catalog.md](references/hallmark-catalog.md)，用随包目录中的 Hallmark 风格目录给出三个可预览候选；它不是新的 skill、全局样式或页面生成器。
 - 需要实际共享数据的独立 HTML：读 [runtime.md](references/runtime.md)，评估复用附带的最小状态层与双端示例。已有状态方案优先复用，不强制迁移。
 - 涉及业务联动或迭代回归：读 [verification.md](references/verification.md)，分别验证状态不变量与用户实际操作。
 - 准备 PRD/研发交接或接入 SDLC：读 [handoff.md](references/handoff.md)。
@@ -57,7 +58,9 @@ description: 从需求、PRD 或已有 HTML 创建和迭代可交互的产品交
 
 ### 2. 确定视觉和导航结构
 
-迭代优先沿用现有品牌、布局和导航，只改变本次相关部分。从零开始按视觉规范形成简短的 token、版式和组件状态约定，再应用到页面。已有 DESIGN.md 则直接复用；不存在时在原型工作区记录本次决定，不把配色固化到技能本身。
+迭代优先沿用现有品牌、布局和导航，只改变本次相关部分。从零开始按视觉规范形成简短的 token、版式和组件状态约定，再应用到页面。已有 DESIGN.md 则直接复用；不存在时在原型工作区记录本次决定，不把配色固化到技能本身。新的产品界面没有已确认设计，或用户明确要求风格灵感时，按 [Hallmark 风格目录](references/hallmark-catalog.md) 展示三种候选和预览链接，先收集选择再把其中可采用的材料转为本产品 token。
+
+已确认的设计身份不能因目录更新而静默变化。普通迭代不重新做风格发现；营销网站仍按其既有设计路由，不因这份产品原型目录扩大入口范围。
 
 根据用户任务选择信息密度。客户端强调当前任务、反馈和返回路径；平台强调对象、筛选、操作条件和处理记录。两端可以共享品牌，同时采用各自适合的布局。
 

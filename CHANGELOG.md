@@ -2,6 +2,18 @@
 
 遵循语义化版本。格式参考 Keep a Changelog。
 
+## [4.3.0] — 2026-10-30
+
+### Added
+
+- `sdlc-prototype` 内置 Hallmark 风格目录：新的产品界面没有已确认视觉方向、或用户明确请求灵感时，可从 50 个离线主题中返回三个带官方预览、固定源码和 revision 的候选；中文 brief 通过独立本地 aliases 扩展。
+- 随包标准库 helper 提供只读状态/检查、三主题召回、单主题读取及显式缓存或维护者目标的原子增量同步。首次推荐时，Agent 对无成功检查记录或距上次检查超过 24 小时的 workspace 缓存执行更新，报告主题增改删并复用未变 blob。同步保留上游 MIT LICENSE、blob hash 和 provenance，并在远程/校验/锁/写入失败时保留旧快照。
+
+### Compatibility
+
+- 不新增 lifecycle state、顶层 skill、全局样式、Hallmark runtime 或自动后台刷新。已确认的 `DESIGN.md` 和 prototype brief 继续是视觉决定的权威来源；目录更新不会静默替换现有选择。
+- 公共 lifecycle CLI、`state_version=3` 和 `.sdlc-v1/` 结构保持不变，无需迁移。插件发布元数据同步为 `4.3.0`。
+
 ## [4.2.0] — 2026-10-25
 
 ### Changed

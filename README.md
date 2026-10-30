@@ -314,11 +314,12 @@ bash scripts/validate-skills
 git diff --check
 ```
 
-`validate-skills` 只做快速结构/frontmatter/引用检查，并运行三组小测试：
+`validate-skills` 只做快速结构/frontmatter/引用检查，并运行四组小测试：
 
 - `test_lifecycle_state.py`：Requirement → Feature → Task → validation/review/release；
 - `test_backlog.py`：需求树与看板；
 - `test_contrast_check.py`：设计对比度检查。
+- `test_hallmark_catalog.py`：随包 Hallmark 风格目录的召回、来源完整性和原子增量同步。
 
 它还检查阶段协议、brief/result 模板、检查点模板和已知冲突文案的机械形状；主 Agent 的语义判断仍不能由字符串检查替代。
 
