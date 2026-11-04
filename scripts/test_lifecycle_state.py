@@ -79,6 +79,73 @@ class LifecycleStateTest(unittest.TestCase):
         )
         return ref
 
+    def update_requirement_timestamp(self, timestamp: str) -> None:
+        state_path = self.repo / ".sdlc-v1/state.json"
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        state["requirements"]["REQ-timestamp"]["updated_at"] = timestamp
+        state_path.write_text(json.dumps(state), encoding="utf-8")
+
+    def prepare_requirement_timestamp_state(self) -> None:
+        self.initialize_state()
+        self.capture("REQ-timestamp")
+
+    def test_state_load_preserves_supported_timezone_spellings(self) -> None:
+        self.prepare_requirement_timestamp_state()
+
+        for timestamp in (
+            "2026-08-21T06:16:11+0800",
+            "2026-08-21T06:16:11-0330",
+            "2026-08-21T06:16:11Z",
+            "2026-08-21T06:16:11+08:00",
+        ):
+            with self.subTest(timestamp=timestamp):
+                self.update_requirement_timestamp(timestamp)
+
+                loaded = lifecycle_state.load(self.repo)
+
+                self.assertEqual(
+                    loaded["requirements"]["REQ-timestamp"]["updated_at"],
+                    timestamp,
+                )
+
+    def test_mutation_preserves_basic_timezone_offset(self) -> None:
+        self.initialize_state()
+        product_ref = self.context("product-REQ-basic-offset")
+        timestamp = "2026-08-21T06:16:11-0330"
+
+        captured = lifecycle_state.capture_requirement(
+            repo=self.repo,
+            requirement_id="REQ-basic-offset",
+            title="Basic offset",
+            priority="P2",
+            product_context_ref=product_ref,
+            at=timestamp,
+        )
+
+        self.assertEqual(captured["requirement"]["updated_at"], timestamp)
+        loaded = lifecycle_state.load(self.repo)
+        self.assertEqual(
+            loaded["requirements"]["REQ-basic-offset"]["updated_at"],
+            timestamp,
+        )
+
+    def test_state_load_rejects_naive_and_invalid_timezone_offsets(self) -> None:
+        self.prepare_requirement_timestamp_state()
+
+        for timestamp in (
+            "2026-08-21T06:16:11",
+            "2026-08-21T06:16:11+080",
+            "2026-08-21T06:16:11+2400",
+        ):
+            with self.subTest(timestamp=timestamp):
+                self.update_requirement_timestamp(timestamp)
+
+                with self.assertRaisesRegex(
+                    lifecycle_state.LifecycleStateError,
+                    "invalid-requirement-updated-at",
+                ):
+                    lifecycle_state.load(self.repo)
+
     def complete_one_task(self, feature_id: str = "FEAT-one") -> None:
         lifecycle_state.add_task(
             repo=self.repo, feature_id=feature_id, task_id="TASK-one", title="Implement",

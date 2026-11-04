@@ -14,6 +14,7 @@
 - `allowed_transitions` 只列当前已获授权的、有序 lifecycle 请求；没有时保留空列表。`--repo` 由主 Agent 固定，子 Agent 不提供或覆盖。
 - 模型选择与独立性由宿主 adapter 记录，不把 `qa`、`security` 等专业视角当作运行时角色。canonical 结果仍只使用本模板和阶段协议已有字段。
 - 准备批次在同一原生消息中为每个阶段各附一份本合同；共享事实可引用，但每块保留自身的 `stage`、`write_scope` 和 `allowed_transitions`。完整规则见[阶段协议](../stage-agent-protocol.md#bounded-preparation-batch-for-small-projects)。
+- 若 `required_verification` 会启动服务、浏览器、模拟器、容器、VM 或明显占用主机资源，按[验证资源生命周期](../stage-agent-protocol.md#verification-resource-lifecycle)在既有字段中说明归属、收尾和核对。
 
 ### 派工合同
 

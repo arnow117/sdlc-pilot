@@ -253,6 +253,20 @@ only the current, relevant parts when recovery needs them, rather than reloading
 all historical changes to the current effective solution or handoffs.
 This rule adds no schema, ledger, or runtime service.
 
+### Verification resource lifecycle
+
+仅当检查会启动服务、浏览器、模拟器、容器、VM，或明显占用主机资源时适用；普通静态检查和文档工作不因此新增资源报告。
+
+1. **预检与复用：** 先以低成本、项目范围内的方式确认资源需要、当前负载和可复用的健康环境；用户明确停用或暂停时保持停用。
+   资源状态无法核实应如实说明，普通等待超时不触发恢复或重启。
+2. **归属与边界：** 在既有 brief 的 `dependencies`、`required_verification` 和 `completion_conditions` 中说明本 Task 所启动资源的归属、共享边界和必要核对。
+   未知、共享或仍在使用的资源不得自动停止；不新建资源 registry、状态或报告协议。
+3. **有界执行：** 为准备、执行和收尾保留有限预算；取消时停止启动新资源、以有限等待收尾，并仅处理已核对为本 Task 所有的资源。
+4. **证据与清理：** 在删除本次可丢弃的 fixture 数据前保留需要的失败证据。成功、失败或取消后清理已确认的专属资源；
+   不得用全局 `pkill`、`docker prune`、删除无关数据或因为任务容器已停止而停止共享 VM。
+5. **最终状态：** 在原生命令输出或既有日志中核对资源已停止，或记录有意保留的资源及理由。子 Agent 结束或 exit 0 不证明 OS 资源已释放，
+   也不能承诺处理 `SIGKILL`；无法核实状态时按既有证据规则披露限制。
+
 ### Interaction while work is active
 
 While an actual stage child or long-running command is executing, the main Agent

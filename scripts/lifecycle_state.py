@@ -193,6 +193,11 @@ def _require_context_file(root: Path, ref: str, *, label: str) -> None:
 def _timestamp(value: object, *, label: str) -> str:
     raw = _text(value, label=label)
     parseable = raw[:-1] + "+00:00" if raw.endswith("Z") else raw
+    # Python 3.9 rejects ISO 8601 basic timezone offsets (for example,
+    # ``+0800``) that later supported Python versions accept. Normalize only a
+    # terminal basic offset for parsing; state continues to retain the original
+    # timestamp spelling.
+    parseable = re.sub(r"([+-]\d{2})(\d{2})$", r"\1:\2", parseable)
     try:
         parsed = datetime.fromisoformat(parseable)
     except ValueError as exc:

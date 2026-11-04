@@ -27,7 +27,8 @@ distilled-from: [Zts0hg/codexspec]
 1. 加载 `sdlc-product-design` 和 [`lifecycles/product-design.md`](../sdlc/references/lifecycles/product-design.md)。
 2. 先核对产品上下文中的方向来源、预期结果和成功指标；长期文档只作为约束来源，不复制为当前需求正文。
 3. 先复用已确认的来源和明确委托的选择，再按[尽早处理实质产品选择](../sdlc/references/lifecycles/product-design.md#尽早处理实质产品选择)
-   提出会影响范围、行为或验收的少量问题；不把普通实现默认值或已经给出的答案重问一遍。
+   提出会影响范围、行为或验收的少量问题；需要外部事实时按[调研上下文](../sdlc/references/research-context.md)
+   记录问题、约束和证据范围，不把普通实现默认值或已经给出的答案重问一遍。
 4. 用 Given/When/Then 或具体例子覆盖主路径、失败路径和边界。
 5. 明确术语、业务规则、不变量、体验约束和非功能要求。
 6. 将结论直接写回 `product_context_ref` 指向的 Markdown；按

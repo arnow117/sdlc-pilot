@@ -29,6 +29,9 @@ task-card file around them. The main Agent uses one child for actual stage work 
 default; a child never creates its own children. The main Agent, not the child,
 applies the canonical protocol when it permits bounded analysis or parallel work.
 
+Interrupting a child does not prove that task-owned OS resources have stopped. When a check starts such resources, the main Agent follows the protocol's
+[verification resource lifecycle](../stage-agent-protocol.md#verification-resource-lifecycle); `interrupt_agent` cannot promise `SIGKILL` handling.
+
 [`templates/TASK.md`](../templates/TASK.md) is an optional brief/result message
 shape. Pass it directly to a child; do not persist it as a current effective
 solution, task card, or

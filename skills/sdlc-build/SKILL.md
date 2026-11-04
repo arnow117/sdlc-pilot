@@ -50,6 +50,9 @@ description: >
 10. 逐条核对完成条件与验收条件，记录实际检查命令和结果；满足后在 orchestrated mode 请求
    `set-task-status ... --status done`，只有独立、不在主 Agent 编排中的 standalone mode 才直接调用 CLI。
 
+若检查会启动服务、浏览器、模拟器、容器、VM 或明显占用主机资源，按唯一的
+[验证资源生命周期](../sdlc/references/stage-agent-protocol.md#verification-resource-lifecycle)处理其归属、收尾和核对。
+
 ## 调试
 
 遇到意外失败时，先形成可证伪假设，再做最小实验。不要连续堆叠无依据的修补。若发现产品规则缺口，停止当前 Task，将问题写回产品上下文并交给产品侧确认。
