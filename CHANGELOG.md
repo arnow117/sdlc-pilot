@@ -4,6 +4,16 @@
 
 ## [Unreleased]
 
+## [4.3.2] — 2026-11-05
+
+### Fixed
+
+- Codex adapter 将 Build、独立 Validate 和已授权 Ship 的 Terra 模型映射从 `gpt-5.6-terra` 更新为 `gpt-6.1-terra`，保持 `xhigh`，并继续在派工前核对目标仓库的实际角色配置。
+
+### Compatibility
+
+- Sol/Terra 职责、独立验证与评审要求、公共 lifecycle CLI、`state_version=3` 和 `.sdlc-v1/` 结构保持不变，无需迁移。插件发布元数据同步为 `4.3.2`；本轮未进行模型性能或 token 消耗实测。
+
 ## [4.3.1] — 2026-11-04
 
 ### Fixed

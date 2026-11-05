@@ -1,7 +1,7 @@
 # Codex runtime adapter
 
 > distilled-from: session:sdlc-codex-compat-2026-06-17
-> updated: 2026-09-15
+> updated: 2026-11-05
 
 This reference maps the portable protocol to currently available Codex tools. It
 does not define lifecycle, dispatch, result, acceptance, or checkpoint semantics;
@@ -47,10 +47,10 @@ model settings; an installation of this skill alone does not provide them.
 |---|---|---|
 | Product decisions, Plan acceptance, lifecycle acceptance, final acceptance | primary Agent | `gpt-6.1-sol` / `xhigh` |
 | Actual Backlog → Spec → Plan preparation batch | fresh Sol stage child | `gpt-6.1-sol` / `xhigh` |
-| One complete Build Task and its in-scope corrections | `worker` | `gpt-5.6-terra` / `xhigh` |
-| Independent Validate of the current candidate | fresh `worker` distinct from the implementer | `gpt-5.6-terra` / `xhigh` |
+| One complete Build Task and its in-scope corrections | `worker` | `gpt-6.1-terra` / `xhigh` |
+| Independent Validate of the current candidate | fresh `worker` distinct from the implementer | `gpt-6.1-terra` / `xhigh` |
 | Independent read-only Review | `reviewer` | `gpt-6.1-sol` / `xhigh` |
-| Ship execution after the required approval | Terra execution Agent selected for the accepted delivery unit | `gpt-5.6-terra` / `xhigh` |
+| Ship execution after the required approval | Terra execution Agent selected for the accepted delivery unit | `gpt-6.1-terra` / `xhigh` |
 
 The main Agent explicitly requests these roles when the runtime supports them and
 records any deviation from the configured model or effort. If a required Terra
