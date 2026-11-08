@@ -309,15 +309,18 @@ bash scripts/validate-skills
 
 ## 测试
 
+测试入口、覆盖边界和首批共享场景见 [测试与场景索引](docs/testing.md)。
+
 ```bash
 bash scripts/validate-skills
 git diff --check
 ```
 
-`validate-skills` 只做快速结构/frontmatter/引用检查，并运行四组小测试：
+`validate-skills` 做快速结构/frontmatter/引用检查，并运行以下本地测试：
 
 - `test_lifecycle_state.py`：Requirement → Feature → Task → validation/review/release；
 - `test_backlog.py`：需求树与看板；
+- `test_scenarios.py`：六个共享场景的初始仓库、参考操作、结果断言与反例；
 - `test_contrast_check.py`：设计对比度检查。
 - `test_hallmark_catalog.py`：随包 Hallmark 风格目录的召回、来源完整性和原子增量同步。
 

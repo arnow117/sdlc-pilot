@@ -1,7 +1,7 @@
 ---
 title: 源码协作纪律（分支 / 命名 / 提交 / worktree / 并行收敛）
 scope: methodology                # 通用、跨语言、跨目标——不含项目特定值
-applies-to: sdlc(driver §1.1, 跨阶段) + sdlc-build §0.2   # driver 在 entry 加载、贯穿 plan→build→review;build 用于提交/波内执行
+applies-to: stage-agent-protocol integration and acceptance
 distilled-from: [session:collaboration-discipline-2026-06-23, session:portal-auth-multiagent-loop-2026-06-24]
 updated: 2026-06-24
 ---
@@ -110,6 +110,7 @@ git worktree remove ../<repo>-<purpose> && git branch -d <type>/<summary> && git
 - 执行者不直接编辑 `state.json`，也不与其他执行者同时写 Feature 研发上下文；返回代码 diff、实际测试和未解决问题，由 Feature 负责人合并。
 - Feature 负责人串行集成 Task 分支。每合入一个分支，其余待集成分支先同步最新集成 commit。
 - 每次集成后运行受影响测试；全部 Task 集成完成后，在最新集成 commit 上重新运行 Feature 的完整必要验证。
+- 最终通过 merge 交付时，核对实际交付实现及证据；相关源码、配置或契约改变须补受影响的验证和评审。仅 SHA 改变或目标分支无关变动不要求完整重跑；部署未变的已验证产物也不因 main 的无关变动失效。既有 validation commit 和 CLI 语义不变，合并权限仍须既有授权。
 - 并行条件失效时切回串行，保留已有 Task ID、分支和结果。
 
 标准角色评审按改动范围和风险选择；不强制额外的多轮对抗复审。

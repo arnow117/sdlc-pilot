@@ -17,6 +17,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 import lifecycle_state  # noqa: E402
+import test_support  # noqa: E402
 
 
 class LifecycleStateTest(unittest.TestCase):
@@ -24,21 +25,13 @@ class LifecycleStateTest(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory()
         self.base = Path(self.temporary.name)
         self.repo = self.base / "repo"
-        self.repo.mkdir()
-        self.git("init")
-        self.git("config", "user.email", "tests@example.invalid")
-        self.git("config", "user.name", "SDLC tests")
-        (self.repo / "README.md").write_text("test repository\n", encoding="utf-8")
-        self.git("add", "README.md")
-        self.git("commit", "-m", "initial")
+        test_support.initialize_git_repo(self.repo, readme="test repository\n")
 
     def tearDown(self) -> None:
         self.temporary.cleanup()
 
     def git(self, *args: str) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
-            ["git", "-C", str(self.repo), *args], check=True, capture_output=True, text=True,
-        )
+        return test_support.git(self.repo, *args)
 
     def context(self, name: str, *, root: Path | None = None) -> str:
         target_root = self.repo if root is None else root

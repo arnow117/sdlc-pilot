@@ -15,28 +15,21 @@ sys.path.insert(0, str(HERE))
 
 import backlog  # noqa: E402
 import lifecycle_state  # noqa: E402
+import test_support  # noqa: E402
 
 
 class BacklogProjectionTest(unittest.TestCase):
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
         self.repo = Path(self.temporary.name) / "repo"
-        self.repo.mkdir()
-        self.git("init")
-        self.git("config", "user.email", "tests@example.invalid")
-        self.git("config", "user.name", "SDLC tests")
-        (self.repo / "README.md").write_text("backlog tests\n", encoding="utf-8")
-        self.git("add", "README.md")
-        self.git("commit", "-m", "initial")
+        test_support.initialize_git_repo(self.repo, readme="backlog tests\n")
         lifecycle_state.initialize(self.repo, at="2026-08-10T00:00:00Z")
 
     def tearDown(self) -> None:
         self.temporary.cleanup()
 
     def git(self, *args: str) -> subprocess.CompletedProcess[str]:
-        return subprocess.run(
-            ["git", "-C", str(self.repo), *args], check=True, capture_output=True, text=True,
-        )
+        return test_support.git(self.repo, *args)
 
     def context(self, name: str) -> str:
         relative = f".sdlc-v1/context/{name}.md"

@@ -49,7 +49,7 @@ Decision = resolve(
 | `**/*.sql`、`**/pipelines/**`、`**/etl/**`、`**/dbt/**`、`**/warehouse/**`、`**/migrations/**` | `big-data` | `correctness` | 数据、回填、lineage 和一致性 |
 | `**/*.test.*`、`**/*.spec.*`、`**/*.e2e.*`、`e2e.config.*`、`**/e2e.config.*`、`**/test/**`、`**/tests/**`、`**/e2e/**` | `qa` | `correctness`，按被测面补 e2e | 测试或测试配置发生变化 |
 | `**/agents/**/*.json`、`**/workflows/**/*.json`、`**/processes/**/*.json`、`**/employees/**/*.{yaml,yml}`、`**/SKILL.md` | `server-dev` | `correctness` | 声明式配置和技能定义；涉及权限矩阵时补 `security` |
-| `CLAUDE.md`、`AGENTS.md`、`.claude/**`、`justfile`、`Makefile`、`tsconfig.json`、`.github/**` | `ai-readiness` | `correctness` | AI 工程上下文、构建和自动化配置 |
+| `CLAUDE.md`、`AGENTS.md`、`.claude/**`、`.codex/**`、`justfile`、`Makefile`、`tsconfig.json`、`.github/**` | `ai-readiness` | `correctness` | AI 工程上下文、构建和自动化配置 |
 | 当前仓库的 `skills/**`、`.claude-plugin/**` | `skill-maintainer` | `correctness` | 维护 SDLC 技能体系自身 |
 
 ## 3. 跨区域规则
@@ -57,6 +57,8 @@ Decision = resolve(
 - diff 命中客户端、服务端、数据、AI、声明式配置中两个以上类别：加入 `architect`。
 - 公共 API、持久化格式、跨机器交互或不可逆外部行为变化：加入 `architect`，必要时进行一次独立复核。
 - 敏感区域变化：加入 `security`，不得仅依赖其他角色顺带检查。
+- 工程验证语义风险：削弱检查、断言、阈值或评审范围时加入 `qa`，按实际影响加入 `ai-readiness`、`architect` 或 `security`；扩展工具、CI 或 Agent 权限时按权限影响加入 `security` 和相关视角。CI 变更按实际效果判断，不一律视为最高风险。在既有研发上下文记录受影响能力的验证证据及残余风险。产品模型、提示和 Agent 质量仍由现有 `eval-bench` 处理。
+- 项目已有 `REVIEW.md` 或 `CODEOWNERS` 时可用于确定适用检查和 owner 策略；它们不能豁免必要验证，也不引入统一人数要求。
 - 用户可见行为变化：即使只改服务端，也应根据产品场景决定是否补 `design` 或对应 e2e。
 
 ## 4. 角色字典

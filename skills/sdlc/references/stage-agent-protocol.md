@@ -429,6 +429,9 @@ acceptance on the integrated revision.
 
 ### Integration and acceptance
 
+Follow the applicable integration discipline in [`collaboration-discipline.md`](collaboration-discipline.md),
+including serial integration and checks against the current integration baseline.
+
 The main Agent selects bounded integration checks from the relevant user journeys,
 recovery/concurrency behavior, and permission isolation; it may use a small set or
 run them serially instead of mechanically splitting roles. A child supplies
