@@ -1,17 +1,18 @@
 # Codex runtime adapter
 
 > distilled-from: session:sdlc-codex-compat-2026-06-17
-> updated: 2026-11-05
+> updated: 2026-11-10
 
 This reference maps the portable protocol to currently available Codex tools. It
 does not define lifecycle, dispatch, result, acceptance, or checkpoint semantics;
 [`stage-agent-protocol.md`](../stage-agent-protocol.md) is authoritative.
 
-The native mapping below remains the default. If the current task explicitly
-selects and authorizes an external Claude executor, the main Agent directly uses
-the optional [T3 Code adapter](t3-code.md) for that dispatch. Do not spawn
-a native stage child to launch the executor. This alternative does not by itself
-satisfy configured model or independence requirements.
+Use the protocol's [runtime selection](../stage-agent-protocol.md#runtime-selection)
+before applying this mapping. The native mapping below is the default. When the
+current task explicitly selects and authorizes Claude execution through T3 Code,
+the main Agent directly uses the [T3 Code adapter](t3-code.md) for that dispatch,
+without a native stage child around it. This choice does not by itself satisfy
+configured model or independence requirements.
 
 ## Interface map
 

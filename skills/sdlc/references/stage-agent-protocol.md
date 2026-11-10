@@ -57,6 +57,24 @@ independence, or turn a main Agent into an independent reviewer.
 Product confirmation and prototype restrictions remain under
 [Early product choices](#early-product-choices).
 
+### Runtime selection
+
+Stage skills share one runtime decision for each bounded dispatch. Use the host's
+native path by default; the [Codex adapter](runtime-adapters/codex.md) maps that
+host's controls and configured roles. If the current task explicitly selects and
+authorizes Claude Code through a connected T3 Code MCP, the main Agent instead
+uses the [T3 Code adapter](runtime-adapters/t3-code.md) for that executor. A direct
+stage invocation follows this same selection; it does not route back to a native
+child merely because a stage skill mentions an Agent.
+
+The selected T3 thread is the stage execution context: the main Agent sends the
+complete brief, observes the run, accepts evidence and applies allowed lifecycle
+operations. A native child must not launch it, and T3 must not create another
+controller. This transport choice neither grants permissions nor overrides
+configured model/role requirements, independent validation or review. Missing
+capabilities or incompatible model requirements must be reported before dispatch.
+Only the selected adapter is needed; the native path has no T3 dependency.
+
 ## 2. Dispatch contract
 
 Every child receives a complete current brief. Use

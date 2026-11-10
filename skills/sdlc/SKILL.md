@@ -11,8 +11,8 @@ description: >
 `/sdlc` 读取当前状态、选择阶段、编排受控的阶段执行、验证结果并推进。实际工作仍由阶段技能完成；阶段子 Agent
 协作规则唯一见 [`stage-agent-protocol.md`](references/stage-agent-protocol.md)。单个阶段结果不是在已有授权目标内结束编排的信号。
 
-默认使用宿主的原生路径；只有当前任务明确选择并授权 Claude 外部执行时，主 Agent 才按需读取
-[`T3 Code 适配`](references/runtime-adapters/t3-code.md) 并直接控制该阶段执行者。
+整套阶段技能共用协议中的[运行时选择](references/stage-agent-protocol.md#runtime-selection)：默认使用宿主原生路径；
+当前任务明确选择并授权 Claude 时，主 Agent 直接通过 T3 Code MCP 控制该阶段执行者。只加载所选适配说明。
 
 ## 1. 唯一目录
 

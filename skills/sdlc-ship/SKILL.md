@@ -9,9 +9,9 @@ description: >
 
 ## Orchestrated mode
 
-遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。ship Agent 准备发布和 smoke 证据；Codex 配置适用时由
-runtime adapter 指定的 Terra worker 执行，
-但外部副作用及 `record-release`/`retract-release` 均由取得用户授权的主 Agent 执行；未授权时返回阻塞原因。协议允许把已经验收的源码交付/打包单元交给拥有明确写入范围的新最小上下文执行者；它不能取代原实现者完成未验收的实现或修正。
+遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。ship Agent 准备发布和 smoke 证据；
+按协议的[运行时选择](../sdlc/references/stage-agent-protocol.md#runtime-selection)读取所选适配并遵守配置的模型职责。
+外部副作用及 `record-release`/`retract-release` 均由取得用户授权的主 Agent 执行；未授权时返回阻塞原因。协议允许把已经验收的源码交付/打包单元交给拥有明确写入范围的新最小上下文执行者；它不能取代原实现者完成未验收的实现或修正。
 
 ## 入口条件
 

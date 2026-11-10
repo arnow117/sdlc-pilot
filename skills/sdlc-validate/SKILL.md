@@ -12,7 +12,7 @@ description: >
 遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。validate Agent 不修改实现或 state，只记录
 验证证据和请求 `record-validation`；主 Agent 核对运行输出、当前 commit 与工作树后执行。产品 `eval-bench` 仍按实际
 改动面选择，不增加新的行为评估流程。配置运行时支持独立执行者时，由与实现者不同的执行者实际运行当前候选的必要检查；
-模型映射与不可用 fallback 见 [Codex adapter](../sdlc/references/runtime-adapters/codex.md)。
+模型映射与不可用 fallback 按协议的[运行时选择](../sdlc/references/stage-agent-protocol.md#runtime-selection)读取所选适配；T3 run 完成不能代替独立验证。
 
 ## 输入
 

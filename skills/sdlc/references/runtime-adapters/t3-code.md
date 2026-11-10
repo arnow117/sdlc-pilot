@@ -1,4 +1,10 @@
-# Optional T3 Code runtime adapter
+# T3 Code MCP runtime adapter
+
+Read this adapter only when the protocol's
+[runtime selection](../stage-agent-protocol.md#runtime-selection) chooses T3 for
+the current dispatch. It is the complete T3 execution path, without a local driver
+or terminal-automation fallback. The public skill is optional for this package;
+the mapping below is sufficient for SDLC stage execution.
 
 This reference maps explicitly selected and authorized Claude Code execution through the connected T3 Code MCP to the existing [stage protocol](../stage-agent-protocol.md) and [brief/result template](../templates/TASK.md). The main Agent directly controls the executor, checks its result and owns lifecycle mutations. Do not insert a native stage child, use T3 delegation/workflows to create another orchestration flow, or treat a completed run as acceptance. Existing model, role and independence constraints still apply; a Claude invocation or instance label is not proof of the actual role or model. Independent bounded delegation uses the public `driving-claude-code-sessions` entry without requiring a Feature.
 

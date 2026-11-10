@@ -45,7 +45,8 @@ Requirement: captured → ready → in_delivery → validated → released
 ### 可选的 Claude 执行者
 
 例如“将这个已跟踪 Task 的实现委托给 Claude”，主 Agent 仍先按当前阶段准备完整 brief，并核对本次任务、provider 和
-适用的运行权限。明确选择 Claude 后，主 Agent 直接使用已连接的 T3 Code MCP，按[包内适配说明](skills/sdlc/references/runtime-adapters/t3-code.md)执行。
+适用的运行权限。整套阶段技能共用[运行时选择](skills/sdlc/references/stage-agent-protocol.md#runtime-selection)：明确选择 Claude 后，
+主 Agent 直接使用已连接的 T3 Code MCP，按[包内适配说明](skills/sdlc/references/runtime-adapters/t3-code.md)执行，不经过原生子 Agent 包装。
 缺少工具或授权时报告缺口；未选择 Claude 时原生路径不依赖 T3。独立普通委托无需创建 Feature。
 
 主 Agent 按阶段协议核对实际文件、检查结果和版本后验收，仍负责状态写入与必要的独立验证、评审。等待超时不代表任务结束：

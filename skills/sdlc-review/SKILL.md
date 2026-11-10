@@ -16,8 +16,8 @@ updated: 2026-09-05
 
 遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。运行时支持时，主 Agent 使用与实现者不同的
 新 review Agent；否则按相同检查串行完成并披露 fallback。review Agent 不修改实现或 state，只返回发现、证据和
-`record-review` 请求，由主 Agent 验证后执行。Codex 的独立 Sol 角色映射和不可用 fallback 见
-[runtime adapter](../sdlc/references/runtime-adapters/codex.md)，专业角色卡不替代该独立性。
+`record-review` 请求，由主 Agent 验证后执行。角色映射与不可用 fallback 按协议的
+[运行时选择](../sdlc/references/stage-agent-protocol.md#runtime-selection)读取所选适配；更换传输方式或专业角色卡不替代独立性与模型要求。
 
 ## Review input and scope
 
