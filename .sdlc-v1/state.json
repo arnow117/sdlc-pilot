@@ -84,6 +84,40 @@
         "result": "pass"
       }
     },
+    "FEAT-claude-executor": {
+      "branch": "codex/claude-execution-adapter",
+      "created_at": "2026-11-10T06:08:26Z",
+      "engineering_context_ref": ".sdlc-v1/context/FEAT-claude-executor.engineering.md",
+      "id": "FEAT-claude-executor",
+      "release": {
+        "at": null,
+        "commit": null,
+        "status": "pending"
+      },
+      "requirement_id": "REQ-claude-executor",
+      "review": {
+        "at": null,
+        "by": null,
+        "decision": "pending"
+      },
+      "status": "in_progress",
+      "tasks": {
+        "TASK-claude-execution-consolidation": {
+          "depends_on": [],
+          "id": "TASK-claude-execution-consolidation",
+          "status": "in_progress",
+          "title": "收敛 Claude 委托入口并接入可选执行适配",
+          "updated_at": "2026-11-10T06:08:26Z"
+        }
+      },
+      "updated_at": "2026-11-10T06:08:26Z",
+      "validation": {
+        "at": null,
+        "command": null,
+        "commit": null,
+        "result": "pending"
+      }
+    },
     "FEAT-dispatch-workload": {
       "branch": "codex/sdlc-dispatch-evolve",
       "created_at": "2026-10-25T10:51:15Z",
@@ -145,6 +179,19 @@
       "status": "released",
       "title": "统一原型入口与分发",
       "updated_at": "2026-10-21T08:43:43Z"
+    },
+    "REQ-claude-executor": {
+      "created_at": "2026-11-10T05:48:38Z",
+      "depends_on": [],
+      "description": "保留普通委托公共入口，将可选 Claude SDLC 执行适配归入包内，清理旧入口，并验证交付两个仓库源码。",
+      "domain": "skill-system",
+      "feature_id": "FEAT-claude-executor",
+      "id": "REQ-claude-executor",
+      "priority": "P1",
+      "product_context_ref": ".sdlc-v1/context/REQ-claude-executor.product.md",
+      "status": "in_delivery",
+      "title": "可选 Claude 执行者与公共委托入口收敛",
+      "updated_at": "2026-11-10T06:08:26Z"
     },
     "REQ-dispatch-workload": {
       "created_at": "2026-10-25T10:42:30Z",
