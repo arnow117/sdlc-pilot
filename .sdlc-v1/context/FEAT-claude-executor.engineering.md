@@ -23,7 +23,7 @@
 | 主仓 | `/Users/mac/hansen_agent_team/workspace/20261110-claude-execution-consolidation/sdlc-pilot`；`codex/claude-execution-adapter` | `5480d8d3f17d74e2579121dda8fa8053e3b137f1` |
 | 配套仓 | `/Users/mac/hansen_agent_team/workspace/20261110-claude-execution-consolidation/agent-team`；`codex/consolidate-claude-delegation` | `5124fe112500a78d8a6fc44d661921657ed97f6b` |
 
-以上绝对路径仅是本次执行绑定，不进入可分发的适配参考。主仓实际插件元数据为 `4.3.3`；project.md 中 `2.0.0` 等版本/测试数字是历史事实，不能作为当前工具版本。配套驱动固定上游为 `obra/claude-session-driver@d97d1eb0a904546ed059b0a33dd5d4aa3e199c9a`，bundle、hooks 和 LICENSE 的归属/hash 见其 `UPSTREAM.md`。
+以上绝对路径仅是本次执行绑定，不进入可分发的适配参考。起始主仓插件元数据为 `4.3.3`；实施期间 canonical main 并发前进到 `41f48798c17a5f62d67a99cbb03c578a5b5dba56`，已包含 v5.0.0 元数据和核心模型/变化边界规则。本次合入并保留该上游提交，仍只增加 Unreleased 能力，不回退元数据或另发版本。project.md 中 `2.0.0` 等版本/测试数字是历史事实，不能作为当前工具版本。配套驱动固定上游为 `obra/claude-session-driver@d97d1eb0a904546ed059b0a33dd5d4aa3e199c9a`，bundle、hooks 和 LICENSE 的归属/hash 见其 `UPSTREAM.md`。
 
 #### 架构与组件
 
@@ -48,6 +48,19 @@
 - **覆盖**：SCN-1～SCN-10；AC-1～AC-10 的实际检查导航。
 
 #### 关键设计决定
+
+##### 核心模型与变化边界（适用）
+
+当前真实变体是默认的宿主原生子 Agent 与本任务明确选择的 Claude CLI worker。共同执行者是按唯一阶段协议工作的主 Agent；它统一派工、验收、纠偏和生命周期状态写入，两个 IO 适配引用同一协议，不各自复制执行循环或状态规则。
+
+权威模型仍为现有 Requirement/Feature/Task、完整 stage brief、允许的有序转换请求、canonical result、Git 版本和实际证据。ID 可不适用的阶段沿用协议的 N/A；仓库/分支/版本、写入范围、当前任务授权、结果和允许转换必须相符。谁编写、校验、执行及负责副作用，均以现有阶段协议和生命周期 CLI 为准，不新增字段、schema、配置解释器或迁移。
+
+| 当前变化 | 保持稳定 | 实际差异与扩展边界 | 代表性验证 |
+|---|---|---|---|
+| 原生执行与明确选择的 Claude CLI | 同一 brief/result、主控状态所有权、独立阶段和失败/取消历史 | 原生映射使用宿主控制；Claude 映射既有 csd 的启动、等待、读取、停止。新增其它执行语义需相应适配，不能把代码或函数编码成配置字符串，也不由现有 CLI 名称猜测支持。 | SCN-1～SCN-3、SCN-6～SCN-8，真实 csd 事件/wait fixture；live 链路 NOT_RUN。 |
+| 同一执行路径中不同 Task、参数与合法结果 | 共用协议校验和既有 CLI，不增加按 Task 分叉的控制器 | 内容/参数取自当前 brief；缺授权、错误/缺失证据、不适用版本和越出允许列表的请求拒收；等价输入的证据仍按原协议判断。 | SCN-4～SCN-5 的实际 Git/artifact/log 输入；正常候选与两种非法候选，state 不变。 |
+
+这满足并发上游 v5 新增的适用设计要求；产品结果和原 AC 未改变。集成候选需要重新核对本节与当前实现/证据，而不能仅凭旧业务 commit 相同沿用通过。测试样例的失败收尾还必须保留诊断输入；以受控快照差异验证失败非零退出、目录与证据仍在，成功时才自动清理。临时根目录使用宿主可用的临时目录，不增加个人或 macOS 特定路径依赖。
 
 ##### 决定 1：复用 csd 与 canonical 协议，仅增加按需参考
 
@@ -252,8 +265,8 @@ Task 无其它 Task 依赖。主 Agent 先接受本计划、依次 start-feature
 
 ## 评审记录（实际）
 
-- **状态**：NOT_RUN；待实现与正式验证后独立 Sol Review。
-- **范围、发现与处理**：无当前实现评审结论。
+- **2026-11-10，旧候选有界评审**：独立 Reviewer 检查业务候选 `18edb0e` / `29f022ae` 后返回 incomplete，未请求批准；发现 P2：`docs/testing.md` 无条件 EXIT trap 会在断言失败时删除诊断输入。主 Agent 接受该有因果依据的发现，交同一实现者修正并验证成功/受控失败路径。
+- **并发集成义务**：上游 `41f4879` 引入 v5 核心模型/变化边界要求；主 Agent 已更新本方案的适用说明并保留上游版本。本次产品范围、Task 和实现者不变。重新打开同一 Task、集成指定上游提交，随后在新提交上独立 Validate，并按 delta 和必要累计契约重新 Review；旧验证事实保留为旧快照证据，不能批准尚未验证的集成候选。未消耗一次诊断额度，也未以换名重置失败历史。
 
 ## 发布与观察记录（实际）
 

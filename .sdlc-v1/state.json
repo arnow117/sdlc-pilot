@@ -100,22 +100,22 @@
         "by": null,
         "decision": "pending"
       },
-      "status": "validated",
+      "status": "in_progress",
       "tasks": {
         "TASK-claude-execution-consolidation": {
           "depends_on": [],
           "id": "TASK-claude-execution-consolidation",
-          "status": "done",
+          "status": "in_progress",
           "title": "收敛 Claude 委托入口并接入可选执行适配",
-          "updated_at": "2026-11-10T06:18:51Z"
+          "updated_at": "2026-11-10T06:35:01Z"
         }
       },
-      "updated_at": "2026-11-10T06:25:07Z",
+      "updated_at": "2026-11-10T06:35:01Z",
       "validation": {
-        "at": "2026-11-10T06:25:07Z",
-        "command": "bash scripts/validate-skills",
-        "commit": "18edb0e586c1d57252ec7d9dbef4eda3ed929f17",
-        "result": "pass"
+        "at": null,
+        "command": null,
+        "commit": null,
+        "result": "pending"
       }
     },
     "FEAT-dispatch-workload": {
@@ -189,9 +189,9 @@
       "id": "REQ-claude-executor",
       "priority": "P1",
       "product_context_ref": ".sdlc-v1/context/REQ-claude-executor.product.md",
-      "status": "validated",
+      "status": "in_delivery",
       "title": "可选 Claude 执行者与公共委托入口收敛",
-      "updated_at": "2026-11-10T06:25:07Z"
+      "updated_at": "2026-11-10T06:35:01Z"
     },
     "REQ-dispatch-workload": {
       "created_at": "2026-10-25T10:42:30Z",
