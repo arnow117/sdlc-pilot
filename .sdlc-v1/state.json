@@ -90,9 +90,9 @@
       "engineering_context_ref": ".sdlc-v1/context/FEAT-claude-executor.engineering.md",
       "id": "FEAT-claude-executor",
       "release": {
-        "at": null,
-        "commit": null,
-        "status": "pending"
+        "at": "2026-11-10T06:59:56Z",
+        "commit": "425b1f7765ad18f836ef96a942d4aa0cad8e9413",
+        "status": "released"
       },
       "requirement_id": "REQ-claude-executor",
       "review": {
@@ -100,7 +100,7 @@
         "by": "independent-sol-reviewer",
         "decision": "approved"
       },
-      "status": "reviewed",
+      "status": "released",
       "tasks": {
         "TASK-claude-execution-consolidation": {
           "depends_on": [],
@@ -110,7 +110,7 @@
           "updated_at": "2026-11-10T06:42:22Z"
         }
       },
-      "updated_at": "2026-11-10T06:49:11Z",
+      "updated_at": "2026-11-10T06:59:56Z",
       "validation": {
         "at": "2026-11-10T06:46:13Z",
         "command": "bash scripts/validate-skills",
@@ -189,9 +189,9 @@
       "id": "REQ-claude-executor",
       "priority": "P1",
       "product_context_ref": ".sdlc-v1/context/REQ-claude-executor.product.md",
-      "status": "validated",
+      "status": "released",
       "title": "可选 Claude 执行者与公共委托入口收敛",
-      "updated_at": "2026-11-10T06:49:11Z"
+      "updated_at": "2026-11-10T06:59:56Z"
     },
     "REQ-dispatch-workload": {
       "created_at": "2026-10-25T10:42:30Z",
