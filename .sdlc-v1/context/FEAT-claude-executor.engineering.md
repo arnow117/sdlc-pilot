@@ -12,7 +12,7 @@
 
 **创建日期**：2026-11-10。
 
-**状态**：Plan 候选，待主 Agent 接受；无 Feature/Task 登记或实现通过结论。
+**状态**：Plan 已由主 Agent 接受；Feature/Task 进度以 state 为准，实际检查见后文证据。
 
 #### 背景
 
@@ -111,7 +111,7 @@
 
 **关联设计**：本文“架构设计”。
 
-**已确认需求**：同上；**创建日期**：2026-11-10；**状态**：Plan 候选。
+**已确认需求**：同上；**创建日期**：2026-11-10；**状态**：Plan 已接受。
 
 #### 背景
 
@@ -214,7 +214,7 @@ Task 无其它 Task 依赖。主 Agent 先接受本计划、依次 start-feature
 
 ## 实现记录（实际）
 
-- **状态**：Build 候选待主 Agent 验收；Task 已登记并进入 in_progress，未启动 provider。实际文件范围见 Git diff：主仓接入参考、入口、usage、fixture 定义和 Unreleased；配套仓修改公共驱动路由及归属，删除旧三文件并更新审计中的活动建议。
+- **状态**：Build 已由主 Agent 接受；Task 已完成，未启动 provider。实际文件范围见 Git diff：主仓接入参考、入口、usage、fixture 定义和 Unreleased；配套仓修改公共驱动路由及归属，删除旧三文件并更新审计中的活动建议。
 - **Task**：`TASK-claude-execution-consolidation`；只有主 Agent 可修改生命周期状态。源码候选 commit 对在固定提交后由主 Agent 核对；本记录不宣称独立阶段或发布完成。
 
 ## 验证记录（实际）
@@ -225,6 +225,30 @@ Task 无其它 Task 依赖。主 Agent 先接受本计划、依次 start-feature
 - **结果 fixture 自检**：隔离 Git 版本 A `841e1132473347ce8595f7ac06a2b5d7c7d2d520` 的 artifact 为 `expected`，对应实际 `test "$(cat artifact.txt)" = expected` exit 0；版本 B `07fbed1351545fe034f6865e111eb21b03b1f990` artifact 为 `changed`，旧检查不覆盖 B。三份 TASK 形状输入按实际文件核对：A 的完整候选可接受；缺命令证据和以 A 日志声称 B 的候选拒收，state 前后 `cmp` 相同。首次检查命令在 zsh 中的变量冒号展开使 `git show` 失败；全新 fixture 使用 Bash 和 `${revision}:artifact.txt` 后 exit 0。不同 SHA 本身不是拒绝等价输入的依据。
 - **合成场景自检**：原生无外部依赖、普通独立任务不创建 Feature；缺能力/授权报告而不启动或隐式 consent。仍运行等待原 turn，已结束读取结果，未知报告不推断终止；缺证据交同一实现者，取消时保留证据并仅处理核对归属的资源，恢复保留停止、授权、失败和诊断限制。以上是实现者依据文档作的决策核对，不是独立执行。
 - **缺口**：独立 Validate/Review 和双 main 交付尚待执行；真实 Claude/provider/tmux launch、converse、stop 与模型任务 `NOT_RUN`。上述自检不证明模型身份、独立性或真实资源回收。
+
+### 独立 Validate（实际，2026-11-10 14:20–14:23 +08）
+
+执行者为独立于 Build 的 Validate 上下文；测试时主仓 HEAD `18edb0e586c1d57252ec7d9dbef4eda3ed929f17`（基线 `5480d8d3f17d74e2579121dda8fa8053e3b137f1`），配套仓 HEAD `29f022aea423f4f6f796e756ce0c5c56838f5429`（基线 `5124fe112500a78d8a6fc44d661921657ed97f6b`）；两仓业务工作树干净，主仓 tracked state 未暂存、无冲突，Task 为 done。环境 Python 3.15.2、Node 26.13.0、Git 2.56.0、Bash 3.2.57；没有安装依赖。
+
+- 主仓 `bash scripts/validate-skills` 沙箱外本机 loopback exit 0，结构及引用检查和 40、7、5、36、12 项测试共 100 项通过；Hallmark 输出一次 Python HTTPError ResourceWarning，测试仍全部通过。测试的临时 HTTP server 使用随机 loopback 端口，源码在 close 中 shutdown/join/server_close；命令退出后 `ps -ax -o pid=,command= | rg '[t]est_hallmark_catalog.py|[s]cripts/validate-skills' || true` exit 0、无对应进程，未操作共享服务。两仓 `git diff --check`、各自基线到 HEAD 的 `git diff --check <baseline> HEAD` 均 exit 0。
+- 配套仓 `bash .agents/skills/driving-claude-code-sessions/scripts/verify-plugin-layout` 与 `.agents/skills/driving-claude-code-sessions/scripts/csd help` 均 exit 0；`PYTHONPATH=/Users/mac/.cache/uv/archive-v0/s3Toi1vTz0UMC1P5 python3 -B /Users/mac/.codex/skills/.system/skill-creator/scripts/quick_validate.py .agents/skills/driving-claude-code-sessions` exit 0，输出 Skill is valid。Python 对驱动 SKILL 和 UPSTREAM 的相对 Markdown 链接检查 exit 0；主仓标准检查覆盖包内引用。上游 manifest、hooks、两个 bundle 与 LICENSE 的 `shasum -a 256` 与 UPSTREAM 五个值一致；`git diff <配套基线> HEAD -- .../dist .../hooks .../.claude-plugin .../LICENSE .../scripts .sdlc-v1 .agents/skills/dreaming` exit 0 且无差异。UPSTREAM 明示 SKILL 本地修改。曾误在配套仓执行主仓基线 diff，exit 128 bad object；随后在正确主仓重跑相同范围 exit 0，属于工作目录错误，不是实现失败。
+- 依据 `docs/testing.md` 在新 `CSD_WORKER_DIR` 生成 Stop，实际 `csd --worker fixture read-events` exit 0；`wait-for-turn 1` exit 1 且输出 timeout，`wait-for-turn 1 --after-line 0` exit 0 读取已有 stop；两次 `cmp` 均 exit 0，meta/events 不变，整体 fixture exit 0，专属目录由 trap 删除。只读固定 bundle：`cmdConverse` 等待失败返回 1；`cmdStop` 调 `removeWorker` 删除 meta/events/shim 等。均不证明 live 进程的超时或资源回收。
+- 独立准备的隔离 Git 结果 fixture：A `5635f2ade3c44025cb7aa2eac4d2844ea6f6b7a6` 内容 expected、工作树干净，实际 `test "$(cat artifact.txt)" = expected` exit 0、日志可读；B `f3ce8e058c7e3374a8870499e243e62910d701c7` 业务 artifact 改为 changed 并提交、工作树干净。按 TASK canonical 字段准备三份结果并读取实际 artifact、日志和版本：A 完整结果可接受；A 缺命令证据应退回同一实现者；B 引用 A 的旧检查不覆盖 changed，应退回。不同 SHA 本身不是拒收等价输入的理由。fixture `cmp state.before repo/state.json` exit 0，专属临时目录已删除。首次隔离 fixture 未在切换至 B 前打印 A 的工作树状态，因此以第二个新 fixture 补齐该观测；两次均未修改产品 state。以上是本地合成结果，不是 live Agent 运行。
+- 独立场景判断（synthetic）：SCN-1/2 原生保持默认且无需外部工具，普通外部独立委托无需 Feature；SCN-3 缺能力或任务/provider/权限绕过授权时报告缺口，不 launch、grant consent、静默替换或从 native child 再套 CLI；SCN-4/5 使用上述文件/检查证据并由主 Agent 管状态与接受。SCN-6 原 turn 仍运行时等待同一 turn，已结束时按旧基线读取结果，未知时报告未知、不重派；SCN-7 合同内纠偏交同一可用实现者，替换不得重置失败历史或已用诊断额度；SCN-8 取消后停止新工作，保留证据与工作树，只处理核实归属资源；恢复须遵守明确停止、授权和单写者约束，不清理共享会话或数据。
+
+| 验收条件 | 本阶段结果 | 证据或后续义务 |
+|---|---|---|
+| AC-1 | 候选通过；原主工作区待 Ship 后复核 | 两候选三个旧文件删除、活动驱动/审计引用扫描无旧目标；两候选和用户三个 discovery root 精确目标不存在；对两候选、原主工作区和用户各三个 root 的所有即时符号链接按目标及解析路径扫描，旧目标匹配 0。原主工作区 `.agents/skills/claude-rnd-orchestrator` 实体仍在，隔离候选未合并时预期如此，未触碰其他 worktree。 |
+| AC-2 | PASS | README、router、Codex adapter 按需引用包内薄适配，diff 未新增状态或执行系统。 |
+| AC-3、AC-4 | PASS（文档与合成场景范围） | 原生默认、普通委托、明确选择/能力/授权与执行者身份按上述 SCN 判断；无真实外部链路。 |
+| AC-5 | PASS（实际文件与合成结果范围） | 三个 canonical 输入、真实 artifact/log、适用版本及未变 state 如上；主 Agent 独占接受和状态。 |
+| AC-6 | PASS（事件 fixture、源码与合成场景范围） | 实测 wait 基线及只读 stop/converse 源码，SCN-6～8 判断如上；live 控制和 OS 回收未测。 |
+| AC-7 | PASS | 两仓标准/格式/链接检查、上游 hash 与受保护路径基线 diff 如上；改动文档与参考可读。 |
+| AC-8 | 本阶段 PASS；独立 Review 待执行 | 本记录为独立 Validate 命令、双 SHA 与范围；Review 不能由此替代。真实 Claude/provider/tmux launch、converse、stop、grant-consent 和模型任务均 `NOT_RUN`。 |
+| AC-9 | PENDING Ship | CHANGELOG 为 Unreleased；版本元数据无 diff。两个实际 main/远端 SHA 和无额外发布需在已授权 Ship 后核对，当前不宣称已交付。 |
+| AC-10 | PASS（候选范围） | 两仓基线 diff 已核对：仅主仓记录本需求生命周期，配套 Dreaming、其他技能与上游受保护文件无改动；无历史清理。 |
+
+本轮没有新增生产代码或改 vendor，不虚构覆盖率；上述实际检查的总体归因为 PASS（仅限已明确范围）。独立 Review 和已授权 Ship 是后续阶段，不是本轮已完成事实。
 
 ## 评审记录（实际）
 

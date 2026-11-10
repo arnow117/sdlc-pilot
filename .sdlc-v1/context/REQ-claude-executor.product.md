@@ -4,7 +4,7 @@
 
 **Requirement ID**：`REQ-claude-executor`
 
-**状态**：产品意图 confirmed；本次 Spec 候选待主 Agent 验收，生命周期以 state 为准。
+**状态**：产品意图 confirmed；Spec 已由主 Agent 接受，生命周期以 state 为准。
 
 **上次确认**：2026-11-10，主 Agent 提供已确认方向及本阶段完整 brief。
 
@@ -81,7 +81,7 @@
 
 **创建日期**：2026-11-10。
 
-**状态**：Spec 候选；实现与验收场景尚未执行。
+**状态**：Spec 已接受；实际实现与验证进度以 state 和工程证据为准。
 
 **输入**：以上已确认条目；主仓 `README.md`、根维护契约及当前阶段协议是既有权限、可移植性与源码分发约束来源。`DESIGN.md` 的看板 UI 设计与本需求无关。
 
