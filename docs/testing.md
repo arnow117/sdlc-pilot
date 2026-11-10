@@ -42,66 +42,11 @@ node --test skills/sdlc-prototype/assets/shared-state/runtime.test.cjs
 
 这些检查不自动运行模型。结构检查和脚本不能代替对产品确认、语义变化、实际执行者身份及授权副作用的判断。
 
-## Claude CLI 适配：无 provider 检查
+## T3 Code MCP 有界实测记录
 
-下面是一次性、可丢弃的输入，不启动 Claude、tmux、provider，不发送 prompt、不执行 `grant-consent` 或 `stop`。
-下面从配套仓根目录运行；其他安装位置需将 `plugin_root` 改为实际的 `driving-claude-code-sessions` 目录。不要改 HOME 或共享会话。
-每次使用新的专属临时目录；成功时自动清理，失败时打印并保留目录，检查必要证据后只清理该目录。
+2026-11-10 使用 T3 Code 0.1.8 与已连接的原生 MCP/OAuth，按授权在 Scratch 启动空闲线程，显式选择 Claude provider 实例、目录模型 `glm-5.3-flash[1M]`、low effort 和 `auto-accept-edits`。核对绑定后发送一次任务：读取输入中的 31 和 11，只写 `result.txt`，内容为 42 和一个行末换行。该 run 约 11.4 秒完成；活动记录包含实际 Read 与结果文件创建 diff（T3 将 Write 归一化为 `file_change`），输入 hash 未变，没有其他新增 artifact。settle 回执仅包含 sequence；后续线程读取显示 `settled=true`、`activeRunId=null`，该任务的 Claude 进程退出，共享 T3 服务仍运行。配置或报告的 GLM 标识不构成 Anthropic 模型身份认证。
 
-```bash
-(
-set -e
-fixture_dir=$(mktemp -d "${TMPDIR:-/tmp}/csd-wait-fixture.XXXXXX")
-cleanup_fixture() {
-  fixture_exit=$?
-  trap - EXIT
-  if [ "$fixture_exit" -eq 0 ]; then
-    rm -rf -- "$fixture_dir" || exit 1
-  else
-    printf 'Fixture failed; evidence retained at %s\n' "$fixture_dir" >&2
-  fi
-  exit "$fixture_exit"
-}
-trap cleanup_fixture EXIT
-printf 'Fixture directory: %s\n' "$fixture_dir"
-plugin_root="$PWD/.agents/skills/driving-claude-code-sessions"
-printf '%s\n' '{"tmux_name":"fixture","session_id":"fixture-session","cwd":"/","harness":"claude"}' > "$fixture_dir/fixture-session.meta"
-printf '%s\n' '{"session_id":"fixture-session","hook_event_name":"Stop","cwd":"/"}' | CSD_WORKER_DIR="$fixture_dir" node "$plugin_root/dist/emit-event.cjs"
-cp "$fixture_dir/fixture-session.meta" "$fixture_dir/meta.before"
-cp "$fixture_dir/fixture-session.events.jsonl" "$fixture_dir/events.before"
-CSD_WORKER_DIR="$fixture_dir" "$plugin_root/scripts/csd" --worker fixture read-events
-if CSD_WORKER_DIR="$fixture_dir" "$plugin_root/scripts/csd" --worker fixture wait-for-turn 1; then
-  wait_exit=0
-else
-  wait_exit=$?
-fi
-printf 'default wait exit: %s\n' "$wait_exit"
-[ "$wait_exit" -eq 1 ] || exit 1
-CSD_WORKER_DIR="$fixture_dir" "$plugin_root/scripts/csd" --worker fixture wait-for-turn 1 --after-line 0 || exit 1
-cmp "$fixture_dir/meta.before" "$fixture_dir/fixture-session.meta" || exit 1
-cmp "$fixture_dir/events.before" "$fixture_dir/fixture-session.events.jsonl" || exit 1
-)
-```
-
-预期默认等待 exit 1、指定旧基线 exit 0 并返回已有 stop，meta/events 内容不变。核对固定 bundle 的 `cmdConverse` 超时返回与
-`cmdStop` 清理代码；这些静态检查不能证明真实会话的超时、取消或进程回收行为。
-
-### 结果与场景输入
-
-在新的临时目录创建隔离 Git 仓库，按以下步骤准备三个可核对输入，不创建自动验收器：
-
-1. 创建 `artifact.txt` 内容 `expected`、`state.json` 内容 `unchanged`，提交为版本 A；运行
-   `test "$(cat artifact.txt)" = expected`，把真实命令、exit 0 和输出保存为检查日志。记录 Git HEAD、工作树与 state 内容。
-2. 按现有 [TASK 模板](../skills/sdlc/references/templates/TASK.md)填写 canonical Build 结果，引用版本 A、实际 artifact、
-   检查日志和工作树状态；这是有效输入。复制一份并去掉必要命令证据，形成缺证据输入。
-3. 将 `artifact.txt` 改成 `changed` 并提交为版本 B；第三份结果声称版本 B，却引用只检查版本 A 的旧日志。
-   B 的业务输入确实变化，不能仅凭 SHA 不同拒绝等价输入。核对 B、实际文件、日志与 state；分别判断三份结果：有效候选可接受，
-   缺证据及不适用版本应拒收并交原实现者纠正。检查前后 state 内容不变。隔离仓库和日志是测试输入，不是独立 Agent 或真实阶段证据。
-
-另对照当前 usage 和适配说明检查合成条件：原生路径没有外部工具；独立普通任务；缺工具或授权；原 turn 仍运行、已结束或状态未知；
-同实现者修正；明确取消且有共享资源。逐项记录允许动作、禁止动作与保护对象：不嵌套启动、不重复派工、不隐式同意、
-不越权停止，也不因更换执行者重置失败或停止限制。活动入口和源码交付需另外用实际文件与远端事实核对。
-独立 Validate 应自行运行这些检查并判断，Build 自检不能冒称独立结果；真实 Claude/provider 链路标记 `NOT_RUN`。
+该证据覆盖一次 Scratch 的启动、发送、等待、文件核对和完成后资源回收；不覆盖仓库项目注册、真实阶段验收、独立 Validate/Review、主动运行中取消、传输丢失恢复或模型身份认证。项目注册在该权限级别返回 `capability_denied`；不通过提升权限绕过。不得将此一次实测外推为其他环境的可用性或性能保证。必要时按当前授权和环境另行验证，不把历史记录当作当前版本的自动测试。
 
 ## 按改动选择检查与复用
 

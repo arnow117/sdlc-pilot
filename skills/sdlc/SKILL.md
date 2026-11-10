@@ -12,7 +12,7 @@ description: >
 协作规则唯一见 [`stage-agent-protocol.md`](references/stage-agent-protocol.md)。单个阶段结果不是在已有授权目标内结束编排的信号。
 
 默认使用宿主的原生路径；只有当前任务明确选择并授权 Claude 外部执行时，主 Agent 才按需读取
-[`Claude CLI 适配`](references/runtime-adapters/claude-cli.md) 并直接控制该阶段执行者。
+[`T3 Code 适配`](references/runtime-adapters/t3-code.md) 并直接控制该阶段执行者。
 
 ## 1. 唯一目录
 

@@ -9,8 +9,8 @@ does not define lifecycle, dispatch, result, acceptance, or checkpoint semantics
 
 The native mapping below remains the default. If the current task explicitly
 selects and authorizes an external Claude executor, the main Agent directly uses
-the optional [Claude CLI adapter](claude-cli.md) for that dispatch. Do not spawn
-a native stage child to launch the CLI worker. This alternative does not by itself
+the optional [T3 Code adapter](t3-code.md) for that dispatch. Do not spawn
+a native stage child to launch the executor. This alternative does not by itself
 satisfy configured model or independence requirements.
 
 ## Interface map
