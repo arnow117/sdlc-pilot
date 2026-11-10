@@ -270,6 +270,26 @@ Task 无其它 Task 依赖。主 Agent 先接受本计划、依次 start-feature
 
 本轮没有新增生产代码或改 vendor，不虚构覆盖率；上述实际检查的总体归因为 PASS（仅限已明确范围）。独立 Review 和已授权 Ship 是后续阶段，不是本轮已完成事实。
 
+
+### 集成候选的独立 Validate（实际，2026-11-10 14:43–14:45 +08）
+
+本轮与旧候选独立结果分开记录。主仓被测 HEAD `425b1f7765ad18f836ef96a942d4aa0cad8e9413`，配套仓 `29f022aea423f4f6f796e756ce0c5c56838f5429`；主仓业务树干净，state/context tracked、state 未暂存且无冲突，唯一 Task 已 done；配套树干净。环境与上一独立轮相同，未安装依赖。旧 P2 有具体因果定位；本轮受控失败检查已满足其纠正条件，不改变原失败历史或诊断额度。
+
+- `bash scripts/validate-skills` 在可绑定 loopback 的沙箱外执行 exit 0，结构/引用及 40、7、5、36、12 项测试共 100 项通过；Hallmark 输出 HTTPError ResourceWarning，测试全部通过。执行前检查本机负载和监听，测试使用随机 loopback 端口及自身 shutdown/join/server_close；执行后 `ps -ax -o pid=,command= | rg '[t]est_hallmark_catalog.py|[s]cripts/validate-skills' || true` exit 0 无匹配，未操作共享服务。
+- 以 Python 从当前 `docs/testing.md` 的 Claude CLI 章节提取原始 bash 代码块，在配套仓执行，指定专属临时 `TMPDIR`：正常配方 exit 0，读到 stop、默认等待 exit 1、`--after-line 0` exit 0，两个 `cmp` 通过且目录已删除。将提取配方仅在最终 events 比较前向 `events.before` 追加 `controlled-difference\n`，作为受控反例再次执行：原始退出码 1，输出保留目录路径，meta/events 和两个 before 文件均存在；逐字节确认 meta 与快照一致、events 快照仅增加预期内容，随后仅删除该专属目录。两次均以带已设置 EXIT trap 的调用者 source，比较 `trap -p EXIT` 前后相同。两次 fixture 没启动外部执行者、没有发送 prompt；这是实际 csd 文件/事件行为，不是 live Claude 测试。
+- `git merge-base --is-ancestor 41f48798c17a5f62d67a99cbb03c578a5b5dba56 HEAD` exit 0；`git diff --exit-code 41f48798c17a5f62d67a99cbb03c578a5b5dba56 HEAD -- .claude-plugin/plugin.json .claude-plugin/marketplace.json skills/sdlc-plan/SKILL.md skills/sdlc-review/SKILL.md skills/sdlc/references/lifecycles/software-delivery.md skills/sdlc/references/templates/ENGINEERING.md` exit 0，两份元数据均为上游 5.0.0；CHANGELOG 对该上游只新增本任务 Unreleased 条目。工作树和上游到 HEAD 的 `git diff --check` exit 0；无 unmerged index、暂存文件或受影响文件中的冲突标记。
+- `git diff --exit-code 18edb0e586c1d57252ec7d9dbef4eda3ed929f17 HEAD -- skills/sdlc/references/stage-agent-protocol.md skills/sdlc/references/templates/TASK.md skills/sdlc/references/runtime-adapters/claude-cli.md skills/sdlc/references/runtime-adapters/codex.md` exit 0；同范围 README、router 和 lifecycle 实现也无 diff，实际业务变化为事件配方收尾与并发上游 v5 方法。配套 SHA、干净工作树、bundle/hooks/manifest/LICENSE/scripts 对配套基线无差异、环境相同，因此上一独立轮该配套 SHA 的布局/help/YAML/引用/hash 检查以及使用不变结果合同的实际 Git/artifact/log fixture 仍适用；没有将 Build 自检代作本轮结果，也没有因主仓 SHA 变化重跑无关配套检查。
+- 按当前上游软件交付“核心模型与变化边界”、现行阶段协议、适配参考及 SCN-1～8 独立核对：原生子 Agent 与显式授权 Claude CLI 只改变控制 IO；两者都使用同一 brief/canonical result、主 Agent 独占验收和 state mutation，独立阶段、单写者及失败/取消历史不变。不同任务内容与参数来自各自 brief，完整且适用的结果才可接受；缺失/失败证据、不适用业务版本、未知参数、缺必填或越出 allow-list 的 transition 应拒绝并交同一执行者纠正；等价输入不因 SHA 单独变化而拒绝。未知状态不推断终止、不重复派工；无外部权限则报告缺口；没有新增 schema、控制器或重复执行循环。以上是静态合同核对和合成场景判断，不是两种执行者的 live 对照实验。
+
+| 验收条件 | 当前判断与证据 |
+|---|---|
+| AC-1、AC-7、AC-10 | 候选范围通过：配套仓未变，复用上轮精确发现、保护范围和上游 hash/格式证据；当前主仓标准检查、上游合并与冲突检查通过。原主工作区旧实体需 Ship 合并后复核。 |
+| AC-2～AC-6 | 文档/合成与真实本地文件范围通过：本轮核对 v5 核心矩阵、SCN 和不变合同，复用上轮隔离结果 fixture；新事件配方成功及受控失败实测通过。 |
+| AC-8 | 本轮独立 Validate 的命令、双 SHA 与范围如上；新候选独立 Review 尚待执行。 |
+| AC-9 | PENDING Ship：实际双 main 远端 SHA、无额外发布以及原主工作区入口须在后续已授权交付核对；上游既有 v5.0.0 已保留，本任务本身未新增版本发布。 |
+
+本轮必要检查归因 PASS，仅限上述范围；真实 Claude/provider/tmux launch、converse、stop、grant-consent、模型身份与 live OS 回收均 `NOT_RUN`。无新增生产代码或 vendor 变更，不虚构覆盖率。
+
 ## 评审记录（实际）
 
 - **2026-11-10，旧候选有界评审**：独立 Reviewer 检查业务候选 `18edb0e` / `29f022ae` 后返回 incomplete，未请求批准；发现 P2：`docs/testing.md` 无条件 EXIT trap 会在断言失败时删除诊断输入。主 Agent 接受该有因果依据的发现，交同一实现者修正并验证成功/受控失败路径。
