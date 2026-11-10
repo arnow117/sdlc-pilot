@@ -42,6 +42,17 @@ Requirement: captured → ready → in_delivery → validated → released
 确定进入生命周期后，才在状态缺失时初始化；已有源码但缺少 `project.md` 时先运行 onboard。
 完整入口规则见 [`sdlc`](skills/sdlc/SKILL.md#2-入口)。
 
+### 可选的 Claude 执行者
+
+例如“将这个已跟踪 Task 的实现委托给 Claude”，主 Agent 仍先按当前阶段准备完整 brief，并核对本次任务、provider 和
+绕过权限提示的适用授权。明确选择 Claude 后，由主 Agent 从已安装的公共 `driving-claude-code-sessions` 技能发现
+`scripts/csd`，直接按[包内适配说明](skills/sdlc/references/runtime-adapters/claude-cli.md)启动外部 CLI 执行者。
+缺少工具或授权时报告缺口；未选择 Claude 时原生路径不依赖 csd、Claude 或 tmux。独立普通委托无需创建 Feature。
+
+主 Agent 按阶段协议核对实际文件、检查结果和版本后验收，仍负责状态写入与必要的独立验证、评审。等待超时不代表任务结束：
+先读取已有结果或继续等待同一 turn；取消和恢复时核对会话归属、保留证据并确认资源状态。适配说明列出实际参数和限制；
+外部 CLI 不自动满足项目指定的模型角色或独立性要求。
+
 阶段 Agent 在约定范围内自主完成实现与必要验证，集中返回证据和反馈。已有连续执行授权在原范围内延续，
 不新增逐阶段审批；缺少用户决策或外部授权时仍需暂停。默认主 Agent 到子 Agent 只有一层；主 Agent 只有在接口、
 写范围、依赖和验证独立时才允许额外有界分析或并行工作，并负责汇总和集成验收。同阶段修正复用原实现者；评审只有

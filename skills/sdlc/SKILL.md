@@ -11,6 +11,9 @@ description: >
 `/sdlc` 读取当前状态、选择阶段、编排受控的阶段执行、验证结果并推进。实际工作仍由阶段技能完成；阶段子 Agent
 协作规则唯一见 [`stage-agent-protocol.md`](references/stage-agent-protocol.md)。单个阶段结果不是在已有授权目标内结束编排的信号。
 
+默认使用宿主的原生路径；只有当前任务明确选择并授权 Claude 外部执行时，主 Agent 才按需读取
+[`Claude CLI 适配`](references/runtime-adapters/claude-cli.md) 并直接控制该阶段执行者。
+
 ## 1. 唯一目录
 
 目标项目只使用以下结构：

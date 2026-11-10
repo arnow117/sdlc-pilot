@@ -4,6 +4,14 @@
 
 ## [Unreleased]
 
+### Added
+
+- 提供按需加载的 Claude CLI 阶段执行适配，复用公共会话驱动和既有阶段协议。
+
+### Compatibility
+
+- 默认原生路径、生命周期接口与独立验证/评审要求保持不变；外部执行需要当前任务的明确选择与适用授权。真实 Claude/provider 链路本轮 `NOT_RUN`。
+
 ## [4.3.3] — 2026-11-08
 
 ### Changed

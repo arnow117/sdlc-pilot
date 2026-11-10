@@ -42,6 +42,50 @@ node --test skills/sdlc-prototype/assets/shared-state/runtime.test.cjs
 
 这些检查不自动运行模型。结构检查和脚本不能代替对产品确认、语义变化、实际执行者身份及授权副作用的判断。
 
+## Claude CLI 适配：无 provider 检查
+
+下面是一次性、可丢弃的输入，不启动 Claude、tmux、provider，不发送 prompt、不执行 `grant-consent` 或 `stop`。
+运行前将 `plugin_root` 设为实际安装的 `driving-claude-code-sessions` 目录；不要改 HOME 或共享会话。每次使用新的专属临时目录；
+保留失败证据后只清理该目录。事件检查从配套仓根目录运行：
+
+```bash
+fixture_dir=$(mktemp -d /private/tmp/csd-wait-fixture.XXXXXX)
+trap 'rm -rf -- "$fixture_dir"' EXIT
+plugin_root="$PWD/.agents/skills/driving-claude-code-sessions"
+printf '%s\n' '{"tmux_name":"fixture","session_id":"fixture-session","cwd":"/private/tmp","harness":"claude"}' > "$fixture_dir/fixture-session.meta"
+printf '%s\n' '{"session_id":"fixture-session","hook_event_name":"Stop","cwd":"/private/tmp"}' | CSD_WORKER_DIR="$fixture_dir" node "$plugin_root/dist/emit-event.cjs"
+cp "$fixture_dir/fixture-session.meta" "$fixture_dir/meta.before"
+cp "$fixture_dir/fixture-session.events.jsonl" "$fixture_dir/events.before"
+CSD_WORKER_DIR="$fixture_dir" "$plugin_root/scripts/csd" --worker fixture read-events
+CSD_WORKER_DIR="$fixture_dir" "$plugin_root/scripts/csd" --worker fixture wait-for-turn 1
+wait_exit=$?
+printf 'default wait exit: %s\n' "$wait_exit"
+[ "$wait_exit" -eq 1 ] || exit 1
+CSD_WORKER_DIR="$fixture_dir" "$plugin_root/scripts/csd" --worker fixture wait-for-turn 1 --after-line 0 || exit 1
+cmp "$fixture_dir/meta.before" "$fixture_dir/fixture-session.meta" || exit 1
+cmp "$fixture_dir/events.before" "$fixture_dir/fixture-session.events.jsonl" || exit 1
+```
+
+预期默认等待 exit 1、指定旧基线 exit 0 并返回已有 stop，meta/events 内容不变。核对固定 bundle 的 `cmdConverse` 超时返回与
+`cmdStop` 清理代码；这些静态检查不能证明真实会话的超时、取消或进程回收行为。
+
+### 结果与场景输入
+
+在新的临时目录创建隔离 Git 仓库，按以下步骤准备三个可核对输入，不创建自动验收器：
+
+1. 创建 `artifact.txt` 内容 `expected`、`state.json` 内容 `unchanged`，提交为版本 A；运行
+   `test "$(cat artifact.txt)" = expected`，把真实命令、exit 0 和输出保存为检查日志。记录 Git HEAD、工作树与 state 内容。
+2. 按现有 [TASK 模板](../skills/sdlc/references/templates/TASK.md)填写 canonical Build 结果，引用版本 A、实际 artifact、
+   检查日志和工作树状态；这是有效输入。复制一份并去掉必要命令证据，形成缺证据输入。
+3. 将 `artifact.txt` 改成 `changed` 并提交为版本 B；第三份结果声称版本 B，却引用只检查版本 A 的旧日志。
+   B 的业务输入确实变化，不能仅凭 SHA 不同拒绝等价输入。核对 B、实际文件、日志与 state；分别判断三份结果：有效候选可接受，
+   缺证据及不适用版本应拒收并交原实现者纠正。检查前后 state 内容不变。隔离仓库和日志是测试输入，不是独立 Agent 或真实阶段证据。
+
+另对照当前 usage 和适配说明检查合成条件：原生路径没有外部工具；独立普通任务；缺工具或授权；原 turn 仍运行、已结束或状态未知；
+同实现者修正；明确取消且有共享资源。逐项记录允许动作、禁止动作与保护对象：不嵌套启动、不重复派工、不隐式同意、
+不越权停止，也不因更换执行者重置失败或停止限制。活动入口和源码交付需另外用实际文件与远端事实核对。
+独立 Validate 应自行运行这些检查并判断，Build 自检不能冒称独立结果；真实 Claude/provider 链路标记 `NOT_RUN`。
+
 ## 按改动选择检查与复用
 
 维护 SDLC 自身时，先根据实际行为变化选择证据。默认快速检查仍是上面的 `validate-skills`；其中的场景脚本是确定性测试，

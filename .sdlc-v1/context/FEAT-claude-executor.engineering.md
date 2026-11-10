@@ -214,14 +214,17 @@ Task 无其它 Task 依赖。主 Agent 先接受本计划、依次 start-feature
 
 ## 实现记录（实际）
 
-- **状态**：NOT_RUN；本阶段只创建工程计划，无实现、删除、提交或 provider 启动。
-- **实际改动与 Task 引用**：仅本文件；`TASK-claude-execution-consolidation` 尚待主 Agent 登记。
+- **状态**：Build 候选待主 Agent 验收；Task 已登记并进入 in_progress，未启动 provider。实际文件范围见 Git diff：主仓接入参考、入口、usage、fixture 定义和 Unreleased；配套仓修改公共驱动路由及归属，删除旧三文件并更新审计中的活动建议。
+- **Task**：`TASK-claude-execution-consolidation`；只有主 Agent 可修改生命周期状态。源码候选 commit 对在固定提交后由主 Agent 核对；本记录不宣称独立阶段或发布完成。
 
 ## 验证记录（实际）
 
-- **状态**：正式 Build/Validate NOT_RUN。Plan 只读查询确认 ready/no Feature、两仓起始 SHA/分支、当前 csd help、旧三文件、活动审计引用和无发现目标别名。
-- **被测版本、环境、命令与结果**：Plan 使用表中两仓基线；当前 csd help exit 0；start-feature/add-task --help 与 product-projection exit 0。源码标准检查、fixture、独立 Validate 与真实模型均未在 Plan 执行。
-- **覆盖与缺口**：暂无正式验证业务 commit 对；Build 完成后由主 Agent 在此记录两仓实际候选 SHA，再派独立验证。不得把本段只读事实、历史 test 数或计划命令改称通过证据。
+- **Build 自检，2026-11-10**：主仓 `3f04cb466d6b0cfecbe95e8347d81c3200f6c2d9` 加本次工作树改动，配套仓 `5124fe112500a78d8a6fc44d661921657ed97f6b` 加本次工作树改动；Node v26.13.0、Python 3.15.2、Git 2.56.0、Bash 3.2.57。标准 `bash scripts/validate-skills` 首次 exit 1：沙箱禁止绑定 127.0.0.1，Hallmark 12 项中 9 项 setup 为 `PermissionError`；其余四组 40、7、5、36 项通过。以获准的沙箱外本机 loopback 重跑同一命令 exit 0，五组共 100 项通过，测试自建临时服务并按测试清理。两仓 `git diff --check` exit 0。
+- 配套仓 `bash .agents/skills/driving-claude-code-sessions/scripts/verify-plugin-layout`、`.../scripts/csd help` 均 exit 0；Ruby YAML frontmatter/name/description 和两文件相对 Markdown 链接检查均 exit 0。可选 `quick_validate.py` exit 1，因为当前 Python 没有 `yaml` 模块；未安装依赖，以上 YAML 检查及主仓标准检查为实际结构证据，不把可选命令写成通过。固定上游 bundle、hooks、manifest、LICENSE、wrapper 与 verify 脚本对配套基线无 diff；`shasum -a 256` 五项均与 UPSTREAM 一致。精确发现目标扫描在两隔离 worktree 无旧入口；原工作区存在独立实体目录，已报告主 Agent，不改其他 worktree。
+- **无 provider 事件 fixture**：按 `docs/testing.md` 执行；`read-events` exit 0 读到 stop，默认 `wait-for-turn 1` exit 1 超时，`--after-line 0` exit 0 读到同一 stop，`cmp` 确认 meta/events 不变，整体 exit 0。首次脚本在 zsh 中误用只读变量 `status` 导致 exit 1；改为 `wait_exit` 后在全新专属目录完成。固定 bundle 源只读核对 `cmdConverse` 超时返回 1，`cmdStop` 调用 `removeWorker` 清理 meta/events/shim 等；这不是 live 进程测试。
+- **结果 fixture 自检**：隔离 Git 版本 A `841e1132473347ce8595f7ac06a2b5d7c7d2d520` 的 artifact 为 `expected`，对应实际 `test "$(cat artifact.txt)" = expected` exit 0；版本 B `07fbed1351545fe034f6865e111eb21b03b1f990` artifact 为 `changed`，旧检查不覆盖 B。三份 TASK 形状输入按实际文件核对：A 的完整候选可接受；缺命令证据和以 A 日志声称 B 的候选拒收，state 前后 `cmp` 相同。首次检查命令在 zsh 中的变量冒号展开使 `git show` 失败；全新 fixture 使用 Bash 和 `${revision}:artifact.txt` 后 exit 0。不同 SHA 本身不是拒绝等价输入的依据。
+- **合成场景自检**：原生无外部依赖、普通独立任务不创建 Feature；缺能力/授权报告而不启动或隐式 consent。仍运行等待原 turn，已结束读取结果，未知报告不推断终止；缺证据交同一实现者，取消时保留证据并仅处理核对归属的资源，恢复保留停止、授权、失败和诊断限制。以上是实现者依据文档作的决策核对，不是独立执行。
+- **缺口**：独立 Validate/Review 和双 main 交付尚待执行；真实 Claude/provider/tmux launch、converse、stop 与模型任务 `NOT_RUN`。上述自检不证明模型身份、独立性或真实资源回收。
 
 ## 评审记录（实际）
 
