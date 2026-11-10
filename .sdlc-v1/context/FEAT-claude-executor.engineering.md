@@ -294,6 +294,7 @@ Task 无其它 Task 依赖。主 Agent 先接受本计划、依次 start-feature
 
 - **2026-11-10，旧候选有界评审**：独立 Reviewer 检查业务候选 `18edb0e` / `29f022ae` 后返回 incomplete，未请求批准；发现 P2：`docs/testing.md` 无条件 EXIT trap 会在断言失败时删除诊断输入。主 Agent 接受该有因果依据的发现，交同一实现者修正并验证成功/受控失败路径。
 - **并发集成义务**：上游 `41f4879` 引入 v5 核心模型/变化边界要求；主 Agent 已更新本方案的适用说明并保留上游版本。本次产品范围、Task 和实现者不变。重新打开同一 Task、集成指定上游提交，随后在新提交上独立 Validate，并按 delta 和必要累计契约重新 Review；旧验证事实保留为旧快照证据，不能批准尚未验证的集成候选。未消耗一次诊断额度，也未以换名重置失败历史。
+- **2026-11-10，集成候选独立 Review**：独立 Sol reviewer 按 `18edb0e → 425b1f7` delta 及必要累计/跨仓契约检查，主仓当前证据 HEAD `82e7112` 与 validation `425b1f7765ad18f836ef96a942d4aa0cad8e9413` 的业务内容一致，配套候选仍为 `29f022aea423f4f6f796e756ce0c5c56838f5429`。旧 P2 的成功/受控失败/调用者 trap 隔离证据已核对；上游 v5 核心设计要求、规则、模板及元数据保留。未发现新 P1/P2 或有证据支持的重复实现/可避免工程债，返回 `record-review approved`；主 Agent 接受该决定。只读 `git diff --quiet <validation> HEAD -- . ':(exclude).sdlc-v1/**'`、累计 `git diff --check` 及指定上游文件 `git diff --exit-code` 均 exit 0，未重复跑不变套件。真实外部模型、live 控制/OS 回收仍为 NOT_RUN；实际双 main 交付与原工作区旧入口还须 Ship 核对。
 
 ## 发布与观察记录（实际）
 
