@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+## [5.0.0] — 2026-11-10
+
+### Changed
+
+- 非简单架构工作检查已确认操作、例子和已有实现中的稳定机制与真实变化；适用时在规划、工程模板和评审中落实核心模型、共享执行、扩展边界及代表性验证。一次性修改保持简洁，不强制引入 DSL 或插件框架。
+
+### Compatibility / Upgrade
+
+- 这是流程与验收要求的变化：适用的新建或实质更新 Plan 及 Review 需要这些设计和证据，尚未完成的工作可能需要补充核心契约、共享执行或变体验证。无需批量改写已发布或历史上下文；进行中的工作按 [context-prose-and-evidence-applicability](skills/sdlc/references/stage-agent-protocol.md#context-prose-and-evidence-applicability) 判断已有证据是否仍覆盖当前要求，不能仅凭业务 commit 未变认定充分。
+- 公共 lifecycle CLI、`state_version=3` 和 `.sdlc-v1/` 结构保持不变，无需状态迁移。
+- 两个有界场景仅用于规划检查，未实现为产品；不据此声称所有项目的质量、token 消耗或性能得到改善。
+
 ## [4.3.3] — 2026-11-08
 
 ### Changed
