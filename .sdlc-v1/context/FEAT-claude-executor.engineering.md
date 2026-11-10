@@ -227,7 +227,7 @@ Task 无其它 Task 依赖。主 Agent 先接受本计划、依次 start-feature
 
 ## 实现记录（实际）
 
-- **状态**：Build 已由主 Agent 接受；Task 已完成，未启动 provider。实际文件范围见 Git diff：主仓接入参考、入口、usage、fixture 定义和 Unreleased；配套仓修改公共驱动路由及归属，删除旧三文件并更新审计中的活动建议。
+- **状态**：旧 Build 曾由主 Agent 接受；因下述评审发现和并发上游集成，主 Agent 已重开同一 Task，本轮修正待验收。未启动 provider。实际文件范围见 Git diff：主仓接入参考、入口、usage、fixture 定义和 Unreleased；配套仓修改公共驱动路由及归属，删除旧三文件并更新审计中的活动建议。
 - **Task**：`TASK-claude-execution-consolidation`；只有主 Agent 可修改生命周期状态。源码候选 commit 对在固定提交后由主 Agent 核对；本记录不宣称独立阶段或发布完成。
 
 ## 验证记录（实际）
@@ -238,6 +238,13 @@ Task 无其它 Task 依赖。主 Agent 先接受本计划、依次 start-feature
 - **结果 fixture 自检**：隔离 Git 版本 A `841e1132473347ce8595f7ac06a2b5d7c7d2d520` 的 artifact 为 `expected`，对应实际 `test "$(cat artifact.txt)" = expected` exit 0；版本 B `07fbed1351545fe034f6865e111eb21b03b1f990` artifact 为 `changed`，旧检查不覆盖 B。三份 TASK 形状输入按实际文件核对：A 的完整候选可接受；缺命令证据和以 A 日志声称 B 的候选拒收，state 前后 `cmp` 相同。首次检查命令在 zsh 中的变量冒号展开使 `git show` 失败；全新 fixture 使用 Bash 和 `${revision}:artifact.txt` 后 exit 0。不同 SHA 本身不是拒绝等价输入的依据。
 - **合成场景自检**：原生无外部依赖、普通独立任务不创建 Feature；缺能力/授权报告而不启动或隐式 consent。仍运行等待原 turn，已结束读取结果，未知报告不推断终止；缺证据交同一实现者，取消时保留证据并仅处理核对归属的资源，恢复保留停止、授权、失败和诊断限制。以上是实现者依据文档作的决策核对，不是独立执行。
 - **缺口**：独立 Validate/Review 和双 main 交付尚待执行；真实 Claude/provider/tmux launch、converse、stop 与模型任务 `NOT_RUN`。上述自检不证明模型身份、独立性或真实资源回收。
+
+### 并发集成与修正自检（2026-11-10）
+
+- 输入为主仓 `16d487c17e962cddc8aa7020005ac99cc453d06d` 的工作树加主 Agent 已启动的 `41f48798c17a5f62d67a99cbb03c578a5b5dba56` merge；配套仓 `29f022aea423f4f6f796e756ce0c5c56838f5429`、工作树干净。保留上游自动暂存的规则、模板和 v5.0.0 元数据；`git diff 41f48798... --` 上述六个文件 exit 0 且为空，Python 对 CHANGELOG 的 5.0.0 全章节逐字比较 exit 0；Unreleased 的本任务条目也保留。旧验证只属于旧候选。
+- `docs/testing.md` 修正 P2：专属 fixture 在成功时清理，失败时打印路径并保留目录，以原退出状态返回；临时根采用 `${TMPDIR:-/tmp}`。从文档实际提取配方并调用真实 csd：正常路径 exit 0，默认 wait exit 1、旧基线 wait exit 0，目录已删除；在比较前受控修改 `events.before` 的路径 exit 1，meta、events、两个前后快照均存在且差异可读，核对后只删除该测试目录。首轮以非登录 shell 启动时 PATH 缺 Node，exit 127 并成功保留目录；检查其 meta 后清理，使用实际登录环境在全新目录完成两项检查。
+- 集成工作树 `bash scripts/validate-skills` 沙箱外执行 exit 0，40、7、5、36、12 项共 100 项通过；Hallmark 的 HTTPError ResourceWarning 未使测试失败。沙箱内 `ps` 因权限失败，沙箱外只读 `ps -ax -o pid=,command= | rg '[t]est_hallmark_catalog.py|[s]cripts/validate-skills' || true` exit 0 且无匹配，未停止共享进程。`git diff --check` exit 0；合并冲突标记检查无匹配。
+- 按 v5 核心模型及代表性场景复核：router/Codex 默认原生而 CLI 只有明确选择及授权时主 Agent 直接控制；两者共用阶段 brief/result、状态与独立性合同。适配的等待、读取、取消及未知状态分支符合 SCN-1～3、6～8；缺证据、错业务版本和越出 brief 的转换请求依现有协议拒收，等价输入按适用性判断。旧的实际 Git/artifact/log fixture 对未改的结果合同仍有意义，但不代替本集成候选的独立 Validate。上述是实现者自检，不是独立 Review 或 live 执行。
 
 ### 独立 Validate（实际，2026-11-10 14:20–14:23 +08）
 

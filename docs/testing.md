@@ -45,25 +45,42 @@ node --test skills/sdlc-prototype/assets/shared-state/runtime.test.cjs
 ## Claude CLI 适配：无 provider 检查
 
 下面是一次性、可丢弃的输入，不启动 Claude、tmux、provider，不发送 prompt、不执行 `grant-consent` 或 `stop`。
-运行前将 `plugin_root` 设为实际安装的 `driving-claude-code-sessions` 目录；不要改 HOME 或共享会话。每次使用新的专属临时目录；
-保留失败证据后只清理该目录。事件检查从配套仓根目录运行：
+下面从配套仓根目录运行；其他安装位置需将 `plugin_root` 改为实际的 `driving-claude-code-sessions` 目录。不要改 HOME 或共享会话。
+每次使用新的专属临时目录；成功时自动清理，失败时打印并保留目录，检查必要证据后只清理该目录。
 
 ```bash
-fixture_dir=$(mktemp -d /private/tmp/csd-wait-fixture.XXXXXX)
-trap 'rm -rf -- "$fixture_dir"' EXIT
+(
+set -e
+fixture_dir=$(mktemp -d "${TMPDIR:-/tmp}/csd-wait-fixture.XXXXXX")
+cleanup_fixture() {
+  fixture_exit=$?
+  trap - EXIT
+  if [ "$fixture_exit" -eq 0 ]; then
+    rm -rf -- "$fixture_dir" || exit 1
+  else
+    printf 'Fixture failed; evidence retained at %s\n' "$fixture_dir" >&2
+  fi
+  exit "$fixture_exit"
+}
+trap cleanup_fixture EXIT
+printf 'Fixture directory: %s\n' "$fixture_dir"
 plugin_root="$PWD/.agents/skills/driving-claude-code-sessions"
-printf '%s\n' '{"tmux_name":"fixture","session_id":"fixture-session","cwd":"/private/tmp","harness":"claude"}' > "$fixture_dir/fixture-session.meta"
-printf '%s\n' '{"session_id":"fixture-session","hook_event_name":"Stop","cwd":"/private/tmp"}' | CSD_WORKER_DIR="$fixture_dir" node "$plugin_root/dist/emit-event.cjs"
+printf '%s\n' '{"tmux_name":"fixture","session_id":"fixture-session","cwd":"/","harness":"claude"}' > "$fixture_dir/fixture-session.meta"
+printf '%s\n' '{"session_id":"fixture-session","hook_event_name":"Stop","cwd":"/"}' | CSD_WORKER_DIR="$fixture_dir" node "$plugin_root/dist/emit-event.cjs"
 cp "$fixture_dir/fixture-session.meta" "$fixture_dir/meta.before"
 cp "$fixture_dir/fixture-session.events.jsonl" "$fixture_dir/events.before"
 CSD_WORKER_DIR="$fixture_dir" "$plugin_root/scripts/csd" --worker fixture read-events
-CSD_WORKER_DIR="$fixture_dir" "$plugin_root/scripts/csd" --worker fixture wait-for-turn 1
-wait_exit=$?
+if CSD_WORKER_DIR="$fixture_dir" "$plugin_root/scripts/csd" --worker fixture wait-for-turn 1; then
+  wait_exit=0
+else
+  wait_exit=$?
+fi
 printf 'default wait exit: %s\n' "$wait_exit"
 [ "$wait_exit" -eq 1 ] || exit 1
 CSD_WORKER_DIR="$fixture_dir" "$plugin_root/scripts/csd" --worker fixture wait-for-turn 1 --after-line 0 || exit 1
 cmp "$fixture_dir/meta.before" "$fixture_dir/fixture-session.meta" || exit 1
 cmp "$fixture_dir/events.before" "$fixture_dir/fixture-session.events.jsonl" || exit 1
+)
 ```
 
 预期默认等待 exit 1、指定旧基线 exit 0 并返回已有 stop，meta/events 内容不变。核对固定 bundle 的 `cmdConverse` 超时返回与
