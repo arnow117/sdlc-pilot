@@ -50,6 +50,9 @@ description: >
 
 对应方式服从本节既有的 `PASS`、`IMPLEMENTATION_FAILED`、`ENV_BLOCKED` 和 `INCONCLUSIVE` 语义；表格只在确有区分证据的需要时才使用，不是新的通过前提。
 
+- 同时核对当前 Task 完成条件中的命令、期望退出码及关键输出/行为是否实际满足，并关联到现有验收证据，不重建第二张完成表。自动检查通过不能替代已声明的人工、视觉或实际使用条件；必要观察尚缺时保持未通过并标明缺口。
+- 计划命令不存在、环境不可用或判据无法执行时，按验证归因报告事实；不擅自删除条件、降低阈值或用仅检查文件存在的命令冒充行为验证。等效检查改变验证策略时，先按阶段协议处理方案和 brief。
+
 验证之后如果产品或工程上下文的文字发生实质语义变化，主 Agent 按
 [context-prose-and-evidence-applicability](../sdlc/references/stage-agent-protocol.md#context-prose-and-evidence-applicability)
 判断既有结果对当前要求是否仍适用；本节不创建额外状态或自动失效规则。

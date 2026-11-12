@@ -24,7 +24,7 @@ description: >
    完成同 Feature 写入者交接、工程上下文决定和受控修正后，用实际 worktree 重新发送完整 brief。
 4. 对当前流程中新规划的非简单 Feature，确认研发上下文已经记录复用评估及决定；若缺失，或实现前发现候选框架、依赖能力与原评估明显不符，返回 `sdlc-plan` 更新设计，不在 build 阶段临时拍板引入框架。
 5. 读取 [`Global usage-document, story, and parameter contract`](../sdlc/references/lifecycles/software-delivery.md#11-global-usage-document-story-and-parameter-contract)；若本 Task 影响用户可见操作，同步更新唯一 usage 入口及其详细参数/操作链接。
-6. 选择一个依赖已完成的 Task；不要同时修改多个相互覆盖的 Task。
+6. 选择一个依赖已完成的 Task；不要同时修改多个相互覆盖的 Task。首次写入前，按阶段协议的[规划基线与 STOP conditions](../sdlc/references/stage-agent-protocol.md#规划基线与-stop-conditions)复核本 Task 的规划基线、实际输入与依赖交付结果。主 Agent 的派工前检查不替代此时的核对；普通已接受依赖变化按协议判断适用性，不自行更新 SHA、扩大范围或把差异视为已获授权的重规划。
 7. 根据 `.sdlc-v1/project.md` 和 Git diff 加载相关角色卡与语言参考。
    涉及 Web 或 App 用户旅程时，按 [Web 验证约束](../sdlc/references/validate-modes/e2e.md#web) 或
    [App 验证约束](../sdlc/references/validate-modes/e2e.md#app) 落实当前有效方案中的测试资产、环境与产物归档准备，
@@ -56,6 +56,8 @@ description: >
 ## 调试
 
 遇到意外失败时，先形成可证伪假设，再做最小实验。不要连续堆叠无依据的修补。若发现产品规则缺口，停止当前 Task，将问题写回产品上下文并交给产品侧确认。
+
+命中 Task 特有停止条件时，使用阶段协议已有结果和证据字段返回实际观察、影响及所需决定/证据；不降低完成判据或绕过必要检查。范围内且不改变契约的普通适配可继续，完成输出说明其理由、影响和验证；实质方案变化交主 Agent 协调当前有效方案与完整 `supersedes`。非收敛判定、历史与诊断额度仅按协议 §5，不另以命令失败次数计数。
 
 ## 并行
 

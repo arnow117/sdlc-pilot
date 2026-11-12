@@ -36,6 +36,8 @@ Git 保存历史并负责跨 clone 同步。状态变化可以与相关文档或
 
 ## 2. 入口
 
+仅要求存量代码审计、体检或改进建议时，先进入 `sdlc-backlog` 的“存量代码审计来源”，按其中引用的方法只读分析；不因审计自动 init、创建 Requirement 或开始交付。已有 tracked 目标的查询、实现与正式评审仍服从当前阶段。选中维护结果并进入生命周期后，再执行下列初始化和项目测绘步骤。
+
 1. 确认目标仓库和请求范围。仅查询进度时只读已有状态及其引用；状态不存在就如实报告，不 init、不自动进入执行阶段。
 2. 未纳入已有 Requirement/Feature/Task 的小型、局部、可逆修改，可直接实现并做必要验证，不为此创建完整生命周期记录。用户明确要求完整流程、修改已有跟踪任务，或涉及跨客户端/服务端协同、公共协议兼容性、持久化及并发/恢复风险时，仍走对应 SDLC 阶段；不得拆小任务绕过这些条件。
 3. 确定进入生命周期后，若 `.sdlc-v1/state.json` 不存在，执行 `lifecycle_state.py --repo <repo> init`。
@@ -63,6 +65,7 @@ Git 保存历史并负责跨 clone 同步。状态变化可以与相关文档或
 | 当前意图或状态 | 主技能 | 主要输入 |
 |---|---|---|
 | 首次理解已有工程 | `sdlc-onboard` | 仓库源码 |
+| 存量代码审计、体检或改进建议 | `sdlc-backlog` 的存量代码审计来源 | 明确的仓库/包/分支范围、现有项目事实、代码与决策来源 |
 | 捕获、拆分、排序需求 | `sdlc-backlog` | 用户请求、产品上下文 |
 | Requirement 尚未 ready | `sdlc-spec` 或 `sdlc-product-design` | `product_context_ref` |
 | Requirement ready，尚无 Feature | `sdlc-plan` 或 `sdlc-software-delivery` | 产品上下文、项目上下文 |
