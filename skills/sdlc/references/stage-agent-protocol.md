@@ -385,6 +385,39 @@ the choice actually adopted; do not describe it as the user's personal selection
 Authorization to continue a Feature, stage, or all currently authorized work is
 not by itself delegation or confirmation of every unknown product decision.
 
+### Judgment boundary
+
+A choice must be decided by a person when no confirmed source or explicit
+delegation covers it and it would change public API external behavior, protocol
+or version compatibility, an authorization or ownership boundary, or a genuinely
+subjective product, interaction, or visual direction. Ordinary implementation
+choices under an existing contract — including minimal compliance fixes and
+reversible defaults — continue within the existing authorization: adopt batched
+recommended defaults and confirm exceptions only. For example, when an API
+already specifies that empty strings are rejected, adding that validation is not
+re-asked; changing it to accept them with undefined meaning is asked first.
+
+When a question is required, ask one decision question at a time. Each question
+names the person or owner who should decide it, and carries the completed
+analysis, a recommendation, the principal trade-offs, and
+the next action; other independent work may continue while it is open. No answer
+is not consent, and dependent acceptance or implementation does not advance from
+silence. Do not expand one question into a series of low-risk implementation
+questions.
+
+Escalations produced by the mandatory stop in
+[section 5](#5-evidence-git-and-mandatory-stop) use the `novel-human` vocabulary
+for the decision they need: name the owner who should act, the one concrete
+question, the completed analysis, the conflict or gap, and the options with their
+impacts. When no canonical conflict has been located, say so explicitly instead
+of inventing a conflict point or a new product decision. Those escalations travel through the existing `incomplete`/`blocked`
+results and `unresolved_items`/`context_updates` carriers, without new lifecycle
+states or result fields. The
+[planning baseline and STOP conditions](#规划基线与-stop-conditions) and section 5
+remain the only definitions of when a stop triggers and what its single bounded
+diagnosis and recovery allow; this section only names the vocabulary and does
+not copy, relax, or add thresholds to them.
+
 ### User-visible progress from existing evidence
 
 The main Agent gives concise progress at recovery/start, when a material choice

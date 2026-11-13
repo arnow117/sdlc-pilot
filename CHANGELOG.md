@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+## [5.2.0] — 2026-11-13
+
+### Added
+
+- 评审发现新增 `disposition` 处置词表：每条发现保留原字段并增加唯一 disposition（`preserves`/`settled`/`violates`/`novel-human`/`out-of-scope`），每类带判定语义与输出义务；与既有缺陷来源区分和计划与交付核对正交并存。
+- 阶段协议新增 Judgment boundary 小节：枚举必须交人决定的四类选择（公共 API 对外行为、协议/版本兼容性、授权或 ownership 边界、真正主观的产品/交互/视觉方向），已有契约下的普通实现选择按批量推荐默认继续、只确认例外，必须问时一次一个决定问题；非收敛升级沿用 §5 既有停止/诊断/恢复纪律。
+- sdlc-spec 完成条件新增持久规则写作人工清单：六个月测试加 R1–R5/R7 逐项检查，带正反例；不新增脚本，不补造来源未定义的 R6。
+
+### Compatibility
+
+- 公共 lifecycle CLI、`state_version=3`、既有发现字段、STOP results 与 `.sdlc-v1/` 结构保持不变：disposition 只是评审记录新增字段，非收敛升级仍走既有 `incomplete`/`blocked` 加 `unresolved_items`/`context_updates` 载体，不新增状态或结果字段。既有小节标题与锚点未变，各阶段到协议的引用保持可达。
+
 ## [5.1.0] — 2026-11-12
 
 ### Added
