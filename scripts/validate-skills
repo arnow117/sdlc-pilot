@@ -96,7 +96,7 @@ if python3 - <<'PY'
 from pathlib import Path
 import re
 
-roots = [Path("README.md"), Path("CLAUDE.md")]
+roots = [Path("README.md"), Path("CLAUDE.md"), Path("docs/testing.md")]
 roots.extend(Path("skills").rglob("*.md"))
 missing = []
 
@@ -136,7 +136,132 @@ for expected in \
 done
 ok "长期上下文协作约束已检查"
 
-echo "== 7. Stage agent orchestration =="
+echo "== 7. Project-level architecture constraint references =="
+# One checker for reference presence and anchor reachability of the shared
+# subsection; the same function runs on temporary fixture copies below so a
+# removed reference or unreachable anchor is rejected without editing the
+# real working tree.
+check_arch_constraint_refs() {
+  local shared=$1
+  shift
+  PYTHONDONTWRITEBYTECODE=1 python3 - "$shared" "$@" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+shared = Path(sys.argv[1]).resolve()
+scanned = [Path(p) for p in sys.argv[2:]]
+
+def slug(text):
+    return re.sub(r"[^\w\- ]", "", text.strip().lower()).replace(" ", "-")
+
+anchors = set()
+for line in shared.read_text(encoding="utf-8").splitlines():
+    heading = re.match(r"^#{1,6}\s+(.*?)\s*$", line)
+    if heading:
+        anchors.add(slug(heading.group(1)))
+
+errors = []
+required_anchor = "项目级架构约束"
+if required_anchor not in anchors:
+    errors.append(f"{shared}: 缺少共享小节锚点 #{required_anchor}")
+
+for path in scanned:
+    text = path.read_text(encoding="utf-8")
+    has_required_reference = False
+    for url in re.findall(r"\]\(([^)]+)\)", text):
+        if "#" not in url:
+            continue
+        target, fragment = url.split("#", 1)
+        resolved = (path.parent / target).resolve() if target else path.resolve()
+        if resolved != shared:
+            continue
+        if fragment not in anchors:
+            errors.append(f"{path}: 共享小节锚点不可达 #{fragment}")
+        if fragment == required_anchor:
+            has_required_reference = True
+    if not has_required_reference:
+        errors.append(f"{path}: 缺少到共享正文 #{required_anchor} 的引用")
+
+if errors:
+    print("\n".join(errors))
+    raise SystemExit(1)
+PY
+}
+
+arch_shared="$REF/lifecycles/software-delivery.md"
+arch_expected=(
+  "$ROOT/sdlc-software-delivery/SKILL.md"
+  "$ROOT/sdlc-onboard/SKILL.md"
+  "$ROOT/sdlc-plan/SKILL.md"
+  "$ROOT/sdlc-build/SKILL.md"
+  "$ROOT/sdlc-validate/SKILL.md"
+  "$ROOT/sdlc-review/SKILL.md"
+  "$REF/templates/PROJECT.md"
+  "$REF/templates/ENGINEERING.md"
+  "README.md"
+  "$arch_shared"
+)
+if check_arch_constraint_refs "$arch_shared" "${arch_expected[@]}"; then
+  ok "项目级架构约束引用与共享小节锚点已检查"
+else
+  err "项目级架构约束引用缺失或共享小节锚点不可达"
+fi
+
+arch_fixture=$(mktemp -d "${TMPDIR:-/tmp}/sdlc-arch-refs.XXXXXX") || {
+  err "无法创建项目级架构约束引用测试临时目录"
+  arch_fixture=""
+}
+if [ -n "$arch_fixture" ]; then
+  trap 'rm -rf "$arch_fixture"' EXIT
+  mkdir -p "$arch_fixture/sdlc-build" "$arch_fixture/sdlc/references/lifecycles" "$arch_fixture/sdlc/references/templates"
+  cp "$arch_shared" "$arch_fixture/sdlc/references/lifecycles/software-delivery.md"
+  cp "$ROOT/sdlc-build/SKILL.md" "$arch_fixture/sdlc-build/SKILL.md"
+  cp "$REF/templates/PROJECT.md" "$arch_fixture/sdlc/references/templates/PROJECT.md"
+
+  if check_arch_constraint_refs \
+    "$arch_fixture/sdlc/references/lifecycles/software-delivery.md" \
+    "$arch_fixture/sdlc-build/SKILL.md" \
+    "$arch_fixture/sdlc/references/templates/PROJECT.md"; then
+    ok "项目级架构约束引用正例已执行"
+  else
+    err "项目级架构约束引用正例失败"
+  fi
+
+  # Retain the labels and surrounding prose: only remove the required links.
+  python3 - "$arch_fixture/sdlc-build/SKILL.md" "$arch_fixture/sdlc-build/missing-ref.md" <<'PY'
+from pathlib import Path
+import re
+import sys
+
+source = Path(sys.argv[1]).read_text(encoding="utf-8")
+without_links = re.sub(
+    r"\[([^\]]+)\]\([^)]*software-delivery\.md#项目级架构约束\)",
+    r"\1",
+    source,
+)
+Path(sys.argv[2]).write_text(without_links, encoding="utf-8")
+PY
+  if check_arch_constraint_refs \
+    "$arch_fixture/sdlc/references/lifecycles/software-delivery.md" \
+    "$arch_fixture/sdlc-build/missing-ref.md"; then
+    err "删除必要引用的反例未被拒绝"
+  else
+    ok "删除必要引用反例已拒绝"
+  fi
+
+  sed 's/#项目级架构约束/#不存在的锚点/' \
+    "$arch_fixture/sdlc-build/SKILL.md" > "$arch_fixture/sdlc-build/bad-anchor.md"
+  if check_arch_constraint_refs \
+    "$arch_fixture/sdlc/references/lifecycles/software-delivery.md" \
+    "$arch_fixture/sdlc-build/bad-anchor.md"; then
+    err "失效目标锚点的反例未被拒绝"
+  else
+    ok "失效目标锚点反例已拒绝"
+  fi
+fi
+
+echo "== 8. Stage agent orchestration =="
 for expected in \
   "$ROOT/sdlc/SKILL.md:stage-agent-protocol.md" \
   "$REF/role-routing.md:stage-agent-protocol.md" \
@@ -221,7 +346,7 @@ checkpoint_fixture=$(mktemp -d "${TMPDIR:-/tmp}/sdlc-checkpoint-shape.XXXXXX") |
   checkpoint_fixture=""
 }
 if [ -n "$checkpoint_fixture" ]; then
-  trap 'rm -rf "$checkpoint_fixture"' EXIT
+  trap 'rm -rf "$checkpoint_fixture" "$arch_fixture"' EXIT
 
   cp "$REF/templates/CHECKPOINT.md" "$checkpoint_fixture/valid.md"
   if check_checkpoint_shape "$checkpoint_fixture/valid.md"; then
@@ -287,7 +412,7 @@ for forbidden in \
 done
 ok "阶段 Agent 编排形状和冲突反例已检查"
 
-echo "== 8. Portability =="
+echo "== 9. Portability =="
 for file in "$ROOT"/*/SKILL.md; do
   if grep -q "AskUserQuestion" "$file" && ! grep -q "text_mode" "$file"; then
     err "$file 使用 AskUserQuestion 但未声明 text_mode 降级"
@@ -295,7 +420,7 @@ for file in "$ROOT"/*/SKILL.md; do
 done
 ok "可移植性文本检查完成"
 
-echo "== 9. Focused tests =="
+echo "== 10. Focused tests =="
 for test_file in \
   scripts/test_lifecycle_state.py \
   scripts/test_backlog.py \

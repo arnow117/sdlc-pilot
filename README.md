@@ -110,6 +110,30 @@ Requirement 的产品行为、结果观察计划和 Requirement 回流；`*.engi
 repo-context 的 `sync`/`refine` 若会改动业务路径或长期文档，应在当前 Feature 的 validation 前完成；若在 validation
 之后进行，则建立单独的维护 Requirement，或在评审/发布前重新验证。SDLC 的 state 校验规则不为这些路径提供例外。
 
+### 项目级架构约束：建立、检查与修订
+
+**全局场景 ID：`SCN-project-architecture`。** 跨 Feature 长期有效的架构规范由项目负责人判断定稿；发现、确认、引用、
+检查与修订的唯一共享方法见
+[软件交付生命周期 §2 项目级架构约束](skills/sdlc/references/lifecycles/software-delivery.md#项目级架构约束)。
+产品规则与验收参数以当前 Requirement 的 `product_context_ref`（`.sdlc-v1/context/<requirement-id>.product.md`）为准，
+不在本节复制。
+
+- **建立或复用**：负责人在 canonical 正文（既有架构文档或现有规范的适当章节）提出或复用条目；`project.md` 只索引路径。
+  候选保留理由、范围与验证方式，现状未知、建议与已确认分开；确认指向人、具体内容/版本和适用范围。已有获确认规范时
+  复用同一正文与决定，不因新会话或新 Feature 重复要求批准。入口：`sdlc-onboard` 索引导航，`sdlc-plan` 关联设计与检查。
+- **阶段检查**：Plan 把适用条目与确认来源关联到设计/Task/计划验证；Build 在首次写入与实质变更时核对偏离；Review 读
+  原始规范与实际 diff 并沿用 disposition。确定性检查给实际命令结果，职责与抽象判断保留人工观察证据；未运行或缺失的
+  人工判断如实保留为缺口，不汇总成全部满足。
+- **例外与修订**：不合规实现先合规修复；有界例外记录理由、范围、批准与重访条件，不自动放宽全项目，也不改正文。
+  长期规则修订展示具体差异、理由与影响并由人确认；Feature 局部决定不自动升级为全项目规范。规范变更时按
+  [阶段协议证据适用性](skills/sdlc/references/stage-agent-protocol.md#context-prose-and-evidence-applicability)
+  复用或补验。
+
+恢复与边界：导航索引缺失或过期不跳过已知相关正文，直接核对当前范围内已知规范及确认来源；正文写者由主 Agent 在写入前
+指定，onboard 不编写或批准长期正文。同范围已确认来源相互矛盾、或与产品要求冲突时，列出具体 claim 与来源交负责人决定，
+依赖冲突的工作暂停，独立授权工作继续。存量项目缺规范时按当前改动涉及的模块边界补齐并确认必要约束；局部小改动无新
+架构决定时说明适用性即可。
+
 ## 技能体系
 
 | 层 | 内容 | 作用 |

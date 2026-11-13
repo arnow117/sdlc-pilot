@@ -47,6 +47,7 @@ Validation/证据位置。
 - 读取项目、产品和研发上下文，但只加载与本次 diff 有关的部分。
 - 上下文含相关图示时，按[图示辅助对齐](../sdlc/references/lifecycles/software-delivery.md#图示辅助对齐)核对图、正文、实现与已有证据；不以图的数量代替覆盖判断。
 - 按[核心模型与变化边界](../sdlc/references/lifecycles/software-delivery.md#核心模型与变化边界)判断适用性；适用时对照已声明的变化、核心契约、实现及代表性验证证据，检查真实变体是否共享机制、扩展是否符合接口，以及非法输入和既有行为是否得到覆盖。
+- 涉及项目级架构约束时，按 [`§2 项目级架构约束`](../sdlc/references/lifecycles/software-delivery.md#项目级架构约束)读原始规范、确认范围和实际 diff：违反适用条目用 `violates`，恢复适用权威用 `preserves`，无权威覆盖的新约束需求或权威冲突用 `novel-human`；批准当前交付不能反向批准长期规则，例外与正文修订按该节的有界流程处理。
 - 读取 [`sdlc-validate`](../sdlc-validate/SKILL.md#验收条件与证据对应) 对研发上下文验证/证据部分的要求，核对当前有效验收条件的覆盖缺口与实现版本；不复制或重建验收条件/结果/证据表。
 - 依照 [context-prose-and-evidence-applicability](../sdlc/references/stage-agent-protocol.md#context-prose-and-evidence-applicability)
   由主 Agent 先判断验证证据是否仍覆盖当前产品决定和当前有效方案；不把未变的业务 commit 当作自动证明。
@@ -91,7 +92,7 @@ disposition 与本文件既有两个分类维度正交并存、不互相取代�
 当前 review Agent 在已有输入范围内执行下列检查，不新增评审报告或结果表：
 
 1. 对照当前有效方案和 Task 完成条件，逐项核对期望结果与适用的独立 Validation 证据。不能以 Build 的“通过”代替独立验证；证据复用、缺口补验和阶段特有检查唯一遵循阶段协议 §5。没有输入变化或缺口时，不机械重跑全部完成命令。
-2. 将实际变更路径与允许写入范围及明确禁止改变的契约对照，读取本轮完整相关 diff；不只读 diff stat、摘要或新文件。源码、测试、配置、依赖和文档改动均须能追溯到当前 Task、验收条件或已接受方案；合理但无关的重构、格式化或清理仍按 scope drift 报告。
+2. 将实际变更路径与允许写入范围及明确禁止改变的契约对照，读取本轮完整相关 diff；不只读 diff stat、摘要或新文件。源码、测试、配置、依赖和文档改动均须能追溯到当前 Task、验收条件或已接受方案；合理但无关的重构、格式化或清理仍按 scope drift 报告。适用项目级架构约束时对照[项目级架构约束](../sdlc/references/lifecycles/software-delivery.md#项目级架构约束)的原始正文与确认范围核对实际 diff，偏离按 disposition 如实报告，不以记录理由自动授权。
 3. 按问题的实际意图、仓库范式和相关调用链判断是否解决目标。直接读取新增或改动测试的断言，按 [QA](../sdlc/references/roles/qa.md) 检查真实行为、回归与失败路径，避免空断言、只验证 mock 或平凡存在性检查。命令 exit 0 或覆盖率数字本身不能证明目标已覆盖。
 4. 对已记录的范围内适配，按观察事实、当前契约和证据判断，不因偏离最初步骤自动否决。未记录或无法追溯的偏离须澄清；记录理由不自动授权越界或修改产品条件。确需实质变更时先按当前有效方案、完整 `supersedes` 及合法状态规则处理，再完成必要 build → validate → review。
 

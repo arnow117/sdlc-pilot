@@ -26,7 +26,7 @@ description: >
 ## 流程
 
 1. 若 `.sdlc-v1/state.json` 不存在，先调用 `lifecycle_state.py --repo <repo> init`。
-2. 先读根 `AGENTS.md` 和当前代码范围内最近的 scoped `AGENTS.md`。若同时存在 `.repo-context/manifest.yaml` 与 `.repo-context/evidence.json`，读取当前 `HEAD`，并只在两份文件声明相同 `analyzedCommit`、相同 `evidenceDigest` 且该 commit 等于当前 `HEAD` 时，将它们作为已验证的长期上下文索引：读取其中列出的既有 canonical 文档路径。缺失、无法解析或不匹配时，标记为 `none` 或 `stale`，继续从源码和配置采集；不要调用、依赖或改写 repo-context 的脚本和文件。
+2. 先读根 `AGENTS.md` 和当前代码范围内最近的 scoped `AGENTS.md`。若同时存在 `.repo-context/manifest.yaml` 与 `.repo-context/evidence.json`，读取当前 `HEAD`，并只在两份文件声明相同 `analyzedCommit`、相同 `evidenceDigest` 且该 commit 等于当前 `HEAD` 时，将它们作为已验证的长期上下文索引：读取其中列出的既有 canonical 文档路径。缺失、无法解析或不匹配时，标记为 `none` 或 `stale`，继续从源码和配置采集；不要调用、依赖或改写 repo-context 的脚本和文件。索引 `none`/`stale` 不能跳过已知相关规范：按 [`§2 项目级架构约束`](../sdlc/references/lifecycles/software-delivery.md#项目级架构约束)直接核对当前范围内已知相关 canonical 正文、确认来源及适用性，把路径、状态与缺口记入 project 索引；onboard 只维护事实、路径和缺口，不编写或批准长期正文。
 3. 收集可验证事实：
    - 语言、框架、依赖和外部系统；
    - 启动入口、路由、CLI、数据入口；
@@ -70,7 +70,9 @@ surface map 中的角色取值来自角色卡目录，验证方式来自 `valida
 - 每个主要代码目录已归入一个 surface，或明确列为未归类。
 - 每个 surface 都有有效 globs、角色和验证方式。
 - 实际存在并已确认的测试、构建与类型检查命令均以实际命令记录；空仓库或未验证能力的六个 `commands` 值为 `none`，计划/`NOT_RUN` 在正文单列并记为风险。
-- 长期工程上下文只记录已验证路径与 commit，不复制正文；不可用时明确原因。
+- 长期工程上下文只记录已验证路径与 commit，不复制正文；不可用时明确原因。项目级架构约束的正文维护与确认归属见
+  [`§2 项目级架构约束`](../sdlc/references/lifecycles/software-delivery.md#项目级架构约束)：长期来源事实变化时 onboard
+  只局部刷新导航，不在本阶段确认或修订规范正文。
 - 只修改了 `.sdlc-v1/project.md`。
 
 完成后返回项目上下文路径、surface 数量、主要测试命令和建议的下一阶段。

@@ -24,7 +24,7 @@ description: >
    完成同 Feature 写入者交接、工程上下文决定和受控修正后，用实际 worktree 重新发送完整 brief。
 4. 对当前流程中新规划的非简单 Feature，确认研发上下文已经记录复用评估及决定；若缺失，或实现前发现候选框架、依赖能力与原评估明显不符，返回 `sdlc-plan` 更新设计，不在 build 阶段临时拍板引入框架。
 5. 读取 [`Global usage-document, story, and parameter contract`](../sdlc/references/lifecycles/software-delivery.md#11-global-usage-document-story-and-parameter-contract)；若本 Task 影响用户可见操作，同步更新唯一 usage 入口及其详细参数/操作链接。
-6. 选择一个依赖已完成的 Task；不要同时修改多个相互覆盖的 Task。首次写入前，按阶段协议的[规划基线与 STOP conditions](../sdlc/references/stage-agent-protocol.md#规划基线与-stop-conditions)复核本 Task 的规划基线、实际输入与依赖交付结果。主 Agent 的派工前检查不替代此时的核对；普通已接受依赖变化按协议判断适用性，不自行更新 SHA、扩大范围或把差异视为已获授权的重规划。
+6. 选择一个依赖已完成的 Task；不要同时修改多个相互覆盖的 Task。首次写入前，按阶段协议的[规划基线与 STOP conditions](../sdlc/references/stage-agent-protocol.md#规划基线与-stop-conditions)复核本 Task 的规划基线、实际输入与依赖交付结果。复核同时按 [`§2 项目级架构约束`](../sdlc/references/lifecycles/software-delivery.md#项目级架构约束)核对本 Task 适用条目及确认来源；发现偏离、缺口或候选约束时报告主 Agent，不在 Build 内定稿长期正文。主 Agent 的派工前检查不替代此时的核对；普通已接受依赖变化按协议判断适用性，不自行更新 SHA、扩大范围或把差异视为已获授权的重规划。
 7. 根据 `.sdlc-v1/project.md` 和 Git diff 加载相关角色卡与语言参考。
    涉及 Web 或 App 用户旅程时，按 [Web 验证约束](../sdlc/references/validate-modes/e2e.md#web) 或
    [App 验证约束](../sdlc/references/validate-modes/e2e.md#app) 落实当前有效方案中的测试资产、环境与产物归档准备，
@@ -45,7 +45,10 @@ description: >
    通过宿主已有消息能力做中途汇报：提供入口或产物引用、实际命令和验证范围、被测版本和工作区事实及已知缺口，并继续当前已授权执行。首个真实增量可以早于覆盖率汇总、格式化或提交收尾，但不能跳过该增量实际依赖的数据保护。
    该中途汇报不结束阶段、不重派 Task、不新增结果字段或进度记录，也不把未完成 Task 标为 `done`。若宿主不能中途发送消息，
    仅将同一报告延后到最近可响应点；执行者和降级条件仍唯一遵循该协议，不强制新消息工具。
-9. 把有长期价值的设计决定、代码位置变化和风险更新到研发上下文；涉及已有图示时遵循
+9. 把有长期价值的本 Feature 设计决定、代码位置变化和风险更新到研发上下文；需要成为项目级架构约束时，按
+   [项目级架构约束](../sdlc/references/lifecycles/software-delivery.md#项目级架构约束)的有界维护与确认流程交主 Agent
+   指派正文写者，Build 身份不自带长期正文维护权。实质变更涉及适用条目时核对并记录适用性、检查证据与偏离，不静默扩大例外范围。
+   涉及已有图示时遵循
    [图示辅助对齐](../sdlc/references/lifecycles/software-delivery.md#图示辅助对齐)的同步约定。
 10. 逐条核对完成条件与验收条件，记录实际检查命令和结果；满足后在 orchestrated mode 请求
    `set-task-status ... --status done`，只有独立、不在主 Agent 编排中的 standalone mode 才直接调用 CLI。

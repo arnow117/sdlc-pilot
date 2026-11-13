@@ -29,7 +29,7 @@ Feature 特有发现留在工程上下文，产品行为更新产品上下文；
 
 ## 流程
 
-1. 加载 `sdlc-software-delivery` 和 [`lifecycles/software-delivery.md`](../sdlc/references/lifecycles/software-delivery.md#11-global-usage-document-story-and-parameter-contract)；用户可见改动标明受影响的 usage 入口、故事/场景、参数来源和实际使用验证范围，内部改动则记录不适用理由。
+1. 加载 `sdlc-software-delivery` 和 [`lifecycles/software-delivery.md`](../sdlc/references/lifecycles/software-delivery.md#11-global-usage-document-story-and-parameter-contract)；用户可见改动标明受影响的 usage 入口、故事/场景、参数来源和实际使用验证范围，内部改动则记录不适用理由。涉及跨 Feature 长期有效的架构约束时，按 [`§2 项目级架构约束`](../sdlc/references/lifecycles/software-delivery.md#项目级架构约束)定位适用条目、确认来源和当前范围；本阶段不批准长期正文。
 2. 选择 Feature ID 与实际工作分支。登记 branch 后若需改到另一实际开发 worktree，遵循
    [`lightweight-runtime.md` 的开发分支登记迁移](../sdlc/references/lightweight-runtime.md#51-开发分支登记迁移)：
    先记录工程决定和预期 HEAD，由主 Agent 在同一 Feature 写入者交接后受控执行；不要在当前有效方案中把 branch
@@ -51,6 +51,7 @@ Feature 特有发现留在工程上下文，产品行为更新产品上下文；
    - 复用评估：需求、候选、证据、决定及未采用方案；
    - 可选原型的路径、版本和覆盖场景，以及实现/复用决定；原始产物由引用保留，不复制报告；
    - 满足当前验收条件的最简单设计与关键取舍；按[核心模型与变化边界](../sdlc/references/lifecycles/software-delivery.md#核心模型与变化边界)检查已确认的操作、例子与已有实现并判断适用性，适用时在现有设计与验收关联中记录真实变体、核心契约、扩展方式和代表性验证；不适用时简述理由；
+   - 适用项目级架构约束时，按[项目级架构约束](../sdlc/references/lifecycles/software-delivery.md#项目级架构约束)把适用条目、确认来源和检查方式接入现有“验收条件 → 设计/契约 → Task → 计划验证”关联；存量缺规范的按当前改动涉及的模块边界以候选交主 Agent，由负责人确认具体内容与范围，未决只暂停依赖工作；
    - 需要时使用软件交付生命周期定义的轻量设计决定，并建立一处“当前验收条件 → 设计/契约 → Task → 计划验证”的紧凑关联；规则、schema、接口和验收条件保留各自唯一权威定义，其他位置引用而不复述。新 Feature 可先写计划 Task，`add-task` 后改用实际 Task ID；
    - 按[最早真实增量协议](../sdlc/references/stage-agent-protocol.md#earliest-real-increment)，在既有的“实施计划”阶段或
      “工程任务”用户故事条目中，用简短说明点名最早可检验结果、对应 Task（未登记时为计划 Task）及检查或复现方式；
@@ -80,6 +81,7 @@ Feature 特有发现留在工程上下文，产品行为更新产品上下文；
 - 每条当前验收条件都有适当的设计或契约、计划 Task（已登记时为实际 Task ID）和计划验证关联；这不在 `start-feature` 或 `add-task` 前要求已有 Task，也不改变既有创建顺序；简单需求不必为此添加 ID 或表格。
 - 既有的实施阶段或用户故事条目明确点名最早可检验结果、对应 Task 和检查或复现方式，或记录无独立增量的实际依赖原因；不要仅从 Task 排序推断该结果。
 - 设计、Task、兼容性处理和计划验证没有遗漏、矛盾或未经授权的 scope expansion；适用的核心模型与变化边界有可执行的设计及代表性验证关联，架构说明或实现顺序仍在同一个当前有效方案内。
+- 适用项目级架构约束的条目关联了确认来源与检查方式；未经确认的约束保持候选并标明影响范围，与产品要求或既有规范的冲突已列明 claim 与来源，未决冲突只暂停依赖它的工作。
 - 零会话上下文的执行者能从本次 brief、可访问的权威上下文和仓库执行本 Task；必要引用在实际执行 worktree 可读。当前摘录由规划者自己核对，路径、符号、范例和决定来源准确，不用旧报告代替现状。
 - 规划基线能定位实际输入；每个 Task 的范围、相关依赖、完成检查与期望结果、特有停止条件明确。自动检查之外仍需人工、视觉或真实使用判断时，写明可观察判据、证据和确认责任，不伪造成命令成功即可通过。
 - 对风险或尚存歧义确需独立读计划时，按阶段协议派发新上下文的有界只读分析；仅作候选输入，由主 Agent 接受。运行时不能创建独立上下文时披露限制，不以自读冒充独立评审，不为每个小改动固定新增一次评审。

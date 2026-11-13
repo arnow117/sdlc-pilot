@@ -11,6 +11,9 @@ description: >
 [`lifecycles/software-delivery.md`](../sdlc/references/lifecycles/software-delivery.md)。
 涉及用户可见操作时，各阶段还必须加载其中的
 [`Global usage-document, story, and parameter contract`](../sdlc/references/lifecycles/software-delivery.md#11-global-usage-document-story-and-parameter-contract)。
+规划、实现与评审还按当前阶段加载其中的
+[`§2 项目级架构约束`](../sdlc/references/lifecycles/software-delivery.md#项目级架构约束)：
+建立或复用项目级架构规范、阶段检查与例外/修订的唯一方法在该小节，各阶段入口只在自身触发时加载它，本技能不复制其规则。
 
 ## Orchestrated mode
 
