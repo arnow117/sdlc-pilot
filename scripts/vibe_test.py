@@ -10,6 +10,7 @@ import os
 import re
 import shutil
 import random
+import stat
 from pathlib import Path
 import sys
 import tempfile
@@ -22,13 +23,35 @@ except ImportError:
 Z = 1.959963984540054
 
 
+def read_file(path):
+    path = Path(path)
+    reject_links(path)
+    flags = os.O_RDONLY | os.O_NONBLOCK | getattr(os, 'O_NOFOLLOW', 0)
+    fd = os.open(path, flags)
+    try:
+        if not stat.S_ISREG(os.fstat(fd).st_mode):
+            raise ValueError(f'expected regular file: {path}')
+        with os.fdopen(fd, 'rb') as stream:
+            fd = None
+            return stream.read()
+    finally:
+        if fd is not None:
+            os.close(fd)
+
+
 def digest(path):
-    return hashlib.sha256(path.read_bytes()).hexdigest()
+    return hashlib.sha256(read_file(path)).hexdigest()
+
+
+def copy_regular(source, destination):
+    Path(destination).write_bytes(read_file(source))
+    shutil.copystat(source, destination, follow_symlinks=False)
+    return destination
 
 
 def read_json(path):
     try:
-        return json.loads(Path(path).read_bytes().decode('utf-8'))
+        return json.loads(read_file(path).decode('utf-8'))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError, RecursionError) as exc:
         raise ValueError(f'invalid UTF-8 JSON: {path}: {exc}') from exc
 
@@ -153,9 +176,16 @@ def collect(source, out):
     if not isinstance(data, dict) or data.get('kind') != 'synthetic' or not isinstance(data.get('trials'), list):
         raise ValueError('only synthetic results may be collected')
     out.mkdir(parents=True)
-    (out / 'results.json').write_bytes(source.read_bytes())
+    (out / 'results.json').write_bytes(read_file(source))
     write_json(out / 'collection.json', {'kind': 'synthetic', 'source': str(source), 'sha256': digest(source), 'model_runs': 0, 'live_verified': False})
     return 0
+
+
+def quality_complete(trial):
+    return (trial['status'] in ('pass', 'fail', 'timeout')
+            and trial.get('started') is True
+            and trial.get('integrity') == 'ok'
+            and (trial['status'] == 'timeout' or trial.get('required_checks') == 'complete'))
 
 
 def report(source, out, strict):
@@ -186,17 +216,12 @@ def report(source, out, strict):
     summaries = []
     complete = True
     batch_integrity_violation = any(trial.get('integrity') == 'violation' for trial in trials)
+    deterministic_complete = len(ids) == len(slot_map) and all(quality_complete(trial) for trial in trials)
     for task in sorted(set(slot['task'] for slot in slots)):
         groups = {}
         for arm in ('control', 'treatment'):
             rows = [t for t in trials if t['task'] == task and t['arm'] == arm]
-            quality = [
-                trial for trial in rows
-                if trial['status'] in ('pass', 'fail', 'timeout')
-                and trial.get('started') is True
-                and trial.get('integrity') == 'ok'
-                and (trial['status'] == 'timeout' or trial.get('required_checks') == 'complete')
-            ]
+            quality = [trial for trial in rows if quality_complete(trial)]
             passed = sum(t['status'] == 'pass' for t in quality)
             gaps = [t for t in rows if t not in quality or t.get('judge') != 'complete']
             expected = [slot for slot in slots if slot['task'] == task and slot['arm'] == arm]
@@ -214,7 +239,7 @@ def report(source, out, strict):
             }
         t, c = groups['treatment'], groups['control']
         difference = None
-        severe = batch_integrity_violation
+        severe = batch_integrity_violation or not deterministic_complete
         if t['quality_denominator'] and c['quality_denominator'] and not severe:
             interval = newcombe(t['pass'], t['quality_denominator'], c['pass'], c['quality_denominator'])
             interpretation = (
@@ -348,7 +373,7 @@ def build_trials(tasks, repetition, target, permissions, limits, required_dimens
 
 def plan(config_path, out):
     config_path = input_path(str(config_path), Path.cwd())
-    config_bytes = config_path.read_bytes()
+    config_bytes = read_file(config_path)
     try:
         data = json.loads(config_bytes.decode('utf-8'))
     except (UnicodeDecodeError, json.JSONDecodeError, RecursionError) as exc:
@@ -367,7 +392,7 @@ def plan(config_path, out):
         if not path.is_file() or path.name in seen:
             raise ValueError('documents must be distinct regular files with unique names')
         seen.add(path.name)
-        raw_document = path.read_bytes()
+        raw_document = read_file(path)
         documents.append({'path': str(path), 'name': path.name,
                           'sha256': hashlib.sha256(raw_document).hexdigest(),
                           'snapshot_base64': base64.b64encode(raw_document).decode('ascii')})
@@ -518,7 +543,7 @@ def prepare(plan_path, trial_id, out, host_context=None):
     sources = [plan_path, Path(data['battery_path']).parent] + [Path(d['path']) for d in data['documents']]
     ensure_output(out, sources)
     out.mkdir(parents=True)
-    shutil.copytree(task['public'], out / 'public', symlinks=False)
+    shutil.copytree(task['public'], out / 'public', symlinks=False, copy_function=copy_regular)
     if trial['arm'] == 'treatment' and data['documents']:
         (out / 'documents').mkdir()
         for doc in data['documents']:
@@ -586,7 +611,7 @@ def collect_trial(plan_path, trial_id, receipt_path, submission, out, host_conte
         'note': 'No submission code executed; native receipt and host evidence require independent verification.',
     }
     out.mkdir(parents=True)
-    (out / 'receipt.json').write_bytes(receipt_path.read_bytes())
+    (out / 'receipt.json').write_bytes(read_file(receipt_path))
     write_json(out / 'result.json', result)
     return 0
 
@@ -613,7 +638,12 @@ def load_records(results_dir, plan_path, data):
         if digest(raw_receipt) != result.get('receipt_sha256') or read_json(raw_receipt) != result.get('native_receipt'):
             raise ValueError('raw receipt digest mismatch')
         current_submission = input_path(result['submission_path'], Path.cwd())
-        result['_submission_changed'] = checked_tree(current_submission) != result.get('submission_tree')
+        stored_tree = result.get('submission_tree')
+        if not isinstance(stored_tree, dict) or snapshot_hash(stored_tree) != result.get('submission_tree_sha256'):
+            raise ValueError('stored submission snapshot digest mismatch')
+        current_tree = checked_tree(current_submission)
+        result['_submission_changed'] = current_tree != stored_tree
+        result['_current_submission_tree_sha256'] = snapshot_hash(current_tree)
         result['_result_path'] = str(path)
         result['_result_sha256'] = digest(path)
         records.append(result)
@@ -691,7 +721,7 @@ def report_plan(plan_path, results_dir, out, strict, judge_result=None, judge_ma
         if live:
             native, score = vibe_host.verify_scored(
                 host_context, digest(plan_path), data, trial, raw,
-                record['receipt_sha256'], record['submission_tree_sha256'],
+                record['receipt_sha256'], record['_current_submission_tree_sha256'],
             )
             if native != record.get('normalized_receipt') or score != record.get('host_score'):
                 raise ValueError('collected host evidence changed')
@@ -803,7 +833,7 @@ def report_plan(plan_path, results_dir, out, strict, judge_result=None, judge_ma
         source = Path(temp).resolve() / 'raw.json'
         write_json(source, {'kind': 'synthetic', 'trials': rows, 'expected_slots': slots})
         report(source, out, False)
-        shutil.copyfile(source, out / 'raw-results.json')
+        (out / 'raw-results.json').write_bytes(read_file(source))
     path = out / 'report.json'
     summary = read_json(path)
     summary['source'] = str(out / 'raw-results.json')
@@ -819,10 +849,7 @@ def report_plan(plan_path, results_dir, out, strict, judge_result=None, judge_ma
     summary['deterministic_complete'] = (
         len(rows) == len(slots)
         and not problems
-        and all(row['started'] and row['integrity'] == 'ok'
-                and row['status'] in ('pass', 'fail', 'timeout')
-                and (row['status'] == 'timeout' or row['required_checks'] == 'complete')
-                for row in rows)
+        and all(quality_complete(row) for row in rows)
     )
     if live:
         summary['model_runs'] = None
@@ -968,6 +995,8 @@ def judge_prepare(plan_path, results_dir, out, host_context=None):
     cases = []
     mapping = {}
     for record in records:
+        if record['_submission_changed']:
+            raise ValueError('submission changed after collection')
         if not live and not record.get('synthetic'):
             raise ValueError('live submissions cannot be placed in synthetic judge payload')
         trial = get_trial(data, record['trial_id'])
@@ -978,27 +1007,33 @@ def judge_prepare(plan_path, results_dir, out, host_context=None):
         submission = input_path(record['submission_path'], Path.cwd())
         if checked_tree(submission) != record['submission_tree']:
             raise ValueError('submission changed after collection')
+        receipt = record['native_receipt']
+        if live:
+            native, score = vibe_host.verify_scored(
+                host_context, digest(plan_path), data, trial, receipt,
+                record['receipt_sha256'], record['_current_submission_tree_sha256'],
+            )
+            if native != record.get('normalized_receipt') or score != record.get('host_score'):
+                raise ValueError('collected host evidence changed')
+            receipt = score
         files = []
         for name, entry in sorted(record['submission_tree'].items()):
             if entry['type'] != 'file':
                 continue
-            content = (submission / name).read_bytes().decode('utf-8')
+            content_bytes = read_file(submission / name)
+            if hashlib.sha256(content_bytes).hexdigest() != entry['sha256']:
+                raise ValueError('submission changed while preparing judge input')
+            content = content_bytes.decode('utf-8')
             if labels.search(name) or labels.search(content) or record['trial_id'] in content:
                 raise ValueError('submission contains identifying labels; anonymous judge blocked')
             files.append({'path': name, 'content': content})
         contracts = []
         for name, entry in sorted(task['public_tree'].items()):
             if entry['type'] == 'file' and Path(name).name == 'contract.md':
-                contracts.append((public / name).read_text(encoding='utf-8'))
-        receipt = record['native_receipt']
-        if live:
-            native, score = vibe_host.verify_scored(
-                host_context, digest(plan_path), data, trial, receipt,
-                record['receipt_sha256'], record['submission_tree_sha256'],
-            )
-            if native != record.get('normalized_receipt') or score != record.get('host_score'):
-                raise ValueError('collected host evidence changed')
-            receipt = score
+                contract_bytes = read_file(public / name)
+                if hashlib.sha256(contract_bytes).hexdigest() != entry['sha256']:
+                    raise ValueError('public input changed while preparing judge input')
+                contracts.append(contract_bytes.decode('utf-8'))
         dimensions = receipt.get('dimensions')
         if labels.search(json.dumps(dimensions, ensure_ascii=False)):
             raise ValueError('deterministic evidence contains identifying labels')
@@ -1079,8 +1114,8 @@ def judge_collect(payload_path, ratings_path, out, host_context=None, plan_path=
         raise ValueError('judge ratings missing')
     out.mkdir(parents=True)
     if live:
-        (out / 'native-receipt.json').write_bytes(native_receipt_path.read_bytes())
-        (out / 'ratings.json').write_bytes(ratings_path.read_bytes())
+        (out / 'native-receipt.json').write_bytes(read_file(native_receipt_path))
+        (out / 'ratings.json').write_bytes(read_file(ratings_path))
     write_json(out / 'judge-result.json', {'kind': 'host judge result' if live else 'synthetic judge result',
                'model_runs': None if live else 0, 'model_runs_started_by_script': 0,
                'live_verified': False, 'payload_sha256': digest(payload_path),

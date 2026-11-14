@@ -3,6 +3,7 @@ import copy
 import json
 import math
 import hashlib
+import os
 import shutil
 import subprocess
 import sys
@@ -37,6 +38,63 @@ class CoreTests(unittest.TestCase):
                 self.core.read_json(p)
             with self.assertRaises(ValueError):
                 self.core.check_output(BATTERY, BATTERY.parent)
+
+    def test_cli_rejects_nonregular_inputs_without_creating_output(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            fifo = root / 'input.fifo'
+            os.mkfifo(fifo)
+            for command, argument in (('collect', '--results'), ('plan', '--config')):
+                with self.subTest(command=command):
+                    out = root / f'out-{command}'
+                    proc = subprocess.run(
+                        [sys.executable, '-B', str(SCRIPT), command, argument, str(fifo), '--out', str(out)],
+                        capture_output=True, text=True, timeout=2,
+                    )
+                    self.assertNotEqual(proc.returncode, 0)
+                    self.assertFalse(out.exists())
+                    self.assertTrue(fifo.exists())
+            regular = root / 'regular.json'
+            regular.write_text('{"kind": "synthetic", "trials": []}')
+            link = root / 'link.json'
+            link.symlink_to(regular)
+            for source in (link, root):
+                with self.subTest(source=source):
+                    out = root / f'out-{source.name}'
+                    proc = subprocess.run(
+                        [sys.executable, '-B', str(SCRIPT), 'collect', '--results', str(source), '--out', str(out)],
+                        capture_output=True, text=True, timeout=2,
+                    )
+                    self.assertNotEqual(proc.returncode, 0)
+                    self.assertFalse(out.exists())
+            self.assertEqual(self.core.collect(regular, root / 'ordinary'), 0)
+
+    def test_legacy_report_stops_batch_on_missing_or_facility_failure(self):
+        source = ROOT / 'examples/vibe-battery-v1/private/report-cases/complete.json'
+        original = json.loads(source.read_text())
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp).resolve()
+            for case in ('complete', 'missing', 'facility_failure'):
+                with self.subTest(case=case):
+                    data = copy.deepcopy(original)
+                    if case == 'missing':
+                        data['trials'].pop(0)
+                    elif case == 'facility_failure':
+                        data['trials'][0]['status'] = 'facility_failure'
+                    path = root / f'{case}.json'
+                    path.write_text(json.dumps(data))
+                    self.assertEqual(self.core.report(path, root / case, False), 0)
+                    summary = json.loads((root / case / 'report.json').read_text())
+                    if case == 'complete':
+                        self.assertTrue(all(item['difference'] for item in summary['results']))
+                        interval = summary['results'][0]['difference']['newcombe95']
+                        self.assertAlmostEqual(interval[0], -.3158006844, places=9)
+                        self.assertAlmostEqual(interval[1], .7177751119, places=9)
+                    else:
+                        self.assertTrue(all(item['difference'] is None and item['comparison_stopped']
+                                            for item in summary['results']))
+                        groups = [arm for item in summary['results'] for arm in item['arms'].values()]
+                        self.assertTrue(any(group['gaps'] for group in groups))
 
     def test_oracle_and_relaxed_checker_detection(self):
         with tempfile.TemporaryDirectory() as temp:

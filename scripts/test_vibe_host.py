@@ -1,4 +1,5 @@
 """Controlled host contract tests. Stub evidence only; no model or MCP calls."""
+import copy
 import hashlib
 import json
 import tempfile
@@ -295,6 +296,8 @@ class HostContractTests(unittest.TestCase):
                     expected = state['scores'][facts['trial_id']]
                     result['native_receipt_sha256'] = expected['receipt_sha256']
                     result['scorer'] = expected['score']
+                    if state.get('tamper_during_scoring'):
+                        state['tamper_during_scoring'].write_text('replacement during scoring')
                 if stage == 'judge_collect':
                     result.update(judge_independent=True, judge_payload_sha256=state['judge_payload'], native_receipt_sha256=state['judge_receipt'], ratings_sha256=state['ratings_sha'], judge_target={'providerInstanceId': 'judge-provider', 'model': 'judge-model', 'options': {}})
                 if stage == 'compare':
@@ -433,6 +436,52 @@ class HostContractTests(unittest.TestCase):
                 timeout_task = next(item for item in data['results'] if item['task'] == timeout_trial['task'])
                 timeout_arm = timeout_task['arms'][timeout_trial['arm']]
                 self.assertEqual((timeout_arm['quality_denominator'], timeout_arm['pass']), (1, 0))
+                if batch == 'before':
+                    record_path = results / '0/result.json'
+                    original_record = json.loads(record_path.read_text())
+                    submission_file = folder / 'submission-0/result.txt'
+                    original_content = submission_file.read_text()
+                    judge_attempt = state['attempts'].pop()
+                    state['tamper_during_scoring'] = submission_file
+                    try:
+                        with self.assertRaises(ValueError):
+                            core.judge_prepare(plan_path, results, folder / 'bad-judge-race', host_context=host)
+                        self.assertFalse((folder / 'bad-judge-race').exists())
+                    finally:
+                        state.pop('tamper_during_scoring')
+                        state['attempts'].append(judge_attempt)
+                        submission_file.write_text(original_content)
+                    for tampering in ('content', 'snapshot', 'snapshot-and-digest'):
+                        with self.subTest(tampering=tampering):
+                            submission_file.write_text('replacement inert text')
+                            altered = copy.deepcopy(original_record)
+                            if tampering != 'content':
+                                altered['submission_tree'] = core.checked_tree(submission_file.parent)
+                            if tampering == 'snapshot-and-digest':
+                                altered['submission_tree_sha256'] = core.snapshot_hash(altered['submission_tree'])
+                            record_path.write_text(json.dumps(altered))
+                            judge_attempt = state['attempts'].pop()
+                            try:
+                                with self.assertRaises(ValueError):
+                                    core.judge_prepare(plan_path, results, folder / f'bad-judge-{tampering}', host_context=host)
+                            finally:
+                                state['attempts'].append(judge_attempt)
+                            self.assertFalse((folder / f'bad-judge-{tampering}').exists())
+                            try:
+                                exit_code = core.report_plan(
+                                    plan_path, results, folder / f'bad-report-{tampering}', True,
+                                    folder / 'judged/judge-result.json', folder / 'judge/private-map.json',
+                                    payload, host_context=host,
+                                )
+                            except ValueError:
+                                pass
+                            else:
+                                self.assertEqual(exit_code, 1)
+                                bad = json.loads((folder / f'bad-report-{tampering}' / 'report.json').read_text())
+                                self.assertFalse(bad['live_complete'])
+                                self.assertTrue(all(item['difference'] is None for item in bad['results']))
+                            record_path.write_text(json.dumps(original_record))
+                            submission_file.write_text(original_content)
                 state['report_sha256'] = core.digest(report / 'report.json')
                 if batch == 'before':
                     severe_results = folder / 'severe-results'
