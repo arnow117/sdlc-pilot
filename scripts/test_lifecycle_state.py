@@ -1985,7 +1985,7 @@ class AcceptanceFingerprintTest(LifecycleFixture):
                     self.assertEqual(result.returncode, code, result.stderr)
                     self.assertEqual(json.loads(result.stdout)["result"], expected_result)
 
-    def test_standalone_flow_nodes_keep_nested_business_content(self) -> None:
+    def test_flow_nodes_and_compound_keys_keep_nested_business_content(self) -> None:
         self.initialize_state()
         frontmatters = (
             "meta:\n  {x: y,\nstatus: reject-empty\n}\n",
@@ -1995,6 +1995,13 @@ class AcceptanceFingerprintTest(LifecycleFixture):
             "items:\n  - {x: y,\nstatus: reject-empty\n}\n",
             "items:\n  - &anchor {x: y,\nstatus: reject-empty\n}\n",
             "meta:\n  [x, {x: y,\nstatus: reject-empty\n}]\n",
+            "[meta]: {x: y,\nstatus: reject-empty\n}\n",
+            "{meta}: {x: y,\nstatus: reject-empty\n}\n",
+            '[meta]: "first\nstatus: reject-empty\nlast"\n',
+            "[meta]: 'first\nstatus: reject-empty\nlast'\n",
+            '[meta]: &anchor "first\nstatus: reject-empty\nlast"\n',
+            "{meta}: 'first\nstatus: reject-empty\nlast'\n",
+            "[meta]: &anchor {x: y,\nstatus: reject-empty\n}\n",
         )
         for index, frontmatter in enumerate(frontmatters):
             content = (

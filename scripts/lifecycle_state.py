@@ -275,7 +275,6 @@ def _frontmatter_close_index(lines: list[str]) -> int | None:
         return None
     open_quote: str | None = None
     flow_stack: list[str] = []
-    flow_quote: str | None = None
     for index in range(1, len(lines)):
         content = _line_content(lines[index])
         if content == "---":
@@ -283,14 +282,14 @@ def _frontmatter_close_index(lines: list[str]) -> int | None:
                 return None
             return index
         if flow_stack:
-            flow_quote = _advance_flow_context(content, flow_stack, flow_quote)
+            open_quote = _advance_flow_context(content, flow_stack, open_quote)
         elif open_quote is not None:
             if _line_closes_open_quote(content, open_quote):
                 open_quote = None
         else:
             open_quote = _unterminated_quoted_value(content)
             if open_quote is None:
-                flow_quote = _advance_flow_context(content, flow_stack, flow_quote)
+                open_quote = _advance_flow_context(content, flow_stack, None)
     return None
 
 
@@ -489,8 +488,8 @@ def _advance_flow_context(
                 stack.append("?")
                 return quote
             stack.pop()
-            if not stack:
-                return None
+            # A closed collection can be a mapping key. Continue through the
+            # rest of the line to retain its following flow or quoted value.
         index += 1
     return quote
 
@@ -503,7 +502,6 @@ def _drop_frontmatter_metadata_lines(lines: list[str]) -> list[str]:
     kept = []
     open_quote: str | None = None
     flow_stack: list[str] = []
-    flow_quote: str | None = None
     for index, line in enumerate(lines):
         if not 0 < index < close_index:
             kept.append(line)
@@ -511,7 +509,7 @@ def _drop_frontmatter_metadata_lines(lines: list[str]) -> list[str]:
         content = _line_content(line)
         following = _next_significant_frontmatter_line(lines, index + 1, close_index)
         if flow_stack:
-            flow_quote = _advance_flow_context(content, flow_stack, flow_quote)
+            open_quote = _advance_flow_context(content, flow_stack, open_quote)
             kept.append(line)
             continue
         if open_quote is not None:
@@ -528,7 +526,7 @@ def _drop_frontmatter_metadata_lines(lines: list[str]) -> list[str]:
         if opened is not None:
             open_quote = opened
         else:
-            flow_quote = _advance_flow_context(content, flow_stack, flow_quote)
+            open_quote = _advance_flow_context(content, flow_stack, None)
         kept.append(line)
     return kept
 
