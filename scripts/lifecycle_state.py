@@ -385,10 +385,16 @@ def _mapping_value_index(content: str) -> int | None:
 
 def _value_index(content: str) -> int:
     """Locate a mapping/sequence value or standalone node, including properties."""
+    properties_pattern = r"(?:[&!][^ \t]+[ \t]+)*"
+    start = _node_start_index(content)
+    properties = re.match(properties_pattern, content[start:])
+    node_index = start + properties.end()
+    if content[node_index:node_index + 1] in {"[", "{"}:
+        return node_index
     index = _mapping_value_index(content)
     if index is None:
-        index = _node_start_index(content)
-    properties = re.match(r"(?:[&!][^ \t]+[ \t]+)*", content[index:])
+        return node_index
+    properties = re.match(properties_pattern, content[index:])
     return index + properties.end()
 
 

@@ -1985,6 +1985,39 @@ class AcceptanceFingerprintTest(LifecycleFixture):
                     self.assertEqual(result.returncode, code, result.stderr)
                     self.assertEqual(json.loads(result.stdout)["result"], expected_result)
 
+    def test_standalone_flow_nodes_keep_nested_business_content(self) -> None:
+        self.initialize_state()
+        frontmatters = (
+            "meta:\n  {x: y,\nstatus: reject-empty\n}\n",
+            "meta: &anchor\n  {x: y,\nstatus: reject-empty\n}\n",
+            "meta:\n  &anchor {x: y,\nstatus: reject-empty\n}\n",
+            "meta:\n  !custom {x: y,\nstatus: reject-empty\n}\n",
+            "items:\n  - {x: y,\nstatus: reject-empty\n}\n",
+            "items:\n  - &anchor {x: y,\nstatus: reject-empty\n}\n",
+            "meta:\n  [x, {x: y,\nstatus: reject-empty\n}]\n",
+        )
+        for index, frontmatter in enumerate(frontmatters):
+            content = (
+                f"---\n# before sentinel\n{frontmatter}status: draft\n---\n"
+                "# Title\n\n## Rules\nafter sentinel\n"
+            )
+            expected = content.replace("status: draft\n", "")
+            with self.subTest(variant=index, check="exact normalized content"):
+                self.assertEqual(lifecycle_state._normalize_context_v1(content), expected)
+
+            requirement_id = f"REQ-standalone-flow-{index}"
+            product_ref = self.capture_documented(requirement_id, content)
+            lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id=requirement_id)
+            for old, new, code, expected_result in (
+                ("status: reject-empty", "status: accept-empty", 1, "stale"),
+                ("status: draft", "status: ready", 0, "match"),
+            ):
+                with self.subTest(variant=index, changed=old):
+                    self.write_context(product_ref, content.replace(old, new))
+                    result = self.verify_cli("--requirement-id", requirement_id)
+                    self.assertEqual(result.returncode, code, result.stderr)
+                    self.assertEqual(json.loads(result.stdout)["result"], expected_result)
+
     def test_quoted_flow_keys_preserve_exact_normalized_content(self) -> None:
         for key in ('"meta:x"', '"meta#x"', '"meta\\\"#x"', "'meta''#x'"):
             for nested in ("reject-empty", "accept-empty"):
