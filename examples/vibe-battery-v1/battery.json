@@ -1,0 +1,154 @@
+{
+  "version": 1,
+  "freeze": "raw bytes sha256; battery.json and provenance.json excluded from asset map",
+  "assets": {
+    "B01/private/checker.py": "607e7e07ad9ba7d7568bfef4df2adad0a6293754c4d6f89abf3cc2687405ddaf",
+    "B01/private/negative/coerce/tool.py": "4bc76882bd5b71e18e20a30da5b7988b4c12917bc8ef66d09ee5599de1402bf8",
+    "B01/private/negative/parser_only/tool.py": "7448e3e8b4bae43c514dd78ba7adfb8f9d3c3840e0e93fc4567a797f25ce8dcf",
+    "B01/private/negative/query_write/tool.py": "1620cab1da45e79ca2efa3f1e73b92ec0c3d2f98a8e500e415598f7418f9b915",
+    "B01/private/negative/reject_empty/tool.py": "fa7531b823d3e2b99fe67b026b18152f750c9b091b3c41afd19faf6b771d8be6",
+    "B01/private/reference/test_note.py": "1fab3d9fcd120526fa45fb188288690d2849a9e8a9b207ee195eb7192c0c1354",
+    "B01/private/reference/tool.py": "47fce7d8585137804b81dc684686b83b8d51294933cad61b50d693aa3669a46d",
+    "B01/public/contract.md": "90301f614faf45f4b0d5f538bb14a458050100f214a691df4a6730ff3a09162e",
+    "B01/public/old.json": "a1f4db79d5c58492e6f67f400b005c9fdeb6f7e8462854cb256732b089470ea2",
+    "B01/public/prompt.md": "2e167100db9189e48977a1f9f7a0f749205de1a3e6e2f13e45d888a81fb89094",
+    "B01/public/test_existing.py": "c43fb75d0d6aff3c83427a33485fd9a32ea2879303202f080ecf206313d0ded4",
+    "B01/public/tool.py": "25f7735d83749d0c0ec1cd0e40d37d2829790db6657edd6e758c0681e5cbbdd7",
+    "B02/private/checker.py": "45d843eaf3a94a352001c66431848059ac08376bd563ee0642a8591e22874d9c",
+    "B02/private/negative/boolean-line/findings.json": "4e0c9e5403e453c110458a19dc3c03b712cc377fbb2442ca9eb1e71bb6c1c6de",
+    "B02/private/negative/broad-range/findings.json": "6674e726433d5b755d4b0189148ec91970709372d5603a77cae409be6ab2808e",
+    "B02/private/negative/empty/findings.json": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+    "B02/private/negative/fact/findings.json": "aa8d0ef66faa38db5583ebe5c2cb0060b08d4bd26f16916ec67e9bd28ca73bd9",
+    "B02/private/negative/format/findings.json": "7bdf67759a0b02525db98fc2e6bd2113633f1b44fe5af8ce7a7c3faf0b3d2ca0",
+    "B02/private/negative/invalid-range/findings.json": "759e565e37f7a6df0264be586c78447de28fc97286d9fd12fc12e9dc45ae138e",
+    "B02/private/negative/invalid-schema/findings.json": "a8d43111028f01af723dcf7f87abd680e583054de75d1128433a0ef6242585b9",
+    "B02/private/negative/location/findings.json": "25d5135ff07a5afaa0fa5a7082a6d7e29624e783c6831a75191e45ff60ed7d42",
+    "B02/private/negative/missing/findings.json": "382458a888fea43a91eb310c8d4351a0abf26e4d008cc3149c8576c142c69a1d",
+    "B02/private/negative/reversed-range/findings.json": "57614d2fc208e5f8f67643e8c5eb5775378f5c768d0bbcc6124ae6eff25e51d7",
+    "B02/private/negative/wrong-order/findings.json": "49d9f6a8ae37f76abcf1c7f9fa73e55823d83d5bb13b31a90360dc8d17c739fe",
+    "B02/private/reference-alias/findings.json": "8faeaefcad65d1bf9f9d5756d3b8dac109758e101320489ec29f264468ebc876",
+    "B02/private/reference-mixed/findings.json": "af5cb723c2be6ba65cc6ddca8b2f15cd603d22e61b93a3013727433a6838caa5",
+    "B02/private/reference/findings.json": "c7cb8ed9ddc6b183df33dff6e8d57995c7e0775c02e1064434b3ff20abcbadc0",
+    "B02/public/input/baseline.py": "3e3bab4960513c26d81454cb0c19f07ce3ef1bcecaef3fe9956cebe23e3c86f2",
+    "B02/public/input/change.diff": "5781b5faa2d48591f3269f707c5735903ca73d17efdcea62ca134a0902c5b73f",
+    "B02/public/input/contract.md": "09ee59831c0eb7744016ea30b2f84411955ef497d9826fcc50e3df792ba12840",
+    "B02/public/input/current.py": "3add4c9b2dda91963458795aef8e0700d51d887bf09c8f282a96af640913d114",
+    "B02/public/input/sample.json": "f9262f833a7d90293b1c7fc825b028bcc8542d96c26e40fb669b4db930f8a679",
+    "B02/public/input/schema.json": "e447e75defd7bf0c3b6185fd3cd6281bded57671f807081dddb635c16cc0c672",
+    "B02/public/input/test_contract.py": "ea890fe04feeccd8a569780eb121621692e7fc8ad9dac8038d83744be7689e67",
+    "B02/public/prompt.md": "1e853a6efbeeaea62d047d564b6bc1abe23078a66ccc094ee5abe3716a0b29f4",
+    "private/report-cases/complete.json": "678d4dbceab61938ead4598224cf377aad7114721086d12180550583a287e867",
+    "private/report-cases/incomplete.json": "b653bf9c7a007e27e09874901e94320d560284c6bd1426d671bfbbc6b0d613fd"
+  },
+  "tasks": [
+    {
+      "id": "B01",
+      "public": "B01/public",
+      "checker": "B01/private/checker.py",
+      "cases": [
+        {
+          "name": "reference",
+          "submission": "B01/private/reference",
+          "fails": null
+        },
+        {
+          "name": "parser_only",
+          "submission": "B01/private/negative/parser_only",
+          "fails": "empty"
+        },
+        {
+          "name": "coerce",
+          "submission": "B01/private/negative/coerce",
+          "fails": "non_string"
+        },
+        {
+          "name": "reject_empty",
+          "submission": "B01/private/negative/reject_empty",
+          "fails": "empty"
+        },
+        {
+          "name": "query_write",
+          "submission": "B01/private/negative/query_write",
+          "fails": "read_only"
+        }
+      ]
+    },
+    {
+      "id": "B02",
+      "public": "B02/public",
+      "checker": "B02/private/checker.py",
+      "cases": [
+        {
+          "name": "reference",
+          "submission": "B02/private/reference",
+          "fails": null
+        },
+        {
+          "name": "empty",
+          "submission": "B02/private/negative/empty",
+          "fails": "write"
+        },
+        {
+          "name": "missing",
+          "submission": "B02/private/negative/missing",
+          "fails": "ordering"
+        },
+        {
+          "name": "format",
+          "submission": "B02/private/negative/format",
+          "fails": "no_false_positive"
+        },
+        {
+          "name": "location",
+          "submission": "B02/private/negative/location",
+          "fails": "write"
+        },
+        {
+          "name": "fact",
+          "submission": "B02/private/negative/fact",
+          "fails": "write"
+        },
+        {
+          "name": "reference-alias",
+          "submission": "B02/private/reference-alias",
+          "fails": null
+        },
+        {
+          "name": "invalid-schema",
+          "submission": "B02/private/negative/invalid-schema",
+          "fails": "schema"
+        },
+        {
+          "name": "invalid-range",
+          "submission": "B02/private/negative/invalid-range",
+          "fails": "schema"
+        },
+        {
+          "name": "reversed-range",
+          "submission": "B02/private/negative/reversed-range",
+          "fails": "schema"
+        },
+        {
+          "name": "broad-range",
+          "submission": "B02/private/negative/broad-range",
+          "fails": "write"
+        },
+        {
+          "name": "wrong-order",
+          "submission": "B02/private/negative/wrong-order",
+          "fails": "ordering"
+        },
+        {
+          "name": "boolean-line",
+          "submission": "B02/private/negative/boolean-line",
+          "fails": "schema"
+        },
+        {
+          "name": "reference-mixed",
+          "submission": "B02/private/reference-mixed",
+          "fails": null
+        }
+      ]
+    }
+  ]
+}

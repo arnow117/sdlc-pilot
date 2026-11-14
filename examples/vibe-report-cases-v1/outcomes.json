@@ -1,0 +1,7 @@
+{
+  "kind": "synthetic-outcomes",
+  "description": "No model runs. Per-arm fixture used for offline report demonstration.",
+  "control": ["pass", "fail", "fail"],
+  "treatment": ["pass", "pass", "fail"],
+  "variants": ["timeout", "facility_failure", "skipped", "missing", "integrity_violation", "judge_missing"]
+}

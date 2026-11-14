@@ -1,0 +1,289 @@
+{
+  "kind": "synthetic",
+  "trials": [
+    {
+      "id": "B01-control-1",
+      "task": "B01",
+      "arm": "control",
+      "started": true,
+      "status": "skipped",
+      "integrity": "ok",
+      "required_checks": "missing",
+      "judge": "complete",
+      "origin": "synthetic",
+      "evidence": "synthetic:B01:control:1 (synthetic; no command or artifact)",
+      "dimensions": {},
+      "commands": [],
+      "command_exit": null,
+      "artifact_sha256": null,
+      "failure_reason": "synthetic skipped"
+    },
+    {
+      "id": "B01-control-2",
+      "task": "B01",
+      "arm": "control",
+      "started": true,
+      "status": "facility_failure",
+      "integrity": "ok",
+      "required_checks": "complete",
+      "judge": "complete",
+      "origin": "synthetic",
+      "evidence": "synthetic:B01:control:2 (synthetic; no command or artifact)",
+      "dimensions": {},
+      "commands": [],
+      "command_exit": null,
+      "artifact_sha256": null,
+      "failure_reason": "synthetic facility_failure"
+    },
+    {
+      "id": "B01-control-3",
+      "task": "B01",
+      "arm": "control",
+      "started": true,
+      "status": "fail",
+      "integrity": "violation",
+      "required_checks": "complete",
+      "judge": "complete",
+      "origin": "synthetic",
+      "evidence": "synthetic:B01:control:3 (synthetic; no command or artifact)",
+      "dimensions": {
+        "synthetic_quality": false
+      },
+      "commands": [],
+      "command_exit": null,
+      "artifact_sha256": null,
+      "failure_reason": "synthetic fail"
+    },
+    {
+      "id": "B01-treatment-1",
+      "task": "B01",
+      "arm": "treatment",
+      "started": true,
+      "status": "pass",
+      "integrity": "ok",
+      "required_checks": "complete",
+      "judge": "missing",
+      "origin": "synthetic",
+      "evidence": "synthetic:B01:treatment:1 (synthetic; no command or artifact)",
+      "dimensions": {
+        "synthetic_quality": true
+      },
+      "commands": [],
+      "command_exit": null,
+      "artifact_sha256": null,
+      "failure_reason": null
+    },
+    {
+      "id": "B01-treatment-2",
+      "task": "B01",
+      "arm": "treatment",
+      "started": true,
+      "status": "timeout",
+      "integrity": "ok",
+      "required_checks": "complete",
+      "judge": "complete",
+      "origin": "synthetic",
+      "evidence": "synthetic:B01:treatment:2 (synthetic; no command or artifact)",
+      "dimensions": {},
+      "commands": [],
+      "command_exit": null,
+      "artifact_sha256": null,
+      "failure_reason": "synthetic timeout"
+    },
+    {
+      "id": "B01-treatment-3",
+      "task": "B01",
+      "arm": "treatment",
+      "started": true,
+      "status": "fail",
+      "integrity": "ok",
+      "required_checks": "complete",
+      "judge": "complete",
+      "origin": "synthetic",
+      "evidence": "synthetic:B01:treatment:3 (synthetic; no command or artifact)",
+      "dimensions": {
+        "synthetic_quality": false
+      },
+      "commands": [],
+      "command_exit": null,
+      "artifact_sha256": null,
+      "failure_reason": "synthetic fail"
+    },
+    {
+      "id": "B02-control-1",
+      "task": "B02",
+      "arm": "control",
+      "started": true,
+      "status": "pass",
+      "integrity": "ok",
+      "required_checks": "complete",
+      "judge": "complete",
+      "origin": "synthetic",
+      "evidence": "synthetic:B02:control:1 (synthetic; no command or artifact)",
+      "dimensions": {
+        "synthetic_quality": true
+      },
+      "commands": [],
+      "command_exit": null,
+      "artifact_sha256": null,
+      "failure_reason": null
+    },
+    {
+      "id": "B02-control-2",
+      "task": "B02",
+      "arm": "control",
+      "started": true,
+      "status": "fail",
+      "integrity": "ok",
+      "required_checks": "complete",
+      "judge": "complete",
+      "origin": "synthetic",
+      "evidence": "synthetic:B02:control:2 (synthetic; no command or artifact)",
+      "dimensions": {
+        "synthetic_quality": false
+      },
+      "commands": [],
+      "command_exit": null,
+      "artifact_sha256": null,
+      "failure_reason": "synthetic fail"
+    },
+    {
+      "id": "B02-control-3",
+      "task": "B02",
+      "arm": "control",
+      "started": true,
+      "status": "fail",
+      "integrity": "ok",
+      "required_checks": "complete",
+      "judge": "complete",
+      "origin": "synthetic",
+      "evidence": "synthetic:B02:control:3 (synthetic; no command or artifact)",
+      "dimensions": {
+        "synthetic_quality": false
+      },
+      "commands": [],
+      "command_exit": null,
+      "artifact_sha256": null,
+      "failure_reason": "synthetic fail"
+    },
+    {
+      "id": "B02-treatment-1",
+      "task": "B02",
+      "arm": "treatment",
+      "started": true,
+      "status": "pass",
+      "integrity": "ok",
+      "required_checks": "complete",
+      "judge": "complete",
+      "origin": "synthetic",
+      "evidence": "synthetic:B02:treatment:1 (synthetic; no command or artifact)",
+      "dimensions": {
+        "synthetic_quality": true
+      },
+      "commands": [],
+      "command_exit": null,
+      "artifact_sha256": null,
+      "failure_reason": null
+    },
+    {
+      "id": "B02-treatment-2",
+      "task": "B02",
+      "arm": "treatment",
+      "started": true,
+      "status": "pass",
+      "integrity": "ok",
+      "required_checks": "complete",
+      "judge": "complete",
+      "origin": "synthetic",
+      "evidence": "synthetic:B02:treatment:2 (synthetic; no command or artifact)",
+      "dimensions": {
+        "synthetic_quality": true
+      },
+      "commands": [],
+      "command_exit": null,
+      "artifact_sha256": null,
+      "failure_reason": null
+    },
+    {
+      "id": "B02-treatment-3",
+      "task": "B02",
+      "arm": "treatment",
+      "started": true,
+      "status": "fail",
+      "integrity": "ok",
+      "required_checks": "complete",
+      "judge": "complete",
+      "origin": "synthetic",
+      "evidence": "synthetic:B02:treatment:3 (synthetic; no command or artifact)",
+      "dimensions": {
+        "synthetic_quality": false
+      },
+      "commands": [],
+      "command_exit": null,
+      "artifact_sha256": null,
+      "failure_reason": "synthetic fail"
+    }
+  ],
+  "expected_slots": [
+    {
+      "id": "B01-control-1",
+      "task": "B01",
+      "arm": "control"
+    },
+    {
+      "id": "B01-control-2",
+      "task": "B01",
+      "arm": "control"
+    },
+    {
+      "id": "B01-control-3",
+      "task": "B01",
+      "arm": "control"
+    },
+    {
+      "id": "B01-treatment-1",
+      "task": "B01",
+      "arm": "treatment"
+    },
+    {
+      "id": "B01-treatment-2",
+      "task": "B01",
+      "arm": "treatment"
+    },
+    {
+      "id": "B01-treatment-3",
+      "task": "B01",
+      "arm": "treatment"
+    },
+    {
+      "id": "B02-control-1",
+      "task": "B02",
+      "arm": "control"
+    },
+    {
+      "id": "B02-control-2",
+      "task": "B02",
+      "arm": "control"
+    },
+    {
+      "id": "B02-control-3",
+      "task": "B02",
+      "arm": "control"
+    },
+    {
+      "id": "B02-treatment-1",
+      "task": "B02",
+      "arm": "treatment"
+    },
+    {
+      "id": "B02-treatment-2",
+      "task": "B02",
+      "arm": "treatment"
+    },
+    {
+      "id": "B02-treatment-3",
+      "task": "B02",
+      "arm": "treatment"
+    }
+  ]
+}

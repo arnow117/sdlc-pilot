@@ -1,0 +1,181 @@
+{
+  "description": "Array of findings; ordering of findings and object keys is unrestricted.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": [
+      "file",
+      "symbol",
+      "line_start",
+      "line_end",
+      "category",
+      "impact",
+      "suggestion",
+      "observation"
+    ],
+    "properties": {
+      "file": {
+        "type": "string",
+        "minLength": 1,
+        "description": "Path relative to the working root.",
+        "pattern": "\\S"
+      },
+      "symbol": {
+        "type": "string",
+        "minLength": 1,
+        "description": "Symbol containing the affected code.",
+        "pattern": "\\S"
+      },
+      "line_start": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "line_end": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "category": {
+        "enum": [
+          "unexpected_write",
+          "ordering",
+          "other"
+        ]
+      },
+      "impact": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "\\S"
+      },
+      "suggestion": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "\\S"
+      },
+      "observation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "expected",
+          "actual"
+        ],
+        "properties": {
+          "expected": {
+            "description": "Value permitted by the behavioral contract."
+          },
+          "actual": {
+            "description": "Value observed from the submitted change."
+          }
+        }
+      }
+    },
+    "allOf": [
+      {
+        "if": {
+          "properties": {
+            "category": {
+              "const": "unexpected_write"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "observation": {
+              "$ref": "#/$defs/change_observation"
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "category": {
+              "const": "ordering"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "observation": {
+              "$ref": "#/$defs/order_observation"
+            }
+          }
+        }
+      },
+      {
+        "if": {
+          "properties": {
+            "category": {
+              "const": "other"
+            }
+          }
+        },
+        "then": {
+          "properties": {
+            "observation": {
+              "oneOf": [
+                {
+                  "$ref": "#/$defs/change_observation"
+                },
+                {
+                  "$ref": "#/$defs/order_observation"
+                }
+              ]
+            }
+          }
+        }
+      }
+    ]
+  },
+  "rules": {
+    "location": "Lines are positive integers (not booleans), inclusive and ordered. The range must lie within the named symbol and cover the relevant code in the specified file.",
+    "unexpected_write": "Both observation values are booleans indicating whether bytes changed relative to initial bytes, or the equivalent strings changed and unchanged. Each value may independently use either representation.",
+    "ordering": "Both observation values are arrays of string IDs in the observed or expected order. Preserve the actual order.",
+    "other": "Use either a pair of byte-change values or a pair of ordered string-ID arrays; each pair uses one semantic kind.",
+    "text": "impact and suggestion are nonempty text explaining effect and minimal correction; wording is unrestricted."
+  },
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$defs": {
+    "change": {
+      "oneOf": [
+        {
+          "type": "boolean"
+        },
+        {
+          "enum": [
+            "changed",
+            "unchanged"
+          ]
+        }
+      ]
+    },
+    "id_sequence": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "change_observation": {
+      "type": "object",
+      "properties": {
+        "expected": {
+          "$ref": "#/$defs/change"
+        },
+        "actual": {
+          "$ref": "#/$defs/change"
+        }
+      }
+    },
+    "order_observation": {
+      "type": "object",
+      "properties": {
+        "expected": {
+          "$ref": "#/$defs/id_sequence"
+        },
+        "actual": {
+          "$ref": "#/$defs/id_sequence"
+        }
+      }
+    }
+  }
+}

@@ -4,6 +4,18 @@
 
 ## [Unreleased]
 
+## [5.4.0] — 2026-11-14
+
+### Added
+
+- 新增参数化 vibe test 离线执行器和 B01/B02 battery：冻结原始字节、运行参考／负例 oracle，收集合成结果，按任务与臂报告 Wilson/Newcombe 区间并比较可比快照。
+- 提供受控宿主 Python API，绑定调用方核实的批准、原生 receipt、隔离、独立 scorer 与 judge；普通脚本不调用 MCP、模型或 lifecycle mutation。标准检查新增核心与 host stub 两组离线测试。
+
+### Limits
+
+- host 回调与 stub 测试不认证真实宿主隔离、路由或授权；当前 delegate 的 full-access 不能证明隐藏材料、网络及不可信 scorer 的隔离。真实 AC01/AC04 测量尚未执行，不据合成报告声称效果。
+- 公共 lifecycle CLI、`state_version=3` 和 `.sdlc-v1/` 状态格式保持不变；真实实验须另核实能力与该批授权。
+
 ## [5.3.0] — 2026-11-14
 
 ### Added

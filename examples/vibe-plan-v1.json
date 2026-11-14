@@ -1,0 +1,38 @@
+{
+  "kind": "synthetic",
+  "battery": "vibe-battery-v1/battery.json",
+  "documents": [
+    "vibe-documents-v1/sdlc-build.md",
+    "vibe-documents-v1/sdlc-review.md"
+  ],
+  "repetitions": 3,
+  "budget": {
+    "producer_runs": 12,
+    "judge_runs": 1,
+    "concurrency": 1
+  },
+  "target": {
+    "providerInstanceId": "synthetic",
+    "model": "fixture",
+    "options": {
+      "effort": "test"
+    }
+  },
+  "permissions": [
+    "public-files"
+  ],
+  "limits": {
+    "seconds": 900,
+    "output_tokens": 24000
+  },
+  "approval_status": "approved",
+  "approval_ref": "synthetic only; no authorization",
+  "required_dimensions": {
+    "B01": [
+      "probe"
+    ],
+    "B02": [
+      "probe"
+    ]
+  }
+}

@@ -28,6 +28,10 @@ for path in \
   scripts/test_scenarios.py \
   scripts/test_contrast_check.py \
   scripts/test_hallmark_catalog.py \
+  scripts/vibe_test.py \
+  scripts/vibe_host.py \
+  scripts/test_vibe_test.py \
+  scripts/test_vibe_host.py \
   "$REF/role-routing.md" \
   "$REF/lightweight-runtime.md" \
   "$REF/lifecycles/product-design.md" \
@@ -301,8 +305,10 @@ for test_file in \
   scripts/test_backlog.py \
   scripts/test_scenarios.py \
   scripts/test_contrast_check.py \
-  scripts/test_hallmark_catalog.py; do
-  if PYTHONDONTWRITEBYTECODE=1 python3 "$test_file"; then
+  scripts/test_hallmark_catalog.py \
+  scripts/test_vibe_test.py \
+  scripts/test_vibe_host.py; do
+  if PYTHONDONTWRITEBYTECODE=1 python3 -B "$test_file"; then
     ok "$test_file"
   else
     err "$test_file 失败"
