@@ -340,15 +340,61 @@ def _line_closes_open_quote(content: str, quote: str) -> bool:
     return False
 
 
-def _unterminated_quoted_value(content: str) -> str | None:
-    """Quote character when a ``key: "value`` line leaves its scalar open."""
-    value = content.lstrip(" \t")
-    if not value or value[0] not in _QUOTE_CHARACTERS:
-        colon = content.find(":")
-        if colon < 0 or colon + 1 >= len(content) or content[colon + 1] not in " \t":
+def _node_start_index(content: str) -> int:
+    """Skip indentation and block-sequence indicators before a node."""
+    index = len(content) - len(content.lstrip(" \t"))
+    while content[index:index + 2] in {"- ", "-\t"}:
+        index += 2
+        while index < len(content) and content[index] in " \t":
+            index += 1
+    return index
+
+
+def _mapping_value_index(content: str) -> int | None:
+    """Find the value after a recognizable block mapping key, without parsing it."""
+    start = _node_start_index(content)
+    if start == len(content):
+        return None
+    if content[start] in _QUOTE_CHARACTERS:
+        closing = _quoted_scalar_closing_index(content[start:], content[start])
+        if closing is None:
             return None
-        value = content[colon + 1:].lstrip(" \t")
-    value = re.sub(r"^(?:[&!][^ \t]+[ \t]+)+", "", value)
+        index = start + closing + 1
+        while index < len(content) and content[index] in " \t":
+            index += 1
+        if index >= len(content) or content[index] != ":":
+            return None
+        if index + 1 < len(content) and content[index + 1] not in " \t":
+            return None
+    else:
+        index = start
+        while index < len(content):
+            character = content[index]
+            if character == "#" and (index == start or content[index - 1] in " \t"):
+                return None
+            if character == ":" and (index + 1 == len(content) or content[index + 1] in " \t"):
+                break
+            index += 1
+        if index == len(content):
+            return None
+    index += 1
+    while index < len(content) and content[index] in " \t":
+        index += 1
+    return index
+
+
+def _value_index(content: str) -> int:
+    """Locate a mapping/sequence value or standalone node, including properties."""
+    index = _mapping_value_index(content)
+    if index is None:
+        index = _node_start_index(content)
+    properties = re.match(r"(?:[&!][^ \t]+[ \t]+)*", content[index:])
+    return index + properties.end()
+
+
+def _unterminated_quoted_value(content: str) -> str | None:
+    """Quote character when a value leaves its scalar open on this line."""
+    value = content[_value_index(content):]
     if not value or value[0] not in _QUOTE_CHARACTERS:
         return None
     if _quoted_scalar_closing_index(value, value[0]) is not None:
@@ -407,26 +453,7 @@ def _advance_flow_context(
     """
     index = 0
     if not stack:
-        index = len(content) - len(content.lstrip(" \t"))
-        value = content[index:]
-        if not value or value[0] not in "[{":
-            if value and value[0] in _QUOTE_CHARACTERS:
-                closing = _quoted_scalar_closing_index(value, value[0])
-                if closing is None:
-                    return None
-                separator = re.match(r"[ \t]*:[ \t]+", value[closing + 1:])
-                if separator is None:
-                    return None
-                index += closing + 1 + separator.end()
-                value = content[index:]
-            else:
-                match = re.match(r"[ \t]*(?:[^:#]+:[ \t]+|-[ \t]+)(.*)", content)
-                if match is None:
-                    return None
-                value = match.group(1)
-                index = match.start(1)
-        prefix = re.match(r"(?:[&!][^ \t]+[ \t]+)*", value)
-        index += prefix.end()
+        index = _value_index(content)
         value = content[index:]
         if not value or value[0] not in "[{":
             return None

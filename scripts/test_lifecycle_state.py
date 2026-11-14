@@ -1925,6 +1925,66 @@ class AcceptanceFingerprintTest(LifecycleFixture):
         expected = content.replace("status: draft\n", "").replace("- 文档状态：draft\n", "")
         self.assertEqual(lifecycle_state._normalize_context_v1(content), expected)
 
+    def test_mapping_key_value_boundary_matrix_preserves_exact_content(self) -> None:
+        keys = (
+            "meta", "meta:x", "meta#x", '"meta:x"', '"meta#x"',
+            '"meta\\\"#x"', "'meta:x'", "'meta''#x'",
+            'items:\n  - "meta: x"', "items:\n  - 'meta: x'",
+        )
+        values = (
+            "{\nstatus: reject-empty\n}",
+            '"first\nstatus: reject-empty\nlast"',
+            "'first\nstatus: reject-empty\nlast'",
+        )
+        for key in keys:
+            for value in values:
+                for prefix in ("", "&anchor ", "!custom "):
+                    with self.subTest(key=key, value=value, prefix=prefix):
+                        content = (
+                            f"---\n# before sentinel\n{key}: {prefix}{value}\n"
+                            "status: draft\n---\n# Title\n\n## Rules\nafter sentinel\n"
+                        )
+                        expected = content.replace("status: draft\n", "")
+                        normalize = lifecycle_state._normalize_context_v1
+                        self.assertEqual(normalize(content), expected)
+                        changed = content.replace("status: reject-empty", "status: accept-empty")
+                        self.assertEqual(
+                            normalize(changed),
+                            expected.replace("status: reject-empty", "status: accept-empty"),
+                        )
+                        self.assertEqual(normalize(content.replace("status: draft", "status: ready")), expected)
+
+    def test_mapping_key_value_boundary_detects_drift_via_cli(self) -> None:
+        self.initialize_state()
+        cases = (
+            ("meta:x", "{\nstatus: reject-empty\n}"),
+            ("meta#x", "{\nstatus: reject-empty\n}"),
+            ("meta:x", '"first\nstatus: reject-empty\nlast"'),
+            ('"meta:x"', '"first\nstatus: reject-empty\nlast"'),
+            ('"meta#x"', '"first\nstatus: reject-empty\nlast"'),
+            ('"meta\\\"#x"', '"first\nstatus: reject-empty\nlast"'),
+            ("'meta''#x'", "'first\nstatus: reject-empty\nlast'"),
+            ('items:\n  - "meta: x"', '"first\nstatus: reject-empty\nlast"'),
+            ("items:\n  - 'meta: x'", "'first\nstatus: reject-empty\nlast'"),
+        )
+        for index, (key, value) in enumerate(cases):
+            requirement_id = f"REQ-key-value-{index}"
+            content = (
+                f"---\n# before sentinel\n{key}: {value}\nstatus: draft\n"
+                "---\n# Title\n\n## Rules\nafter sentinel\n"
+            )
+            product_ref = self.capture_documented(requirement_id, content)
+            lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id=requirement_id)
+            for old, new, code, expected_result in (
+                ("status: reject-empty", "status: accept-empty", 1, "stale"),
+                ("status: draft", "status: ready", 0, "match"),
+            ):
+                with self.subTest(key=key, value=value, changed=old):
+                    self.write_context(product_ref, content.replace(old, new))
+                    result = self.verify_cli("--requirement-id", requirement_id)
+                    self.assertEqual(result.returncode, code, result.stderr)
+                    self.assertEqual(json.loads(result.stdout)["result"], expected_result)
+
     def test_quoted_flow_keys_preserve_exact_normalized_content(self) -> None:
         for key in ('"meta:x"', '"meta#x"', '"meta\\\"#x"', "'meta''#x'"):
             for nested in ("reject-empty", "accept-empty"):
