@@ -254,6 +254,19 @@ python3 scripts/lifecycle_state.py --repo <target-repo> migrate-feature-branch \
 公开查询命令为 `status`、`next`、`readyqueue`、`product-projection` 和 `feature-projection`。`next` 在只有一个
 候选时返回下一阶段；存在多个活动 Feature/Requirement 时返回 `needs_selection` 和候选列表，不替用户猜测。
 
+引用已验收结论前，先只读核对验收时绑定的 context 内容是否仍与快照一致：
+
+```bash
+python3 scripts/lifecycle_state.py --repo <target-repo> verify-acceptance --requirement-id REQ-001
+python3 scripts/lifecycle_state.py --repo <target-repo> verify-acceptance --feature-id FEAT-001 --point plan
+```
+
+结果为 `match`/`stale`/`missing`：`stale` 退出码 1，表示绑定内容已漂移，先暂停引用并重新批准；
+`missing` 表示该点未绑定内容、未验证当前适用性，不报错也不当作已核验。`mark-requirement-ready` 与
+`start-feature` 的 `--refresh-acceptance` 用于主 Agent 重新获批后显式重记既有快照。JSON 形状、错误
+处理与恢复流程见
+[轻量运行时的验收内容指纹核对](skills/sdlc/references/lightweight-runtime.md#71-验收内容指纹核对)。
+
 backlog/board 是 `.sdlc-v1/state.json` 的只读投影，不维护第二份需求状态：
 
 ```bash

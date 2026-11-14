@@ -13,6 +13,7 @@ from contextlib import contextmanager
 from copy import deepcopy
 from datetime import datetime, timezone
 import fcntl
+import hashlib
 import json
 import os
 from pathlib import Path, PurePosixPath
@@ -38,10 +39,21 @@ _FEATURE_FIELDS = frozenset({
     "id", "requirement_id", "branch", "status", "tasks", "validation", "review", "release",
     "engineering_context_ref", "created_at", "updated_at",
 })
+_REQUIREMENT_FIELDS_WITH_ACCEPTANCE = _REQUIREMENT_FIELDS | {"acceptance"}
+_FEATURE_FIELDS_WITH_ACCEPTANCE = _FEATURE_FIELDS | {"acceptance"}
 _TASK_FIELDS = frozenset({"id", "title", "status", "depends_on", "updated_at"})
 _VALIDATION_FIELDS = frozenset({"result", "command", "commit", "at"})
 _REVIEW_FIELDS = frozenset({"decision", "by", "at"})
 _RELEASE_FIELDS = frozenset({"status", "commit", "at"})
+_SNAPSHOT_FIELDS = frozenset({"algorithm", "normalization", "at", "documents"})
+_SNAPSHOT_ALGORITHM = "sha256"
+_SNAPSHOT_NORMALIZATION = "context-v1"
+_REQUIREMENT_ACCEPTANCE_POINTS = frozenset({"spec_ready"})
+_FEATURE_ACCEPTANCE_POINTS = frozenset({"plan", "validation", "review"})
+_ACCEPTANCE_POINT_ORDER = ("spec_ready", "plan", "validation", "review")
+_DIGEST_PATTERN = re.compile(r"^[0-9a-f]{64}$")
+_FRONTMATTER_METADATA_KEYS = ("updated_at", "status", "document_status")
+_DOCUMENT_STATUS_PREFIXES = ("- 文档状态：", "**状态**：", "**上次确认**：")
 
 _ID = re.compile(r"^[A-Za-z][A-Za-z0-9._-]{0,127}$")
 _REQUIREMENT_STATUSES = frozenset({"captured", "ready", "in_delivery", "validated", "released", "cancelled"})
@@ -184,10 +196,423 @@ def _require_context_file(root: Path, ref: str, *, label: str) -> None:
     try:
         resolved = current.resolve(strict=True)
         resolved.relative_to(root)
-    except (OSError, ValueError) as exc:
+    except FileNotFoundError as exc:
         raise LifecycleStateError(f"{label}-not-found:{ref}") from exc
+    except ValueError as exc:
+        raise LifecycleStateError(f"{label}-not-found:{ref}") from exc
+    except OSError as exc:
+        # Existence cannot be confirmed (for example EACCES); report that
+        # distinctly instead of claiming the file is missing.
+        raise LifecycleStateError(f"{label}-cannot-confirm:{ref}") from exc
     if not resolved.is_file():
         raise LifecycleStateError(f"{label}-not-regular:{ref}")
+
+
+def _context_file_path(root: Path, ref: str) -> Path:
+    path = root
+    for part in PurePosixPath(ref).parts:
+        path = path / part
+    return path
+
+
+def _read_context_bytes(root: Path, ref: str) -> bytes:
+    """Read one context file strictly: inside the repo, no symlinks, must exist."""
+    _require_context_file(root, ref, label="context")
+    try:
+        return _context_file_path(root, ref).read_bytes()
+    except OSError as exc:
+        raise LifecycleStateError(f"cannot-read-context:{ref}") from exc
+
+
+def _read_verification_context_bytes(root: Path, ref: str) -> bytes | None:
+    """Read one context file for a query; a vanished bound file is drift, not an error."""
+    current = root
+    for part in PurePosixPath(ref).parts:
+        current = current / part
+        if current.is_symlink():
+            raise LifecycleStateError(f"context-cannot-be-symlink:{ref}")
+    path = current
+    try:
+        info = os.stat(path)
+    except FileNotFoundError:
+        return None
+    except OSError as exc:
+        # Existence cannot be confirmed (for example a permission error);
+        # that is an explicit error, not a three-state result.
+        raise LifecycleStateError(f"cannot-confirm-context:{ref}") from exc
+    if not stat.S_ISREG(info.st_mode):
+        raise LifecycleStateError(f"context-not-regular:{ref}")
+    try:
+        return path.read_bytes()
+    except OSError as exc:
+        raise LifecycleStateError(f"cannot-read-context:{ref}") from exc
+
+
+def _split_physical_lines(text: str) -> list[str]:
+    """Split only on ``\\n`` so other Unicode separators stay byte-faithful content."""
+    lines: list[str] = []
+    start = 0
+    for index, character in enumerate(text):
+        if character == "\n":
+            lines.append(text[start:index + 1])
+            start = index + 1
+    if start < len(text):
+        lines.append(text[start:])
+    return lines
+
+
+def _line_content(line: str) -> str:
+    if line.endswith("\r\n"):
+        return line[:-2]
+    if line.endswith("\n") or line.endswith("\r"):
+        return line[:-1]
+    return line
+
+
+def _frontmatter_close_index(lines: list[str]) -> int | None:
+    """Return the closing marker index of a complete opening frontmatter block."""
+    if not lines or _line_content(lines[0]) != "---":
+        return None
+    open_quote: str | None = None
+    flow_stack: list[str] = []
+    flow_quote: str | None = None
+    for index in range(1, len(lines)):
+        content = _line_content(lines[index])
+        if content == "---":
+            if open_quote is not None or flow_stack:
+                return None
+            return index
+        if flow_stack:
+            flow_quote = _advance_flow_context(content, flow_stack, flow_quote)
+        elif open_quote is not None:
+            if _line_closes_open_quote(content, open_quote):
+                open_quote = None
+        else:
+            open_quote = _unterminated_quoted_value(content)
+            if open_quote is None:
+                flow_quote = _advance_flow_context(content, flow_stack, flow_quote)
+    return None
+
+
+_FRONTMATTER_METADATA_KEY_PATTERN = re.compile(r"(updated_at|status|document_status):[ \t]+(\S.*)")
+_QUOTE_CHARACTERS = {"\"", "'"}
+
+
+def _metadata_scalar_value(content: str) -> str | None:
+    """Return the value part when the line names a documented top-level key."""
+    match = _FRONTMATTER_METADATA_KEY_PATTERN.fullmatch(content)
+    if match is None:
+        return None
+    return match.group(2)
+
+
+def _quoted_scalar_closing_index(value: str, quote: str) -> int | None:
+    """Index of the unescaped closing quote, or None while the scalar stays open."""
+    index = 1  # skip the opening quote
+    while index < len(value):
+        character = value[index]
+        if quote == '"' and character == "\\":
+            index += 2
+            continue
+        if character == quote:
+            if quote == "'" and value[index + 1:index + 2] == "'":
+                index += 2
+                continue
+            return index
+        index += 1
+    return None
+
+
+def _line_closes_open_quote(content: str, quote: str) -> bool:
+    """Whether an open quoted scalar closes somewhere within this line."""
+    index = 0
+    while index < len(content):
+        character = content[index]
+        if quote == '"' and character == "\\":
+            index += 2
+            continue
+        if character == quote:
+            if quote == "'" and content[index + 1:index + 2] == "'":
+                index += 2
+                continue
+            return True
+        index += 1
+    return False
+
+
+def _unterminated_quoted_value(content: str) -> str | None:
+    """Quote character when a ``key: "value`` line leaves its scalar open."""
+    value = content.lstrip(" \t")
+    if not value or value[0] not in _QUOTE_CHARACTERS:
+        colon = content.find(":")
+        if colon < 0 or colon + 1 >= len(content) or content[colon + 1] not in " \t":
+            return None
+        value = content[colon + 1:].lstrip(" \t")
+    value = re.sub(r"^(?:[&!][^ \t]+[ \t]+)+", "", value)
+    if not value or value[0] not in _QUOTE_CHARACTERS:
+        return None
+    if _quoted_scalar_closing_index(value, value[0]) is not None:
+        return None
+    return value[0]
+
+
+def _is_complete_metadata_scalar(value: str, following: str | None) -> bool:
+    """Confirm one complete single-line scalar for a documented top-level key.
+
+    An indented following line may continue the value as a nested block or a
+    multi-line scalar, which stays byte-sensitive. Quoted values must close on
+    the same line; flow collections, block scalars, and anchored values are not
+    confirmable plain scalars. Without full YAML parsing, anything unconfirmed
+    is conservatively kept.
+    """
+    if following is not None and _line_content(following)[:1] in {" ", "\t"}:
+        return False
+    if value[0] in _QUOTE_CHARACTERS:
+        closing = _quoted_scalar_closing_index(value, value[0])
+        if closing is None:
+            return False
+        if value[0] == '"':
+            quoted = value[1:closing]
+            valid_escape = r'\\(?:[0abtnvfre "\\/N_LP]|x[0-9a-fA-F]{2}|u[0-9a-fA-F]{4}|U[0-9a-fA-F]{8})'
+            if re.search(r'\\', re.sub(valid_escape, "", quoted)):
+                return False
+        return value[closing + 1:].strip(" \t") == ""
+    if value[0] in {"[", "{", "|", ">", "&", "*", "!", "%", "@", "`", "#", ",", "]", "}"}:
+        return False
+    if re.match(r"[-?:](?:[ \t]|$)", value):
+        return False
+    if re.search(r":(?:[ \t]|$)|[ \t]#|[\x00-\x08\x0b-\x1f\x7f]", value):
+        return False
+    return True
+
+
+def _next_significant_frontmatter_line(lines: list[str], start: int, end: int) -> str | None:
+    """Skip blank and comment lines, which cannot establish scalar closure."""
+    for line in lines[start:end]:
+        content = _line_content(line)
+        if not content.strip(" \t") or content.lstrip(" \t").startswith("#"):
+            continue
+        return line
+    return None
+
+
+def _advance_flow_context(
+    content: str, stack: list[str], quote: str | None,
+) -> str | None:
+    """Track flow collections and quoted strings without interpreting their values.
+
+    Unclosed or mismatched collections remain open so ambiguous later lines are
+    retained. Outside a collection, only a value beginning with a flow opener is
+    recognized; quoted block values are handled separately by the caller.
+    """
+    index = 0
+    if not stack:
+        index = len(content) - len(content.lstrip(" \t"))
+        value = content[index:]
+        if not value or value[0] not in "[{":
+            if value and value[0] in _QUOTE_CHARACTERS:
+                closing = _quoted_scalar_closing_index(value, value[0])
+                if closing is None:
+                    return None
+                separator = re.match(r"[ \t]*:[ \t]+", value[closing + 1:])
+                if separator is None:
+                    return None
+                index += closing + 1 + separator.end()
+                value = content[index:]
+            else:
+                match = re.match(r"[ \t]*(?:[^:#]+:[ \t]+|-[ \t]+)(.*)", content)
+                if match is None:
+                    return None
+                value = match.group(1)
+                index = match.start(1)
+        prefix = re.match(r"(?:[&!][^ \t]+[ \t]+)*", value)
+        index += prefix.end()
+        value = content[index:]
+        if not value or value[0] not in "[{":
+            return None
+
+    while index < len(content):
+        character = content[index]
+        if quote is not None:
+            if quote == '"' and character == "\\":
+                index += 2
+                continue
+            if character == quote:
+                if quote == "'" and content[index + 1:index + 2] == "'":
+                    index += 2
+                    continue
+                quote = None
+        elif character == "#" and (index == 0 or content[index - 1] in " \t"):
+            break
+        elif character in _QUOTE_CHARACTERS and (
+            index == 0 or content[index - 1] in " \t,:[{?"
+        ):
+            quote = character
+        elif character in "[{":
+            stack.append(character)
+        elif character in "]}":
+            if not stack or stack[-1] != {']': '[', '}': '{'}[character]:
+                # An invalid collection is uncertain: keep all remaining lines.
+                stack.append("?")
+                return quote
+            stack.pop()
+            if not stack:
+                return None
+        index += 1
+    return quote
+
+
+def _drop_frontmatter_metadata_lines(lines: list[str]) -> list[str]:
+    close_index = _frontmatter_close_index(lines)
+    if close_index is None:
+        # No complete frontmatter block: nothing is excluded, conservatively.
+        return lines
+    kept = []
+    open_quote: str | None = None
+    flow_stack: list[str] = []
+    flow_quote: str | None = None
+    for index, line in enumerate(lines):
+        if not 0 < index < close_index:
+            kept.append(line)
+            continue
+        content = _line_content(line)
+        following = _next_significant_frontmatter_line(lines, index + 1, close_index)
+        if flow_stack:
+            flow_quote = _advance_flow_context(content, flow_stack, flow_quote)
+            kept.append(line)
+            continue
+        if open_quote is not None:
+            # Conservatively keep every line inside a cross-line quoted value;
+            # a metadata-like line there is content, not a top-level key.
+            if _line_closes_open_quote(content, open_quote):
+                open_quote = None
+            kept.append(line)
+            continue
+        value = _metadata_scalar_value(content)
+        if value is not None and _is_complete_metadata_scalar(value, following):
+            continue
+        opened = _unterminated_quoted_value(content)
+        if opened is not None:
+            open_quote = opened
+        else:
+            flow_quote = _advance_flow_context(content, flow_stack, flow_quote)
+        kept.append(line)
+    return kept
+
+
+def _heading_level(content: str) -> int | None:
+    match = re.match(r"(#{1,6})(\s|$)", content)
+    if match is None:
+        return None
+    return len(match.group(1))
+
+
+_CODE_FENCE_PATTERN = re.compile(r" {0,3}(`{3,}|~{3,})")
+
+
+def _code_fence_marker(content: str) -> tuple[str, int] | None:
+    """Return the fence character and length for an opening fence-shaped line."""
+    match = _CODE_FENCE_PATTERN.match(content)
+    if match is None:
+        return None
+    marker = match.group(1)
+    return marker[0], len(marker)
+
+
+def _closes_code_fence(content: str, character: str, length: int) -> bool:
+    """Whether this line is a bare fence closing the given opening fence."""
+    indent = len(content) - len(content.lstrip(" "))
+    if indent > 3:
+        return False
+    stripped = content[indent:]
+    if len(stripped) < length or any(part != character for part in stripped[:length]):
+        return False
+    return stripped[length:].strip(" \t") == ""
+
+
+def _fenced_code_line_flags(lines: list[str], start: int) -> list[bool]:
+    """Per-line flags: True when the line belongs to a fenced code block.
+
+    A fence opens with three or more backticks or tildes (up to three leading
+    spaces, optional info string) and closes with a bare fence of the same
+    character at least as long. An unterminated fence conservatively keeps the
+    rest of the document inside the block.
+    """
+    flags = []
+    in_fence = False
+    fence_character = ""
+    fence_length = 0
+    for line in lines[start:]:
+        content = _line_content(line)
+        marker = _code_fence_marker(content)
+        if marker is not None:
+            character, length = marker
+            if (
+                in_fence
+                and character == fence_character
+                and length >= fence_length
+                and _closes_code_fence(content, character, length)
+            ):
+                in_fence = False
+                flags.append(True)
+                continue
+            if not in_fence:
+                match = _CODE_FENCE_PATTERN.match(content)
+                if character == "`" and "`" in content[match.end():]:
+                    flags.append(False)
+                    continue
+                fence_character = character
+                fence_length = length
+                in_fence = True
+            flags.append(True)
+            continue
+        flags.append(in_fence)
+    return flags
+
+
+def _drop_document_status_lines(lines: list[str]) -> list[str]:
+    opens_frontmatter = bool(lines) and _line_content(lines[0]) == "---"
+    close_index = _frontmatter_close_index(lines)
+    if opens_frontmatter and close_index is None:
+        # Incomplete frontmatter: nothing is excluded, conservatively.
+        return lines
+    body_start = 0 if close_index is None else close_index + 1
+    fenced = _fenced_code_line_flags(lines, body_start)
+    first_heading = None
+    for offset, line in enumerate(lines[body_start:]):
+        if fenced[offset]:
+            continue
+        if _heading_level(_line_content(line)) is not None:
+            first_heading = body_start + offset
+            break
+    if first_heading is None:
+        return lines
+    drop = set()
+    for offset in range(first_heading + 1 - body_start, len(fenced)):
+        if fenced[offset]:
+            continue
+        content = _line_content(lines[body_start + offset])
+        if _heading_level(content) == 2:
+            break
+        if any(content.startswith(prefix) for prefix in _DOCUMENT_STATUS_PREFIXES):
+            drop.add(body_start + offset)
+    return [line for index, line in enumerate(lines) if index not in drop]
+
+
+def _normalize_context_v1(text: str) -> str:
+    """Drop only the documented lifecycle metadata lines; keep every other byte."""
+    lines = _split_physical_lines(text)
+    lines = _drop_frontmatter_metadata_lines(lines)
+    lines = _drop_document_status_lines(lines)
+    return "".join(lines)
+
+
+def _context_digest(raw: bytes, *, ref: str) -> str:
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise LifecycleStateError(f"context-not-valid-utf8:{ref}") from exc
+    return hashlib.sha256(_normalize_context_v1(text).encode("utf-8")).hexdigest()
 
 
 def _timestamp(value: object, *, label: str) -> str:
@@ -294,6 +719,40 @@ def _validate_release(value: object) -> dict[str, object]:
     return result
 
 
+def _validate_snapshot(value: object, *, label: str) -> dict[str, object]:
+    if not isinstance(value, Mapping) or set(value) != _SNAPSHOT_FIELDS:
+        raise LifecycleStateError(f"invalid-{label}-fields")
+    result = dict(value)
+    if result.get("algorithm") != _SNAPSHOT_ALGORITHM:
+        raise LifecycleStateError(f"invalid-{label}-algorithm")
+    if result.get("normalization") != _SNAPSHOT_NORMALIZATION:
+        raise LifecycleStateError(f"invalid-{label}-normalization")
+    result["at"] = _timestamp(result.get("at"), label=f"{label}-at")
+    documents = result.get("documents")
+    if not isinstance(documents, Mapping) or not documents:
+        raise LifecycleStateError(f"invalid-{label}-documents")
+    checked_documents: dict[str, object] = {}
+    for ref, digest in documents.items():
+        checked_documents[_context_ref(ref, label=f"{label}-document-ref")] = digest
+        if not isinstance(digest, str) or _DIGEST_PATTERN.fullmatch(digest) is None:
+            raise LifecycleStateError(f"invalid-{label}-digest:{ref}")
+    result["documents"] = checked_documents
+    return result
+
+
+def _validate_acceptance(value: object, *, label: str, allowed_points: frozenset[str]) -> dict[str, object]:
+    if not isinstance(value, Mapping):
+        raise LifecycleStateError(f"invalid-{label}-fields")
+    unknown_points = sorted(set(value) - allowed_points)
+    if unknown_points:
+        raise LifecycleStateError(f"invalid-{label}-fields:" + ",".join(unknown_points))
+    result: dict[str, object] = {}
+    for point in _ACCEPTANCE_POINT_ORDER:
+        if point in value:
+            result[point] = _validate_snapshot(value[point], label="acceptance-snapshot")
+    return result
+
+
 def _validate_state(value: object) -> dict[str, object]:
     if not isinstance(value, Mapping) or set(value) != _STATE_FIELDS:
         raise LifecycleStateError("invalid-state-fields")
@@ -307,7 +766,9 @@ def _validate_state(value: object) -> dict[str, object]:
     requirement_records: dict[str, dict[str, object]] = {}
     for key, raw in requirements.items():
         requirement_id = _id(key, label="requirement-key")
-        if not isinstance(raw, Mapping) or set(raw) != _REQUIREMENT_FIELDS:
+        if not isinstance(raw, Mapping) or set(raw) not in (
+            _REQUIREMENT_FIELDS, _REQUIREMENT_FIELDS_WITH_ACCEPTANCE,
+        ):
             raise LifecycleStateError(f"invalid-requirement-fields:{requirement_id}")
         record = deepcopy(dict(raw))
         if _id(record.get("id"), label="requirement-id") != requirement_id:
@@ -327,6 +788,12 @@ def _validate_state(value: object) -> dict[str, object]:
         record["feature_id"] = None if feature_id is None else _id(feature_id, label="requirement-feature-id")
         record["created_at"] = _timestamp(record.get("created_at"), label="requirement-created-at")
         record["updated_at"] = _timestamp(record.get("updated_at"), label="requirement-updated-at")
+        if "acceptance" in record:
+            record["acceptance"] = _validate_acceptance(
+                record["acceptance"],
+                label="requirement-acceptance",
+                allowed_points=_REQUIREMENT_ACCEPTANCE_POINTS,
+            )
         requirement_records[requirement_id] = record
     missing_requirements = sorted({dependency for record in requirement_records.values()
                                    for dependency in record["depends_on"] if dependency not in requirement_records})
@@ -339,7 +806,9 @@ def _validate_state(value: object) -> dict[str, object]:
     feature_records: dict[str, dict[str, object]] = {}
     for key, raw in features.items():
         feature_id = _id(key, label="feature-key")
-        if not isinstance(raw, Mapping) or set(raw) != _FEATURE_FIELDS:
+        if not isinstance(raw, Mapping) or set(raw) not in (
+            _FEATURE_FIELDS, _FEATURE_FIELDS_WITH_ACCEPTANCE,
+        ):
             raise LifecycleStateError(f"invalid-feature-fields:{feature_id}")
         record = deepcopy(dict(raw))
         if _id(record.get("id"), label="feature-id") != feature_id:
@@ -384,6 +853,12 @@ def _validate_state(value: object) -> dict[str, object]:
         record["validation"] = _validate_validation(record.get("validation"))
         record["review"] = _validate_review(record.get("review"))
         record["release"] = _validate_release(record.get("release"))
+        if "acceptance" in record:
+            record["acceptance"] = _validate_acceptance(
+                record["acceptance"],
+                label="feature-acceptance",
+                allowed_points=_FEATURE_ACCEPTANCE_POINTS,
+            )
         feature_records[feature_id] = record
 
     for requirement_id, requirement in requirement_records.items():
@@ -827,6 +1302,75 @@ def _feature(state: Mapping[str, object], feature_id: str) -> dict[str, object]:
     return record
 
 
+def _set_acceptance_snapshot(record: dict[str, object], point: str, snapshot: Mapping[str, object]) -> None:
+    acceptance = record.get("acceptance")
+    if not isinstance(acceptance, dict):
+        acceptance = {}
+        record["acceptance"] = acceptance
+    acceptance[point] = deepcopy(dict(snapshot))
+
+
+def _clear_acceptance_snapshot(record: dict[str, object], *points: str) -> None:
+    acceptance = record.get("acceptance")
+    if not isinstance(acceptance, dict):
+        return
+    for point in points:
+        acceptance.pop(point, None)
+
+
+def _context_file_identity(root: Path, ref: str) -> tuple[int, int, int, int]:
+    """Read-time identity of one context file, recorded for the later re-check."""
+    path = _context_file_path(root, ref)
+    try:
+        info = os.stat(path, follow_symlinks=False)
+    except FileNotFoundError as exc:
+        raise LifecycleStateError(f"context-not-found:{ref}") from exc
+    except OSError as exc:
+        raise LifecycleStateError(f"cannot-confirm-context:{ref}") from exc
+    if stat.S_ISLNK(info.st_mode):
+        raise LifecycleStateError(f"context-cannot-be-symlink:{ref}")
+    if not stat.S_ISREG(info.st_mode):
+        raise LifecycleStateError(f"context-not-regular:{ref}")
+    return info.st_dev, info.st_ino, info.st_size, info.st_mtime_ns
+
+
+def _build_acceptance_snapshot(
+    root: Path, refs: Sequence[str], *, at: str,
+) -> tuple[dict[str, object], dict[str, str], dict[str, tuple[int, int, int, int]]]:
+    ordered_refs = sorted(set(refs))
+    if not ordered_refs:
+        raise LifecycleStateError("acceptance-references-empty")
+    documents: dict[str, object] = {}
+    raw_digests: dict[str, str] = {}
+    identities: dict[str, tuple[int, int, int, int]] = {}
+    for ref in ordered_refs:
+        identities[ref] = _context_file_identity(root, ref)
+        raw = _read_context_bytes(root, ref)
+        raw_digests[ref] = hashlib.sha256(raw).hexdigest()
+        documents[ref] = _context_digest(raw, ref=ref)
+    snapshot = {
+        "algorithm": _SNAPSHOT_ALGORITHM,
+        "normalization": _SNAPSHOT_NORMALIZATION,
+        "at": at,
+        "documents": documents,
+    }
+    return snapshot, raw_digests, identities
+
+
+def _verify_snapshot_identity(
+    root: Path,
+    raw_digests: Mapping[str, str],
+    identities: Mapping[str, tuple[int, int, int, int]],
+) -> None:
+    """Re-read every bound file once more before the caller replaces the state."""
+    for ref, expected_raw_digest in raw_digests.items():
+        raw = _read_context_bytes(root, ref)
+        if hashlib.sha256(raw).hexdigest() != expected_raw_digest:
+            raise LifecycleStateError(f"context-changed-during-snapshot:{ref}")
+        if _context_file_identity(root, ref) != identities[ref]:
+            raise LifecycleStateError(f"context-changed-during-snapshot:{ref}")
+
+
 def capture_requirement(
     *, repo: str | os.PathLike[str] = ".", requirement_id: str, title: str,
     description: str = "", domain: str = "general", priority: str = "P2",
@@ -959,26 +1503,43 @@ def cancel_requirement(
     return _mutate(repo, operation, at=at)
 
 
-def mark_requirement_ready(*, repo: str | os.PathLike[str] = ".", requirement_id: str, at: str | None = None) -> dict[str, object]:
+def mark_requirement_ready(
+    *, repo: str | os.PathLike[str] = ".", requirement_id: str, at: str | None = None,
+    refresh_acceptance: bool = False,
+) -> dict[str, object]:
+    root = _repo_root(repo)
     requirement_id = _id(requirement_id, label="requirement-id")
 
     def operation(state: dict[str, object], timestamp: str) -> dict[str, object]:
         requirement = _requirement(state, requirement_id)
-        if requirement["status"] != "captured":
-            raise LifecycleStateError(f"requirement-not-captured:{requirement_id}")
-        unmet = [item for item in requirement["depends_on"] if _requirement(state, item)["status"] != "released"]
-        if unmet:
-            raise LifecycleStateError("requirement-dependencies-not-released:" + ",".join(sorted(unmet)))
-        requirement["status"] = "ready"
+        if refresh_acceptance:
+            if requirement["status"] in {"released", "cancelled"}:
+                raise LifecycleStateError(f"requirement-not-open-for-refresh:{requirement_id}")
+            acceptance = requirement.get("acceptance")
+            if not isinstance(acceptance, dict) or "spec_ready" not in acceptance:
+                raise LifecycleStateError(f"acceptance-snapshot-missing:{requirement_id}/spec_ready")
+        else:
+            if requirement["status"] != "captured":
+                raise LifecycleStateError(f"requirement-not-captured:{requirement_id}")
+            unmet = [item for item in requirement["depends_on"] if _requirement(state, item)["status"] != "released"]
+            if unmet:
+                raise LifecycleStateError("requirement-dependencies-not-released:" + ",".join(sorted(unmet)))
+        snapshot, raw_digests, identities = _build_acceptance_snapshot(
+            root, [str(requirement["product_context_ref"])], at=timestamp,
+        )
+        if not refresh_acceptance:
+            requirement["status"] = "ready"
         requirement["updated_at"] = timestamp
+        _set_acceptance_snapshot(requirement, "spec_ready", snapshot)
+        _verify_snapshot_identity(root, raw_digests, identities)
         return {"operation": "mark-requirement-ready", "requirement": deepcopy(requirement)}
 
-    return _mutate(repo, operation, at=at)
+    return _mutate(root, operation, at=at)
 
 
 def start_feature(
     *, repo: str | os.PathLike[str] = ".", requirement_id: str, feature_id: str, branch: str,
-    engineering_context_ref: str, at: str | None = None,
+    engineering_context_ref: str, at: str | None = None, refresh_acceptance: bool = False,
 ) -> dict[str, object]:
     root = _repo_root(repo)
     requirement_id = _id(requirement_id, label="requirement-id")
@@ -989,14 +1550,50 @@ def start_feature(
     )
     _require_context_file(root, engineering_context_ref, label="engineering-context")
 
+    def feature_identity_matches(feature: Mapping[str, object]) -> bool:
+        return (
+            feature["requirement_id"] == requirement_id
+            and feature["branch"] == branch
+            and feature["engineering_context_ref"] == engineering_context_ref
+        )
+
     def operation(state: dict[str, object], timestamp: str) -> dict[str, object]:
         requirement = _requirement(state, requirement_id)
         features = state["features"]
         assert isinstance(features, dict)
+        if refresh_acceptance:
+            existing = features.get(feature_id)
+            if not isinstance(existing, dict):
+                raise LifecycleStateError(f"feature-not-found:{feature_id}")
+            if existing["status"] in {"released", "cancelled"}:
+                raise LifecycleStateError(f"feature-not-open-for-refresh:{feature_id}")
+            if (
+                not feature_identity_matches(existing)
+                or requirement["feature_id"] != feature_id
+            ):
+                raise LifecycleStateError(f"feature-identity-mismatch:{feature_id}")
+            acceptance = existing.get("acceptance")
+            if not isinstance(acceptance, dict) or "plan" not in acceptance:
+                raise LifecycleStateError(f"acceptance-snapshot-missing:{feature_id}/plan")
+            feature = existing
+            snapshot, raw_digests, identities = _build_acceptance_snapshot(
+                root,
+                sorted({str(requirement["product_context_ref"]), engineering_context_ref}),
+                at=timestamp,
+            )
+            feature["updated_at"] = timestamp
+            _set_acceptance_snapshot(feature, "plan", snapshot)
+            _verify_snapshot_identity(root, raw_digests, identities)
+            return {"operation": "start-feature", "feature": deepcopy(feature), "requirement": deepcopy(requirement)}
         if requirement["status"] != "ready" or requirement["feature_id"] is not None:
             raise LifecycleStateError(f"requirement-not-ready-for-feature:{requirement_id}")
         if feature_id in features:
             raise LifecycleStateError(f"feature-already-exists:{feature_id}")
+        snapshot, raw_digests, identities = _build_acceptance_snapshot(
+            root,
+            sorted({str(requirement["product_context_ref"]), engineering_context_ref}),
+            at=timestamp,
+        )
         record = {
             "id": feature_id, "requirement_id": requirement_id, "branch": branch, "status": "planned", "tasks": {},
             "engineering_context_ref": engineering_context_ref,
@@ -1005,6 +1602,8 @@ def start_feature(
             "release": {"status": "pending", "commit": None, "at": None},
             "created_at": timestamp, "updated_at": timestamp,
         }
+        _set_acceptance_snapshot(record, "plan", snapshot)
+        _verify_snapshot_identity(root, raw_digests, identities)
         features[feature_id] = record
         requirement["feature_id"] = feature_id
         requirement["status"] = "in_delivery"
@@ -1113,6 +1712,8 @@ def _reset_delivery_checks(feature: dict[str, object]) -> None:
     feature["validation"] = {"result": "pending", "command": None, "commit": None, "at": None}
     feature["review"] = {"decision": "pending", "by": None, "at": None}
     feature["release"] = {"status": "pending", "commit": None, "at": None}
+    # The pass records these snapshots attest are revoked with the checks.
+    _clear_acceptance_snapshot(feature, "validation", "review")
 
 
 def _unmet_task_dependencies(task: Mapping[str, object], tasks: Mapping[str, object]) -> list[str]:
@@ -1300,14 +1901,32 @@ def record_validation(
             not active_tasks or any(task["status"] != "done" for task in active_tasks)
         ):
             raise LifecycleStateError(f"feature-has-incomplete-active-tasks:{feature_id}")
+        requirement = _requirement(state, str(feature["requirement_id"]))
+        validation_snapshot: dict[str, object] | None = None
+        raw_digests: dict[str, str] | None = None
+        snapshot_identities: dict[str, tuple[int, int, int, int]] | None = None
+        if result == "pass":
+            validation_snapshot, raw_digests, snapshot_identities = _build_acceptance_snapshot(
+                root,
+                sorted({str(requirement["product_context_ref"]), str(feature["engineering_context_ref"])}),
+                at=timestamp,
+            )
         feature["validation"] = {"result": result, "command": command, "commit": head, "at": timestamp}
         feature["review"] = {"decision": "pending", "by": None, "at": None}
         feature["release"] = {"status": "pending", "commit": None, "at": None}
+        if result == "pass":
+            _set_acceptance_snapshot(feature, "validation", validation_snapshot)
+        else:
+            # A failed validation cannot keep a passing fingerprint.
+            _clear_acceptance_snapshot(feature, "validation")
+        # The previous approval is revoked together with the review record.
+        _clear_acceptance_snapshot(feature, "review")
         feature["status"] = "validated" if result == "pass" else "in_progress"
         feature["updated_at"] = timestamp
-        requirement = _requirement(state, str(feature["requirement_id"]))
         requirement["status"] = "validated" if result == "pass" else "in_delivery"
         requirement["updated_at"] = timestamp
+        if raw_digests is not None and snapshot_identities is not None:
+            _verify_snapshot_identity(root, raw_digests, snapshot_identities)
         return {"operation": "record-validation", "feature": deepcopy(feature)}
 
     return _mutate(root, operation, at=at)
@@ -1332,13 +1951,28 @@ def record_review(
         validated_commit = str(validation["commit"])
         if not _implementation_unchanged(root, validated_commit, head):
             raise LifecycleStateError("review-commit-does-not-match-validation")
+        requirement = _requirement(state, str(feature["requirement_id"]))
+        review_snapshot: dict[str, object] | None = None
+        raw_digests: dict[str, str] | None = None
+        snapshot_identities: dict[str, tuple[int, int, int, int]] | None = None
+        if decision == "approved":
+            review_snapshot, raw_digests, snapshot_identities = _build_acceptance_snapshot(
+                root,
+                sorted({str(requirement["product_context_ref"]), str(feature["engineering_context_ref"])}),
+                at=timestamp,
+            )
         feature["review"] = {"decision": decision, "by": by, "at": timestamp}
         feature["release"] = {"status": "pending", "commit": None, "at": None}
+        if decision == "approved":
+            _set_acceptance_snapshot(feature, "review", review_snapshot)
+        else:
+            _clear_acceptance_snapshot(feature, "review")
         feature["status"] = "reviewed" if decision == "approved" else "in_progress"
         feature["updated_at"] = timestamp
-        requirement = _requirement(state, str(feature["requirement_id"]))
         requirement["status"] = "validated" if decision == "approved" else "in_delivery"
         requirement["updated_at"] = timestamp
+        if raw_digests is not None and snapshot_identities is not None:
+            _verify_snapshot_identity(root, raw_digests, snapshot_identities)
         return {
             "operation": "record-review", "feature": deepcopy(feature),
             "requirement": deepcopy(requirement),
@@ -1445,6 +2079,102 @@ def feature_projection(*, repo: str | os.PathLike[str] = ".", feature_id: str) -
     feature = _feature(state, _id(feature_id, label="feature-id"))
     requirement = _requirement(state, str(feature["requirement_id"]))
     return {"feature": deepcopy(feature), "requirement": deepcopy(requirement)}
+
+
+def _compare_snapshot_with_current(
+    root: Path, snapshot: Mapping[str, object], refs: Sequence[str],
+) -> tuple[bool, list[dict[str, object]]]:
+    expected_documents = snapshot["documents"]
+    assert isinstance(expected_documents, Mapping)
+    current_refs = set(refs)
+    files: list[dict[str, object]] = []
+    is_stale = False
+    for ref in sorted(set(expected_documents) | current_refs):
+        expected = expected_documents.get(ref)
+        current_digest: str | None = None
+        if ref in current_refs:
+            raw = _read_verification_context_bytes(root, ref)
+            if raw is not None:
+                confirmation = _read_verification_context_bytes(root, ref)
+                if confirmation is None or hashlib.sha256(confirmation).hexdigest() != hashlib.sha256(raw).hexdigest():
+                    raise LifecycleStateError(f"context-changed-during-verification:{ref}")
+                current_digest = _context_digest(raw, ref=ref)
+        if ref not in expected_documents:
+            reason = "ref-added"
+            is_stale = True
+        elif ref not in current_refs:
+            reason = "ref-removed"
+            is_stale = True
+        elif current_digest is None:
+            reason = "missing-file"
+            is_stale = True
+        elif current_digest != expected:
+            reason = "content-drift"
+            is_stale = True
+        else:
+            reason = "match"
+        files.append({
+            "path": ref,
+            "expected_digest": expected,
+            "current_digest": current_digest,
+            "reason": reason,
+        })
+    return is_stale, files
+
+
+def verify_acceptance(
+    *, repo: str | os.PathLike[str] = ".", requirement_id: str | None = None,
+    feature_id: str | None = None, point: str | None = None,
+) -> dict[str, object]:
+    """Read-only acceptance fingerprint comparison; this writes nothing."""
+    if (requirement_id is None) == (feature_id is None):
+        raise LifecycleStateError("invalid-acceptance-target")
+    if point is not None and point not in _ACCEPTANCE_POINT_ORDER:
+        raise LifecycleStateError(f"invalid-acceptance-point:{point}")
+    root = _repo_root(repo)
+    state = _read_state(root)
+    if requirement_id is not None:
+        if point is not None and point != "spec_ready":
+            raise LifecycleStateError(f"invalid-acceptance-point:{point}")
+        requirement = _requirement(state, _id(requirement_id, label="requirement-id"))
+        target_type = "requirement"
+        target_id = str(requirement["id"])
+        product_ref = str(requirement["product_context_ref"])
+        engineering_ref = None
+        sources = [("spec_ready", requirement)]
+    else:
+        feature = _feature(state, _id(feature_id, label="feature-id"))
+        requirement = _requirement(state, str(feature["requirement_id"]))
+        target_type = "feature"
+        target_id = str(feature["id"])
+        product_ref = str(requirement["product_context_ref"])
+        engineering_ref = str(feature["engineering_context_ref"])
+        if point is None:
+            sources = [
+                ("spec_ready", requirement), ("plan", feature),
+                ("validation", feature), ("review", feature),
+            ]
+        elif point == "spec_ready":
+            sources = [("spec_ready", requirement)]
+        else:
+            sources = [(point, feature)]
+    points: list[dict[str, object]] = []
+    for point_name, record in sources:
+        if point_name == "spec_ready":
+            refs = [product_ref]
+        else:
+            assert engineering_ref is not None
+            refs = sorted({product_ref, engineering_ref})
+        acceptance = record.get("acceptance")
+        snapshot = acceptance.get(point_name) if isinstance(acceptance, Mapping) else None
+        if snapshot is None:
+            points.append({"point": point_name, "result": "missing", "files": []})
+            continue
+        is_stale, files = _compare_snapshot_with_current(root, snapshot, refs)
+        points.append({"point": point_name, "result": "stale" if is_stale else "match", "files": files})
+    results = {item["result"] for item in points}
+    overall = "stale" if "stale" in results else ("missing" if "missing" in results else "match")
+    return {"target_type": target_type, "target_id": target_id, "result": overall, "points": points}
 
 
 def _feature_next_stage(feature: Mapping[str, object]) -> tuple[str, str]:
@@ -1620,12 +2350,20 @@ def build_parser() -> argparse.ArgumentParser:
     cancel.add_argument("--at")
     ready = commands.add_parser("mark-requirement-ready", help="mark a captured requirement ready for delivery")
     ready.add_argument("--requirement-id", required=True)
+    ready.add_argument(
+        "--refresh-acceptance", action="store_true",
+        help="re-record the existing spec_ready fingerprint after renewed approval; changes no progress",
+    )
     ready.add_argument("--at")
     start = commands.add_parser("start-feature", help="link a ready requirement to one feature branch")
     start.add_argument("--requirement-id", required=True)
     start.add_argument("--feature-id", required=True)
     start.add_argument("--branch", required=True)
     start.add_argument("--engineering-context-ref", required=True)
+    start.add_argument(
+        "--refresh-acceptance", action="store_true",
+        help="re-record the existing plan fingerprint after renewed approval; creates no feature",
+    )
     start.add_argument("--at")
     add = commands.add_parser("add-task", help="add a delivery task")
     add.add_argument("--feature-id", required=True)
@@ -1697,6 +2435,26 @@ def build_parser() -> argparse.ArgumentParser:
     product.add_argument("--requirement-id", required=True)
     feature = commands.add_parser("feature-projection", help="show one feature and its requirement")
     feature.add_argument("--feature-id", required=True)
+    verify = commands.add_parser(
+        "verify-acceptance",
+        help="compare recorded acceptance fingerprints with current context content",
+        description=(
+            "Read-only check of the content fingerprints recorded at acceptance time. "
+            "This command writes nothing and exits 1 when a checked point is stale."
+        ),
+    )
+    verify_target = verify.add_mutually_exclusive_group(required=True)
+    verify_target.add_argument(
+        "--requirement-id", help="check this requirement's spec_ready acceptance point",
+    )
+    verify_target.add_argument(
+        "--feature-id",
+        help="check this feature's acceptance points; spec_ready uses the linked requirement",
+    )
+    verify.add_argument(
+        "--point", choices=_ACCEPTANCE_POINT_ORDER,
+        help="check a single acceptance point instead of the default set",
+    )
     return parser
 
 
@@ -1726,11 +2484,15 @@ def main(argv: Sequence[str] | None = None) -> int:
                 repo=args.repo, requirement_id=args.requirement_id, reason=args.reason, at=args.at,
             )
         elif args.command == "mark-requirement-ready":
-            result = mark_requirement_ready(repo=args.repo, requirement_id=args.requirement_id, at=args.at)
+            result = mark_requirement_ready(
+                repo=args.repo, requirement_id=args.requirement_id,
+                at=args.at, refresh_acceptance=args.refresh_acceptance,
+            )
         elif args.command == "start-feature":
             result = start_feature(
                 repo=args.repo, requirement_id=args.requirement_id, feature_id=args.feature_id,
-                branch=args.branch, engineering_context_ref=args.engineering_context_ref, at=args.at,
+                branch=args.branch, engineering_context_ref=args.engineering_context_ref,
+                at=args.at, refresh_acceptance=args.refresh_acceptance,
             )
         elif args.command == "add-task":
             result = add_task(
@@ -1772,6 +2534,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             result = next_action(args.repo)
         elif args.command == "product-projection":
             result = product_projection(repo=args.repo, requirement_id=args.requirement_id)
+        elif args.command == "verify-acceptance":
+            result = verify_acceptance(
+                repo=args.repo, requirement_id=args.requirement_id,
+                feature_id=args.feature_id, point=args.point,
+            )
         else:
             result = feature_projection(repo=args.repo, feature_id=args.feature_id)
     except LifecycleStateError as exc:
@@ -1785,6 +2552,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             _emit_error_details(details)
         return 2
     _emit(result)
+    if args.command == "verify-acceptance":
+        return 1 if result["result"] == "stale" else 0
     return 0
 
 
@@ -1798,4 +2567,5 @@ __all__ = [
     "mark_requirement_ready", "migrate_feature_branch", "next_action", "product_projection", "readyqueue",
     "record_release", "retract_release",
     "record_review", "record_validation", "revise_requirement", "set_task_status", "start_feature", "state_path", "status",
+    "verify_acceptance",
 ]

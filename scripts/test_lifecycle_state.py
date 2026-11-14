@@ -20,7 +20,9 @@ import lifecycle_state  # noqa: E402
 import test_support  # noqa: E402
 
 
-class LifecycleStateTest(unittest.TestCase):
+class LifecycleFixture(unittest.TestCase):
+    """Shared temporary-repository fixture for lifecycle contract tests."""
+
     def setUp(self) -> None:
         self.temporary = tempfile.TemporaryDirectory()
         self.base = Path(self.temporary.name)
@@ -82,6 +84,61 @@ class LifecycleStateTest(unittest.TestCase):
         self.initialize_state()
         self.capture("REQ-timestamp")
 
+    def complete_one_task(self, feature_id: str = "FEAT-one") -> None:
+        lifecycle_state.add_task(
+            repo=self.repo, feature_id=feature_id, task_id="TASK-one", title="Implement",
+            at="2026-08-10T00:04:00Z",
+        )
+        lifecycle_state.set_task_status(
+            repo=self.repo, feature_id=feature_id, task_id="TASK-one", status="in_progress",
+            at="2026-08-10T00:05:00Z",
+        )
+        lifecycle_state.set_task_status(
+            repo=self.repo, feature_id=feature_id, task_id="TASK-one", status="done",
+            at="2026-08-10T00:06:00Z",
+        )
+
+    def prepare_branch_migration(
+        self,
+        *,
+        requirement_id: str = "REQ-migrate",
+        feature_id: str = "FEAT-migrate",
+        branch: str = "feature/migrated",
+    ) -> tuple[str, str, str]:
+        self.initialize_state()
+        self.capture(requirement_id)
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id=requirement_id)
+        engineering_ref = self.start(requirement_id, feature_id)
+        self.git("checkout", "-b", branch)
+        head = self.git("rev-parse", "HEAD").stdout.strip()
+        return engineering_ref, head, f"feature/{feature_id}"
+
+    def state_bytes(self, *, root: Path | None = None) -> bytes:
+        target_root = self.repo if root is None else root
+        return (target_root / ".sdlc-v1/state.json").read_bytes()
+
+    def migration_arguments(
+        self,
+        *,
+        feature_id: str = "FEAT-migrate",
+        expected_branch: str = "feature/FEAT-migrate",
+        branch: str = "feature/migrated",
+        expected_head: str | None = None,
+    ) -> dict[str, str | Path]:
+        head = expected_head or self.git("rev-parse", "HEAD").stdout.strip()
+        return {
+            "repo": self.repo,
+            "feature_id": feature_id,
+            "expected_branch": expected_branch,
+            "branch": branch,
+            "expected_head": head,
+            "reason": "continue implementation in the current checkout",
+        }
+
+
+class LifecycleStateTest(LifecycleFixture):
+    """Contract tests for the pre-fingerprint lifecycle behaviors."""
+
     def test_state_load_preserves_supported_timezone_spellings(self) -> None:
         self.prepare_requirement_timestamp_state()
 
@@ -138,57 +195,6 @@ class LifecycleStateTest(unittest.TestCase):
                     "invalid-requirement-updated-at",
                 ):
                     lifecycle_state.load(self.repo)
-
-    def complete_one_task(self, feature_id: str = "FEAT-one") -> None:
-        lifecycle_state.add_task(
-            repo=self.repo, feature_id=feature_id, task_id="TASK-one", title="Implement",
-            at="2026-08-10T00:04:00Z",
-        )
-        lifecycle_state.set_task_status(
-            repo=self.repo, feature_id=feature_id, task_id="TASK-one", status="in_progress",
-            at="2026-08-10T00:05:00Z",
-        )
-        lifecycle_state.set_task_status(
-            repo=self.repo, feature_id=feature_id, task_id="TASK-one", status="done",
-            at="2026-08-10T00:06:00Z",
-        )
-
-    def prepare_branch_migration(
-        self,
-        *,
-        requirement_id: str = "REQ-migrate",
-        feature_id: str = "FEAT-migrate",
-        branch: str = "feature/migrated",
-    ) -> tuple[str, str, str]:
-        self.initialize_state()
-        self.capture(requirement_id)
-        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id=requirement_id)
-        engineering_ref = self.start(requirement_id, feature_id)
-        self.git("checkout", "-b", branch)
-        head = self.git("rev-parse", "HEAD").stdout.strip()
-        return engineering_ref, head, f"feature/{feature_id}"
-
-    def state_bytes(self, *, root: Path | None = None) -> bytes:
-        target_root = self.repo if root is None else root
-        return (target_root / ".sdlc-v1/state.json").read_bytes()
-
-    def migration_arguments(
-        self,
-        *,
-        feature_id: str = "FEAT-migrate",
-        expected_branch: str = "feature/FEAT-migrate",
-        branch: str = "feature/migrated",
-        expected_head: str | None = None,
-    ) -> dict[str, str | Path]:
-        head = expected_head or self.git("rev-parse", "HEAD").stdout.strip()
-        return {
-            "repo": self.repo,
-            "feature_id": feature_id,
-            "expected_branch": expected_branch,
-            "branch": branch,
-            "expected_head": head,
-            "reason": "continue implementation in the current checkout",
-        }
 
     def test_state_updates_can_be_batched_before_a_git_handoff(self) -> None:
         self.initialize_state()
@@ -1499,6 +1505,1353 @@ class LifecycleStateTest(unittest.TestCase):
         ):
             lifecycle_state.record_release(repo=self.repo, feature_id="FEAT-protection")
         self.assertEqual(self.state_bytes(), before_release)
+
+
+ACCEPTANCE_POINTS = ("spec_ready", "plan", "validation", "review")
+
+
+class AcceptanceFingerprintTest(LifecycleFixture):
+    """Behavior tests for the acceptance content fingerprint (REQ-SDLC-FINGERPRINT-001)."""
+
+    def setUp(self) -> None:
+        super().setUp()
+        self.command = [sys.executable, str(HERE / "lifecycle_state.py"), "--repo", str(self.repo)]
+
+    def run_cli(self, *args: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run([*self.command, *args], capture_output=True, text=True)
+
+    def verify_cli(self, *args: str) -> subprocess.CompletedProcess[str]:
+        return self.run_cli("verify-acceptance", *args)
+
+    def write_context(self, ref: str, content: str = "", *, raw: bytes | None = None) -> None:
+        path = self.repo / ref
+        path.parent.mkdir(parents=True, exist_ok=True)
+        if raw is not None:
+            path.write_bytes(raw)
+        else:
+            path.write_text(content, encoding="utf-8")
+
+    def spec_document(
+        self,
+        *,
+        updated_at: str = "2026-11-13T00:00:00Z",
+        document_status: str = "captured",
+        status_line: str = "- 文档状态：Requirement captured；正文定稿。",
+        body_rule: str = "拒绝空值",
+    ) -> str:
+        return (
+            "---\n"
+            f"updated_at: {updated_at}\n"
+            "status: draft\n"
+            f"document_status: {document_status}\n"
+            "owner: product-owner\n"
+            "---\n"
+            "# 产品规格\n"
+            "\n"
+            f"{status_line}\n"
+            "\n"
+            "## 验收条件\n"
+            "\n"
+            f"- 接受标准：{body_rule}\n"
+        )
+
+    def capture_documented(self, requirement_id: str, content: str) -> str:
+        ref = f".sdlc-v1/context/product-{requirement_id}.md"
+        self.write_context(ref, content)
+        lifecycle_state.capture_requirement(
+            repo=self.repo,
+            requirement_id=requirement_id,
+            title=f"Requirement {requirement_id}",
+            product_context_ref=ref,
+            at="2026-08-10T00:01:00Z",
+        )
+        return ref
+
+    def deliver_through_validation(self, requirement_id: str, feature_id: str) -> tuple[str, str]:
+        product_ref = self.capture(requirement_id)
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id=requirement_id)
+        engineering_ref = self.start(requirement_id, feature_id)
+        self.complete_one_task(feature_id)
+        self.commit_state("ready for delivery checks")
+        lifecycle_state.record_validation(
+            repo=self.repo, feature_id=feature_id, result="pass", command="python -m unittest",
+        )
+        return product_ref, engineering_ref
+
+    def acceptance_of(self, requirement_id: str | None = None, feature_id: str | None = None) -> object:
+        state = lifecycle_state.load(self.repo)
+        if requirement_id is not None:
+            return state["requirements"][requirement_id].get("acceptance")
+        return state["features"][feature_id].get("acceptance")
+
+    def assert_hex_digest(self, value: object) -> None:
+        self.assertIsInstance(value, str)
+        self.assertRegex(value, r"^[0-9a-f]{64}$")
+
+    def test_spec_acceptance_binds_product_context_and_matches_initially(self) -> None:
+        self.initialize_state()
+        product_ref = self.capture_documented("REQ-spec", self.spec_document())
+
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-spec")
+        result = self.run_cli("verify-acceptance", "--requirement-id", "REQ-spec")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["target_type"], "requirement")
+        self.assertEqual(payload["target_id"], "REQ-spec")
+        self.assertEqual(payload["result"], "match")
+        self.assertEqual([point["point"] for point in payload["points"]], ["spec_ready"])
+        entry = payload["points"][0]["files"][0]
+        self.assertEqual(entry["path"], product_ref)
+        self.assertEqual(entry["reason"], "match")
+        self.assertEqual(entry["expected_digest"], entry["current_digest"])
+        self.assert_hex_digest(entry["expected_digest"])
+
+    def test_feature_default_points_bind_expected_reference_sets(self) -> None:
+        self.initialize_state()
+        product_ref, engineering_ref = self.deliver_through_validation("REQ-points", "FEAT-points")
+        lifecycle_state.record_review(repo=self.repo, feature_id="FEAT-points", decision="approved")
+
+        result = self.run_cli("verify-acceptance", "--feature-id", "FEAT-points")
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["target_type"], "feature")
+        self.assertEqual(payload["result"], "match")
+        self.assertEqual([point["point"] for point in payload["points"]], list(ACCEPTANCE_POINTS))
+        file_counts = {point["point"]: len(point["files"]) for point in payload["points"]}
+        self.assertEqual(file_counts, {"spec_ready": 1, "plan": 2, "validation": 2, "review": 2})
+        plan_paths = {entry["path"] for entry in payload["points"][1]["files"]}
+        self.assertEqual(plan_paths, {product_ref, engineering_ref})
+        spec_paths = {entry["path"] for entry in payload["points"][0]["files"]}
+        self.assertEqual(spec_paths, {product_ref})
+
+    def test_unrelated_documents_do_not_affect_acceptance_results(self) -> None:
+        self.initialize_state()
+        self.capture_documented("REQ-unrelated", self.spec_document())
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-unrelated")
+        other_ref = self.capture("REQ-other")
+        (self.repo / "project.md").write_text("# project\n", encoding="utf-8")
+
+        before = self.run_cli("verify-acceptance", "--requirement-id", "REQ-unrelated")
+        self.write_context(other_ref, "# product-REQ-other changed\n")
+        (self.repo / "project.md").write_text("# project changed\n", encoding="utf-8")
+        after = self.run_cli("verify-acceptance", "--requirement-id", "REQ-unrelated")
+
+        self.assertEqual(before.returncode, 0, before.stderr)
+        self.assertEqual(after.returncode, 0, after.stderr)
+        self.assertEqual(json.loads(before.stdout)["result"], "match")
+        self.assertEqual(json.loads(after.stdout)["result"], "match")
+
+    def test_content_drift_reports_stale_with_accurate_file_and_recovers(self) -> None:
+        self.initialize_state()
+        product_ref = self.capture_documented("REQ-drift", self.spec_document())
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-drift")
+        original = (self.repo / product_ref).read_bytes()
+
+        self.write_context(product_ref, self.spec_document(body_rule="接受空值"))
+        stale = self.verify_cli("--requirement-id", "REQ-drift")
+        self.assertEqual(stale.returncode, 1, stale.stderr)
+        payload = json.loads(stale.stdout)
+        self.assertEqual(payload["result"], "stale")
+        entry = payload["points"][0]["files"][0]
+        self.assertEqual(entry["path"], product_ref)
+        self.assertEqual(entry["reason"], "content-drift")
+        self.assertNotEqual(entry["expected_digest"], entry["current_digest"])
+        self.assert_hex_digest(entry["current_digest"])
+
+        (self.repo / product_ref).write_bytes(original)
+        recovered = self.verify_cli("--requirement-id", "REQ-drift")
+        self.assertEqual(recovered.returncode, 0, recovered.stderr)
+        self.assertEqual(json.loads(recovered.stdout)["result"], "match")
+
+    def test_deleted_bound_file_is_drift_not_error(self) -> None:
+        self.initialize_state()
+        product_ref = self.capture_documented("REQ-deleted", self.spec_document())
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-deleted")
+        (self.repo / product_ref).unlink()
+
+        result = self.verify_cli("--requirement-id", "REQ-deleted")
+
+        self.assertEqual(result.returncode, 1, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["result"], "stale")
+        entry = payload["points"][0]["files"][0]
+        self.assertEqual(entry["reason"], "missing-file")
+        self.assertIsNone(entry["current_digest"])
+        self.assert_hex_digest(entry["expected_digest"])
+
+    def test_reference_switch_is_observed_as_drift(self) -> None:
+        self.initialize_state()
+        self.capture_documented("REQ-switch", self.spec_document())
+        other_ref = self.capture("REQ-switch-target")
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-switch")
+        state_path = lifecycle_state.state_path(self.repo)
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        state["requirements"]["REQ-switch"]["product_context_ref"] = other_ref
+        state_path.write_text(json.dumps(state), encoding="utf-8")
+
+        result = self.verify_cli("--requirement-id", "REQ-switch")
+
+        self.assertEqual(result.returncode, 1, result.stderr)
+        payload = json.loads(result.stdout)
+        self.assertEqual(payload["result"], "stale")
+        reasons = {entry["path"]: entry["reason"] for entry in payload["points"][0]["files"]}
+        self.assertEqual(reasons[other_ref], "ref-added")
+        self.assertIn("ref-removed", reasons.values())
+
+    def test_validation_and_review_points_record_only_on_pass_and_approved(self) -> None:
+        self.initialize_state()
+        product_ref, engineering_ref = self.deliver_through_validation("REQ-record", "FEAT-record")
+        self.assertIsNotNone(product_ref and engineering_ref)
+        validated = self.verify_cli("--feature-id", "FEAT-record", "--point", "validation")
+        self.assertEqual(validated.returncode, 0, validated.stderr)
+        self.assertEqual(json.loads(validated.stdout)["points"][0]["result"], "match")
+
+        lifecycle_state.record_review(
+            repo=self.repo, feature_id="FEAT-record", decision="approved", by="owner",
+        )
+        approved = self.verify_cli("--feature-id", "FEAT-record", "--point", "review")
+        self.assertEqual(approved.returncode, 0, approved.stderr)
+        self.assertEqual(json.loads(approved.stdout)["points"][0]["result"], "match")
+
+        # No fingerprint is produced by a failed validation or a rejection review.
+        self.deliver_through_validation("REQ-negative", "FEAT-negative")
+        lifecycle_state.record_review(
+            repo=self.repo, feature_id="FEAT-negative", decision="changes_requested",
+        )
+        rejected = self.verify_cli("--feature-id", "FEAT-negative", "--point", "review")
+        self.assertEqual(json.loads(rejected.stdout)["points"][0]["result"], "missing")
+        lifecycle_state.record_validation(repo=self.repo, feature_id="FEAT-negative", result="fail")
+        failed = self.verify_cli("--feature-id", "FEAT-negative", "--point", "validation")
+        self.assertEqual(failed.returncode, 0, failed.stderr)
+        failed_payload = json.loads(failed.stdout)
+        self.assertEqual(failed_payload["points"][0]["result"], "missing")
+        self.assertEqual(failed_payload["points"][0]["files"], [])
+
+    def test_metadata_line_exclusions_follow_the_documented_positions(self) -> None:
+        self.initialize_state()
+        product_ref = self.capture_documented("REQ-normalize", self.spec_document())
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-normalize")
+
+        def expect(payload_changes: dict, *, should_match: bool) -> None:
+            self.write_context(product_ref, self.spec_document(**payload_changes))
+            result = self.verify_cli("--requirement-id", "REQ-normalize")
+            payload = json.loads(result.stdout)
+            if should_match:
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(payload["result"], "match", payload_changes)
+            else:
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertEqual(payload["result"], "stale", payload_changes)
+
+        expect({"updated_at": "2026-11-14T00:00:00Z"}, should_match=True)
+        expect({"document_status": "ready"}, should_match=True)
+        expect({"status_line": "- 文档状态：Requirement ready；正文定稿。"}, should_match=True)
+        expect({"status_line": "**状态**：ready"}, should_match=True)
+        expect({"updated_at": "2026-11-15T00:00:00Z", "document_status": "ready"}, should_match=True)
+        expect({"body_rule": "接受空值"}, should_match=False)
+        expect({"status_line": "owner: 改成别的键"}, should_match=False)
+
+    def test_normalization_keeps_non_designated_metadata_and_structural_changes(self) -> None:
+        self.initialize_state()
+        product_ref = self.capture_documented("REQ-keep", self.spec_document())
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-keep")
+
+        # A same-named status line outside the designated region is content.
+        drifted = self.spec_document().replace(
+            "- 接受标准：拒绝空值\n",
+            "- 接受标准：拒绝空值\n- 文档状态：混入正文的同名行\n",
+        )
+        self.write_context(product_ref, drifted)
+        result = self.verify_cli("--requirement-id", "REQ-keep")
+        self.assertEqual(json.loads(result.stdout)["result"], "stale")
+
+        # Other frontmatter keys stay byte-sensitive.
+        self.write_context(product_ref, self.spec_document().replace("owner: product-owner", "owner: someone-else"))
+        self.assertEqual(json.loads(self.verify_cli("--requirement-id", "REQ-keep").stdout)["result"], "stale")
+
+        # Line-ending changes on kept lines are drift.
+        self.write_context(product_ref, self.spec_document().replace("- 接受标准：拒绝空值\n", "- 接受标准：拒绝空值\r\n"))
+        self.assertEqual(json.loads(self.verify_cli("--requirement-id", "REQ-keep").stdout)["result"], "stale")
+        self.write_context(product_ref, self.spec_document())
+
+    def test_quoted_multiline_frontmatter_hides_no_metadata_like_lines(self) -> None:
+        self.initialize_state()
+        content = (
+            "---\n"
+            "title: \"产品规格第一行\n"
+            "status: reject-empty\n"
+            "第二行\"\n"
+            "updated_at: 2026-11-13T00:00:00Z\n"
+            "owner: product-owner\n"
+            "---\n"
+            "# 产品规格\n"
+            "## 验收条件\n"
+            "- 接受标准：拒绝空值\n"
+        )
+        product_ref = self.capture_documented("REQ-quoted", content)
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-quoted")
+
+        # The metadata-like line inside the quoted value is real content, not metadata.
+        self.write_context(product_ref, content.replace("status: reject-empty", "status: accept-empty"))
+        result = self.verify_cli("--requirement-id", "REQ-quoted")
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["result"], "stale")
+
+        # The designated top-level scalar after the quoted value is still excluded.
+        self.write_context(product_ref, content.replace("2026-11-13", "2026-11-14"))
+        recovered = self.verify_cli("--requirement-id", "REQ-quoted")
+        self.assertEqual(recovered.returncode, 0, recovered.stderr)
+        self.assertEqual(json.loads(recovered.stdout)["result"], "match")
+
+    def test_code_fence_examples_before_the_first_heading_stay_content(self) -> None:
+        self.initialize_state()
+        content = (
+            "---\n"
+            "updated_at: 2026-11-13T00:00:00Z\n"
+            "status: draft\n"
+            "document_status: captured\n"
+            "owner: product-owner\n"
+            "---\n"
+            "```text\n"
+            "# Example heading\n"
+            "- 文档状态：示例（首标题前代码块内）\n"
+            "```\n"
+            "# 产品规格\n"
+            "- 文档状态：Requirement captured；正文定稿。\n"
+            "## 验收条件\n"
+            "- 接受标准：拒绝空值\n"
+        )
+        product_ref = self.capture_documented("REQ-fence-head", content)
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-fence-head")
+
+        self.write_context(
+            product_ref,
+            content.replace("- 文档状态：示例（首标题前代码块内）", "- 文档状态：示例已修改"),
+        )
+        result = self.verify_cli("--requirement-id", "REQ-fence-head")
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["result"], "stale")
+
+        self.write_context(
+            product_ref,
+            content.replace(
+                "- 文档状态：Requirement captured；正文定稿。", "- 文档状态：ready；正文定稿。",
+            ),
+        )
+        recovered = self.verify_cli("--requirement-id", "REQ-fence-head")
+        self.assertEqual(recovered.returncode, 0, recovered.stderr)
+        self.assertEqual(json.loads(recovered.stdout)["result"], "match")
+
+    def test_code_fence_examples_inside_the_metadata_region_stay_content(self) -> None:
+        self.initialize_state()
+        content = (
+            "---\n"
+            "updated_at: 2026-11-13T00:00:00Z\n"
+            "status: draft\n"
+            "document_status: captured\n"
+            "owner: product-owner\n"
+            "---\n"
+            "# 产品规格\n"
+            "```text\n"
+            "- 文档状态：示例（元数据区代码块内）\n"
+            "```\n"
+            "- 文档状态：Requirement captured；正文定稿。\n"
+            "## 验收条件\n"
+            "- 接受标准：拒绝空值\n"
+        )
+        product_ref = self.capture_documented("REQ-fence-region", content)
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-fence-region")
+
+        self.write_context(
+            product_ref,
+            content.replace("- 文档状态：示例（元数据区代码块内）", "- 文档状态：示例已修改"),
+        )
+        result = self.verify_cli("--requirement-id", "REQ-fence-region")
+        self.assertEqual(result.returncode, 1, result.stderr)
+        self.assertEqual(json.loads(result.stdout)["result"], "stale")
+
+        self.write_context(
+            product_ref,
+            content.replace(
+                "- 文档状态：Requirement captured；正文定稿。", "- 文档状态：ready；正文定稿。",
+            ),
+        )
+        recovered = self.verify_cli("--requirement-id", "REQ-fence-region")
+        self.assertEqual(recovered.returncode, 0, recovered.stderr)
+        self.assertEqual(json.loads(recovered.stdout)["result"], "match")
+
+    def test_plain_scalar_continuation_after_blank_line_is_content(self) -> None:
+        self.initialize_state()
+        content = (
+            "---\nstatus: reject-empty\n\n  continuation\n"
+            "updated_at: 2026-11-13\n---\n"
+            "# Title\n- 文档状态：draft\n## Rules\nbody sentinel\n"
+        )
+        product_ref = self.capture_documented("REQ-blank-continuation", content)
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-blank-continuation")
+
+        for old, new in (("reject-empty", "accept-empty"), ("continuation", "changed")):
+            with self.subTest(changed=old):
+                self.write_context(product_ref, content.replace(old, new))
+                result = self.verify_cli("--requirement-id", "REQ-blank-continuation")
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertEqual(json.loads(result.stdout)["result"], "stale")
+
+        expected = content.replace("updated_at: 2026-11-13\n", "").replace("- 文档状态：draft\n", "")
+        self.assertEqual(lifecycle_state._normalize_context_v1(content), expected)
+
+    def test_multiline_flow_nested_keys_are_content(self) -> None:
+        self.initialize_state()
+        content = (
+            "---\nmeta: {\nquoted: \"} [ still quoted\",\n"
+            "status: reject-empty\n}\nstatus: draft\n---\n"
+            "# Title\n- 文档状态：draft\n## Rules\nbody sentinel\n"
+        )
+        product_ref = self.capture_documented("REQ-flow", content)
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-flow")
+
+        for old, new, code, expected_result in (
+            ("status: reject-empty", "status: accept-empty", 1, "stale"),
+            ("status: draft", "status: ready", 0, "match"),
+        ):
+            with self.subTest(changed=old):
+                self.write_context(product_ref, content.replace(old, new))
+                result = self.verify_cli("--requirement-id", "REQ-flow")
+                self.assertEqual(result.returncode, code, result.stderr)
+                self.assertEqual(json.loads(result.stdout)["result"], expected_result)
+
+        expected = content.replace("status: draft\n", "").replace("- 文档状态：draft\n", "")
+        self.assertEqual(lifecycle_state._normalize_context_v1(content), expected)
+
+    def test_quoted_flow_keys_preserve_exact_normalized_content(self) -> None:
+        for key in ('"meta:x"', '"meta#x"', '"meta\\\"#x"', "'meta''#x'"):
+            for nested in ("reject-empty", "accept-empty"):
+                with self.subTest(key=key, nested=nested):
+                    content = (
+                        f"---\n{key}: {{\nstatus: {nested}\n}}\nstatus: draft\n"
+                        "---\n# Title\n\n## Rules\nkeep sentinel\n"
+                    )
+                    expected = content.replace("status: draft\n", "")
+                    self.assertEqual(lifecycle_state._normalize_context_v1(content), expected)
+
+    def test_quoted_flow_keys_detect_nested_drift_via_cli(self) -> None:
+        self.initialize_state()
+        for index, key in enumerate(('"meta:x"', '"meta#x"', '"meta\\\"#x"', "'meta''#x'")):
+            requirement_id = f"REQ-quoted-flow-key-{index}"
+            content = (
+                f"---\n{key}: {{\nstatus: reject-empty\n}}\nstatus: draft\n"
+                "---\n# Title\n\n## Rules\nkeep sentinel\n"
+            )
+            product_ref = self.capture_documented(requirement_id, content)
+            lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id=requirement_id)
+            for old, new, code, expected_result in (
+                ("status: reject-empty", "status: accept-empty", 1, "stale"),
+                ("status: draft", "status: ready", 0, "match"),
+            ):
+                with self.subTest(key=key, changed=old):
+                    self.write_context(product_ref, content.replace(old, new))
+                    result = self.verify_cli("--requirement-id", requirement_id)
+                    self.assertEqual(result.returncode, code, result.stderr)
+                    self.assertEqual(json.loads(result.stdout)["result"], expected_result)
+
+    def test_invalid_backtick_info_does_not_open_fence(self) -> None:
+        self.initialize_state()
+        for index, invalid in enumerate(("```python```", "```lang`meta")):
+            with self.subTest(invalid=invalid):
+                content = (
+                    f"# Title\n{invalid}\n```\n- 文档状态：code sentinel\n```\n"
+                    "- 文档状态：draft\n## Rules\nbody sentinel\n"
+                )
+                requirement_id = f"REQ-invalid-fence-{index}"
+                product_ref = self.capture_documented(requirement_id, content)
+                lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id=requirement_id)
+                self.write_context(product_ref, content.replace("code sentinel", "changed sentinel"))
+                result = self.verify_cli("--requirement-id", requirement_id)
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertEqual(json.loads(result.stdout)["result"], "stale")
+                expected = content.replace("- 文档状态：draft\n", "")
+                self.assertEqual(lifecycle_state._normalize_context_v1(content), expected)
+
+        tilde = "# Title\n~~~lang`meta\n- 文档状态：code sentinel\n~~~\n- 文档状态：draft\n## Rules\nbody sentinel\n"
+        self.assertEqual(
+            lifecycle_state._normalize_context_v1(tilde),
+            tilde.replace("- 文档状态：draft\n", ""),
+        )
+
+    def test_prefixed_containers_and_uncertain_scalars_are_preserved(self) -> None:
+        normalize = lifecycle_state._normalize_context_v1
+        for prefix in ("&anchor", "!custom"):
+            for value in ("{\nstatus: nested\n}", '"first\nstatus: nested\nlast"'):
+                with self.subTest(prefix=prefix, value=value):
+                    content = f"---\nmeta: {prefix} {value}\nstatus: outer\n---\n# Title\n## Rules\nbody sentinel\n"
+                    self.assertEqual(normalize(content), content.replace("status: outer\n", ""))
+
+        for value in ("# comment only", "value: nested", "- nested", '"bad\\q"'):
+            with self.subTest(value=value):
+                content = f"---\nstatus: {value}\n---\n# Title\n## Rules\nbody sentinel\n"
+                self.assertEqual(normalize(content), content)
+
+    def test_ambiguous_frontmatter_contexts_keep_complete_body(self) -> None:
+        normalize = lifecycle_state._normalize_context_v1
+        for opening in ('meta: "unclosed', "meta: {"):
+            with self.subTest(opening=opening):
+                content = f"---\n{opening}\n---\n# Title\n- 文档状态：body sentinel\n## Rules\nlast sentinel\n"
+                self.assertEqual(normalize(content), content)
+
+        separated_flow = (
+            "---\nmeta: &anchor\n  {\nstatus: nested\n  }\n"
+            "status: outer\n---\n# Title\n## Rules\nbody sentinel\n"
+        )
+        self.assertEqual(normalize(separated_flow), separated_flow.replace("status: outer\n", ""))
+
+        quoted_flow = (
+            '---\nmeta: {\nkey: "first\n}\nstatus: inside quote\nlast",\n'
+            "status: inside flow\n}\nstatus: outer\n---\n# Title\n## Rules\nbody sentinel\n"
+        )
+        self.assertEqual(normalize(quoted_flow), quoted_flow.replace("status: outer\n", ""))
+
+    def test_normalization_unit_boundaries_are_conservative(self) -> None:
+        normalize = lifecycle_state._normalize_context_v1
+
+        def document(frontmatter: str, body: str) -> str:
+            return f"---\n{frontmatter}---\n{body}"
+
+        multiline_value = document(
+            "updated_at: 2026-01-01T00:00:00Z\n  continued-from-previous\nstatus: draft\n",
+            "# Title\n- 文档状态：区域行\n",
+        )
+        self.assertNotEqual(normalize(multiline_value), normalize(multiline_value.replace("continued-from-previous", "changed")))
+
+        nested_key = document(
+            "meta:\n  status: inner-value\nstatus: outer\n",
+            "# Title\n- 文档状态：区域行\n",
+        )
+        self.assertNotEqual(normalize(nested_key), normalize(nested_key.replace("inner-value", "changed")))
+
+        incomplete = "---\nupdated_at: 2026-01-01T00:00:00Z\n# Title\n- 文档状态：区域行\n"
+        self.assertNotEqual(normalize(incomplete), normalize(incomplete.replace("2026-01-01", "2026-01-02")))
+
+        no_heading = "updated_at: 2026-01-01T00:00:00Z\n- 文档状态：没有标题不豁免\n"
+        self.assertNotEqual(normalize(no_heading), normalize(no_heading.replace("不豁免", "changed")))
+
+        before_heading = "- 文档状态：标题之前不豁免\n# Title\n- 文档状态：区域行\n## Next\n"
+        self.assertNotEqual(
+            normalize(before_heading),
+            normalize(before_heading.replace("标题之前不豁免", "changed")),
+        )
+
+        after_h2 = "# Title\n## Next\n- 文档状态：二级标题之后不豁免\n"
+        self.assertNotEqual(normalize(after_h2), normalize(after_h2.replace("不豁免", "changed")))
+
+        region = "# Title\n\n- 文档状态：区域行\n- 文档状态：另一行\n## Next\n正文\n"
+        self.assertEqual(normalize(region), normalize(region.replace("区域行", "changed").replace("另一行", "changed2")))
+
+    def test_frontmatter_quoted_multiline_values_keep_metadata_like_lines(self) -> None:
+        normalize = lifecycle_state._normalize_context_v1
+
+        quoted = (
+            "---\n"
+            "title: \"第一行\n"
+            "status: reject-empty\n"
+            "第二行\"\n"
+            "updated_at: 2026-11-13T00:00:00Z\n"
+            "owner: product-owner\n"
+            "---\n"
+            "# 产品规格\n"
+            "## 验收条件\n"
+            "- 接受标准：拒绝空值\n"
+        )
+        # A metadata-like line inside a cross-line quoted value stays byte-sensitive.
+        self.assertNotEqual(
+            normalize(quoted),
+            normalize(quoted.replace("status: reject-empty", "status: accept-empty")),
+        )
+        # The genuine top-level scalar after the quoted value is still excluded.
+        self.assertEqual(
+            normalize(quoted),
+            normalize(quoted.replace("2026-11-13", "2026-11-14")),
+        )
+        # A complete single-line quoted scalar remains excludable.
+        closed = "---\nstatus: \"draft\"\n---\n# Title\n"
+        self.assertEqual(normalize(closed), normalize(closed.replace("\"draft\"", "\"ready\"")))
+        # Unclosed quoted values and flow collections stay conservatively kept.
+        unclosed = "---\nstatus: \"draft\n---\n# Title\n"
+        self.assertNotEqual(normalize(unclosed), normalize(unclosed.replace("\"draft", "\"ready")))
+        flow = "---\nstatus: [a, b]\n---\n# Title\n"
+        self.assertNotEqual(normalize(flow), normalize(flow.replace("[a, b]", "[a]")))
+
+    def test_fenced_code_blocks_are_not_document_metadata(self) -> None:
+        normalize = lifecycle_state._normalize_context_v1
+
+        pre_heading = (
+            "---\n"
+            "updated_at: 2026-11-13T00:00:00Z\n"
+            "---\n"
+            "```text\n"
+            "# Example heading\n"
+            "## Example state\n"
+            "- 文档状态：示例（首标题前代码块内）\n"
+            "```\n"
+            "# 产品规格\n"
+            "- 文档状态：区域真行\n"
+            "## 验收条件\n"
+            "- 接受标准：拒绝空值\n"
+        )
+        self.assertNotEqual(
+            normalize(pre_heading),
+            normalize(pre_heading.replace("示例（首标题前代码块内）", "示例已修改")),
+        )
+        self.assertNotEqual(
+            normalize(pre_heading),
+            normalize(pre_heading.replace("# Example heading", "# Changed heading")),
+        )
+        self.assertEqual(
+            normalize(pre_heading),
+            normalize(pre_heading.replace("区域真行", "区域真行改")),
+        )
+
+        in_region = (
+            "# 产品规格\n"
+            "```text\n"
+            "- 文档状态：示例（元数据区代码块内）\n"
+            "**状态**：示例\n"
+            "```\n"
+            "- 文档状态：区域真行\n"
+            "## 验收条件\n"
+            "- 接受标准：拒绝空值\n"
+        )
+        self.assertNotEqual(
+            normalize(in_region),
+            normalize(in_region.replace("示例（元数据区代码块内）", "示例已修改")),
+        )
+        self.assertEqual(
+            normalize(in_region),
+            normalize(in_region.replace("区域真行", "区域真行改")),
+        )
+
+        variants = (
+            "# 产品规格\n"
+            "  ```python\n"
+            "- 文档状态：缩进围栏内\n"
+            "  ```\n"
+            "~~~~~\n"
+            "- 文档状态：长波浪线围栏内\n"
+            "~~~\n"
+            "- 文档状态：短波浪线不闭合围栏\n"
+            "~~~~~\n"
+            "- 文档状态：区域真行\n"
+            "## Next\n"
+        )
+        self.assertNotEqual(normalize(variants), normalize(variants.replace("缩进围栏内", "改")))
+        self.assertNotEqual(normalize(variants), normalize(variants.replace("长波浪线围栏内", "改")))
+        self.assertNotEqual(normalize(variants), normalize(variants.replace("短波浪线不闭合围栏", "改")))
+        self.assertEqual(normalize(variants), normalize(variants.replace("区域真行", "改")))
+
+        unclosed = (
+            "# 产品规格\n"
+            "```text\n"
+            "- 文档状态：未闭合围栏内\n"
+            "## Next\n"
+            "- 文档状态：围栏后的区域行\n"
+        )
+        self.assertNotEqual(normalize(unclosed), normalize(unclosed.replace("未闭合围栏内", "改")))
+        # No exclusion survives an unterminated fence: conservatively keep every line.
+        self.assertNotEqual(normalize(unclosed), normalize(unclosed.replace("围栏后的区域行", "改")))
+
+    def test_invalid_utf8_context_is_a_clear_error_and_records_nothing(self) -> None:
+        self.initialize_state()
+        product_ref = self.capture_documented("REQ-utf8", self.spec_document())
+        self.write_context(product_ref, raw=b"# \xff\xfe invalid\n")
+
+        with self.assertRaisesRegex(
+            lifecycle_state.LifecycleStateError, "context-not-valid-utf8",
+        ):
+            lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-utf8")
+        self.assertEqual(self.acceptance_of(requirement_id="REQ-utf8"), None)
+        self.assertEqual(
+            lifecycle_state.load(self.repo)["requirements"]["REQ-utf8"]["status"], "captured",
+        )
+
+        # A query against a previously valid snapshot is an error, not a three-state result.
+        self.write_context(product_ref, self.spec_document())
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-utf8")
+        self.write_context(product_ref, raw=b"# \xff\xfe invalid\n")
+        result = self.verify_cli("--requirement-id", "REQ-utf8")
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("context-not-valid-utf8", result.stderr)
+        self.assertEqual(result.stdout, "")
+
+    def test_missing_and_mixed_results_and_exit_codes(self) -> None:
+        self.initialize_state()
+        product_ref, engineering_ref = self.deliver_through_validation("REQ-mixed", "FEAT-mixed")
+        lifecycle_state.record_review(repo=self.repo, feature_id="FEAT-mixed", decision="approved")
+        state_path = lifecycle_state.state_path(self.repo)
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        del state["features"]["FEAT-mixed"]["acceptance"]["review"]
+        state_path.write_text(
+            json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8",
+        )
+
+        only_missing = self.run_cli("verify-acceptance", "--feature-id", "FEAT-mixed")
+        self.assertEqual(only_missing.returncode, 0, only_missing.stderr)
+        payload = json.loads(only_missing.stdout)
+        self.assertEqual(payload["result"], "missing")
+        self.assertEqual(payload["points"][3]["point"], "review")
+        self.assertEqual(payload["points"][3]["result"], "missing")
+        self.assertEqual(payload["points"][3]["files"], [])
+        self.assertEqual({point["result"] for point in payload["points"][:3]}, {"match"})
+
+        # A missing point must not mask another point's stale result.
+        self.write_context(engineering_ref, "# engineering-FEAT-mixed drifted\n")
+        mixed = self.run_cli("verify-acceptance", "--feature-id", "FEAT-mixed")
+        self.assertEqual(mixed.returncode, 1, mixed.stderr)
+        mixed_payload = json.loads(mixed.stdout)
+        self.assertEqual(mixed_payload["result"], "stale")
+        self.assertIn("missing", {point["result"] for point in mixed_payload["points"]})
+        self.assertIsNotNone(product_ref)
+
+    def test_invalid_selectors_and_unknown_targets_are_errors(self) -> None:
+        self.initialize_state()
+        self.capture("REQ-select")
+
+        both = self.run_cli(
+            "verify-acceptance", "--requirement-id", "REQ-select", "--feature-id", "FEAT-none",
+        )
+        self.assertEqual(both.returncode, 2)
+        self.assertIn("not allowed with argument", both.stderr)
+        neither = self.run_cli("verify-acceptance")
+        self.assertEqual(neither.returncode, 2)
+        self.assertIn("one of the arguments", neither.stderr)
+        wrong_point = self.run_cli(
+            "verify-acceptance", "--requirement-id", "REQ-select", "--point", "plan",
+        )
+        self.assertEqual(wrong_point.returncode, 2)
+        self.assertIn("lifecycle-state-error: invalid-acceptance-point:plan", wrong_point.stderr)
+        bogus_point = self.run_cli(
+            "verify-acceptance", "--requirement-id", "REQ-select", "--point", "bogus",
+        )
+        self.assertEqual(bogus_point.returncode, 2)
+        self.assertIn("invalid choice", bogus_point.stderr)
+        unknown_feature = self.verify_cli("--feature-id", "FEAT-missing")
+        self.assertEqual(unknown_feature.returncode, 2)
+        self.assertIn("feature-not-found:FEAT-missing", unknown_feature.stderr)
+        unknown_requirement = self.verify_cli("--requirement-id", "REQ-missing")
+        self.assertEqual(unknown_requirement.returncode, 2)
+        self.assertIn("requirement-not-found:REQ-missing", unknown_requirement.stderr)
+
+    def test_corrupted_acceptance_records_are_state_errors_not_missing(self) -> None:
+        self.initialize_state()
+        self.capture_documented("REQ-corrupt", self.spec_document())
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-corrupt")
+        snapshot = self.acceptance_of(requirement_id="REQ-corrupt")
+        self.assertIsNotNone(snapshot)
+
+        def rewrite(acceptance: dict) -> None:
+            state_path = lifecycle_state.state_path(self.repo)
+            state = json.loads(state_path.read_text(encoding="utf-8"))
+            state["requirements"]["REQ-corrupt"]["acceptance"] = acceptance
+            state_path.write_text(
+                json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8",
+            )
+
+        unknown_point = dict(snapshot)
+        unknown_point["bogus"] = dict(snapshot["spec_ready"])
+        rewrite(unknown_point)
+        with self.assertRaisesRegex(lifecycle_state.LifecycleStateError, "invalid-requirement-acceptance-fields"):
+            lifecycle_state.load(self.repo)
+        corrupted_query = self.verify_cli("--requirement-id", "REQ-corrupt")
+        self.assertEqual(corrupted_query.returncode, 2)
+        self.assertIn("invalid-requirement-acceptance-fields", corrupted_query.stderr)
+
+        bad_digest = {"spec_ready": dict(snapshot["spec_ready"])}
+        bad_digest["spec_ready"]["documents"] = dict(bad_digest["spec_ready"]["documents"])
+        ref = next(iter(bad_digest["spec_ready"]["documents"]))
+        bad_digest["spec_ready"]["documents"][ref] = "zz" * 32
+        rewrite(bad_digest)
+        with self.assertRaisesRegex(lifecycle_state.LifecycleStateError, "invalid-.*-digest"):
+            lifecycle_state.load(self.repo)
+
+        bad_algorithm = {"spec_ready": dict(snapshot["spec_ready"])}
+        bad_algorithm["spec_ready"]["algorithm"] = "md5"
+        rewrite(bad_algorithm)
+        with self.assertRaisesRegex(lifecycle_state.LifecycleStateError, "invalid-.*-algorithm"):
+            lifecycle_state.load(self.repo)
+
+    def test_query_rejects_symlinked_bound_file(self) -> None:
+        self.initialize_state()
+        product_ref = self.capture_documented("REQ-link", self.spec_document())
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-link")
+        (self.repo / product_ref).unlink()
+        (self.repo / product_ref).symlink_to(self.repo / "README.md")
+
+        result = self.verify_cli("--requirement-id", "REQ-link")
+
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("context-cannot-be-symlink", result.stderr)
+        self.assertEqual(result.stdout, "")
+
+    def test_unconfirmed_context_existence_is_an_error_not_missing(self) -> None:
+        if hasattr(os, "geteuid") and os.geteuid() == 0:
+            self.skipTest("context permission boundaries require a non-root runner")
+        self.initialize_state()
+        product_ref = self.capture_documented("REQ-permission", self.spec_document())
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-permission")
+        context_directory = self.repo / ".sdlc-v1/context"
+        context_directory.chmod(0o000)
+        try:
+            # A query cannot pretend an unreadable path is a missing file.
+            result = self.verify_cli("--requirement-id", "REQ-permission")
+            self.assertEqual(result.returncode, 2, result.stderr)
+            self.assertIn("cannot-confirm-context", result.stderr)
+            self.assertEqual(result.stdout, "")
+
+            # The record path reports the same access failure and records nothing.
+            before = self.state_bytes()
+            with self.assertRaisesRegex(
+                lifecycle_state.LifecycleStateError, "cannot-confirm-context",
+            ):
+                lifecycle_state.mark_requirement_ready(
+                    repo=self.repo, requirement_id="REQ-permission", refresh_acceptance=True,
+                )
+            self.assertEqual(self.state_bytes(), before)
+            with self.assertRaisesRegex(
+                lifecycle_state.LifecycleStateError, "product-context-cannot-confirm",
+            ):
+                lifecycle_state.capture_requirement(
+                    repo=self.repo, requirement_id="REQ-permission-second", title="Second",
+                    product_context_ref=product_ref,
+                )
+            self.assertEqual(self.state_bytes(), before)
+        finally:
+            context_directory.chmod(0o755)
+
+    def test_query_is_read_only_and_initializes_nothing(self) -> None:
+        self.initialize_state()
+        product_ref, engineering_ref = self.deliver_through_validation("REQ-readonly", "FEAT-readonly")
+
+        def repo_snapshot() -> dict[str, bytes]:
+            listing: dict[str, bytes] = {}
+            for path in sorted(self.repo.rglob("*")):
+                relative = path.relative_to(self.repo).as_posix()
+                if relative.startswith(".git/"):
+                    continue
+                if path.is_file():
+                    listing[relative] = path.read_bytes()
+            return listing
+
+        before_files = repo_snapshot()
+        match_result = self.run_cli("verify-acceptance", "--feature-id", "FEAT-readonly")
+        self.assertEqual(match_result.returncode, 0, match_result.stderr)
+        self.assertEqual(repo_snapshot(), before_files)
+
+        self.write_context(engineering_ref, "# engineering-FEAT-readonly drifted\n")
+        before_stale_files = repo_snapshot()
+        stale_result = self.run_cli("verify-acceptance", "--feature-id", "FEAT-readonly")
+        self.assertEqual(stale_result.returncode, 1, stale_result.stderr)
+        self.assertEqual(repo_snapshot(), before_stale_files)
+        self.assertIsNotNone(product_ref)
+
+        uninitialized = self.base / "empty-repo"
+        test_support.initialize_git_repo(uninitialized, readme="fresh\n")
+        result = subprocess.run(
+            [
+                sys.executable, str(HERE / "lifecycle_state.py"), "--repo", str(uninitialized),
+                "verify-acceptance", "--requirement-id", "REQ-anything",
+            ],
+            capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 2)
+        self.assertIn("state-not-initialized", result.stderr)
+        self.assertFalse((uninitialized / ".sdlc-v1").exists())
+
+    def test_old_state_is_read_without_backfill_and_extensions_round_trip(self) -> None:
+        self.initialize_state()
+        self.capture_documented("REQ-legacy", self.spec_document())
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-legacy")
+        state_path = lifecycle_state.state_path(self.repo)
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        del state["requirements"]["REQ-legacy"]["acceptance"]
+        state_path.write_text(
+            json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8",
+        )
+        self.assertEqual(lifecycle_state.load(self.repo)["state_version"], 3)
+
+        missing = self.verify_cli("--requirement-id", "REQ-legacy")
+        self.assertEqual(missing.returncode, 0, missing.stderr)
+        self.assertEqual(json.loads(missing.stdout)["result"], "missing")
+
+        # Unrelated mutations must not backfill removed fingerprints.
+        lifecycle_state.capture_requirement(
+            repo=self.repo, requirement_id="REQ-second", title="Second",
+            product_context_ref=self.context("product-REQ-second"),
+        )
+        loaded = lifecycle_state.load(self.repo)
+        self.assertNotIn("acceptance", loaded["requirements"]["REQ-legacy"])
+        self.assertNotIn("acceptance", loaded["requirements"]["REQ-second"])
+        self.assertEqual(loaded["state_version"], 3)
+
+        # A state carrying optional acceptance fields round-trips unchanged.
+        self.capture_documented("REQ-roundtrip", self.spec_document())
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-roundtrip")
+        before = lifecycle_state.load(self.repo)["requirements"]["REQ-roundtrip"]["acceptance"]
+        lifecycle_state.capture_requirement(
+            repo=self.repo, requirement_id="REQ-third", title="Third",
+            product_context_ref=self.context("product-REQ-third"),
+        )
+        after = lifecycle_state.load(self.repo)["requirements"]["REQ-roundtrip"]["acceptance"]
+        self.assertEqual(after, before)
+
+    def test_feature_records_do_not_crosstalk(self) -> None:
+        self.initialize_state()
+        product_a, engineering_a = self.deliver_through_validation("REQ-a", "FEAT-a")
+        product_b = self.capture("REQ-b")
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-b")
+        engineering_b = self.start("REQ-b", "FEAT-b")
+
+        results_a = {
+            point["point"]: point["result"]
+            for point in json.loads(self.verify_cli("--feature-id", "FEAT-a").stdout)["points"]
+        }
+        self.assertEqual(results_a["validation"], "match")
+        results_b = {
+            point["point"]: point["result"]
+            for point in json.loads(self.verify_cli("--feature-id", "FEAT-b").stdout)["points"]
+        }
+        self.assertEqual(results_b["plan"], "match")
+        self.assertEqual(results_b["validation"], "missing")
+
+        self.write_context(engineering_a, "# engineering-FEAT-a drifted\n")
+        results_a = {
+            point["point"]: point["result"]
+            for point in json.loads(self.verify_cli("--feature-id", "FEAT-a").stdout)["points"]
+        }
+        results_b = {
+            point["point"]: point["result"]
+            for point in json.loads(self.verify_cli("--feature-id", "FEAT-b").stdout)["points"]
+        }
+        self.assertEqual(results_a["validation"], "stale")
+        self.assertEqual(results_b["plan"], "match")
+        self.assertIsNotNone(product_a and product_b)
+
+    def test_revoked_pass_records_revoke_their_snapshots(self) -> None:
+        self.initialize_state()
+        product_ref, engineering_ref = self.deliver_through_validation("REQ-revoke", "FEAT-revoke")
+        lifecycle_state.record_review(repo=self.repo, feature_id="FEAT-revoke", decision="approved", by="owner")
+        approved = json.loads(self.verify_cli("--feature-id", "FEAT-revoke").stdout)
+        self.assertEqual({point["point"]: point["result"] for point in approved["points"]},
+                         dict.fromkeys(ACCEPTANCE_POINTS, "match"))
+
+        # Re-validation revokes the review approval and refreshes the validation fingerprint.
+        self.write_context(engineering_ref, "# engineering-FEAT-revoke revised\n")
+        lifecycle_state.record_validation(
+            repo=self.repo, feature_id="FEAT-revoke", result="pass", command="python -m unittest",
+        )
+        after_revalidation = json.loads(self.verify_cli("--feature-id", "FEAT-revoke").stdout)
+        results = {point["point"]: point["result"] for point in after_revalidation["points"]}
+        self.assertEqual(results["validation"], "match")
+        self.assertEqual(results["review"], "missing")
+        self.assertEqual(results["plan"], "stale")
+
+        lifecycle_state.record_validation(repo=self.repo, feature_id="FEAT-revoke", result="fail")
+        failed = json.loads(self.verify_cli("--feature-id", "FEAT-revoke", "--point", "validation").stdout)
+        self.assertEqual(failed["points"][0]["result"], "missing")
+
+        lifecycle_state.record_validation(
+            repo=self.repo, feature_id="FEAT-revoke", result="pass", command="python -m unittest",
+        )
+        lifecycle_state.record_review(repo=self.repo, feature_id="FEAT-revoke", decision="approved", by="owner")
+        lifecycle_state.record_review(repo=self.repo, feature_id="FEAT-revoke", decision="changes_requested")
+        review_missing = json.loads(self.verify_cli("--feature-id", "FEAT-revoke", "--point", "review").stdout)
+        validation_kept = json.loads(self.verify_cli("--feature-id", "FEAT-revoke", "--point", "validation").stdout)
+        self.assertEqual(review_missing["points"][0]["result"], "missing")
+        self.assertEqual(validation_kept["points"][0]["result"], "match")
+        self.assertIsNotNone(product_ref)
+
+    def test_task_reopen_clears_validation_and_review_snapshots_but_keeps_plan(self) -> None:
+        self.initialize_state()
+        self.deliver_through_validation("REQ-reopen-fp", "FEAT-reopen-fp")
+        lifecycle_state.record_review(repo=self.repo, feature_id="FEAT-reopen-fp", decision="approved", by="owner")
+        before_plan = self.acceptance_of(feature_id="FEAT-reopen-fp")["plan"]
+
+        lifecycle_state.set_task_status(
+            repo=self.repo, feature_id="FEAT-reopen-fp", task_id="TASK-one", status="todo",
+        )
+
+        acceptance = self.acceptance_of(feature_id="FEAT-reopen-fp")
+        self.assertEqual(acceptance["plan"], before_plan)
+        self.assertNotIn("validation", acceptance)
+        self.assertNotIn("review", acceptance)
+        results = {
+            point["point"]: point["result"]
+            for point in json.loads(self.verify_cli("--feature-id", "FEAT-reopen-fp").stdout)["points"]
+        }
+        self.assertEqual(
+            results,
+            {"spec_ready": "match", "plan": "match", "validation": "missing", "review": "missing"},
+        )
+
+    def test_refresh_acceptance_updates_spec_snapshot_after_renewed_approval(self) -> None:
+        self.initialize_state()
+        product_ref = self.capture_documented("REQ-refresh", self.spec_document())
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-refresh")
+        original_digest = self.acceptance_of(requirement_id="REQ-refresh")["spec_ready"]["documents"][product_ref]
+
+        # Without the flag the existing preconditions stay unchanged.
+        with self.assertRaisesRegex(lifecycle_state.LifecycleStateError, "requirement-not-captured"):
+            lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-refresh")
+
+        self.write_context(product_ref, self.spec_document(body_rule="接受空值"))
+        refreshed = lifecycle_state.mark_requirement_ready(
+            repo=self.repo, requirement_id="REQ-refresh", refresh_acceptance=True,
+        )
+        self.assertEqual(refreshed["requirement"]["status"], "ready")
+        new_digest = self.acceptance_of(requirement_id="REQ-refresh")["spec_ready"]["documents"][product_ref]
+        self.assertNotEqual(new_digest, original_digest)
+        result = json.loads(self.verify_cli("--requirement-id", "REQ-refresh").stdout)
+        self.assertEqual(result["result"], "match")
+
+        # Refreshing a requirement without an existing snapshot cannot backfill history.
+        self.capture("REQ-no-snapshot")
+        with self.assertRaisesRegex(
+            lifecycle_state.LifecycleStateError, "acceptance-snapshot-missing:REQ-no-snapshot/spec_ready",
+        ):
+            lifecycle_state.mark_requirement_ready(
+                repo=self.repo, requirement_id="REQ-no-snapshot", refresh_acceptance=True,
+            )
+
+    def test_refresh_acceptance_rerecords_spec_after_delivery_started(self) -> None:
+        self.initialize_state()
+        product_ref = self.capture_documented("REQ-refresh-live", self.spec_document())
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-refresh-live")
+        self.start("REQ-refresh-live", "FEAT-refresh-live")
+        before = lifecycle_state.load(self.repo)
+        original_digest = (
+            self.acceptance_of(requirement_id="REQ-refresh-live")["spec_ready"]["documents"][product_ref]
+        )
+
+        self.write_context(product_ref, self.spec_document(body_rule="接受空值"))
+        refreshed = self.run_cli(
+            "mark-requirement-ready", "--requirement-id", "REQ-refresh-live", "--refresh-acceptance",
+        )
+        self.assertEqual(refreshed.returncode, 0, refreshed.stderr)
+
+        after = lifecycle_state.load(self.repo)
+        self.assertEqual(after["requirements"]["REQ-refresh-live"]["status"], "in_delivery")
+        self.assertEqual(after["features"]["FEAT-refresh-live"], before["features"]["FEAT-refresh-live"])
+        self.assertEqual(
+            after["features"]["FEAT-refresh-live"]["acceptance"]["plan"],
+            before["features"]["FEAT-refresh-live"]["acceptance"]["plan"],
+        )
+        new_digest = (
+            self.acceptance_of(requirement_id="REQ-refresh-live")["spec_ready"]["documents"][product_ref]
+        )
+        self.assertNotEqual(new_digest, original_digest)
+
+        # The refreshed spec point matches while the untouched plan point stays visibly stale.
+        results = {
+            point["point"]: point["result"]
+            for point in json.loads(self.verify_cli("--feature-id", "FEAT-refresh-live").stdout)["points"]
+        }
+        self.assertEqual(results["spec_ready"], "match")
+        self.assertEqual(results["plan"], "stale")
+
+        # Closed requirements stay closed for refresh.
+        state_path = lifecycle_state.state_path(self.repo)
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        state["requirements"]["REQ-refresh-live"]["status"] = "cancelled"
+        state["features"]["FEAT-refresh-live"]["status"] = "cancelled"
+        state_path.write_text(
+            json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8",
+        )
+        before_cancelled = self.state_bytes()
+        with self.assertRaisesRegex(
+            lifecycle_state.LifecycleStateError, "requirement-not-open-for-refresh",
+        ):
+            lifecycle_state.mark_requirement_ready(
+                repo=self.repo, requirement_id="REQ-refresh-live", refresh_acceptance=True,
+            )
+        self.assertEqual(self.state_bytes(), before_cancelled)
+
+    def test_refresh_acceptance_updates_plan_snapshot_without_touching_downstream(self) -> None:
+        self.initialize_state()
+        product_ref, engineering_ref = self.deliver_through_validation("REQ-plan-refresh", "FEAT-plan-refresh")
+        lifecycle_state.record_review(repo=self.repo, feature_id="FEAT-plan-refresh", decision="approved", by="owner")
+        before = lifecycle_state.load(self.repo)
+
+        self.write_context(engineering_ref, "# engineering-FEAT-plan-refresh revised\n")
+        lifecycle_state.start_feature(
+            repo=self.repo,
+            requirement_id="REQ-plan-refresh",
+            feature_id="FEAT-plan-refresh",
+            branch="feature/FEAT-plan-refresh",
+            engineering_context_ref=engineering_ref,
+            refresh_acceptance=True,
+        )
+        after = lifecycle_state.load(self.repo)
+        refreshed_feature = after["features"]["FEAT-plan-refresh"]
+        self.assertEqual(refreshed_feature["tasks"], before["features"]["FEAT-plan-refresh"]["tasks"])
+        self.assertEqual(refreshed_feature["status"], "reviewed")
+        self.assertEqual(
+            refreshed_feature["validation"], before["features"]["FEAT-plan-refresh"]["validation"],
+        )
+        self.assertEqual(refreshed_feature["review"], before["features"]["FEAT-plan-refresh"]["review"])
+        self.assertEqual(refreshed_feature["release"], before["features"]["FEAT-plan-refresh"]["release"])
+        self.assertEqual(after["requirements"]["REQ-plan-refresh"]["feature_id"], "FEAT-plan-refresh")
+        self.assertEqual(after["requirements"]["REQ-plan-refresh"]["status"], "validated")
+
+        results = {
+            point["point"]: point["result"]
+            for point in json.loads(self.verify_cli("--feature-id", "FEAT-plan-refresh").stdout)["points"]
+        }
+        self.assertEqual(results["plan"], "match")
+        self.assertEqual(results["validation"], "stale")
+        self.assertEqual(results["review"], "stale")
+        self.assertEqual(results["spec_ready"], "match")
+        self.assertIsNotNone(product_ref)
+
+    def test_refresh_acceptance_rejects_identity_mismatch_and_closed_targets(self) -> None:
+        self.initialize_state()
+        product_ref, engineering_ref = self.deliver_through_validation("REQ-guard", "FEAT-guard")
+        self.capture("REQ-other")
+        self.write_context(".sdlc-v1/context/engineering-other.md", "# engineering-other\n")
+        before = self.state_bytes()
+
+        with self.assertRaisesRegex(lifecycle_state.LifecycleStateError, "feature-identity-mismatch:FEAT-guard"):
+            lifecycle_state.start_feature(
+                repo=self.repo, requirement_id="REQ-guard", feature_id="FEAT-guard",
+                branch="feature/other", engineering_context_ref=engineering_ref, refresh_acceptance=True,
+            )
+        with self.assertRaisesRegex(lifecycle_state.LifecycleStateError, "feature-identity-mismatch:FEAT-guard"):
+            lifecycle_state.start_feature(
+                repo=self.repo, requirement_id="REQ-guard", feature_id="FEAT-guard",
+                branch="feature/FEAT-guard",
+                engineering_context_ref=".sdlc-v1/context/engineering-other.md", refresh_acceptance=True,
+            )
+        with self.assertRaisesRegex(lifecycle_state.LifecycleStateError, "feature-identity-mismatch:FEAT-guard"):
+            lifecycle_state.start_feature(
+                repo=self.repo, requirement_id="REQ-other", feature_id="FEAT-guard",
+                branch="feature/FEAT-guard", engineering_context_ref=engineering_ref, refresh_acceptance=True,
+            )
+        with self.assertRaisesRegex(lifecycle_state.LifecycleStateError, "feature-not-found:FEAT-new"):
+            lifecycle_state.start_feature(
+                repo=self.repo, requirement_id="REQ-guard", feature_id="FEAT-new",
+                branch="feature/FEAT-new", engineering_context_ref=engineering_ref, refresh_acceptance=True,
+            )
+
+        state_path = lifecycle_state.state_path(self.repo)
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        state["features"]["FEAT-guard"]["status"] = "cancelled"
+        state["requirements"]["REQ-guard"]["status"] = "cancelled"
+        state_path.write_text(
+            json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8",
+        )
+        before_cancelled = self.state_bytes()
+        with self.assertRaisesRegex(lifecycle_state.LifecycleStateError, "feature-not-open-for-refresh:FEAT-guard"):
+            lifecycle_state.start_feature(
+                repo=self.repo, requirement_id="REQ-guard", feature_id="FEAT-guard",
+                branch="feature/FEAT-guard", engineering_context_ref=engineering_ref, refresh_acceptance=True,
+            )
+        self.assertEqual(self.state_bytes(), before_cancelled)
+
+    def test_cli_help_documents_refresh_and_verify(self) -> None:
+        ready_help = self.run_cli("mark-requirement-ready", "--help")
+        self.assertEqual(ready_help.returncode, 0, ready_help.stderr)
+        self.assertIn("--refresh-acceptance", ready_help.stdout)
+        start_help = self.run_cli("start-feature", "--help")
+        self.assertEqual(start_help.returncode, 0, start_help.stderr)
+        self.assertIn("--refresh-acceptance", start_help.stdout)
+        verify_help = self.run_cli("verify-acceptance", "--help")
+        self.assertEqual(verify_help.returncode, 0, verify_help.stderr)
+        for option in ("--requirement-id", "--feature-id", "--point"):
+            self.assertIn(option, verify_help.stdout)
+
+    def test_byte_identical_clone_matches_and_active_checkout_drift_is_visible(self) -> None:
+        self.initialize_state()
+        product_ref, engineering_ref = self.deliver_through_validation("REQ-clone", "FEAT-clone")
+        lifecycle_state.record_review(repo=self.repo, feature_id="FEAT-clone", decision="approved", by="owner")
+        self.commit_state("share fingerprints")
+        remote = self.base / "fingerprint-remote.git"
+        subprocess.run(["git", "init", "--bare", str(remote)], check=True, capture_output=True, text=True)
+        self.git("remote", "add", "origin", str(remote))
+        self.git("push", "-u", "origin", "HEAD")
+        clone = self.base / "fingerprint-clone"
+        subprocess.run(["git", "clone", str(remote), str(clone)], check=True, capture_output=True, text=True)
+
+        clone_command = [
+            sys.executable, str(HERE / "lifecycle_state.py"), "--repo", str(clone),
+            "verify-acceptance", "--feature-id", "FEAT-clone",
+        ]
+        clone_match = subprocess.run(clone_command, capture_output=True, text=True)
+        self.assertEqual(clone_match.returncode, 0, clone_match.stderr)
+        self.assertEqual(json.loads(clone_match.stdout)["result"], "match")
+
+        (clone / engineering_ref).write_text("# engineering-FEAT-clone drifted in clone\n", encoding="utf-8")
+        clone_stale = subprocess.run(clone_command, capture_output=True, text=True)
+        self.assertEqual(clone_stale.returncode, 1, clone_stale.stderr)
+        self.assertEqual(json.loads(clone_stale.stdout)["result"], "stale")
+
+        origin_match = self.run_cli("verify-acceptance", "--feature-id", "FEAT-clone")
+        self.assertEqual(origin_match.returncode, 0, origin_match.stderr)
+        self.assertEqual(json.loads(origin_match.stdout)["result"], "match")
+        self.assertIsNotNone(product_ref)
+
+    def test_branch_migration_preserves_snapshots(self) -> None:
+        self.prepare_branch_migration()
+        before = lifecycle_state.load(self.repo)["features"]["FEAT-migrate"]["acceptance"]
+        self.assertIn("plan", before)
+
+        lifecycle_state.migrate_feature_branch(**self.migration_arguments(), at="2026-10-07T00:00:00Z")
+
+        after = lifecycle_state.load(self.repo)
+        self.assertEqual(after["features"]["FEAT-migrate"]["acceptance"], before)
+        result = json.loads(self.verify_cli("--feature-id", "FEAT-migrate").stdout)
+        self.assertEqual(result["points"][1]["point"], "plan")
+        self.assertEqual(result["points"][1]["result"], "match")
+
+    def test_record_detects_context_change_between_reads_without_sleep(self) -> None:
+        self.initialize_state()
+        self.capture_documented("REQ-race", self.spec_document())
+        before = self.state_bytes()
+        with mock.patch.object(
+            lifecycle_state, "_read_context_bytes",
+            side_effect=[b"first version\n", b"second version\n"],
+        ):
+            with self.assertRaisesRegex(
+                lifecycle_state.LifecycleStateError, "context-changed-during-snapshot",
+            ):
+                lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-race")
+        self.assertEqual(self.state_bytes(), before)
+        self.assertEqual(lifecycle_state.load(self.repo)["requirements"]["REQ-race"]["status"], "captured")
+
+    def test_record_rejects_replaced_context_file_between_reads(self) -> None:
+        self.initialize_state()
+        product_ref = self.capture_documented("REQ-swap", self.spec_document())
+        before = self.state_bytes()
+        original_build = lifecycle_state._build_acceptance_snapshot
+
+        def build_then_swap_files(root: Path, refs: list[str], *, at: str) -> tuple:
+            snapshot, raw_digests, identities = original_build(root, refs, at=at)
+            for ref in refs:
+                path = root / ref
+                handle, name = tempfile.mkstemp(prefix=".swap-", dir=str(path.parent))
+                temporary = Path(name)
+                try:
+                    with os.fdopen(handle, "wb") as stream:
+                        stream.write(path.read_bytes())
+                    os.replace(temporary, path)
+                finally:
+                    if temporary.exists():
+                        temporary.unlink()
+            return snapshot, raw_digests, identities
+
+        # Same bytes, different file identity: the record must still be rejected.
+        with mock.patch.object(
+            lifecycle_state, "_build_acceptance_snapshot", side_effect=build_then_swap_files,
+        ):
+            with self.assertRaisesRegex(
+                lifecycle_state.LifecycleStateError, "context-changed-during-snapshot",
+            ):
+                lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-swap")
+        self.assertEqual(self.state_bytes(), before)
+        self.assertEqual(
+            lifecycle_state.load(self.repo)["requirements"]["REQ-swap"]["status"], "captured",
+        )
+
+    def test_record_review_detects_change_between_reads_without_sleep(self) -> None:
+        self.initialize_state()
+        self.deliver_through_validation("REQ-review-race", "FEAT-review-race")
+        before = self.state_bytes()
+        with mock.patch.object(
+            lifecycle_state, "_read_context_bytes",
+            side_effect=[b"product\n", b"engineering\n", b"product-changed\n", b"engineering\n"],
+        ):
+            with self.assertRaisesRegex(
+                lifecycle_state.LifecycleStateError, "context-changed-during-snapshot",
+            ):
+                lifecycle_state.record_review(
+                    repo=self.repo, feature_id="FEAT-review-race", decision="approved", by="owner",
+                )
+        self.assertEqual(self.state_bytes(), before)
+
+    def test_record_failure_leaves_state_unchanged(self) -> None:
+        self.initialize_state()
+        product_ref = self.capture_documented("REQ-readfail", self.spec_document())
+        state_path = lifecycle_state.state_path(self.repo)
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        state["requirements"]["REQ-readfail"]["product_context_ref"] = ".sdlc-v1/context/nowhere.md"
+        state_path.write_text(
+            json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8",
+        )
+        before = self.state_bytes()
+        with self.assertRaisesRegex(lifecycle_state.LifecycleStateError, "context-not-found"):
+            lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-readfail")
+        self.assertEqual(self.state_bytes(), before)
+
+        state = json.loads(state_path.read_text(encoding="utf-8"))
+        state["requirements"]["REQ-readfail"]["product_context_ref"] = product_ref
+        state_path.write_text(
+            json.dumps(state, ensure_ascii=False, indent=2, sort_keys=True) + "\n", encoding="utf-8",
+        )
+        before_symlink = self.state_bytes()
+        (self.repo / product_ref).unlink()
+        (self.repo / product_ref).symlink_to(self.repo / "README.md")
+        with self.assertRaisesRegex(lifecycle_state.LifecycleStateError, "context-cannot-be-symlink"):
+            lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-readfail")
+        self.assertEqual(self.state_bytes(), before_symlink)
+
+    def test_query_detects_change_during_read(self) -> None:
+        self.initialize_state()
+        self.capture_documented("REQ-qrace", self.spec_document())
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-qrace")
+        before = self.state_bytes()
+        with mock.patch.object(
+            lifecycle_state, "_read_verification_context_bytes",
+            side_effect=[b"first\n", b"second\n"],
+        ):
+            with self.assertRaisesRegex(
+                lifecycle_state.LifecycleStateError, "context-changed-during-verification",
+            ):
+                lifecycle_state.verify_acceptance(repo=self.repo, requirement_id="REQ-qrace")
+        self.assertEqual(self.state_bytes(), before)
+
+    def test_query_reports_vanished_file_between_reads_as_change(self) -> None:
+        self.initialize_state()
+        self.capture_documented("REQ-vanish", self.spec_document())
+        lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-vanish")
+        before = self.state_bytes()
+        with mock.patch.object(
+            lifecycle_state, "_read_verification_context_bytes",
+            side_effect=[b"first\n", None],
+        ):
+            with self.assertRaisesRegex(
+                lifecycle_state.LifecycleStateError, "context-changed-during-verification",
+            ):
+                lifecycle_state.verify_acceptance(repo=self.repo, requirement_id="REQ-vanish")
+        self.assertEqual(self.state_bytes(), before)
+
+        # The CLI entry surfaces the same deterministic race as a lifecycle error.
+        with mock.patch.object(
+            lifecycle_state, "_read_verification_context_bytes",
+            side_effect=[b"first\n", None],
+        ):
+            with mock.patch.object(sys, "stderr", new=io.StringIO()) as stderr:
+                code = lifecycle_state.main([
+                    "--repo", str(self.repo), "verify-acceptance", "--requirement-id", "REQ-vanish",
+                ])
+        self.assertEqual(code, 2)
+        self.assertIn("lifecycle-state-error: context-changed-during-verification", stderr.getvalue())
+
+    def test_postreplace_failure_keeps_existing_recovery_semantics(self) -> None:
+        self.initialize_state()
+        self.capture_documented("REQ-postreplace", self.spec_document())
+        with mock.patch.object(lifecycle_state, "_sync_directory", side_effect=OSError("disk failure")):
+            with self.assertRaisesRegex(lifecycle_state.LifecycleStateError, "cannot-write-state"):
+                lifecycle_state.mark_requirement_ready(repo=self.repo, requirement_id="REQ-postreplace")
+        loaded = lifecycle_state.load(self.repo)
+        self.assertEqual(loaded["requirements"]["REQ-postreplace"]["status"], "ready")
+        self.assertIn("spec_ready", loaded["requirements"]["REQ-postreplace"]["acceptance"])
 
 
 if __name__ == "__main__":

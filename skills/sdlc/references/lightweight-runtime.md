@@ -173,6 +173,61 @@ lifecycle_state.py --repo <repo> feature-projection --feature-id <FEAT-id>
 
 `next` 在只有一个明确目标时返回下一阶段；并行工作超过一个时返回 `needs_selection` 和候选项，不替用户猜选。恢复工作时先查询 projection，再只读取其中引用的项目、产品和研发上下文。
 
+### 7.1 验收内容指纹核对
+
+四个验收点（`spec_ready`、`plan`、`validation`、`review`）在对应合法操作发生时，把该点实际引用的
+product/engineering context 内容快照（SHA-256，`normalization: context-v1`）记入 state：`spec_ready`
+绑定该 Requirement 的 product context；`plan`/`validation`/`review` 绑定同一对 product/engineering
+context。归一化只排除指定生命周期元数据位置（frontmatter 顶层的 `updated_at`/`status`/`document_status`
+单行标量、首个正文标题后的 `- 文档状态：`/`**状态**：`/`**上次确认**：` 整行），其余内容字节敏感参与比较。
+
+引用已验收结论前先做只读核对：
+
+```bash
+lifecycle_state.py --repo <repo> verify-acceptance --requirement-id <REQ-id>
+lifecycle_state.py --repo <repo> verify-acceptance --feature-id <FEAT-id> --point plan
+```
+
+`--requirement-id` 与 `--feature-id` 互斥且必须给一个；requirement 目标只查 `spec_ready`，feature
+目标默认查全部四点，`--point` 可选单点。查询不写 state、context、缓存或锁文件，不初始化缺失目录。
+
+结果 JSON 形状为 `{target_type, target_id, result, points}`；`points` 每项是 `{point, result, files}`，
+`files` 每项含 `path`、`expected_digest`、`current_digest`（文件缺失时为 `null`）和 `reason`
+（`match`/`content-drift`/`ref-added`/`ref-removed`/`missing-file`）。总体 `result` 按 `stale` >
+`missing` > `match` 聚合：`stale` 退出码为 1（JSON 仍输出到 stdout），`match`/`missing` 为 0；
+argparse 参数错误（缺少选择器、非法 `--point` 等）以 usage/error 形式报告并以退出码 2 退出，不带
+`lifecycle-state-error:` 前缀；状态与读取错误沿用 `lifecycle-state-error:` 前缀及退出码 2。消费方应解析
+JSON，不靠退出码 0 推断 `match`。
+
+| 结果 | 含义与后续动作 |
+|---|---|
+| `match` | 该点有合法记录，绑定内容与验收时一致；可继续引用，仍须满足既有测试、授权与代码 commit 绑定条件。 |
+| `stale` | 绑定文件内容、路径或引用集合漂移；工具返回结果与退出码 1，由调用方决定暂停依赖该旧结论的工作，列出 `files` 中的漂移文件与原因，主 Agent 向原批准责任人请求重新批准。 |
+| `missing` | 该点没有指纹记录（旧 Feature 或该点尚未发生）；明示"未绑定内容，未验证当前适用性"，不报错也不阻断既有流程，不当作已核验，不自动补记录。 |
+
+恢复故事：引用批准 → `verify-acceptance` 查询 → `match` 继续、`stale` 暂停并说明差异、`missing`
+如实说明未绑定 → 主 Agent 取得对应批准后显式重记或补验。显式重记只对已有快照的同一验收点生效：
+
+```bash
+lifecycle_state.py --repo <repo> mark-requirement-ready --requirement-id <REQ-id> --refresh-acceptance
+
+lifecycle_state.py --repo <repo> start-feature --requirement-id <REQ-id> --feature-id <FEAT-id> \
+  --branch <branch> --engineering-context-ref .sdlc-v1/context/<FEAT-id>.engineering.md \
+  --refresh-acceptance
+```
+
+`--refresh-acceptance` 只刷新既有 `spec_ready`/`plan` 快照：不改变进度、Task 或 Feature 登记身份
+（start-feature 重记要求全部参数与现有登记完全相同），不创建新 Feature，不填补 missing 历史，也不
+替代未覆盖的验证义务；真正的产品范围变化按既有 backlog 规则新建 Requirement。validation 失败、
+`changes_requested` 或 Task reopen 撤销通过记录时同步移除对应快照；重记 spec/plan 不清除下游快照，
+让后续核对仍能看到 stale。
+
+指纹是机械漂移检测：`match` 只证明本次读取的 context 内容自验收后未变，不证明测试已执行、批准已获
+授权或语义仍覆盖当前要求；语义适用性判断与授权仍按
+[阶段协议](stage-agent-protocol.md#context-prose-and-evidence-applicability)执行。并行编辑不受 state
+锁约束，核对通过只证明本次读取；正式引用前主 Agent 重查。旧版工具不保证读取含 acceptance 字段的
+state，跨机器消费指纹记录前先同步工具版本。
+
 ## 8. 两台机器交接
 
 ```text

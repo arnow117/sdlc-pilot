@@ -760,7 +760,22 @@ planned verification creates an obligation the evidence did not cover, it must u
 the existing planning, build and validation actions and their permitted lifecycle
 transitions before advancing. If the change does not affect coverage, record the
 reason in the existing context and retain the evidence reference. Do not invent an
-automatic state transition, context-prose detector, cache, or new evidence store.
+automatic semantic state transition, automatic context-prose migration, cache, or
+new evidence store.
+
+For the mechanical part of this check, the read-only `verify-acceptance` lifecycle
+command compares the context content bound at each acceptance point (spec ready,
+plan, validation, review) with its recorded fingerprint and reports `match`,
+`stale`, or `missing`; usage and recovery are documented once in the lightweight
+runtime's acceptance query guide
+([验收内容指纹核对](lightweight-runtime.md#71-验收内容指纹核对)). Citing an accepted
+conclusion starts with this query; `stale` exits 1 and the caller pauses, then the
+main Agent seeks renewed approval and an explicit re-record before relying on the
+conclusion again. A fingerprint `match` proves only that the bound prose is
+unchanged since acceptance — it is not proof that tests passed, that approval was
+authorized, or that the prose still covers the current requirements. The semantic
+applicability judgment in this section remains the authority for whether recorded
+evidence still applies.
 
 ## 6. Context and checkpoints
 

@@ -4,6 +4,19 @@
 
 ## [Unreleased]
 
+## [5.3.0] — 2026-11-14
+
+### Added
+
+- 四个验收点（`spec_ready`/`plan`/`validation`/`review`）在既有合法操作发生时，把该点实际引用的 product/engineering context 内容快照（SHA-256，`normalization: context-v1`）记入 state；归一化只排除指定生命周期元数据位置，其余内容字节敏感。
+- 新增 `verify-acceptance` 只读查询：`--requirement-id`/`--feature-id` 互斥必选，`--point` 可选单点；返回 `{target_type, target_id, result, points}`，总体结果按 `stale` > `missing` > `match` 聚合，`stale` 退出码 1。查询零写入，不初始化缺失目录。
+- `mark-requirement-ready` 与 `start-feature` 新增 `--refresh-acceptance`：主 Agent 重新获批后显式重记既有 `spec_ready`/`plan` 快照，不改变进度、Task 或 Feature 登记身份，不填补 missing 历史。
+- 撤销一致性：validation 失败、review `changes_requested` 与 Task reopen 撤销通过记录时同步移除对应快照；重记 spec/plan 不清除下游快照，让后续核对仍能看到 stale。
+
+### Compatibility
+
+- `state_version` 保持 3，`acceptance` 是 Requirement/Feature 的可选新增字段：新工具可读不含该字段的旧 v3 state，旧记录不批量回填。旧版工具不保证读取含 `acceptance` 字段的新 state；跨机器消费指纹记录前须把工具同步到 5.3.0 或更高版本。指纹 `match` 只证明绑定内容自验收后未变，不替代测试执行、授权判断或代码 commit 绑定。消费入口见 README「状态命令」与 sdlc driver，详细说明见 lightweight-runtime「查询与恢复」。
+
 ## [5.2.0] — 2026-11-13
 
 ### Added
