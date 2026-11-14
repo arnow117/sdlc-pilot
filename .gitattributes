@@ -1,0 +1,2 @@
+# Unified-diff blank context lines contain a required space; preserve fixture bytes.
+examples/vibe-battery-v1/B02/public/input/change.diff whitespace=-blank-at-eol
