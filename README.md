@@ -177,6 +177,30 @@ review 每次还会检查本次 diff 中的重复实现、不必要抽象和冗�
 `skills/sdlc-prototype/` 后才可用。新目录刚加入或本地以软链加载时，按宿主的索引刷新或新会话规则重载；本仓不声称
 当前运行时已经加载该前缀。独立原型不初始化 state；已跟踪工作仍受当前 stage、brief 和原型产物目录约束。
 
+## Skill / Context 对照测量
+
+**全局场景 ID：`SCN-vibe-test`。** 维护者可以先用内置 battery 离线验证判定器和合成报告，
+再由主 Agent 在核实真实宿主能力并取得本批授权后，组织独立的对照实验。详细操作、受控 host API、
+比较与恢复见 [vibe test 指南](docs/vibe-tests.md)，[验收覆盖与未执行项](docs/vibe-tests.md#acceptance-coverage)
+说明各项证据边界。参数以 [示例配置](examples/vibe-plan-v1.json)、battery 清单及脚本校验为准。
+
+从仓库根目录选择一个尚不存在的输出目录，运行离线示例：
+
+```bash
+OUTPUT_ROOT="$(python3 -c 'import tempfile; from pathlib import Path; print(Path(tempfile.mkdtemp(prefix="sdlc-vibe-")).resolve())')"
+python3 -B scripts/vibe_test.py oracle --battery examples/vibe-battery-v1/battery.json --out "$OUTPUT_ROOT/oracle"
+python3 -B scripts/vibe_test.py plan --config examples/vibe-plan-v1.json --out "$OUTPUT_ROOT/plan"
+python3 -B scripts/vibe_test.py collect --results examples/vibe-battery-v1/private/report-cases/complete.json --out "$OUTPUT_ROOT/collection"
+python3 -B scripts/vibe_test.py report --results "$OUTPUT_ROOT/collection/results.json" --out "$OUTPUT_ROOT/report"
+python3 -B scripts/vibe_test.py report --results "$OUTPUT_ROOT/collection/results.json" --out "$OUTPUT_ROOT/report-strict" --strict
+```
+
+上述数据均为合成／参考数据，真实模型 run 为 0；最后一条 strict 因缺少真实证据预期退出 1。
+oracle 未通过时停止实验并查看各维度；输入快照变化时重新冻结计划；缺少可比 before 时报告“基线缺失”，
+不得归因文档。改动前后比较须分别使用准确快照和各自批次授权。真实试次启动前，主 Agent 必须核实批准、
+原生路由、隐藏材料及网络访问限制、全工作区和独立 scorer 的执行隔离。当前 delegate 的 full-access 不证明
+这些条件；受控 host API 的存在也不构成证明。完整 live AC01/AC04 尚未执行。
+
 ## Web / App 验证与 2.0 升级
 
 受影响的 Web 用户旅程使用 tester-army/e2e CLI 与 Web engine，App 用户旅程使用 Maestro CLI Flow。
@@ -278,6 +302,19 @@ python3 scripts/lifecycle_state.py --repo <target-repo> migrate-feature-branch \
 公开查询命令为 `status`、`next`、`readyqueue`、`product-projection` 和 `feature-projection`。`next` 在只有一个
 候选时返回下一阶段；存在多个活动 Feature/Requirement 时返回 `needs_selection` 和候选列表，不替用户猜测。
 
+引用已验收结论前，先只读核对验收时绑定的 context 内容是否仍与快照一致：
+
+```bash
+python3 scripts/lifecycle_state.py --repo <target-repo> verify-acceptance --requirement-id REQ-001
+python3 scripts/lifecycle_state.py --repo <target-repo> verify-acceptance --feature-id FEAT-001 --point plan
+```
+
+结果为 `match`/`stale`/`missing`：`stale` 退出码 1，表示绑定内容已漂移，先暂停引用并重新批准；
+`missing` 表示该点未绑定内容、未验证当前适用性，不报错也不当作已核验。`mark-requirement-ready` 与
+`start-feature` 的 `--refresh-acceptance` 用于主 Agent 重新获批后显式重记既有快照。JSON 形状、错误
+处理与恢复流程见
+[轻量运行时的验收内容指纹核对](skills/sdlc/references/lightweight-runtime.md#71-验收内容指纹核对)。
+
 backlog/board 是 `.sdlc-v1/state.json` 的只读投影，不维护第二份需求状态：
 
 ```bash
@@ -358,6 +395,8 @@ git diff --check
 - `test_scenarios.py`：六个共享场景的初始仓库、参考操作、结果断言与反例；
 - `test_contrast_check.py`：设计对比度检查。
 - `test_hallmark_catalog.py`：随包 Hallmark 风格目录的召回、来源完整性和原子增量同步。
+- `test_vibe_test.py`：离线 battery、oracle、合成报告与路径保护。
+- `test_vibe_host.py`：受控宿主回调的 stub 合同；不启动模型。
 
 它还检查阶段协议、brief/result 模板、检查点模板和已知冲突文案的机械形状；主 Agent 的语义判断仍不能由字符串检查替代。
 

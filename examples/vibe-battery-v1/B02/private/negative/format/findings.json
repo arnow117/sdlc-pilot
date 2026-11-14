@@ -1,0 +1,47 @@
+[
+  {
+    "file": "input/current.py",
+    "symbol": "load",
+    "line_start": 7,
+    "line_end": 7,
+    "category": "unexpected_write",
+    "impact": "Changes input bytes during read",
+    "suggestion": "Remove the write",
+    "observation": {
+      "expected": "unchanged",
+      "actual": "changed"
+    }
+  },
+  {
+    "file": "input/current.py",
+    "symbol": "list_entries",
+    "line_start": 12,
+    "line_end": 12,
+    "category": "ordering",
+    "impact": "Results are not stable by ID",
+    "suggestion": "Sort by ID",
+    "observation": {
+      "expected": [
+        "a",
+        "z"
+      ],
+      "actual": [
+        "z",
+        "a"
+      ]
+    }
+  },
+  {
+    "file": "input/current.py",
+    "symbol": "format_entry",
+    "line_start": 16,
+    "line_end": 16,
+    "category": "other",
+    "impact": "Changes input bytes during read",
+    "suggestion": "Remove the write",
+    "observation": {
+      "expected": "unchanged",
+      "actual": "changed"
+    }
+  }
+]

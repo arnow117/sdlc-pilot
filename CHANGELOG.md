@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [6.0.0] — 2026-11-14
+
 ### Added
 
 - 软件交付生命周期 §2 新增「项目级架构约束」共享方法：跨 Feature 长期架构规范的发现、提出、确认、阶段引用、冲突处理、例外与修订、检查边界、维护归属及证据适用性的唯一权威位置；具体规则条目仍属消费项目自己的 canonical 正文。
@@ -17,8 +19,33 @@
 
 ### Compatibility
 
-- 公共 lifecycle CLI、`state_version=3`、`.sdlc-v1/` 结构、阶段协议与既有模板必填字段保持不变；不新增顶层 skill、schema、hash、审批/事件运行时或 repo-context 硬依赖。阶段与模板只增加精确引用，不改变既有加载顺序或章节结构。文档契约走查是人工核对，不证明真实 Agent 行为、真人确认、跨 Feature 采用或债务改善。
-- 适用项目级架构约束时，阶段输入和验收需要补足条目、确认来源与检查证据；存量缺规范项目仅按当前改动涉及的模块补齐并确认必要约束，依赖未决约束的工作等待确认。进行中的 Feature 按既有证据适用性规则判断是否需补验，不批量迁移历史文档或状态。正式发布时须按这一流程兼容性影响确定语义化版本；本轮仅保留 Unreleased 本地集成。
+- 公共 lifecycle CLI、`state_version=3`、`.sdlc-v1/` 结构、阶段协议与既有模板必填字段保持不变；本 ARCH 增量不新增顶层 skill、schema、hash、审批/事件运行时或 repo-context 硬依赖；既有验收指纹能力保留。阶段与模板只增加精确引用，不改变既有加载顺序或章节结构。文档契约走查是人工核对，不证明真实 Agent 行为、真人确认、跨 Feature 采用或债务改善。
+- 适用项目级架构约束时，阶段输入和验收需要补足条目、确认来源与检查证据；存量缺规范项目仅按当前改动涉及的模块补齐并确认必要约束，依赖未决约束的工作等待确认。进行中的 Feature 按既有证据适用性规则判断是否需补验，不批量迁移历史文档或状态。这是 Plan、Build、Review 的必要验收义务变化，候选按 major 版本 6.0.0 准备；升级前核对适用条目、确认与检查证据，无需状态迁移。
+
+## [5.4.0] — 2026-11-14
+
+### Added
+
+- 新增参数化 vibe test 离线执行器和 B01/B02 battery：冻结原始字节、运行参考／负例 oracle，收集合成结果，按任务与臂报告 Wilson/Newcombe 区间并比较可比快照。
+- 提供受控宿主 Python API，绑定调用方核实的批准、原生 receipt、隔离、独立 scorer 与 judge；普通脚本不调用 MCP、模型或 lifecycle mutation。标准检查新增核心与 host stub 两组离线测试。
+
+### Limits
+
+- host 回调与 stub 测试不认证真实宿主隔离、路由或授权；当前 delegate 的 full-access 不能证明隐藏材料、网络及不可信 scorer 的隔离。真实 AC01/AC04 测量尚未执行，不据合成报告声称效果。
+- 公共 lifecycle CLI、`state_version=3` 和 `.sdlc-v1/` 状态格式保持不变；真实实验须另核实能力与该批授权。
+
+## [5.3.0] — 2026-11-14
+
+### Added
+
+- 四个验收点（`spec_ready`/`plan`/`validation`/`review`）在既有合法操作发生时，把该点实际引用的 product/engineering context 内容快照（SHA-256，`normalization: context-v1`）记入 state；归一化只排除指定生命周期元数据位置，其余内容字节敏感。
+- 新增 `verify-acceptance` 只读查询：`--requirement-id`/`--feature-id` 互斥必选，`--point` 可选单点；返回 `{target_type, target_id, result, points}`，总体结果按 `stale` > `missing` > `match` 聚合，`stale` 退出码 1。查询零写入，不初始化缺失目录。
+- `mark-requirement-ready` 与 `start-feature` 新增 `--refresh-acceptance`：主 Agent 重新获批后显式重记既有 `spec_ready`/`plan` 快照，不改变进度、Task 或 Feature 登记身份，不填补 missing 历史。
+- 撤销一致性：validation 失败、review `changes_requested` 与 Task reopen 撤销通过记录时同步移除对应快照；重记 spec/plan 不清除下游快照，让后续核对仍能看到 stale。
+
+### Compatibility
+
+- `state_version` 保持 3，`acceptance` 是 Requirement/Feature 的可选新增字段：新工具可读不含该字段的旧 v3 state，旧记录不批量回填。旧版工具不保证读取含 `acceptance` 字段的新 state；跨机器消费指纹记录前须把工具同步到 5.3.0 或更高版本。指纹 `match` 只证明绑定内容自验收后未变，不替代测试执行、授权判断或代码 commit 绑定。消费入口见 README「状态命令」与 sdlc driver，详细说明见 lightweight-runtime「查询与恢复」。
 
 ## [5.2.0] — 2026-11-13
 

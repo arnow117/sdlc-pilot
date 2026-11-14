@@ -1,0 +1,70 @@
+---
+name: sdlc-build
+description: >
+  实现阶段。按 Feature 的研发上下文和 Task 依赖推进代码，默认使用 TDD，
+  记录必要的工程决策并通过 lifecycle_state 更新 Task 状态。
+---
+
+# sdlc-build — 实现 Feature
+
+## Orchestrated mode
+
+遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。build Agent 可以修改本 Task 的代码和
+工程上下文，但不更新 lifecycle state；它返回 `set-task-status` 请求和命令证据。Feature 特有发现留在工程上下文，
+产品行为更新产品上下文。只有入口、命令、配置、环境、资源、surface 或长期来源等稳定项目事实实际变化时，才返回
+`project_candidates`；否则返回 `[]`。明确跨项目的 SDLC 通用改进才提议 evolve。
+用户交流、原授权内连续推进和增量展示的边界由该协议唯一规定；本阶段只在下述实现循环提供真实增量的报告入口。
+
+## 入口
+
+1. 读取 `feature-projection --feature-id <feature-id>`。
+2. 读取 `engineering_context_ref` 与 `product_context_ref`。
+3. 核对登记 branch、实际 worktree 根目录、当前显式本地 branch 与完整 HEAD。登记不一致时不自行 checkout 或编辑
+   state；由主 Agent 按 [`lightweight-runtime.md` 的开发分支登记迁移](../sdlc/references/lightweight-runtime.md#51-开发分支登记迁移)
+   完成同 Feature 写入者交接、工程上下文决定和受控修正后，用实际 worktree 重新发送完整 brief。
+4. 对当前流程中新规划的非简单 Feature，确认研发上下文已经记录复用评估及决定；若缺失，或实现前发现候选框架、依赖能力与原评估明显不符，返回 `sdlc-plan` 更新设计，不在 build 阶段临时拍板引入框架。
+5. 读取 [`Global usage-document, story, and parameter contract`](../sdlc/references/lifecycles/software-delivery.md#11-global-usage-document-story-and-parameter-contract)；若本 Task 影响用户可见操作，同步更新唯一 usage 入口及其详细参数/操作链接。
+6. 选择一个依赖已完成的 Task；不要同时修改多个相互覆盖的 Task。首次写入前，按阶段协议的[规划基线与 STOP conditions](../sdlc/references/stage-agent-protocol.md#规划基线与-stop-conditions)复核本 Task 的规划基线、实际输入与依赖交付结果。主 Agent 的派工前检查不替代此时的核对；普通已接受依赖变化按协议判断适用性，不自行更新 SHA、扩大范围或把差异视为已获授权的重规划。
+7. 根据 `.sdlc-v1/project.md` 和 Git diff 加载相关角色卡与语言参考。
+   涉及 Web 或 App 用户旅程时，按 [Web 验证约束](../sdlc/references/validate-modes/e2e.md#web) 或
+   [App 验证约束](../sdlc/references/validate-modes/e2e.md#app) 落实当前有效方案中的测试资产、环境与产物归档准备，
+   供 Validate 独立执行；只有实际入口或资产位置因此改变时，才作为 `project_candidates` 返回，由主 Agent 核对后更新
+   `project.md`。代码修复、测试数、覆盖率、候选 commit 或 HEAD 变化本身返回 `[]`。
+
+## 实现循环
+
+1. 在 orchestrated mode 的结果中请求 `set-task-status ... --status in_progress`；只有独立、不在主 Agent 编排中的
+   standalone mode 才直接调用 CLI。
+2. 复述本 Task 的完成条件和对应产品验收条件。
+3. 写明会影响实现或验收的假设；高风险歧义先确认，低风险默认值说明后继续。
+4. 优先写失败测试；确认失败原因与目标行为一致。涉及持久化时，按实际格式和边界尽早覆盖风险：文本编码才检查严格 UTF-8 和孤立 surrogate，JSON 解码才检查损坏或过深输入，文件写入才检查路径别名及原文件/临时文件在写入或替换失败后的保护。
+5. 实现满足当前完成条件的最小改动，不为推测的未来需求新增抽象或扩展点。
+6. 运行受影响区域的静态检查和测试，以及项目要求的累计检查；保留有意义的测试先行和回归，不以局部通过替代仍适用的项目要求。
+7. 必要时重构，再运行相同检查；只修改本 Task 范围内的代码，不顺带格式化、重构或清理无关区域，只删除本次改动产生的无用代码。
+8. 若已经有稳定、证据支持且可查看的阶段增量，按[最早真实增量协议](../sdlc/references/stage-agent-protocol.md#earliest-real-increment)
+   通过宿主已有消息能力做中途汇报：提供入口或产物引用、实际命令和验证范围、被测版本和工作区事实及已知缺口，并继续当前已授权执行。首个真实增量可以早于覆盖率汇总、格式化或提交收尾，但不能跳过该增量实际依赖的数据保护。
+   该中途汇报不结束阶段、不重派 Task、不新增结果字段或进度记录，也不把未完成 Task 标为 `done`。若宿主不能中途发送消息，
+   仅将同一报告延后到最近可响应点；执行者和降级条件仍唯一遵循该协议，不强制新消息工具。
+9. 把有长期价值的设计决定、代码位置变化和风险更新到研发上下文；涉及已有图示时遵循
+   [图示辅助对齐](../sdlc/references/lifecycles/software-delivery.md#图示辅助对齐)的同步约定。
+10. 逐条核对完成条件与验收条件，记录实际检查命令和结果；满足后在 orchestrated mode 请求
+   `set-task-status ... --status done`，只有独立、不在主 Agent 编排中的 standalone mode 才直接调用 CLI。
+
+若检查会启动服务、浏览器、模拟器、容器、VM 或明显占用主机资源，按唯一的
+[验证资源生命周期](../sdlc/references/stage-agent-protocol.md#verification-resource-lifecycle)处理其归属、收尾和核对。
+
+## 调试
+
+遇到意外失败时，先形成可证伪假设，再做最小实验。不要连续堆叠无依据的修补。若发现产品规则缺口，停止当前 Task，将问题写回产品上下文并交给产品侧确认。
+
+命中 Task 特有停止条件时，使用阶段协议已有结果和证据字段返回实际观察、影响及所需决定/证据；不降低完成判据或绕过必要检查。范围内且不改变契约的普通适配可继续，完成输出说明其理由、影响和验证；实质方案变化交主 Agent 协调当前有效方案与完整 `supersedes`。非收敛判定、历史与诊断额度仅按协议 §5，不另以命令失败次数计数。
+
+## 并行
+
+并行资格、分支/worktree 隔离和集成验收由
+[`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md#3-planning-implementation-integration-and-review)
+唯一确定。本阶段只在主 Agent 已作出该判断后执行授权的一个 Task；否则串行。
+
+## 完成输出
+
+返回已完成 Task、变更摘要、测试结果、尚未完成或被阻塞的 Task；若存在可查看的真实增量，附上上述入口和证据事实。全部 Task 为 `done` 后进入 `sdlc-validate`。

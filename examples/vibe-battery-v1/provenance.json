@@ -1,0 +1,575 @@
+{
+  "source_revision": "fcdc18ad8f41c86f8444e3a03b30d6c9f0893a4f",
+  "sources": {
+    "lifecycle": {
+      "revision": "fcdc18ad8f41c86f8444e3a03b30d6c9f0893a4f",
+      "path": "scripts/lifecycle_state.py",
+      "blob": "37c8990696c2ab146521fc1fa846d2b56ead0ba8",
+      "symbols": "_STATE_FIELDS:33, _validate_state:756, _decode_state:912, _read_state:922, _write_replacement:1208, load:1270, capture_requirement:1374, build_parser:2319"
+    },
+    "tests": {
+      "revision": "fcdc18ad8f41c86f8444e3a03b30d6c9f0893a4f",
+      "path": "scripts/test_lifecycle_state.py",
+      "blob": "bc5128edcf492943599bc856b18f024c3dd729f0",
+      "symbols": "LifecycleFixture:23, state_bytes:116"
+    },
+    "backlog": {
+      "revision": "fcdc18ad8f41c86f8444e3a03b30d6c9f0893a4f",
+      "path": "scripts/backlog.py",
+      "blob": "67a19b2089341b5c7443bfd67026c74bfb181142",
+      "symbols": "ready_items:43, tree_projection:84"
+    },
+    "review": {
+      "revision": "fcdc18ad8f41c86f8444e3a03b30d6c9f0893a4f",
+      "path": "skills/sdlc-review/SKILL.md",
+      "blob": "38b821461bf23a8ec2d7b29582c885a574efb7b6",
+      "symbols": "Review input and scope:22-37"
+    }
+  },
+  "freeze": "raw file bytes SHA-256; battery.json and provenance.json excluded to avoid self-reference; battery and provenance hashes are reported externally",
+  "assets": [
+    {
+      "target": "B01/private/checker.py",
+      "target_lines": "1-65",
+      "target_sha256": "607e7e07ad9ba7d7568bfef4df2adad0a6293754c4d6f89abf3cc2687405ddaf",
+      "sources": [
+        "tests"
+      ],
+      "transformation": "Adapted temporary-directory and before/after byte-comparison test pattern; assertions and synthetic values are new.",
+      "target_symbols": [
+        {
+          "name": "check",
+          "lines": "10-65"
+        }
+      ]
+    },
+    {
+      "target": "B01/private/negative/coerce/tool.py",
+      "target_lines": "1-72",
+      "target_sha256": "4bc76882bd5b71e18e20a30da5b7988b4c12917bc8ef66d09ee5599de1402bf8",
+      "sources": [
+        "lifecycle"
+      ],
+      "transformation": "Adapted strict entry schema, register, JSON read/write and CLI; removes lifecycle fields, links and production state; reference adds note; negative variants inject one error.",
+      "target_symbols": [
+        {
+          "name": "validate_store",
+          "lines": "8-18"
+        },
+        {
+          "name": "load",
+          "lines": "21-22"
+        },
+        {
+          "name": "save",
+          "lines": "25-36"
+        },
+        {
+          "name": "register",
+          "lines": "42-51"
+        },
+        {
+          "name": "main",
+          "lines": "54-68"
+        }
+      ]
+    },
+    {
+      "target": "B01/private/negative/parser_only/tool.py",
+      "target_lines": "1-72",
+      "target_sha256": "7448e3e8b4bae43c514dd78ba7adfb8f9d3c3840e0e93fc4567a797f25ce8dcf",
+      "sources": [
+        "lifecycle"
+      ],
+      "transformation": "Adapted strict entry schema, register, JSON read/write and CLI; removes lifecycle fields, links and production state; reference adds note; negative variants inject one error.",
+      "target_symbols": [
+        {
+          "name": "validate_store",
+          "lines": "8-18"
+        },
+        {
+          "name": "load",
+          "lines": "21-22"
+        },
+        {
+          "name": "save",
+          "lines": "25-36"
+        },
+        {
+          "name": "register",
+          "lines": "42-51"
+        },
+        {
+          "name": "main",
+          "lines": "54-68"
+        }
+      ]
+    },
+    {
+      "target": "B01/private/negative/query_write/tool.py",
+      "target_lines": "1-74",
+      "target_sha256": "1620cab1da45e79ca2efa3f1e73b92ec0c3d2f98a8e500e415598f7418f9b915",
+      "sources": [
+        "lifecycle"
+      ],
+      "transformation": "Adapted strict entry schema, register, JSON read/write and CLI; removes lifecycle fields, links and production state; reference adds note; negative variants inject one error.",
+      "target_symbols": [
+        {
+          "name": "validate_store",
+          "lines": "8-18"
+        },
+        {
+          "name": "load",
+          "lines": "21-24"
+        },
+        {
+          "name": "save",
+          "lines": "27-38"
+        },
+        {
+          "name": "register",
+          "lines": "44-53"
+        },
+        {
+          "name": "main",
+          "lines": "56-70"
+        }
+      ]
+    },
+    {
+      "target": "B01/private/negative/reject_empty/tool.py",
+      "target_lines": "1-72",
+      "target_sha256": "fa7531b823d3e2b99fe67b026b18152f750c9b091b3c41afd19faf6b771d8be6",
+      "sources": [
+        "lifecycle"
+      ],
+      "transformation": "Adapted strict entry schema, register, JSON read/write and CLI; removes lifecycle fields, links and production state; reference adds note; negative variants inject one error.",
+      "target_symbols": [
+        {
+          "name": "validate_store",
+          "lines": "8-18"
+        },
+        {
+          "name": "load",
+          "lines": "21-22"
+        },
+        {
+          "name": "save",
+          "lines": "25-36"
+        },
+        {
+          "name": "register",
+          "lines": "42-51"
+        },
+        {
+          "name": "main",
+          "lines": "54-68"
+        }
+      ]
+    },
+    {
+      "target": "B01/private/reference/test_note.py",
+      "target_lines": "1-16",
+      "target_sha256": "1fab3d9fcd120526fa45fb188288690d2849a9e8a9b207ee195eb7192c0c1354",
+      "sources": [
+        "tests"
+      ],
+      "transformation": "Adapted temporary-directory and before/after byte-comparison test pattern; assertions and synthetic values are new.",
+      "target_symbols": [
+        {
+          "name": "NoteTests",
+          "lines": "6-16"
+        }
+      ]
+    },
+    {
+      "target": "B01/private/reference/tool.py",
+      "target_lines": "1-72",
+      "target_sha256": "47fce7d8585137804b81dc684686b83b8d51294933cad61b50d693aa3669a46d",
+      "sources": [
+        "lifecycle"
+      ],
+      "transformation": "Adapted strict entry schema, register, JSON read/write and CLI; removes lifecycle fields, links and production state; reference adds note; negative variants inject one error.",
+      "target_symbols": [
+        {
+          "name": "validate_store",
+          "lines": "8-18"
+        },
+        {
+          "name": "load",
+          "lines": "21-22"
+        },
+        {
+          "name": "save",
+          "lines": "25-36"
+        },
+        {
+          "name": "register",
+          "lines": "42-51"
+        },
+        {
+          "name": "main",
+          "lines": "54-68"
+        }
+      ]
+    },
+    {
+      "target": "B01/public/contract.md",
+      "target_lines": "1-1",
+      "target_sha256": "90301f614faf45f4b0d5f538bb14a458050100f214a691df4a6730ff3a09162e",
+      "sources": [],
+      "transformation": "New synthetic task material; not copied from a source blob.",
+      "target_symbols": []
+    },
+    {
+      "target": "B01/public/old.json",
+      "target_lines": "1-1",
+      "target_sha256": "a1f4db79d5c58492e6f67f400b005c9fdeb6f7e8462854cb256732b089470ea2",
+      "sources": [],
+      "transformation": "New synthetic task material; not copied from a source blob.",
+      "target_symbols": []
+    },
+    {
+      "target": "B01/public/prompt.md",
+      "target_lines": "1-1",
+      "target_sha256": "2e167100db9189e48977a1f9f7a0f749205de1a3e6e2f13e45d888a81fb89094",
+      "sources": [],
+      "transformation": "New synthetic task material; not copied from a source blob.",
+      "target_symbols": []
+    },
+    {
+      "target": "B01/public/test_existing.py",
+      "target_lines": "1-16",
+      "target_sha256": "c43fb75d0d6aff3c83427a33485fd9a32ea2879303202f080ecf206313d0ded4",
+      "sources": [
+        "tests"
+      ],
+      "transformation": "Adapted temporary-directory and before/after byte-comparison test pattern; assertions and synthetic values are new.",
+      "target_symbols": [
+        {
+          "name": "ExistingTests",
+          "lines": "6-16"
+        }
+      ]
+    },
+    {
+      "target": "B01/public/tool.py",
+      "target_lines": "1-61",
+      "target_sha256": "25f7735d83749d0c0ec1cd0e40d37d2829790db6657edd6e758c0681e5cbbdd7",
+      "sources": [
+        "lifecycle"
+      ],
+      "transformation": "Adapted strict entry schema, register, JSON read/write and CLI; removes lifecycle fields, links and production state; reference adds note; negative variants inject one error.",
+      "target_symbols": [
+        {
+          "name": "validate_store",
+          "lines": "8-16"
+        },
+        {
+          "name": "load",
+          "lines": "19-20"
+        },
+        {
+          "name": "save",
+          "lines": "23-34"
+        },
+        {
+          "name": "register",
+          "lines": "37-42"
+        },
+        {
+          "name": "main",
+          "lines": "45-57"
+        }
+      ]
+    },
+    {
+      "target": "B02/private/checker.py",
+      "target_lines": "1-139",
+      "target_sha256": "45d843eaf3a94a352001c66431848059ac08376bd563ee0642a8591e22874d9c",
+      "sources": [],
+      "transformation": "Synthetic probe and matching code; correction normalizes publicly documented byte-change aliases, enforces typed observations and symbol-bounded ranges, and compares them with independent probe results.",
+      "target_symbols": [
+        {
+          "name": "normalize_change",
+          "lines": "15-22"
+        },
+        {
+          "name": "is_id_sequence",
+          "lines": "25-26"
+        },
+        {
+          "name": "valid_observation",
+          "lines": "29-43"
+        },
+        {
+          "name": "valid_finding",
+          "lines": "46-57"
+        },
+        {
+          "name": "probe",
+          "lines": "60-80"
+        },
+        {
+          "name": "matches_location",
+          "lines": "83-92"
+        },
+        {
+          "name": "matches_write",
+          "lines": "95-104"
+        },
+        {
+          "name": "matches_order",
+          "lines": "107-113"
+        },
+        {
+          "name": "check",
+          "lines": "116-139"
+        }
+      ]
+    },
+    {
+      "target": "B02/private/negative/boolean-line/findings.json",
+      "sources": [],
+      "transformation": "New synthetic B02 contract regression case, constructed from the frozen reference findings; no source bytes copied.",
+      "target_lines": "1-34",
+      "target_sha256": "4e0c9e5403e453c110458a19dc3c03b712cc377fbb2442ca9eb1e71bb6c1c6de",
+      "target_symbols": []
+    },
+    {
+      "target": "B02/private/negative/broad-range/findings.json",
+      "sources": [],
+      "transformation": "New synthetic B02 contract regression case, constructed from the frozen reference findings; no source bytes copied.",
+      "target_lines": "1-34",
+      "target_sha256": "6674e726433d5b755d4b0189148ec91970709372d5603a77cae409be6ab2808e",
+      "target_symbols": []
+    },
+    {
+      "target": "B02/private/negative/empty/findings.json",
+      "target_lines": "1-1",
+      "target_sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "sources": [],
+      "transformation": "New synthetic task material; not copied from a source blob.",
+      "target_symbols": []
+    },
+    {
+      "target": "B02/private/negative/fact/findings.json",
+      "target_lines": "1-34",
+      "target_sha256": "aa8d0ef66faa38db5583ebe5c2cb0060b08d4bd26f16916ec67e9bd28ca73bd9",
+      "sources": [],
+      "transformation": "New synthetic task material; not copied from a source blob.",
+      "target_symbols": []
+    },
+    {
+      "target": "B02/private/negative/format/findings.json",
+      "target_lines": "1-47",
+      "target_sha256": "7bdf67759a0b02525db98fc2e6bd2113633f1b44fe5af8ce7a7c3faf0b3d2ca0",
+      "sources": [],
+      "transformation": "New synthetic task material; not copied from a source blob.",
+      "target_symbols": []
+    },
+    {
+      "target": "B02/private/negative/invalid-range/findings.json",
+      "sources": [],
+      "transformation": "New synthetic B02 contract regression case, constructed from the frozen reference findings; no source bytes copied.",
+      "target_lines": "1-34",
+      "target_sha256": "759e565e37f7a6df0264be586c78447de28fc97286d9fd12fc12e9dc45ae138e",
+      "target_symbols": []
+    },
+    {
+      "target": "B02/private/negative/invalid-schema/findings.json",
+      "sources": [],
+      "transformation": "New synthetic B02 contract regression case, constructed from the frozen reference findings; no source bytes copied.",
+      "target_lines": "1-34",
+      "target_sha256": "a8d43111028f01af723dcf7f87abd680e583054de75d1128433a0ef6242585b9",
+      "target_symbols": []
+    },
+    {
+      "target": "B02/private/negative/location/findings.json",
+      "target_lines": "1-34",
+      "target_sha256": "25d5135ff07a5afaa0fa5a7082a6d7e29624e783c6831a75191e45ff60ed7d42",
+      "sources": [],
+      "transformation": "New synthetic task material; not copied from a source blob.",
+      "target_symbols": []
+    },
+    {
+      "target": "B02/private/negative/missing/findings.json",
+      "target_lines": "1-15",
+      "target_sha256": "382458a888fea43a91eb310c8d4351a0abf26e4d008cc3149c8576c142c69a1d",
+      "sources": [],
+      "transformation": "New synthetic task material; not copied from a source blob.",
+      "target_symbols": []
+    },
+    {
+      "target": "B02/private/negative/reversed-range/findings.json",
+      "sources": [],
+      "transformation": "New synthetic B02 contract regression case, constructed from the frozen reference findings; no source bytes copied.",
+      "target_lines": "1-34",
+      "target_sha256": "57614d2fc208e5f8f67643e8c5eb5775378f5c768d0bbcc6124ae6eff25e51d7",
+      "target_symbols": []
+    },
+    {
+      "target": "B02/private/negative/wrong-order/findings.json",
+      "sources": [],
+      "transformation": "New synthetic B02 contract regression case, constructed from the frozen reference findings; no source bytes copied.",
+      "target_lines": "1-34",
+      "target_sha256": "49d9f6a8ae37f76abcf1c7f9fa73e55823d83d5bb13b31a90360dc8d17c739fe",
+      "target_symbols": []
+    },
+    {
+      "target": "B02/private/reference-alias/findings.json",
+      "sources": [],
+      "transformation": "New synthetic B02 contract regression case, constructed from the frozen reference findings; no source bytes copied.",
+      "target_lines": "1-34",
+      "target_sha256": "8faeaefcad65d1bf9f9d5756d3b8dac109758e101320489ec29f264468ebc876",
+      "target_symbols": []
+    },
+    {
+      "target": "B02/private/reference-mixed/findings.json",
+      "target_lines": "1-34",
+      "target_sha256": "af5cb723c2be6ba65cc6ddca8b2f15cd603d22e61b93a3013727433a6838caa5",
+      "sources": [],
+      "transformation": "Synthetic positive: independently mixed public byte-change aliases and reordered findings.",
+      "target_symbols": []
+    },
+    {
+      "target": "B02/private/reference/findings.json",
+      "target_lines": "1-34",
+      "target_sha256": "c7cb8ed9ddc6b183df33dff6e8d57995c7e0775c02e1064434b3ff20abcbadc0",
+      "sources": [],
+      "transformation": "New synthetic task material; not copied from a source blob.",
+      "target_symbols": []
+    },
+    {
+      "target": "B02/public/input/baseline.py",
+      "target_lines": "1-14",
+      "target_sha256": "3e3bab4960513c26d81454cb0c19f07ce3ef1bcecaef3fe9956cebe23e3c86f2",
+      "sources": [
+        "lifecycle",
+        "backlog"
+      ],
+      "transformation": "Adapted read-only load and ordered projection to synthetic entry list; current injects two regressions and authorized format change.",
+      "target_symbols": [
+        {
+          "name": "load",
+          "lines": "5-6"
+        },
+        {
+          "name": "list_entries",
+          "lines": "9-10"
+        },
+        {
+          "name": "format_entry",
+          "lines": "13-14"
+        }
+      ]
+    },
+    {
+      "target": "B02/public/input/change.diff",
+      "target_lines": "1-20",
+      "target_sha256": "5781b5faa2d48591f3269f707c5735903ca73d17efdcea62ca134a0902c5b73f",
+      "sources": [
+        "lifecycle",
+        "backlog"
+      ],
+      "transformation": "Adapted read-only load and ordered projection to synthetic entry list; current injects two regressions and authorized format change.",
+      "target_symbols": []
+    },
+    {
+      "target": "B02/public/input/contract.md",
+      "target_lines": "1-3",
+      "target_sha256": "09ee59831c0eb7744016ea30b2f84411955ef497d9826fcc50e3df792ba12840",
+      "sources": [
+        "review"
+      ],
+      "transformation": "Review input contract adapted from G review scope; corrected public field types, generic categories and observation semantics without publishing task-specific answers.",
+      "target_symbols": []
+    },
+    {
+      "target": "B02/public/input/current.py",
+      "target_lines": "1-16",
+      "target_sha256": "3add4c9b2dda91963458795aef8e0700d51d887bf09c8f282a96af640913d114",
+      "sources": [
+        "lifecycle",
+        "backlog"
+      ],
+      "transformation": "Adapted read-only load and ordered projection to synthetic entry list; current injects two regressions and authorized format change.",
+      "target_symbols": [
+        {
+          "name": "load",
+          "lines": "5-8"
+        },
+        {
+          "name": "list_entries",
+          "lines": "11-12"
+        },
+        {
+          "name": "format_entry",
+          "lines": "15-16"
+        }
+      ]
+    },
+    {
+      "target": "B02/public/input/sample.json",
+      "target_lines": "1-3",
+      "target_sha256": "f9262f833a7d90293b1c7fc825b028bcc8542d96c26e40fb669b4db930f8a679",
+      "sources": [
+        "review"
+      ],
+      "transformation": "Adapted review input shape and contract; content is synthetic, not copied findings.",
+      "target_symbols": []
+    },
+    {
+      "target": "B02/public/input/schema.json",
+      "target_lines": "1-181",
+      "target_sha256": "e447e75defd7bf0c3b6185fd3cd6281bded57671f807081dddb635c16cc0c672",
+      "sources": [
+        "review"
+      ],
+      "transformation": "Review input contract adapted from G review scope; corrected public field types, generic categories and observation semantics without publishing task-specific answers.",
+      "target_symbols": []
+    },
+    {
+      "target": "B02/public/input/test_contract.py",
+      "target_lines": "1-6",
+      "target_sha256": "ea890fe04feeccd8a569780eb121621692e7fc8ad9dac8038d83744be7689e67",
+      "sources": [
+        "review"
+      ],
+      "transformation": "Adapted review input shape and contract; content is synthetic, not copied findings.",
+      "target_symbols": [
+        {
+          "name": "PublicContract",
+          "lines": "4-6"
+        }
+      ]
+    },
+    {
+      "target": "B02/public/prompt.md",
+      "target_lines": "1-1",
+      "target_sha256": "1e853a6efbeeaea62d047d564b6bc1abe23078a66ccc094ee5abe3716a0b29f4",
+      "sources": [
+        "review"
+      ],
+      "transformation": "Adapted review input shape and contract; content is synthetic, not copied findings.",
+      "target_symbols": []
+    },
+    {
+      "target": "private/report-cases/complete.json",
+      "target_lines": "1-295",
+      "target_sha256": "678d4dbceab61938ead4598224cf377aad7114721086d12180550583a287e867",
+      "sources": [],
+      "transformation": "New synthetic task material; not copied from a source blob.",
+      "target_symbols": []
+    },
+    {
+      "target": "private/report-cases/incomplete.json",
+      "target_lines": "1-289",
+      "target_sha256": "b653bf9c7a007e27e09874901e94320d560284c6bd1426d671bfbbc6b0d613fd",
+      "sources": [],
+      "transformation": "New synthetic task material; not copied from a source blob.",
+      "target_symbols": []
+    }
+  ],
+  "contract_correction": "B02 publicly documents byte-change boolean/enumeration aliases and ordered ID observations; checker validates types and normalizes equivalent forms while retaining independent probe comparisons."
+}

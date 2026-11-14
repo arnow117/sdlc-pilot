@@ -132,6 +132,9 @@ Requirement 恢复为 `validated`。正文证据写入 Feature 工程上下文�
   [开发分支登记迁移](references/lightweight-runtime.md#51-开发分支登记迁移)核对或受控修正，不能自行 checkout
   或把登记值当作全局 Git 分支一致性检查。
 - `record-validation` 记录测试时的业务代码 commit；评审和发布始终对应这个实现版本。
+- 引用已验收结论（spec ready、plan、validation、review）前，先运行只读 `verify-acceptance` 机械核对该点
+  绑定的 context 内容；`stale` 时暂停引用，重新获批后显式重记。用法、三态与恢复唯一见
+  [验收内容指纹核对](references/lightweight-runtime.md#71-验收内容指纹核对)；语义适用性判断仍按协议执行。
 - 验证后允许提交仅修改 `.sdlc-v1/**` 的状态、上下文和证据。若 validation commit 到当前 HEAD 在该目录之外有差异，或业务代码工作树不干净，则回到 build/validate。
 - `project.md` 只索引长期工程上下文，不复制其正文；`.sdlc-v1/context/*.md` 只记录当前 Requirement/Feature 的决定、证据和发布后观察。二者通过路径引用协作，不共享状态文件。
 - 完成一次跨人或跨机器交接时，给出 Requirement、Feature、分支、当前阶段、下一动作和需要拉取的 Git ref。

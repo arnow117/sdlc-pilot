@@ -19,13 +19,15 @@ bash scripts/validate-skills
 git diff --check
 ```
 
-前者检查结构、引用和协议文本，并运行五组 Python 测试：
+前者检查结构、引用和协议文本，并运行七组 Python 测试：
 
 - [lifecycle](../scripts/test_lifecycle_state.py)：状态转换、Git 版本、恢复及多 clone；
 - [backlog](../scripts/test_backlog.py)：只读投影、看板和 HTML 转义；
 - [共享场景](../scripts/test_scenarios.py)：六个初始仓库、参考操作及正确和错误结果断言；
 - [contrast](../scripts/test_contrast_check.py)：颜色解析、对比度和 CLI；
 - [Hallmark catalog](../scripts/test_hallmark_catalog.py)：目录、召回、同步及失败保护。
+- [vibe test 核心](../scripts/test_vibe_test.py)：离线 oracle、反例、合成报告、统计与路径保护；
+- [vibe test host](../scripts/test_vibe_host.py)：受控回调、原生字段映射、预算及评分绑定的 stub 合同。
 
 前两组共用 [临时 Git 仓库辅助函数](../scripts/test_support.py)，各自保留业务状态初始化。它们也可分别直接运行：
 
@@ -39,6 +41,10 @@ python3 scripts/test_backlog.py
 ```bash
 node --test skills/sdlc-prototype/assets/shared-state/runtime.test.cjs
 ```
+
+上述两组 vibe test 均为离线测试，host 样例使用 stub，真实模型 run 为 0；它们不会启动 12+1 次实验。
+独立执行命令及真实实验的前置条件见 [vibe test 指南](vibe-tests.md)。当前 full-access delegate 与 host
+接口的存在不能证明隐藏材料、网络访问或不可信 scorer 执行隔离；真实 AC01/AC04 仍未执行。
 
 这些检查不自动运行模型。结构检查和脚本不能代替对产品确认、语义变化、实际执行者身份及授权副作用的判断。
 

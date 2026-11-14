@@ -1,0 +1,15 @@
+{
+  "revision": "0cbdf6a16f5b67324121ce0b0a5c64db93b65bf0",
+  "documents": [
+    {
+      "file": "sdlc-build.md",
+      "source": "skills/sdlc-build/SKILL.md",
+      "sha256": "6801925d63d80e47842b2260e464485743ce31a7ea1ce5d29ad491f8c001f06a"
+    },
+    {
+      "file": "sdlc-review.md",
+      "source": "skills/sdlc-review/SKILL.md",
+      "sha256": "e0f23793e358382200340a20843aeebeed6e0e426ac931cff1b1f2b574094ab7"
+    }
+  ]
+}
