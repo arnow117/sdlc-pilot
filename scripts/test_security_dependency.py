@@ -2,6 +2,7 @@
 """Behavior checks for the offline Codex Security dependency probe."""
 
 import json
+import ntpath
 import os
 from pathlib import Path
 import shlex
@@ -9,6 +10,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -87,6 +89,38 @@ class DependencyProbeTests(unittest.TestCase):
         )
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertTrue(self.marker.is_file(), "candidate did not create its marker")
+
+    def test_windows_candidate_and_command_construction(self):
+        self.bin_dir = Path(self.directory.name) / "bin with spaces"
+        self.bin_dir.mkdir()
+        self.marker = Path(self.directory.name) / "marker with spaces"
+        command_processor = r"C:\Windows\System32\cmd.exe"
+        fallback_root = r"D:\Windows Folder"
+
+        with mock.patch.object(os, "name", "nt"):
+            candidate = self.make_candidate("codex-security")
+            self.assertEqual(candidate.name, "codex-security.cmd")
+            self.assertEqual(
+                candidate.read_text(encoding="utf-8"),
+                f'@echo ran > "{self.marker}"\n',
+            )
+            with mock.patch.dict(os.environ, {"COMSPEC": command_processor}):
+                self.assertEqual(
+                    self.candidate_command(candidate),
+                    [command_processor, "/d", "/c", str(candidate)],
+                )
+            with mock.patch.dict(os.environ, {"SystemRoot": fallback_root}):
+                os.environ.pop("COMSPEC", None)
+                with mock.patch.object(os, "path", ntpath):
+                    self.assertEqual(
+                        self.candidate_command(candidate),
+                        [
+                            ntpath.join(fallback_root, "System32", "cmd.exe"),
+                            "/d",
+                            "/c",
+                            str(candidate),
+                        ],
+                    )
 
     def test_probe_execution_assertion_rejects_candidate_execution(self):
         candidate = self.make_candidate("codex-security")

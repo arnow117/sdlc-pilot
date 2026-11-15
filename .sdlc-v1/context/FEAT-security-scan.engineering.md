@@ -91,6 +91,13 @@ T3 的产品/工程绑定文件和业务实现未被本修订改变，其已有 
 - `PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills` exit 0，183 项及结构检查通过，保留既有 HTTPError 清理 `ResourceWarning`；`git diff --check` exit 0。离线 `coverage.py 7.17.2` 以 branch 模式统计相对该 HEAD 的测试文件新增/改动可执行行：23/26 行、3/4 分支；未覆盖的行 31、40、43 和分支 39→40 为 Windows 路径。此为测试文件覆盖率，不冒充生产探针或 Windows 实际运行；临时 coverage 数据已清理。
 - 以上为主会话 Build 检查，不代替独立 Validate 或正式重新 Review。该单文件业务 diff SHA-256 为 `d63c8393c36f0d0f02bd7eb2799feca9520e7c6a116964ccb621fcc8b514b217`；主会话宿主配置为 `codex / gpt-6.1-terra / reasoningEffort=max`，实际 backend 未知。真实扫描仍为 `NOT_RUN`；历史失败和诊断次数不因返修重置。
 
+### 2026-11-15 Windows 构造路径补测（未提交候选）
+
+- 在 `ab68d8612c5f8b868e967092d9c537fbf0478109` 上，仅补充 `scripts/test_security_dependency.py`：隔离模拟 Windows 平台条件，检查 `.cmd` 标记内容、带空格路径的引号，以及 `COMSPEC` 和 `SystemRoot` 回退命令构造；未运行 Windows shell。该单文件业务 diff SHA-256 为 `0d133e72ae0da205e0d0a18d36b1c573ffdb967e7e8fdea32830708039ae8b9c`。
+- 新增测试单独运行 exit 0；在自建临时测试副本去掉 Windows 标记路径引号后，该测试按预期失败，反例校验 exit 0。真实探针临时副本注入长、短候选执行后，相应两项测试仍均因标记断言失败；临时目录均已清理。
+- `PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills` exit 0，184 项及结构检查通过；保留既有 HTTPError 清理 `ResourceWarning`。离线 Python 3.12.16 / coverage.py 7.17.2 按相对 `e68fa239` 变动函数完整函数体计量：61/61 行、6/6 分支，未排除行；Windows 分支由隔离模拟覆盖，不证明 Windows 实际执行。`git diff --check` exit 0。
+- 以上为主会话 Build 检查；原 `ab68d861` 的 `INCONCLUSIVE/fail`、R1 和旧失败均保留。独立 Validate、正式重新 Review、真实 Windows 运行与真实安全扫描仍待按各自范围处理；backend 和未知诊断次数不因本次补测改变。
+
 ## 验证记录
 
 2026-11-15，以下为同一执行者对基线 `3093e85725a30078f2666886766ef4175bfb1d20` 加当前未提交业务 diff 的 Build 检查，不能冒充独立 Validate：
@@ -183,6 +190,17 @@ T3 的产品/工程绑定文件和业务实现未被本修订改变，其已有 
 - 12:44:26 UTC，`PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/test_security_dependency.py` exit 0，3 项通过；`git diff --check` 及基线到候选的同命令检查 exit 0。环境为 Darwin 25.6.0 arm64、Python 3.15.2、Git 2.56.0、Bash 3.2.57。前后业务工作树干净，root、branch 与完整 HEAD 均符合指定值；仅三处已知 `.sdlc-v1` 文件未暂存。
 - 验证者核对同版 181 项标准检查、上轮探针与更正后的 coverage、源码包和三个当前 router 场景，以及旧版 synthetic 消费证据的适用范围；Security mode、适配、探针与测试、role routing、validate/review 在相关版本间未变，router/共享协议变化由当前场景补证。上述证据分别支持产品场景和失败归因，不证明真实扫描或正式 Review。
 - 运行期间宿主配置为 `codex / gpt-6.1-terra / reasoningEffort=xhigh`；`executedModel=null`，实际 backend 与内部 effort 未知。真实 CLI 扫描、认证、模型调用和扫描效果仍为 `NOT_RUN` / 未知；无模型本地验证符合当前已接受的 Feature 范围。正式 Review 和发布仍待执行。
+
+### 2026-11-15 R1 返修后的独立验证 — ab68d8612c5f8b868e967092d9c537fbf0478109
+
+- [独立验证原始记录](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3A47227d29-f695-4218-844b-3a495d63298c)在 13:27:52–13:28:44 UTC 运行 `PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills`，exit 0；183 项及结构检查通过，既有 HTTPError 清理 `ResourceWarning` 保留。独立专项 5 项通过；将长、短候选执行分别注入临时生产探针副本后，对应测试均因标记断言失败，反例校验 exit 0。
+- 离线 Python 3.12.16 / coverage.py 7.17.2：相对 `e68fa239` 的测试增量 23/26 行、3/4 分支，遗漏为 Windows 行 31、40、43 和分支 39→40；生产探针重新计量 20/20 行、5/6 分支。T3 共同检查按其工程方案执行，增量 82/82 行、16/16 分支，helper 10/10 行、8/8 分支；该检查不构成 T3 阶段接受，也不冒充 Bash 或 Windows 覆盖。
+- [Sol 覆盖范围核对](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3A3ada1bea-c12c-442d-97db-cde7ef0f5343)指出：上述 3/4 只按改动行的弧起点筛选，漏计 `make_candidate()` 条件行未变但两侧标记生成代码受影响的分支。展开受影响函数体为 40/43 行、4/6 分支；分支 66.67% 未达到 70% 的默认阈值，不能只以局部 3/4 声称覆盖充分。需补测 Windows 候选内容、带空格路径及 `COMSPEC`/回退命令构造；隔离平台条件的测试不证明 Windows shell 实际运行。
+- 当前提交新解包的 16 个关键文件与提交字节一致，包内 Security 5 项、T3 场景 10 项及 CLI help 通过；三处版本均为 7.0.1，双清单正文及无日期标题符合已接受方案。包核对脚本首次把无日期标题误判为不得带“版本变更清单”，exit 1；按实际判据更正后 exit 0。解包目录和注入探针副本已清理，未启动服务。
+- 验证者因历史场景线程读取返回 `thread_not_found` 汇总为 `INCONCLUSIVE`，主 Agent 于 13:33:00Z 按原请求记录 validation `fail`，绑定上述 commit。该失败不表示新实现缺陷。随后主 Agent 核对原始 activity 发现读取时去掉了 `thread:` 前缀并解码 ID；使用完整原始编码 ID 已重新打开当前三条场景与两条 synthetic 线程。此新事实供后续独立判断，不倒改本轮失败。
+- 针对已确认的受影响分支测试缺口，主 Agent 于 13:49:53Z 按 `done → todo → in_progress` 重新打开原 Task，两次 CLI 均 exit 0；机器状态中的 validation 记录由此清除，本节保留其原 `INCONCLUSIVE/fail` 历史。
+- 派工返回 `codex / gpt-6.1-terra / xhigh`，验证者报告相同宿主运行声明；其调用的 capabilities 返回继承配置为空，`executedModel=null`，运行绑定配置与实际 backend 的证据边界须在后续接受时分别判断。真实 CLI 扫描、认证、模型调用和扫描效果仍为 `NOT_RUN` / 未知；历史失败及未知诊断次数保留。
+- 本轮原始数据暂存于 `/tmp/security-validate-ab68-zRxNWQy0/`：T3 `coverage.json` SHA-256 `1fdbb4326fa28a5a4738fe392ba0692f2bf20f0faf05efe6999e5a91d82e19f6`，其 `.coverage` 为 `287914df0d57551c6c3bb2e03036a822e2e39566b260fc4856a5dc2432ae710d`；Security `security.json` 为 `d8d8176f1a75c4fa290bf6726a660d4d527d88d1daefedd023cd7fe4d33aaa67`。完整命令和日志见该任务目录及原始线程，接受前不清理。
 
 ## 评审记录
 
