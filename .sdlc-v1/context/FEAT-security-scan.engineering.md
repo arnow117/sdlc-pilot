@@ -6,7 +6,7 @@
 
 **Requirement**：`REQ-security-scan`；产品规则与验收场景唯一见对应产品上下文。
 **规划基线**：2026-11-15，仓库 `main` 的 `3093e85725a30078f2666886766ef4175bfb1d20`；开始时业务工作树干净。`project.md` 的历史版本/测试数是旧事实，不视为当前检查结果。
-**执行环境**：当前 T3 Codex 为 `gpt-6.1-terra / max`；用户在已知限制后要求当前会话继续。阶段工作按可用的串行路径进行，不将该路径称为独立验证或独立评审。
+**执行环境**：当前主会话为 T3 Codex `gpt-6.1-terra / max`。用户明确允许通过 T3 `delegate_task` 调度不同执行上下文；原生 `spawn_agent` / `followup_task` 限制仍然适用。独立验证和评审须核对实际执行上下文及模型信息，宿主未提供的实际模型元数据标为未知。
 **方向来源**：用户当前请求及 `workspace/20261115-codex-security-sdlc-integration/方案.md` 的只读调研；后者是候选依据，不替代当前契约和实际测试。
 
 #### 复用评估
@@ -33,7 +33,7 @@
 - CLI 路径存在不能证明版本、认证或模型可用；插件能力不能从 CLI 缺失反推。若 status 查询可能导入认证，不能作为每次入口的无副作用探针。
 - 上游 committed-diff 扫描要求相应 checkout 和范围满足其自身条件；`B` 与 `H` 必须固定，不能用移动的分支名冒充稳定证据。工具退出成功不等于覆盖足够或没有漏洞。
 - 未安装、未授权、预算耗尽、超时、扫描不完整或原生产物缺失，按已观察事实分类并保留缺口；环境阻塞不自动将 Task 退回实现。
-- 首选实现 provider 与独立执行环境在当前会话未建立；当前用户要求直接推进不构成对外额度、安装、发布、提交或伪称独立验证的授权。真实调用、正式 commit 绑定及独立评审存在缺口时停止相关完成声明。
+- 用户已授权完成验证、评审并发布到 main；真实模型扫描、安装及其他外部资源消耗仍遵守此前约定的单独确认要求。不能将未执行的真实扫描或同一执行者的自查写成已通过的独立验证。
 
 ### 实施计划
 
@@ -41,11 +41,13 @@
 
 | 产品验收 | 设计/契约 | 计划验证 |
 |---|---|---|
-| 依赖缺失、候选与未知不混淆，按需提示安装 | 只读探针 + 选用 Codex Security 时检查 + 适配说明 | 隔离 PATH 的进程测试；直接运行本机探针，人工核对非适用场景不要求检查 |
-| 安全扫描按风险执行，验证与 review 复用证据 | role routing、security-scan mode、Codex Security 适配与阶段引用 | 仓库结构/引用检查，按实际文件审查成功、缺口和失败场景 |
+| 依赖缺失、候选与未知不混淆，按需提示安装 | 只读探针 + 选用 Codex Security 时检查 + 适配说明；README 以稳定场景 ID 导航到产品场景 | 隔离 PATH 的进程测试；核对 README 导航；实际 Agent 演练普通工作、其他工具及选用 Codex Security 时的提醒行为 |
+| 安全扫描按风险执行，验证与 review 复用证据 | role routing、security-scan mode、Codex Security 适配与阶段引用 | 仓库结构/引用检查；实际 Agent 消费标明为 synthetic 的完整、缺失和版本不匹配样本，检查缺口归因及 review 不重复扫描 |
 | 不泄露凭据、不把未运行写通过 | 探针不读取/显示凭据；验证归因与报告纪律 | 敏感环境变量测试、规则与失败场景核对 |
 | 已有生命周期兼容 | 不修改 state schema 和验证 CLI | 现有生命周期回归；检查 diff |
 | 发布候选版本一致 | `CHANGELOG.md` 与两个 `.claude-plugin` 元数据 | 解析 JSON 并核对三个版本值与 CHANGELOG 的 7.0.0 记录；候选未通过验证前不发布 |
+
+提醒行为演练需保留 Agent 输入、加载的技能路径和完整工具轨迹：普通工作及选择其他工具时不检查或提示 Codex Security；实际需要且 CLI 缺失时运行只读探针，结合宿主实际插件发现能力作普通提示，未知项保持未知，不安装、登录或扫描。合成扫描产物只能证明消费者行为，不能证明真实扫描通过。
 
 ### 工程任务
 
@@ -94,6 +96,16 @@
 - `ENV_BLOCKED`：当前 T3 Codex 会话没有符合项目约束的独立验证执行者；Review 也没有独立执行上下文。未声称验证或评审已独立完成。
 - `INCONCLUSIVE`：真实扫描链路和 Agent 按需提醒仍未实际演练；本机 CLI 未发现，插件、认证及外部模型可用性未验证。
 - 必要验证未满足，记录为 fail；保留 Task `done`，不因执行环境缺口重开实现。等待满足条件后重验，再评审和发布。
+
+### 2026-11-15 独立验证 — f220f6b0f4e459c3bd65d1cafab1c92a2bdf7a74
+
+- 验证执行者是主会话通过 T3 `delegate_task` 启动的不同执行上下文；宿主回显 `codex / gpt-6.1-terra / xhigh`，但未提供 `executedModel`，实际模型标为未验证。验证前后仓库干净，HEAD 与 `90f9698def2bb3793c6cb58203d301f16f7880ff` 在 `.sdlc-v1/**` 外无差异。
+- 16:42:41–16:43:31 +08:00，`PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills` exit 0，176 项测试通过；有一条既有 HTTPError 清理 `ResourceWarning`。`python3 -B scripts/test_security_dependency.py` exit 0，3 项通过；`git diff --check 3093e85725a30078f2666886766ef4175bfb1d20 HEAD` exit 0。
+- 使用本机离线缓存的 coverage.py 7.17.2 和临时配置执行探针测试、合并和报告，均 exit 0：20/20 行、5/6 分支，综合 96%；父进程有 `no-data-collected` 提示，子进程数据已合并。`git archive HEAD` 的临时源码包内探针测试通过，版本元数据及 CHANGELOG 均为 7.0.0；临时目录已清理。
+- `IMPLEMENTATION_FAILED`：README 安全扫描使用入口缺少稳定 story/scenario ID 和指向对应产品故事的导航，与软件交付全局 usage 契约不符，需补充后重验。
+- `INCONCLUSIVE`：实际 Agent 在普通工作、选用其他工具及需要 Codex Security 三种情况下的提醒行为，以及扫描证据消费和 review 复用，尚未演练。离线探针和文本检查不能代替这些行为证据。
+- 真实模型扫描 `NOT_RUN`：产品成功标准未自动要求本 Feature 运行真实模型扫描；若后续按实际风险选择其为必要项，仍须实际完成或提供契约允许的等效证据。CLI 未发现，插件、版本及认证未知。
+- 纠正此前环境归因：Codex 原生子代理限制不等于 T3 无法调度独立子任务，本轮验证实际通过 T3 子任务执行；该事实不自动证明独立 Review 或验证通过。按本轮结果通过 lifecycle CLI 记录 `fail`，Review / Release 保持 pending。
 
 ## 评审记录
 

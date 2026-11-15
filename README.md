@@ -154,6 +154,10 @@ review 每次还会检查本次 diff 中的重复实现、不必要抽象和冗�
 
 ## 安全扫描与依赖
 
+**全局场景 ID：`SCN-security-scan`。** 依赖提示、扫描选择、证据处理和评审复用的
+[用户场景 1–5](.sdlc-v1/context/REQ-security-scan.product.md#用户场景与测试)及
+[成功标准](.sdlc-v1/context/REQ-security-scan.product.md#成功标准)见产品上下文；执行范围、工具与预算等参数由下列验证方式和适配说明确定。
+
 认证、授权、敏感数据、外部输入或供应链等变化时，SDLC 按当前安全义务评估
 [`security-scan`](skills/sdlc/references/validate-modes/security-scan.md)。validate 可以使用项目已有的合适扫描工具或
 [Codex Security](skills/sdlc/references/integrations/codex-security.md)；review 复核同一版本的发现和覆盖缺口，
