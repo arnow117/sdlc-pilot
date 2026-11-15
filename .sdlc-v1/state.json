@@ -156,9 +156,9 @@
       "acceptance": {
         "plan": {
           "algorithm": "sha256",
-          "at": "2026-11-15T05:00:26Z",
+          "at": "2026-11-15T05:02:03Z",
           "documents": {
-            ".sdlc-v1/context/FEAT-security-scan.engineering.md": "a61be977a74be64d128865813a174adcc868ff27d983194d2cbdfd1c61ee2cd4",
+            ".sdlc-v1/context/FEAT-security-scan.engineering.md": "e5273a06435033a673240f4e57dfb21b3e6aab7af2b04d72852f9f97978ba090",
             ".sdlc-v1/context/REQ-security-scan.product.md": "1a81a7955cd44e01e5eb3eb6bc7823bd4056a03c22a49ea18cfce60a3e2c0844"
           },
           "normalization": "context-v1"
@@ -189,12 +189,12 @@
           "updated_at": "2026-11-15T05:00:31Z"
         }
       },
-      "updated_at": "2026-11-15T05:00:31Z",
+      "updated_at": "2026-11-15T05:02:14Z",
       "validation": {
-        "at": null,
-        "command": null,
-        "commit": null,
-        "result": "pending"
+        "at": "2026-11-15T05:02:14Z",
+        "command": "bash scripts/validate-skills",
+        "commit": "90f9698def2bb3793c6cb58203d301f16f7880ff",
+        "result": "fail"
       }
     }
   },
@@ -272,7 +272,7 @@
       "product_context_ref": ".sdlc-v1/context/REQ-security-scan.product.md",
       "status": "in_delivery",
       "title": "Codex Security 安全扫描接入与依赖提示",
-      "updated_at": "2026-11-15T05:00:31Z"
+      "updated_at": "2026-11-15T05:02:14Z"
     }
   },
   "state_format": "sdlc-lightweight-state-v1",
