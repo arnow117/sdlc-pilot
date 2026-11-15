@@ -379,6 +379,15 @@ PY
 - 主 Agent 在该 commit 加载 router 和 T3 adapter 后直接派发本 child，核对了不同于实现者的 task/run、实际检查、宿主 `codex / gpt-6.1-terra / xhigh` 生效配置和结果；宿主 `next` 要求本轮返回，完成后实际唤醒并继续。此过程是 AC-001/010 的真实路径证据；正式状态接受仍以 lifecycle 命令为准。`executedModel=null`，实际 backend 和内部 effort 未知。
 - 真实取消、异常恢复、其他 native 宿主及资源释放仍未观察；本 Feature 未选择额外安全扫描，真实扫描 `NOT_RUN`，不称扫描通过。后续独立 Review 和发布仍待执行。
 
+### 2026-11-15 最终集成候选独立重验 — 2b59ea683c86eef4be7c7c99ccd105fb4986aa54
+
+- [独立重验原始记录](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3A363c5ad0-c4d8-473a-8ddd-eca8f5c062b8)给出新的 `PASS` 候选，等待主 Agent 接受。14:54:25–14:55:20 UTC，`PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills` exit 0，184 项及结构检查通过；既有 HTTPError 清理 `ResourceWarning` 保留。
+- 14:54:57–14:55:06 UTC，按实施层决定 3 的完整命令块以 Python 3.12.16 / coverage.py 7.17.2 运行 scenario 10 项，exit 0；变动函数及模块 82/82 行、16/16 分支，helper 10/10 行、8/8 分支，无遗漏。相对 `0ccd06b` 的 Bash 增量仍只有文件清单项，不将 Python 数据称为 Bash 覆盖或把空分母当作 100%。
+- 当前提交新解包的 16 个关键文件与 Git blob 一致；包内 CLI help、T3 scenario 10 项和 Security dependency 6 项均 exit 0，三处版本均为 7.0.1，双清单正文和无日期标题符合候选要求。自建解包目录已清理。首次准备 coverage 命令时工具因含 `rm -f` 拒绝执行，测试未启动；后续不执行该删除操作，直接运行原命令块并取得结果。
+- 相对 e68 的业务差异仅为 Security 测试和 README 测试边界说明；T3 router、adapter、protocol、scenario、故事入口及参数来源未变。当前真实 child 执行了候选检查；主 Agent 收到宿主 `next` 后结束该轮，完成通知已唤醒本轮，结果接受仍以 lifecycle 命令为准。真实取消、异常恢复、其他 native 宿主与资源释放仍未观察，真实扫描和额外模型实验 `NOT_RUN`。
+- 派工回包与运行期间宿主只读配置均为 `codex / gpt-6.1-terra / reasoningEffort=xhigh`；`executedModel=null`，实际 backend 和内部 effort 未知。原 de2c fail、e68 通过与 Review、Security 历史失败和未知诊断次数保留，不将旧批准自动转移到当前候选。
+- 原始数据暂存 `/var/folders/zn/9h5xx7817g1byxssf2d_8k7w0000gn/T/t3-stage-coverage.tb2tNW/`：`coverage.json` SHA-256 `9f48a04278c5bd45b086253654930d20e408aaaf69e59660d3dd00395fd38535`，`.coverage` 为 `287914df0d57551c6c3bb2e03036a822e2e39566b260fc4856a5dc2432ae710d`；接受前不清理。
+
 ## 评审记录（实际）
 
 - **历史状态**：初次独立规划评审建议接受；恢复方案的接受情况以 state 中的 plan 指纹为准，不能把旧规划评审当作覆盖后续正式 Feature Review。
@@ -389,6 +398,12 @@ PY
 - [独立 Sol 评审](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3A503c7b4c-2e27-42d5-9cbc-08a52b6b7797)检查了原基线 `0ccd06b1f08b7922882ab28c0ec9841ef5ad1154` 至验证 commit 的相关累计 diff，建议 `approved`；未发现有证据支持的阻断缺陷、重复实现或可避免工程债。
 - 评审核对了协议、adapter、失败隔离、使用文档、版本及覆盖报告；原始独立验证线程在评审者处返回 `thread_not_found`，其真实派发与唤醒判断依赖本上下文和主 Agent 的原始轨迹核对。请求和宿主配置为 Codex Sol/xhigh，`executedModel=null`，实际 backend 和内部 effort 未知。
 - 此结论仅覆盖本 Feature 和上述实现版本，不代替 Security Feature 的验证或发布；真实取消、异常恢复、其他 native 宿主、资源释放与真实安全扫描仍未观察或未运行。
+
+### 2026-11-15 最终集成候选正式 Feature Review — 2b59ea683c86eef4be7c7c99ccd105fb4986aa54
+
+- [独立 Sol 评审](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3A2f7b4af8-0d94-47df-8d52-958a667b420d)检查了 e68 至当前候选的完整业务增量和必要累计契约，建议 `approved`；没有新增发现，也未发现有证据支持的重复实现或可避免工程债。T3 路由、适配、协议和场景未变；Security 测试与 README 边界说明按当前候选核对。
+- 评审核对了当前独立验证的原始执行、184 项标准检查、82/82 行及 16/16 分支覆盖、归档内容及包内 smoke，确认其适用范围；Git 工作树、当前 commit 和 spec/plan/validation 指纹检查通过。主 Agent 按原请求记录 `approved`，仅对应本候选和本 Feature；旧版批准仍是历史记录。
+- 评审请求及运行期间宿主配置为 `codex / gpt-6.1-sol / reasoningEffort=xhigh`，`executedModel=null`，实际 backend 和内部 effort 未知。真实模型、严格 live、取消、异常恢复、其他 native 宿主和资源释放未观察；真实扫描和认证未运行。历史失败、R1 和未知非收敛及诊断次数保留。
 
 ## 发布与观察记录（实际）
 

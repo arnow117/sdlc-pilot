@@ -156,9 +156,27 @@
       "acceptance": {
         "plan": {
           "algorithm": "sha256",
-          "at": "2026-11-15T14:30:31Z",
+          "at": "2026-11-15T14:52:23Z",
           "documents": {
-            ".sdlc-v1/context/FEAT-security-scan.engineering.md": "677e96e89677d2788d485dce13e1bfe8d15f4cd76d720adb6cf0f61121da2b3e",
+            ".sdlc-v1/context/FEAT-security-scan.engineering.md": "1b968375271a6d42a3b6c79a87f18b1c38d9522fd39c099e2307d6673a9d5626",
+            ".sdlc-v1/context/REQ-security-scan.product.md": "1a81a7955cd44e01e5eb3eb6bc7823bd4056a03c22a49ea18cfce60a3e2c0844"
+          },
+          "normalization": "context-v1"
+        },
+        "review": {
+          "algorithm": "sha256",
+          "at": "2026-11-15T14:52:23Z",
+          "documents": {
+            ".sdlc-v1/context/FEAT-security-scan.engineering.md": "1b968375271a6d42a3b6c79a87f18b1c38d9522fd39c099e2307d6673a9d5626",
+            ".sdlc-v1/context/REQ-security-scan.product.md": "1a81a7955cd44e01e5eb3eb6bc7823bd4056a03c22a49ea18cfce60a3e2c0844"
+          },
+          "normalization": "context-v1"
+        },
+        "validation": {
+          "algorithm": "sha256",
+          "at": "2026-11-15T14:52:23Z",
+          "documents": {
+            ".sdlc-v1/context/FEAT-security-scan.engineering.md": "1b968375271a6d42a3b6c79a87f18b1c38d9522fd39c099e2307d6673a9d5626",
             ".sdlc-v1/context/REQ-security-scan.product.md": "1a81a7955cd44e01e5eb3eb6bc7823bd4056a03c22a49ea18cfce60a3e2c0844"
           },
           "normalization": "context-v1"
@@ -175,11 +193,11 @@
       },
       "requirement_id": "REQ-security-scan",
       "review": {
-        "at": null,
-        "by": null,
-        "decision": "pending"
+        "at": "2026-11-15T14:52:23Z",
+        "by": "Codex Sol independent reviewer",
+        "decision": "approved"
       },
-      "status": "in_progress",
+      "status": "reviewed",
       "tasks": {
         "TASK-security-scan": {
           "depends_on": [],
@@ -189,39 +207,39 @@
           "updated_at": "2026-11-15T14:30:31Z"
         }
       },
-      "updated_at": "2026-11-15T14:30:31Z",
+      "updated_at": "2026-11-15T14:52:23Z",
       "validation": {
-        "at": null,
-        "command": null,
-        "commit": null,
-        "result": "pending"
+        "at": "2026-11-15T14:52:23Z",
+        "command": "PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills",
+        "commit": "2b59ea683c86eef4be7c7c99ccd105fb4986aa54",
+        "result": "pass"
       }
     },
     "FEAT-t3-stage-dispatch": {
       "acceptance": {
         "plan": {
           "algorithm": "sha256",
-          "at": "2026-11-15T12:19:33Z",
+          "at": "2026-11-15T15:23:18Z",
           "documents": {
-            ".sdlc-v1/context/FEAT-t3-stage-dispatch.engineering.md": "5791838c52f8b787c4915aebf74f4edf8c3e8670149f76bc843d57bab1f606c1",
+            ".sdlc-v1/context/FEAT-t3-stage-dispatch.engineering.md": "c398e1c6ae48c10992576279281b3882172c799c904af4faa0f0666c25cf9bbc",
             ".sdlc-v1/context/REQ-t3-stage-dispatch.product.md": "b6b22862b52a75cc5e1125fa8e34a1a0501cff15d32c272ec89498e0680407f3"
           },
           "normalization": "context-v1"
         },
         "review": {
           "algorithm": "sha256",
-          "at": "2026-11-15T12:19:33Z",
+          "at": "2026-11-15T15:23:18Z",
           "documents": {
-            ".sdlc-v1/context/FEAT-t3-stage-dispatch.engineering.md": "5791838c52f8b787c4915aebf74f4edf8c3e8670149f76bc843d57bab1f606c1",
+            ".sdlc-v1/context/FEAT-t3-stage-dispatch.engineering.md": "c398e1c6ae48c10992576279281b3882172c799c904af4faa0f0666c25cf9bbc",
             ".sdlc-v1/context/REQ-t3-stage-dispatch.product.md": "b6b22862b52a75cc5e1125fa8e34a1a0501cff15d32c272ec89498e0680407f3"
           },
           "normalization": "context-v1"
         },
         "validation": {
           "algorithm": "sha256",
-          "at": "2026-11-15T12:19:33Z",
+          "at": "2026-11-15T15:23:18Z",
           "documents": {
-            ".sdlc-v1/context/FEAT-t3-stage-dispatch.engineering.md": "5791838c52f8b787c4915aebf74f4edf8c3e8670149f76bc843d57bab1f606c1",
+            ".sdlc-v1/context/FEAT-t3-stage-dispatch.engineering.md": "c398e1c6ae48c10992576279281b3882172c799c904af4faa0f0666c25cf9bbc",
             ".sdlc-v1/context/REQ-t3-stage-dispatch.product.md": "b6b22862b52a75cc5e1125fa8e34a1a0501cff15d32c272ec89498e0680407f3"
           },
           "normalization": "context-v1"
@@ -238,8 +256,8 @@
       },
       "requirement_id": "REQ-t3-stage-dispatch",
       "review": {
-        "at": "2026-11-15T12:19:33Z",
-        "by": null,
+        "at": "2026-11-15T15:23:18Z",
+        "by": "Codex Sol independent reviewer",
         "decision": "approved"
       },
       "status": "reviewed",
@@ -252,11 +270,11 @@
           "updated_at": "2026-11-15T11:53:44Z"
         }
       },
-      "updated_at": "2026-11-15T12:19:33Z",
+      "updated_at": "2026-11-15T15:23:18Z",
       "validation": {
-        "at": "2026-11-15T12:19:33Z",
-        "command": "PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills; 工程上下文实施层决定 3 完整离线 branch coverage 命令块; git diff --check; git archive HEAD 解包比较和 CLI help",
-        "commit": "e68fa239aa83182f0fa0e2e96c4edc0e9afe4cc3",
+        "at": "2026-11-15T15:23:18Z",
+        "command": "PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills; 工程上下文实施层决定 3 完整离线 branch coverage 命令块; git diff --check; git archive HEAD 包检查及 CLI/suite smoke",
+        "commit": "2b59ea683c86eef4be7c7c99ccd105fb4986aa54",
         "result": "pass"
       }
     }
@@ -333,9 +351,9 @@
       "id": "REQ-security-scan",
       "priority": "P1",
       "product_context_ref": ".sdlc-v1/context/REQ-security-scan.product.md",
-      "status": "in_delivery",
+      "status": "validated",
       "title": "Codex Security 安全扫描接入与依赖提示",
-      "updated_at": "2026-11-15T14:30:31Z"
+      "updated_at": "2026-11-15T14:52:23Z"
     },
     "REQ-t3-stage-dispatch": {
       "acceptance": {
@@ -358,7 +376,7 @@
       "product_context_ref": ".sdlc-v1/context/REQ-t3-stage-dispatch.product.md",
       "status": "validated",
       "title": "按宿主能力修复 T3 阶段调度",
-      "updated_at": "2026-11-15T12:19:33Z"
+      "updated_at": "2026-11-15T15:23:18Z"
     }
   },
   "state_format": "sdlc-lightweight-state-v1",

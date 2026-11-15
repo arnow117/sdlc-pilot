@@ -211,6 +211,13 @@ T3 的产品/工程绑定文件和业务实现未被本修订改变，其已有 
 - 宿主只读配置为 `codex / gpt-6.1-terra / reasoningEffort=xhigh`；`executedModel=null`，实际 backend 和内部 effort 未知。真实 CLI 扫描、认证、模型调用、扫描效果及 Windows shell 仍为 `NOT_RUN` / 未知。此前 `ab68`、`e68`、`44b` 的失败和 R1、首次 coverage/包校验失败均保留，未知诊断次数不重置。
 - 本轮数据暂存 `/tmp/security-r1-validation.ZxguuM1l/`：`security.json` SHA-256 `af16d44f7ece1c11396c2c27ad3bdb6d20418354a5eb17f3b6940a8763f9c406`，`security.coverage` 为 `b93a35494c69aed5104dfedae86e540b80b2379b243eb7afee37ce707c82bd07`；完整日志及脚本与原始线程可供接受核对。
 
+### 2026-11-15 文案修正后的独立验证 — 2b59ea683c86eef4be7c7c99ccd105fb4986aa54
+
+- [独立验证原始记录](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3Aee1c59c3-ddc6-413b-8cff-3f1889679afb)给出新的 `PASS` 候选，等待主 Agent 接受。14:32:36–14:33:30 UTC，`PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills` exit 0，184 项及结构检查通过；既有 HTTPError 清理 `ResourceWarning` 保留。
+- 相对 `1c5a590` 的业务差异仅 README 一行，验证者对照探针与测试调用核对了 P3 文案、故事链接及参数来源。源码、测试、runner 和相关配置未变；前述 R1 正反例及受影响函数 61/61 行、6/6 分支数据经原始记录和摘要核对后适用，Windows 分支仍仅为隔离模拟。
+- 当前提交新解包的 16 个关键文件与 Git blob 一致，包内 Security 6 项、T3 场景 10 项和 CLI help 均通过；三处版本为 7.0.1，双清单正文保留且标题无日期。本轮首次包核对脚本误用当前标题匹配历史带日期标题而 exit 1；更正为比较章节正文后 exit 0，两次自建解包目录均已清理。
+- 五条原始场景按完整编码 ID 可读，实际按需准备与 synthetic 消费证据按源码和契约差异判断适用；T3 覆盖数据仅为共同证据，不代替其正式阶段。宿主只读配置为 `codex / gpt-6.1-terra / reasoningEffort=xhigh`，`executedModel=null`，实际 backend 和内部 effort 未知。真实扫描、认证、模型调用、扫描效果及 Windows shell 均为 `NOT_RUN` / 未知；历史失败与未知诊断次数保留。
+
 ## 评审记录
 
 实现者此前对相关代码、路由、权限和缺口做过串行自查；不称独立评审。此前认为当前会话不能取得独立评审上下文的判断已被 T3 子任务执行事实修正；后续正式 Review 见下。
@@ -232,6 +239,11 @@ T3 的产品/工程绑定文件和业务实现未被本修订改变，其已有 
 - 2026-11-15T14:27:40Z，主 Agent 为修正该文案按 `done → todo → in_progress` 重新打开原 Task；两次 CLI 均 exit 0，并按合同清除机器状态中的 validation/review/release。上述通过与批准保持为历史事实。
 - **P3 文案返修（未提交候选）**：`README.md` 现区分探针不执行 PATH 候选与测试正反控制执行自建临时候选脚本；业务 diff SHA-256 为 `a84542c47c30fdf37df1ebc7555e8a5d409af865c60f834492fc92d3f056648a`。主 Agent 对照测试调用核对文案，`PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills` exit 0，184 项及结构检查通过，`git diff --check` exit 0；既有 HTTPError 清理 `ResourceWarning` 保留。此为 Build 检查，不代替新候选的独立验证或评审。
 - 真实扫描、认证、模型调用、Windows shell 及实际 backend 仍为 `NOT_RUN` / 未知；本轮未发现其他必须修复项。运行期间宿主配置为 `codex / gpt-6.1-sol / reasoningEffort=xhigh`，`executedModel=null`，实际 backend 和内部 effort 未知。
+
+### 2026-11-15 最终候选正式 Review — 2b59ea683c86eef4be7c7c99ccd105fb4986aa54
+
+- [独立 Sol 正式评审](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3A8a23bdcc-6285-4769-8203-ecbaff87c286)建议 `approved`、无新增发现；主 Agent 于 14:51:42Z 按原请求记录，评审者为 `Codex Sol independent reviewer`。P3 文案已按现有契约修正，R1 无新回归证据；原发现和失败历史保留。
+- 评审核对了 README 与探针、测试调用链、当前独立验证及源码包证据；未发现有证据支持的重复实现或可避免工程债。真实 Windows shell、扫描、认证、模型调用和扫描效果仍为 `NOT_RUN` / 未知；运行期间宿主配置为 `codex / gpt-6.1-sol / reasoningEffort=xhigh`，`executedModel=null`，实际 backend 与内部 effort 未知。
 
 ## 发布与观察记录
 
