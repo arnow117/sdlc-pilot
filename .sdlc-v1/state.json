@@ -201,9 +201,9 @@
       "acceptance": {
         "plan": {
           "algorithm": "sha256",
-          "at": "2026-11-15T11:10:46Z",
+          "at": "2026-11-15T11:53:44Z",
           "documents": {
-            ".sdlc-v1/context/FEAT-t3-stage-dispatch.engineering.md": "c853cfbe592bdb061747811da0f4b88d7df6cdd5e473a26509393b1315b3dfa1",
+            ".sdlc-v1/context/FEAT-t3-stage-dispatch.engineering.md": "60cc5846aaa356de859259a1aea543e9b38d8566cbabac0322823122ae57666c",
             ".sdlc-v1/context/REQ-t3-stage-dispatch.product.md": "b6b22862b52a75cc5e1125fa8e34a1a0501cff15d32c272ec89498e0680407f3"
           },
           "normalization": "context-v1"
@@ -231,10 +231,10 @@
           "id": "TASK-t3-stage-dispatch-core",
           "status": "done",
           "title": "修复阶段调度合同并完成必要回归与使用说明",
-          "updated_at": "2026-11-15T11:10:46Z"
+          "updated_at": "2026-11-15T11:53:44Z"
         }
       },
-      "updated_at": "2026-11-15T11:10:46Z",
+      "updated_at": "2026-11-15T11:53:44Z",
       "validation": {
         "at": null,
         "command": null,
@@ -340,7 +340,7 @@
       "product_context_ref": ".sdlc-v1/context/REQ-t3-stage-dispatch.product.md",
       "status": "in_delivery",
       "title": "按宿主能力修复 T3 阶段调度",
-      "updated_at": "2026-11-15T11:10:46Z"
+      "updated_at": "2026-11-15T11:53:44Z"
     }
   },
   "state_format": "sdlc-lightweight-state-v1",

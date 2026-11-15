@@ -422,6 +422,85 @@ def assert_result(test: unittest.TestCase, repo: Path, scenario: str, initial: d
         test.assertEqual(lifecycle.next_action(repo)["stage"], "build")
 
 
+T3_CONTRACT_PATHS = {
+    "adapter": HERE.parent / "skills/sdlc/references/runtime-adapters/t3-code.md",
+    "protocol": HERE.parent / "skills/sdlc/references/stage-agent-protocol.md",
+    "template": HERE.parent / "skills/sdlc/references/templates/TASK.md",
+    "readme": HERE.parent / "README.md",
+}
+T3_REQUIRED_TOKENS = {
+    "adapter": ("delegate_task", "task_cancel", "terminal executor", "host `next`", "stage-agent-protocol.md"),
+    "protocol": ("runtime-adapters/t3-code.md", "host `next`"),
+    "template": ("终端执行者",),
+    "readme": ("SCN-t3-stage-dispatch", "runtime-adapters/t3-code.md"),
+}
+T3_OLD_PATH = "Launch idle via `t3_thread_launch`"
+
+
+def t3_child_contract_errors(adapter: Path, protocol: Path, template: Path, readme: Path) -> list:
+    """Check document contract shape; this does not establish live host behavior."""
+    paths = {"adapter": adapter, "protocol": protocol, "template": template, "readme": readme}
+    texts = {name: path.read_text(encoding="utf-8") for name, path in paths.items()}
+    errors = []
+    for name, tokens in T3_REQUIRED_TOKENS.items():
+        for token in tokens:
+            if token not in texts[name]:
+                errors.append(f"{name}: missing {token}")
+    if T3_OLD_PATH in texts["adapter"]:
+        errors.append("adapter: obsolete affirmative top-level stage path")
+    return errors
+
+
+class T3ChildContractTest(unittest.TestCase):
+    def test_real_repository_contract(self) -> None:
+        self.assertEqual(t3_child_contract_errors(**T3_CONTRACT_PATHS), [])
+
+    def test_temporary_copies_and_each_missing_token(self) -> None:
+        originals = {name: path.read_bytes() for name, path in T3_CONTRACT_PATHS.items()}
+        cases = [(None, None)] + [
+            (name, token)
+            for name, tokens in T3_REQUIRED_TOKENS.items()
+            for token in tokens
+        ]
+        for name, token in cases:
+            with self.subTest(document=name, token=token), tempfile.TemporaryDirectory() as temporary:
+                copies = {key: Path(temporary) / key for key in originals}
+                for key, path in copies.items():
+                    path.write_bytes(originals[key])
+                expected = []
+                if name is not None:
+                    content = copies[name].read_text(encoding="utf-8")
+                    self.assertIn(token, content)
+                    copies[name].write_text(content.replace(token, ""), encoding="utf-8")
+                    expected = [f"{name}: missing {token}"]
+                self.assertEqual(t3_child_contract_errors(**copies), expected)
+                self.assertEqual(
+                    {key: path.read_bytes() for key, path in T3_CONTRACT_PATHS.items()}, originals
+                )
+
+    def test_old_affirmative_path_is_rejected_in_new_copy(self) -> None:
+        originals = {name: path.read_bytes() for name, path in T3_CONTRACT_PATHS.items()}
+        with tempfile.TemporaryDirectory() as temporary:
+            copies = {key: Path(temporary) / key for key in originals}
+            for key, path in copies.items():
+                path.write_bytes(originals[key])
+            with copies["adapter"].open("a", encoding="utf-8") as stream:
+                stream.write(
+                    "\nNever use `t3_thread_launch` for a child; native `spawn_agent` "
+                    "belongs to another adapter.\n"
+                )
+            self.assertEqual(t3_child_contract_errors(**copies), [])
+            with copies["adapter"].open("a", encoding="utf-8") as stream:
+                stream.write("\n" + T3_OLD_PATH + "\n")
+            self.assertEqual(
+                t3_child_contract_errors(**copies),
+                ["adapter: obsolete affirmative top-level stage path"],
+            )
+            self.assertEqual(
+                {key: path.read_bytes() for key, path in T3_CONTRACT_PATHS.items()}, originals
+            )
+
+
 class ScenarioTest(unittest.TestCase):
     def test_reference_and_wrong_results(self) -> None:
         for scenario in REQUESTS:
