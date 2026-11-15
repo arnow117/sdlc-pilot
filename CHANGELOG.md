@@ -4,6 +4,16 @@
 
 ## [Unreleased]
 
+### Added
+
+- 新增 `security-scan` 验证方式和 Codex Security 适配；按风险选择验证范围，保留原生扫描证据、覆盖缺口和费用事实，review 复用适用结果。
+- 需要使用 Codex Security 时，`/sdlc` 以只读探针检查执行机器的 CLI 候选；工具或必要配置缺失时提示安装/配置，不自动下载、登录或扫描。
+
+### Compatibility and limits
+
+- 生命周期 state、`record-validation` 接口和既有四类验证归因不变。只读探针不证明插件、版本、认证或真实扫描可用；必要扫描缺失不能记作通过。
+- Codex Security 是可选供应商适配；实际模型、凭据、额度、CLI 版本及扫描行为必须在执行环境中另行核实。
+
 ## [6.0.0] — 2026-11-14
 
 ### Added

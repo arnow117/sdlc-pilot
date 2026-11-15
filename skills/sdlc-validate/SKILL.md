@@ -18,7 +18,7 @@ description: >
 
 - Feature projection 及其两个上下文。
 - 当前 Git diff 和 `.sdlc-v1/project.md` 的测试命令、surface map。
-- `correctness | e2e:Web | e2e:OpenAPI | e2e:App | eval-bench` 中与改动相关的方式。
+- `correctness | e2e:Web | e2e:OpenAPI | e2e:App | eval-bench | security-scan` 中与改动相关的方式。
 
 ## 询问前的定向查找
 
@@ -64,6 +64,7 @@ description: >
 1. 确认所有非取消 Task 均为 `done`。
 2. 读取 [`Global usage-document, story, and parameter contract`](../sdlc/references/lifecycles/software-delivery.md#11-global-usage-document-story-and-parameter-contract)，并为受影响的故事按当前文档选择代表目标、参数来源和实际操作证据。
 3. 根据 [`role-routing.md`](../sdlc/references/role-routing.md) 选择验证方式，并读取对应 `validate-modes/*.md`。
+   选择 `security-scan` 时按其契约检查实际执行、版本、范围、原生产物和未覆盖项；需要 Codex Security 时读取其适配说明，不能以依赖探针或 dry-run 代替扫描。
 4. 逐条验证产品验收条件，并按“验收条件与证据对应”记录；同时运行相关单元测试、类型检查、构建和必要的端到端检查。实际使用为未运行或失败时，不能写成通过。合成或局部真实目标是环境/数据范围：相关检查可在明确该范围时通过，但不得外推为 live、部署或真人试用通过。若本次独立 Validate 的覆盖率命令确实运行了完整相关单元套件，它可同时证明覆盖率和该套件；在同一证据条目记录一次即可，不为报告格式重跑相同命令。Build 的通过不能替代这次独立运行；源码或配置改变、失败、缺少证据或阶段特有需要时，仍按影响重验。
    若检查会启动服务、浏览器、模拟器、容器、VM 或明显占用主机资源，按唯一的
    [验证资源生命周期](../sdlc/references/stage-agent-protocol.md#verification-resource-lifecycle)记录必要的收尾和资源状态。

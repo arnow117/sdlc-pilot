@@ -39,6 +39,9 @@ Validation/证据位置。
 只读评审记录本次相关契约、调用链和正常失败场景的覆盖情况与实质缺口，并引用现有 Validation 结果或缺口；不重建验收条件、
 结果和证据表，也不新增独立评审报告或评分。
 
+选中 [`security-scan`](../sdlc/references/validate-modes/security-scan.md) 时，提供与 validation commit 绑定的原生扫描证据、
+实际范围、发现和未解决缺口。review 核对可达性、反证、覆盖及当前处置策略；需要补证据时交回 validate，不默认重复运行同一模型扫描。
+
 ## 入口
 
 - Feature 必须已通过验证。

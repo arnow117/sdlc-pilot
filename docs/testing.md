@@ -19,7 +19,7 @@ bash scripts/validate-skills
 git diff --check
 ```
 
-前者检查结构、引用和协议文本，并运行七组 Python 测试：
+前者检查结构、引用和协议文本，并运行八组 Python 测试：
 
 - [lifecycle](../scripts/test_lifecycle_state.py)：状态转换、Git 版本、恢复及多 clone；
 - [backlog](../scripts/test_backlog.py)：只读投影、看板和 HTML 转义；
@@ -28,6 +28,7 @@ git diff --check
 - [Hallmark catalog](../scripts/test_hallmark_catalog.py)：目录、召回、同步及失败保护。
 - [vibe test 核心](../scripts/test_vibe_test.py)：离线 oracle、反例、合成报告、统计与路径保护；
 - [vibe test host](../scripts/test_vibe_host.py)：受控回调、原生字段映射、预算及评分绑定的 stub 合同。
+- [安全扫描依赖探针](../scripts/test_security_dependency.py)：隔离 PATH 中的缺失、候选和重名情况；检查不执行候选程序、不输出凭据，不能证明真实扫描或 Agent 提醒行为。
 
 前两组共用 [临时 Git 仓库辅助函数](../scripts/test_support.py)，各自保留业务状态初始化。它们也可分别直接运行：
 
@@ -66,6 +67,7 @@ node --test skills/sdlc-prototype/assets/shared-state/runtime.test.cjs
 | lifecycle、backlog、共享测试 helper 或场景断言 | 标准检查及受影响的原生测试；场景断言改变时先检查参考和错误结果，不能直接沿用旧评分。 |
 | 产品确认、委托或准备阶段的选择处理 | 选择 B02；影响正常交付推进时补 B01。 |
 | 验证归因、旧通过失效、证据适用性或上下文交接 | 按影响选择 B03、B04A/B；修改复用判断时保留 B04A/B 成对比较，兼顾漏验与不必要重跑。 |
+| 安全扫描接入或依赖提醒 | 运行标准检查中的依赖探针测试，人工核对风险选择、未运行归因、原生产物与 review 复用；真实扫描与 Agent 提醒需各自的实际执行证据。 |
 | 准备批次、部分成功或恢复登记 | 选择 B05；影响完整链路时补 B01。 |
 | 独立评审、集成或实际交付配置 | B01 可检查基础交付；多端兼容、并发、返修 delta 和 feature flags 等风险仍需相应原生测试或有界专项，不能把六题通过外推为全部覆盖。 |
 | 更换模型、通用工具权限或整体编排 | 对实际受影响能力选择代表集；整体路径改变时以六题为起点。只改配置标签而未实跑，记录 NOT_RUN，不宣称性能改善。 |

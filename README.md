@@ -143,7 +143,7 @@ repo-context 的 `sync`/`refine` 若会改动业务路径或长期文档，应�
 | 阶段技能 | onboard、backlog、spec、plan、build、validate、review、ship | 在需要时只加载当前阶段 |
 | 原型方法 | `sdlc-prototype` | 可独立制作交互原型，也可由产品/规格阶段按需加载；不是新阶段 |
 | 角色卡 | product-owner、domain-expert、architect、client-dev、server-dev、qa、design、security 等 | 按改动面补充检查视角 |
-| 验证模式 | correctness、e2e、eval-bench | 由 validate 阶段按项目类型选用 |
+| 验证模式 | correctness、e2e、eval-bench、security-scan | 由 validate 阶段按项目类型及安全义务选用 |
 
 方法论仍然保留 BDD、战略 DDD、SDD、TDD、可靠性检查、多角色评审和发布纪律；它们是阶段内按需加载的
 工作方式，不要求为每一步生成额外的机器记录。
@@ -151,6 +151,17 @@ repo-context 的 `sync`/`refine` 若会改动业务路径或长期文档，应�
 review 每次还会检查本次 diff 中的重复实现、不必要抽象和冗余配置或依赖，帮助预防可避免的工程债。
 删除或替换建议需要具体证据并保持当前行为和工程约束；普通简化建议不阻塞发布。完整检查与处理规则见
 [`sdlc-review`](skills/sdlc-review/SKILL.md)。
+
+## 安全扫描与依赖
+
+认证、授权、敏感数据、外部输入或供应链等变化时，SDLC 按当前安全义务评估
+[`security-scan`](skills/sdlc/references/validate-modes/security-scan.md)。validate 可以使用项目已有的合适扫描工具或
+[Codex Security](skills/sdlc/references/integrations/codex-security.md)；review 复核同一版本的发现和覆盖缺口，
+不默认重复调用模型。未运行或证据不足不能写成扫描通过。
+
+当前阶段需要使用 Codex Security 时，`/sdlc` 在执行机器上做只读依赖检查；缺少工具或配置时说明安装选项。
+普通工作不会因未选用它而检查或提醒。检查不会自动下载、登录或扫描；选中的必要安全检查仍须完成。探针只发现 PATH 候选，不验证插件、
+版本或凭据；具体限制、官方安装入口、调用方式与费用边界见 Codex Security 适配说明。
 
 ## 原型：首次设计、迭代与独立使用
 
@@ -397,6 +408,7 @@ git diff --check
 - `test_hallmark_catalog.py`：随包 Hallmark 风格目录的召回、来源完整性和原子增量同步。
 - `test_vibe_test.py`：离线 battery、oracle、合成报告与路径保护。
 - `test_vibe_host.py`：受控宿主回调的 stub 合同；不启动模型。
+- `test_security_dependency.py`：隔离 PATH 中的依赖发现、重名候选与凭据不输出；不执行候选命令或模型。
 
 它还检查阶段协议、brief/result 模板、检查点模板和已知冲突文案的机械形状；主 Agent 的语义判断仍不能由字符串检查替代。
 

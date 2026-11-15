@@ -92,6 +92,11 @@ The brief includes all of the following:
   paths, and an observable acceptance scenario before implementation.
 - Write scope, dependencies, branch/worktree constraints, completion conditions,
   and required verification.
+- When a required verification uses a scanner, include its actual execution
+  environment, target and scope, tool/runtime and model where applicable,
+  authorized resource and cost limits, artifact location, and ownership of
+  cancellation and cleanup. Scanner-internal execution does not grant authority
+  over lifecycle state or permit a nested lifecycle.
 - 对实现派工，给出当前有效方案中的规划基线引用、相关输入范围和执行前复核要求；明确本 Task 的具体停止条件。它们使用既有 `context_refs`、`dependencies`、`required_verification` 和必要补充文字，不增加 brief 或结果字段。
 - 每份 brief 明文带入下文“敏感材料与被审计内容”的两条限制，不能只假设继承；指定的 reference 与上下文须在实际执行环境可读。不能读取时返回确切缺口，不凭旧会话补猜。
 - For a Feature whose registered development branch must change, use the authoritative
@@ -299,6 +304,7 @@ This rule adds no schema, ledger, or runtime service.
 ### Verification resource lifecycle
 
 仅当检查会启动服务、浏览器、模拟器、容器、VM，或明显占用主机资源时适用；普通静态检查和文档工作不因此新增资源报告。
+适用的安全扫描应把专属 scanner 子进程、模型请求、状态目录和容器/job 纳入同一归属与收尾范围，不停止共享服务。
 
 1. **预检与复用：** 先以低成本、项目范围内的方式确认资源需要、当前负载和可复用的健康环境；用户明确停用或暂停时保持停用。
    资源状态无法核实应如实说明，普通等待超时不触发恢复或重启。
@@ -638,6 +644,12 @@ same independent Validate; do not demand a second identical unit run solely to
 format the report. Implementer evidence does not substitute for independent
 Validate. A changed input, missing evidence, failed check, or stage-specific
 requirement requires appropriate new verification.
+
+For an applicable `security-scan`, retain the actual target/baseline, tool and
+policy versions, scope, raw artifact references and digests, execution outcome,
+and coverage gaps in existing engineering evidence. A digest is not proof of a
+successful or complete scan. Review consumes applicable evidence rather than
+automatically reissuing a model request.
 
 Timing diagnostics may locate work but never justify cancelling on timeout,
 replacing an active writer, omitting required reports or checks, or claiming a

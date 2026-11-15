@@ -31,7 +31,7 @@ Decision = resolve(
 4. 未匹配的路径使用下表；一条路径可命中多条规则，结果取并集。
 5. 任意代码 diff 至少加入 `qa + correctness`。
 6. 命中两个以上不同 surface，或需要 full-chain e2e 时加入 `architect`。
-7. 认证、授权、支付、密钥、个人数据、原始 SQL、文件系统或外部输入发生变化时加入 `security`。
+7. 认证、授权、支付、密钥、个人数据、原始 SQL、文件系统或外部输入发生变化时加入 `security`；按受影响的安全义务评估并选择 `security-scan`，具体工具与模型调用另按授权决定。
 8. 产品澄清阶段默认加入 `product-owner`；术语、业务规则或归属复杂时加入 `domain-expert`。
 9. 去重后只加载选中的角色卡、验证方式和与扩展名匹配的语言参考。
 10. 未归类路径应提示刷新 `project.md` 的 surface map，但不阻止当前工作。
@@ -57,6 +57,7 @@ Decision = resolve(
 - diff 命中客户端、服务端、数据、AI、声明式配置中两个以上类别：加入 `architect`。
 - 公共 API、持久化格式、跨机器交互或不可逆外部行为变化：加入 `architect`，必要时进行一次独立复核。
 - 敏感区域变化：加入 `security`，不得仅依赖其他角色顺带检查。
+- 安全边界、依赖供应链或安全检查变化时，按 [`security-scan`](validate-modes/security-scan.md) 判断需要覆盖的范围和工具能力；不把角色选择、工具缺失或纯文案变更等同于真实扫描通过。
 - 工程验证语义风险：削弱检查、断言、阈值或评审范围时加入 `qa`，按实际影响加入 `ai-readiness`、`architect` 或 `security`；扩展工具、CI 或 Agent 权限时按权限影响加入 `security` 和相关视角。CI 变更按实际效果判断，不一律视为最高风险。在既有研发上下文记录受影响能力的验证证据及残余风险。产品模型、提示和 Agent 质量仍由现有 `eval-bench` 处理。
 - 项目已有 `REVIEW.md` 或 `CODEOWNERS` 时可用于确定适用检查和 owner 策略；它们不能豁免必要验证，也不引入统一人数要求。
 - 用户可见行为变化：即使只改服务端，也应根据产品场景决定是否补 `design` 或对应 e2e。
@@ -86,6 +87,7 @@ Decision = resolve(
 | `e2e:OpenAPI` | `validate-modes/e2e.md` | API 行为 |
 | `e2e:App` | `validate-modes/e2e.md` | 移动端用户旅程 |
 | `eval-bench` | `validate-modes/eval-bench.md` | 模型、策略、提示或数据质量评估 |
+| `security-scan` | `validate-modes/security-scan.md` | 依安全义务选择的代码、配置和供应链扫描 |
 
 ## 6. 语言参考
 

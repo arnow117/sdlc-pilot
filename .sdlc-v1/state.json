@@ -151,6 +151,51 @@
         "commit": "a17ce7d67ad05e67a92a3e2adfac9d4228914691",
         "result": "pass"
       }
+    },
+    "FEAT-security-scan": {
+      "acceptance": {
+        "plan": {
+          "algorithm": "sha256",
+          "at": "2026-11-15T04:41:52Z",
+          "documents": {
+            ".sdlc-v1/context/FEAT-security-scan.engineering.md": "fadb58878aea19b7bbda44ed0c97cb0b68c0206e30587d176af78a68e1cdb2a6",
+            ".sdlc-v1/context/REQ-security-scan.product.md": "1a81a7955cd44e01e5eb3eb6bc7823bd4056a03c22a49ea18cfce60a3e2c0844"
+          },
+          "normalization": "context-v1"
+        }
+      },
+      "branch": "feat/codex-security",
+      "created_at": "2026-11-15T04:09:55Z",
+      "engineering_context_ref": ".sdlc-v1/context/FEAT-security-scan.engineering.md",
+      "id": "FEAT-security-scan",
+      "release": {
+        "at": null,
+        "commit": null,
+        "status": "pending"
+      },
+      "requirement_id": "REQ-security-scan",
+      "review": {
+        "at": null,
+        "by": null,
+        "decision": "pending"
+      },
+      "status": "in_progress",
+      "tasks": {
+        "TASK-security-scan": {
+          "depends_on": [],
+          "id": "TASK-security-scan",
+          "status": "done",
+          "title": "接入安全验证、Codex Security 与只读依赖检查",
+          "updated_at": "2026-11-15T04:40:50Z"
+        }
+      },
+      "updated_at": "2026-11-15T04:41:52Z",
+      "validation": {
+        "at": null,
+        "command": null,
+        "commit": null,
+        "result": "pending"
+      }
     }
   },
   "requirements": {
@@ -205,6 +250,29 @@
       "status": "released",
       "title": "SDLC 小项目派工与证据减量",
       "updated_at": "2026-10-25T12:06:56Z"
+    },
+    "REQ-security-scan": {
+      "acceptance": {
+        "spec_ready": {
+          "algorithm": "sha256",
+          "at": "2026-11-15T04:37:46Z",
+          "documents": {
+            ".sdlc-v1/context/REQ-security-scan.product.md": "1a81a7955cd44e01e5eb3eb6bc7823bd4056a03c22a49ea18cfce60a3e2c0844"
+          },
+          "normalization": "context-v1"
+        }
+      },
+      "created_at": "2026-11-15T04:08:18Z",
+      "depends_on": [],
+      "description": "在 SDLC 的验证和评审中使用安全扫描，并在运行环境缺少 Codex Security 时提醒安装或配置。",
+      "domain": "security",
+      "feature_id": "FEAT-security-scan",
+      "id": "REQ-security-scan",
+      "priority": "P1",
+      "product_context_ref": ".sdlc-v1/context/REQ-security-scan.product.md",
+      "status": "in_delivery",
+      "title": "Codex Security 安全扫描接入与依赖提示",
+      "updated_at": "2026-11-15T04:40:50Z"
     }
   },
   "state_format": "sdlc-lightweight-state-v1",

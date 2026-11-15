@@ -14,6 +14,10 @@ description: >
 整套阶段技能共用协议中的[运行时选择](references/stage-agent-protocol.md#runtime-selection)：默认使用宿主原生路径；
 当前任务明确选择并授权 Claude 时，主 Agent 直接通过 T3 Code MCP 控制该阶段执行者。只加载所选适配说明。
 
+当当前阶段实际需要使用 Codex Security 时，按其 [依赖检查](references/integrations/codex-security.md#按需检查执行机器)
+确认执行机器的可用性；缺少工具或配置时说明缺口并提供安装或配置入口。普通 `/sdlc` 工作不因未选用该工具而检查或提醒；
+已选为必要项的安全扫描仍须实际完成或按验证归因报告缺口。
+
 ## 1. 唯一目录
 
 目标项目只使用以下结构：
