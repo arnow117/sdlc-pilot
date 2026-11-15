@@ -6,7 +6,8 @@
 
 **Requirement**：`REQ-security-scan`；产品规则与验收场景唯一见对应产品上下文。
 **规划基线**：2026-11-15，仓库 `main` 的 `3093e85725a30078f2666886766ef4175bfb1d20`；开始时业务工作树干净。`project.md` 的历史版本/测试数是旧事实，不视为当前检查结果。
-**执行环境**：当前主会话为 T3 Codex `gpt-6.1-terra / max`。用户明确允许通过 T3 `delegate_task` 调度不同执行上下文；原生 `spawn_agent` / `followup_task` 限制仍然适用。独立验证和评审须核对实际执行上下文及模型信息，宿主未提供的实际模型元数据标为未知。
+**初始执行环境（历史）**：初始主会话为 T3 Codex `gpt-6.1-terra / max`。用户明确允许通过 T3 `delegate_task` 调度不同执行上下文；原生 `spawn_agent` / `followup_task` 限制仍然适用。独立验证和评审须核对实际执行上下文及模型信息，宿主未提供的实际模型元数据标为未知。
+**本轮协调基线**：2026-11-15，实际 root `/Users/mac/hansen_agent_team/external/sdlc-pilot`、branch `fix/t3-stage-dispatch`、HEAD `e68fa239aa83182f0fa0e2e96c4edc0e9afe4cc3`；入口仅主 Agent 管理的 state 与 T3 工程上下文未暂存，暂存区及冲突项为空。本轮宿主生效配置为 `codex / gpt-6.1-sol / reasoningEffort=xhigh`，实际 backend 未知；Security 登记仍为 `feat/codex-security`，本轮不迁移、不 checkout。
 **方向来源**：用户当前请求及 `workspace/20261115-codex-security-sdlc-integration/方案.md` 的只读调研；后者是候选依据，不替代当前契约和实际测试。
 
 #### 复用评估
@@ -26,7 +27,27 @@
 - `validate-modes/security-scan.md` 定义风险选择、输入、原生证据、四类归因与 review 复用；`integrations/codex-security.md` 定义经版本/权限/预算检查后使用供应商 CLI/插件及保留原始结果的步骤。CLI 具体命令和参数必须先由当前安装的版本帮助信息核实；本次机器缺 CLI，不声称真实命令已运行。
 - `role-routing.md`、`sdlc-validate`、`sdlc-review`、`sdlc-onboard`、`roles/security.md` 与必要的 README/CHANGELOG 引用同一 mode/适配说明。生命周期 state 结构和 `record-validation` 接口不变。
 - 扫描范围、原生产物、候选 commit、工具版本、预算、退出、缺口与关键反证保存在既有工程证据；原始报告不进入 state。真实运行前按现有授权和资源生命周期检查；不自动 patch、上传或发布。
-- 用户要求发布到 main 后，将两个插件元数据和 CHANGELOG 准备为 `7.0.0` 候选。依据：本次对部分安全敏感变更新增必要验证义务，可能阻塞旧工作流；仓库 6.0.0 对新增必要验证义务使用 major 版本。候选版本不表示已合并、打 tag 或发布。
+- Security 增加必要安全验证义务，按既有 major 规则准备的历史候选为 `7.0.0`；集成 T3 兼容修复后的最终源码候选统一为 `7.0.1`，以本节下方的版本协调判据替换原先“最终三处版本必须为 7.0.0”的工程验收条件。完整保留 CHANGELOG 的 7.0.0 Security 条目及 7.0.1 T3 条目；候选版本不表示已合并、打 tag 或发布。
+
+#### 集成候选版本协调与证据适用性
+
+本修订是供主 Agent 接受的 Security Plan 候选。来源为本次明确授权的跨 Feature 版本协调、现有发布目标、T3 工程方案“实施层决定 3 / 集成和发布安排”及实际元数据；不能从 T3 已通过倒推 Security 已通过。Security 的 7.0.0 major 依据保留，7.0.1 是其上集成的 T3 兼容修复，故无需回退元数据或删除任何一方的变更清单。
+
+| 最终候选检查对象 | 精确判据 |
+|---|---|
+| `.claude-plugin/plugin.json` 的 `version` | `7.0.1` |
+| `.claude-plugin/marketplace.json` 的 `metadata.version` | `7.0.1` |
+| 同文件 `plugins` 中 `name=sdlc-pilot` 的 `version` | `7.0.1`；按名称定位，不依赖数组位置 |
+| `CHANGELOG.md` 的 `[7.0.0]` | 保留 Security 的两条 Added 和三条 Compatibility and limits 全文，涵盖按风险扫描、按需提示、证据/未知、可选供应商及 major 原因 |
+| `CHANGELOG.md` 的 `[7.0.1]` | 保留 T3 的两条 Fixed 和一条 Compatibility 全文；两份 7.x 清单均无发布日期，并保留“不表示验证、评审或发布已经完成”的说明 |
+
+上述三值、两份清单及实际打包内容必须绑定同一最终候选实现 commit；不能只检查三值相等、接受任意更高版本，或要求当前插件版本与历史 7.0.0 标题相等。发布事实与日期仍由 lifecycle 和工程发布证据表达。当前实现基线为上述 e68fa239；仅 `.sdlc-v1/**` 的后续证据提交须按既有 commit 绑定规则核对，不把新 HEAD 自动当作新业务实现已通过。
+
+这只修订发布候选的精确版本判据：产品场景 1–5、权限/预算、扫描选择、四类归因、独立性和安全阈值均不变；不修改功能实现、usage、state schema 或 `TASK-security-scan` 的范围/依赖，不新建 Task，也不因方案冲突自动重开已 done 的实现。复用既有实现、JSON 元数据及 CHANGELOG；本次局部协调不需要新依赖、框架或外部调研。
+
+主 Agent 接受本修订后，先用既有登记参数请求 `start-feature --refresh-acceptance` 并核对 plan；这只接受修订方案，不改变 validation fail。随后需要一个新的独立 Security Validate 结论：实际解析上述三值、逐段核对两份清单及无日期声明，并核对当前产品/方案、Git 输入和同候选源码包证据，明确覆盖已消除的版本判据冲突。已完成的新解包内容/测试可以复用；若包内元数据和 CHANGELOG 未被原证据覆盖，只补这部分内容核对。对于同一相关源码、测试、runner、配置、环境和使用契约，可复用下文同版独立 181 项、探针/更正后 coverage、包内测试和场景证据；验证者须检查适用性，不能只刷新 hash 或把上轮 INCONCLUSIVE 改写为 PASS。若最终候选、相关输入或义务变化、原始证据不可读或覆盖不足，补跑受影响检查；无需仅因本次方案文字修订重复全套测试、模型扫描或 Agent 实验。
+
+T3 的产品/工程绑定文件和业务实现未被本修订改变，其已有 Validate/Review 在本轮入口的指纹均 match；本修订不自动撤销或重记这些结论，也不替代 Security 的正式 Review。主 Agent 在接受新的独立 Security Validate 后再安排 Security Review；携带两个 Feature 的 main 发布仍须分别具备适用的接受及交付证据。真实 CLI、认证、模型调用和扫描效果仍为 NOT_RUN；本次没有新增真实扫描义务或扩大既有授权。
 
 #### 风险与停止条件
 
@@ -45,7 +66,7 @@
 | 安全扫描按风险执行，验证与 review 复用证据 | role routing、security-scan mode、Codex Security 适配与阶段引用 | 仓库结构/引用检查；实际 Agent 消费标明为 synthetic 的完整、缺失和版本不匹配样本，检查缺口归因及 review 不重复扫描 |
 | 不泄露凭据、不把未运行写通过 | 探针不读取/显示凭据；验证归因与报告纪律 | 敏感环境变量测试、规则与失败场景核对 |
 | 已有生命周期兼容 | 不修改 state schema 和验证 CLI | 现有生命周期回归；检查 diff |
-| 发布候选版本一致 | `CHANGELOG.md` 与两个 `.claude-plugin` 元数据 | 解析 JSON 并核对三个版本值与 CHANGELOG 的 7.0.0 记录；候选未通过验证前不发布 |
+| 发布候选版本一致 | 本文“集成候选版本协调与证据适用性”；仍属 `TASK-security-scan` | 解析三处 JSON 版本均为 7.0.1，核对两份完整 7.x 清单和同候选包内容；新独立结论及后续 Review/Ship 不由方案刷新代替 |
 
 提醒行为演练需保留 Agent 输入、加载的技能路径和完整工具轨迹：普通工作及选择其他工具时不检查或提示 Codex Security；实际需要且 CLI 缺失时运行只读探针，结合宿主实际插件发现能力作普通提示，未知项保持未知，不安装、登录或扫描。合成扫描产物只能证明消费者行为，不能证明真实扫描通过。
 
@@ -62,6 +83,13 @@
 - 迁移结果：2026-11-15T04:41:31Z，CLI 在本仓库返回 `main → feat/codex-security`，实际 HEAD 与预期一致；Task 为 `done`，validation/review/release 保持 `pending`。
 - 最早增量以隔离 PATH 测试完成；项目 `.agents/skills/sdlc` 经 `.claude/skills/sdlc` 指向本规范 checkout，已通过该链接执行探针。
 - Manus 同步 `--check` 返回非零：12 个目标均为现有符号链接而不是该工具管理的真实副本；未替换这些链接。
+
+### 2026-11-15 R1 返修（未提交候选）
+
+- 在 `e68fa239aa83182f0fa0e2e96c4edc0e9afe4cc3` 上，仅修改 `scripts/test_security_dependency.py`：候选脚本用 shell 内建重定向写标记；增加受限 PATH 下直接运行候选的正控制，以及让临时不安全探针执行候选、确认原断言拒绝该行为的反例。Windows `.cmd` 标记路径加引号；本轮没有 Windows 运行环境，不能声称该路径已实际验证。
+- 先运行新增正控制时 exit 1：原候选因 `touch` 不在 PATH 返回 127，符合 R1；修复后 `PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/test_security_dependency.py` exit 0，5 项通过。另在自建临时目录复制真实探针并注入执行长、短候选的行为：对应两项测试均以 `probe executed a PATH candidate` 失败，反例检查 exit 0，临时目录已清理。
+- `PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills` exit 0，183 项及结构检查通过，保留既有 HTTPError 清理 `ResourceWarning`；`git diff --check` exit 0。离线 `coverage.py 7.17.2` 以 branch 模式统计相对该 HEAD 的测试文件新增/改动可执行行：23/26 行、3/4 分支；未覆盖的行 31、40、43 和分支 39→40 为 Windows 路径。此为测试文件覆盖率，不冒充生产探针或 Windows 实际运行；临时 coverage 数据已清理。
+- 以上为主会话 Build 检查，不代替独立 Validate 或正式重新 Review。该单文件业务 diff SHA-256 为 `d63c8393c36f0d0f02bd7eb2799feca9520e7c6a116964ccb621fcc8b514b217`；主会话宿主配置为 `codex / gpt-6.1-terra / reasoningEffort=max`，实际 backend 未知。真实扫描仍为 `NOT_RUN`；历史失败和诊断次数不因返修重置。
 
 ## 验证记录
 
@@ -128,9 +156,46 @@
 - [后续 Sol 只读分析](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3Aa184d04b-5a4f-4d7e-84f6-1df1ca3348e4)核对原始轨迹后指出：上条不能概括为宿主生效配置也未核实；通用普通验证没有已定位的统一规则要求 `executedModel` 非空。上述事实不证明实际后端，也不自动改变原 `INCONCLUSIVE`、validation `fail` 或任何验收状态。
 - 该分析确认当前计划指纹漂移来自追加验证记录，未发现原产品、有效方案或验证策略变化。仍须按现有流程重新接受计划并刷新指纹，再获得适用于最终候选的新独立 Validate 结论和正式 Review；真实扫描仍为 `NOT_RUN`。
 
+### 2026-11-15 独立重验 — e68fa239aa83182f0fa0e2e96c4edc0e9afe4cc3
+
+- **原始来源**：[独立验证 Security 接入集成候选](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3Aacb9403a-afc1-410f-b35c-e54a932bec86)。本轮 Plan 已读取其原始 brief、最终结果及 activity 44/48/51/53/55；下列是该独立执行者的结果，不是规划者新跑的验证。其执行环境为 Darwin 25.6.0 arm64、Python 3.15.2、Git 2.56.0、Bash 3.2.57；运行期间宿主 capabilities 确认 `codex / gpt-6.1-terra / reasoningEffort=xhigh`，该 run 的 `executedModel=null`，实际 backend 和内部 effort 未知。
+
+| 实际检查（2026-11-15 UTC；完整命令及临时参数见原始 activity） | 结果与范围 |
+|---|---|
+| 12:28:19，`PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/test_security_dependency.py`（activity 44） | exit 0，3 项隔离 PATH 测试通过：缺失/长命令/短名歧义、候选程序不执行、未知认证及测试凭据不输出 |
+| 默认 Python 直接 `import coverage`（activity 48） | exit 1，ModuleNotFoundError；随后只使用已存在的本机离线缓存，不安装或联网 |
+| 12:28:49–12:28:50，临时 sitecustomize + coverage 配置的首轮测试/combine/report（activity 51） | coverage.py 7.17.3；错误地把文件路径配置为 `source`；测试 exit 0、combine exit 0，report exit 1 / No data to report，整块 exit 1；该失败保留 |
+| 12:29:03–12:29:04，更正为文件 `include` 后运行相同测试/combine/report（activity 53） | 均 exit 0；探针 20/20 行、5/6 分支，综合 96%，未覆盖 `59->exit`；不外推为全项目或 Bash 覆盖率 |
+| 12:29:16–12:29:17，`git archive e68fa239aa83182f0fa0e2e96c4edc0e9afe4cc3` 后新解包并比较、运行包内 `python3 -B scripts/test_security_dependency.py`（activity 55） | exit 0；README、Security 产品、router、mode、adapter、探针及测试七文件存在且逐字节匹配，包内 3 项通过；该七文件检查不包含插件元数据及 CHANGELOG |
+| projection、spec_ready/plan 指纹、`git diff --check`、三处 JSON 版本及前后 Git 身份检查 | exit 0；当时 Task done、spec_ready/plan match；三值均 7.0.1。前后实际 root/branch/完整 HEAD 如本轮基线，仅主 Agent 的 state/T3 工程两项未暂存，无暂存或冲突；未迁移 Security 登记分支 |
+
+- **同版共同检查**：[重验 T3 调度与 Goal 修复候选](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3A6edf3ce5-144b-4dc1-8541-82c1efb09ae6)的原始结果已读：同一 e68fa239、Darwin arm64/Python 3.15.2，11:56:16–11:57:07 UTC，`PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills` exit 0，181 项及结构检查通过（含 Security 3 项）；既有 HTTPError 清理 ResourceWarning 保留。其三处 7.0.1、双清单及源码包 smoke 另有独立记录；不是由 T3 Feature 通过推导 Security 通过，也不是规划者重跑。
+- **产品场景 1–3 的当前候选行为**：独立验证者核对了加载 e68fa239 router 的三份实际轨迹：[普通 SDLC](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3Ad6dfe70e-d520-46be-9fc3-32d129545e5f)不执行探针或提示安装；[Semgrep 准备](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3Ab4609a73-4666-4cba-8cb3-20307fab3b42)不执行 Codex Security 探针，也未运行规则扫描；[Codex Security 准备](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3A5bc5d582-fd93-4d90-8759-caa7246a1804)实际运行只读探针并给普通安装入口，未知保留，未安装/登录/扫描。本 Plan 引用验证者核对结果，不冒称重新执行这些场景。
+- **场景 4–5 的适用性**：44bfc27 至 e68fa239 的 Security mode、Codex Security adapter、探针/测试、role routing、validate/review 文件未变；router/共享协议有变。独立验证者因此复用上文旧版 synthetic 完整/版本不符/缺失产物和 review 复用轨迹，并以当前三场景补 router 行为。本 Plan 亲自检查路径 diff 与上述不变范围相符；不是把旧扫描 SHA 换成新 SHA。合成消费和准备行为不证明真实扫描或正式 Review。
+- **原结论及正式状态**：独立验证为 `validate / incomplete`、整体 `INCONCLUSIVE`，因为 Security 原精确判据要求 7.0.0，T3 方案/实际元数据要求 7.0.1；不是新漏洞断言。主 Agent 已于 12:31:56Z 按请求记录 validation `fail`，绑定 e68fa239，command 为上述独立探针测试；本轮 projection 亲自确认 Task done、review/release pending。此前 44bfc27 的 INCONCLUSIVE/fail 及更早失败全部保留；本次方案协调不倒改任何一次结果。
+- **资源与限制**：独立执行者报告自建测试和解包临时目录已清理，未启动服务；原始执行输出保留在线程，不承诺已清理的 coverage 原始数据仍可下载。真实 CLI、认证、模型调用和扫描效果均 NOT_RUN；普通功能验证不新增统一非空 executedModel 条件，严格 vibe/live 要求不变。
+- **本轮 Plan 检查与历史**：亲自解析元数据得三值 7.0.1；比较 CHANGELOG 7.0.0 正文与 44bfc27、7.0.1 正文与 de2c5ff，均逐字保留（exit 0）。只改本工程上下文，不执行测试、lifecycle mutation、正式 Review 或发布。保留所有失败及诊断历史；本轮未进行实现尝试或有界诊断，上游连续不收敛计数和唯一诊断使用情况没有完整记录，仍为未知，不能置零或获得新次数。
+
+### 2026-11-15 版本协调后的独立重验 — e68fa239aa83182f0fa0e2e96c4edc0e9afe4cc3
+
+- [独立重验原始记录](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3Ae9bef16e-8bda-462d-8f0d-dd526e4d7187)给出新的 `PASS` 候选，等待主 Agent 接受；此前两轮 `INCONCLUSIVE/fail` 及首次 coverage 无数据失败保留，不因本结论倒改。
+- 12:43:43 UTC，验证者使用 `git archive` 在自建临时目录检查插件元数据和 CHANGELOG：提交、工作树及新解包的三个文件逐字节一致；三个版本值均为 `7.0.1`，7.0.0 和 7.0.1 清单正文分别与 `44bfc27` 和 `de2c5ff` 一致，标题无日期且未宣称发布。完整命令与 exit 0 见原始 activity 39；临时目录已清理。
+- 12:44:26 UTC，`PYTHONDONTWRITEBYTECODE=1 python3 -B scripts/test_security_dependency.py` exit 0，3 项通过；`git diff --check` 及基线到候选的同命令检查 exit 0。环境为 Darwin 25.6.0 arm64、Python 3.15.2、Git 2.56.0、Bash 3.2.57。前后业务工作树干净，root、branch 与完整 HEAD 均符合指定值；仅三处已知 `.sdlc-v1` 文件未暂存。
+- 验证者核对同版 181 项标准检查、上轮探针与更正后的 coverage、源码包和三个当前 router 场景，以及旧版 synthetic 消费证据的适用范围；Security mode、适配、探针与测试、role routing、validate/review 在相关版本间未变，router/共享协议变化由当前场景补证。上述证据分别支持产品场景和失败归因，不证明真实扫描或正式 Review。
+- 运行期间宿主配置为 `codex / gpt-6.1-terra / reasoningEffort=xhigh`；`executedModel=null`，实际 backend 与内部 effort 未知。真实 CLI 扫描、认证、模型调用和扫描效果仍为 `NOT_RUN` / 未知；无模型本地验证符合当前已接受的 Feature 范围。正式 Review 和发布仍待执行。
+
 ## 评审记录
 
-已由实现者对相关代码、路由、权限和缺口做串行自查；不称独立评审。此前认为当前会话不能取得独立评审上下文的判断已被 T3 子任务执行事实修正；本 Feature 的正式 Review 仍为 `NOT_RUN`。
+实现者此前对相关代码、路由、权限和缺口做过串行自查；不称独立评审。此前认为当前会话不能取得独立评审上下文的判断已被 T3 子任务执行事实修正；后续正式 Review 见下。
+
+### 2026-11-15 正式 Review — e68fa239aa83182f0fa0e2e96c4edc0e9afe4cc3
+
+- [独立 Sol 评审](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3A5c50767a-93e7-42c2-9dfa-0e2fe5a3b6db)给出 `changes_requested`；主 Agent 于 13:02:47Z 按原请求记录，评审者为 `Codex Sol independent reviewer`。
+- **R1，P2，violates**：`scripts/test_security_dependency.py` 中的候选程序用 `touch` 写标记，但测试将 PATH 限制为临时目录；即使候选被执行，`touch` 也可能找不到，导致标记不存在并误通过。评审者在自有临时目录观察到直接执行候选 exit 127 且无标记；临时探针副本明确执行候选时原有 3 项测试仍全部通过。生产探针源码未见执行候选程序的行为。
+- 修复须使用不依赖受限 PATH 的标记操作，验证标记装置实际有效，并用会执行候选的临时反例证明测试能够拒绝该行为；重新完成适用验证与独立 Review。原 validation `pass` 的命令结果仍属历史事实，但不能证明 R1 所涉断言有效。
+- **开发分支迁移决定**：为在现有集成候选上修复 R1，先将 Security 的开发登记从 `feat/codex-security` 迁到当前已检出的 `fix/t3-stage-dispatch`。预期 repo 为 `/Users/mac/hansen_agent_team/external/sdlc-pilot`，完整 HEAD 为 `e68fa239aa83182f0fa0e2e96c4edc0e9afe4cc3`；原因为“在集成分支修复 Security 正式评审 R1”。本次只变更协作登记，不 checkout 或改变产品与发布目标；同 Feature 的独立评审已完成，当前无已知活动写入者。完整参数：`--feature-id FEAT-security-scan --expected-branch feat/codex-security --branch fix/t3-stage-dispatch --expected-head e68fa239aa83182f0fa0e2e96c4edc0e9afe4cc3 --reason 在集成分支修复 Security 正式评审 R1`。
+- **迁移结果**：2026-11-15T13:03:52Z，`migrate-feature-branch` exit 0，返回上述 root、HEAD、原因及 `feat/codex-security → fix/t3-stage-dispatch`；Task、validation 和 review 未由迁移改变。
+- **Task 恢复**：确认 R1 需要测试修复后，2026-11-15T13:04:13Z 按 `done → todo → in_progress` 连续执行 `set-task-status`，两次均 exit 0。CLI 按合同清除机器状态中的 validation/review/release 记录；本节及前述验证记录保留其历史，不表示缺陷已修复。
 
 ## 发布与观察记录
 

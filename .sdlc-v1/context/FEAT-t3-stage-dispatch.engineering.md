@@ -371,10 +371,24 @@ PY
 - **模型披露**：本阶段职责要求为 `codex / gpt-6.1-sol / {reasoningEffort: xhigh}`；调用方实际 target 回包未提供，不能声称已核对其请求字段。当前宿主明确声明 Codex harness、gpt-6.1-sol/xhigh；没有本 run 的可信实际后端/内部 effort 字段，backend 未知。原实现者本 Task 的 Terra/xhigh 明确授权不变；历史配置/null 不是本轮新运行证据。
 - **交接约束**：主 Agent 先语义接受本候选，再执行唯一允许的 plan refresh 并复核 match，给**原实现者/原 Task**完整 `supersedes`；带入 root/branch/完整 HEAD、两项既有输入归属、原失败/诊断历史、本节和决定 3 引用。目标为三文件返修；不动产品/state/Security/其他业务路径、不提交推送安装联网或启动额外实验，受托者为 T3 终端执行者、禁止任何嵌套执行者。沿用明确 Terra/xhigh 请求并分别报告请求/宿主/backend；无新产品决定或验收例外。必要检查为决定 3 的 helper 全正反例、增量及 helper 两组真实 80%/70% 计量、标准入口、diff/版本/CHANGELOG 完整性走查；命令失败或 Bash 残留分支未计量不得交回通过。返回 canonical 候选、实际命令/exit、完整 revision/业务 diff/状态、JSON 数据位置及未覆盖项；state 操作及后续正式独立 Validate/Review/Ship 仍由主 Agent 按各自实际 allow-list 和既有授权处理。
 
+### 2026-11-15 独立重验 — e68fa239aa83182f0fa0e2e96c4edc0e9afe4cc3
+
+- [独立重验](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3A6edf3ce5-144b-4dc1-8541-82c1efb09ae6)在独立 T3 执行上下文、干净工作树实际运行 `PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills`，2026-11-15 11:56:16–11:57:07 UTC，exit 0，181 项测试及结构检查通过。Hallmark 有一条既有 HTTPError 清理 `ResourceWarning`；typecheck 与独立 release build 未配置。
+- 工程方案中的离线 branch coverage 命令在 Python 3.12.16 / coverage.py 7.17.2 下 exit 0：变动 Python 范围 82/82 行、16/16 分支，合同 helper 10/10 行、8/8 分支，无遗漏或排除；标准入口使用 Python 3.15.2。相对 `0ccd06b1f08b7922882ab28c0ec9841ef5ad1154` 的 Bash 增量仅为文件清单数据，不将 Python 数据解释为 Bash 覆盖率。原始 JSON SHA-256 `116559f465818252093c2e0a25858b36f092deedc043398b081c803b7bff9a91`，`.coverage` SHA-256 `287914df0d57551c6c3bb2e03036a822e2e39566b260fc4856a5dc2432ae710d`；主 Agent 已核对二者摘要。
+- `git diff --check`、三个 README 故事锚点、三处 7.0.1 元数据及无日期 7.x 版本清单核对通过；新解包的 10 个关键文件与候选逐字节一致，包内 CLI help exit 0。原 de2c 失败记录保留；本节不改变 Security 的历史 fail 或其验收。
+- 主 Agent 在该 commit 加载 router 和 T3 adapter 后直接派发本 child，核对了不同于实现者的 task/run、实际检查、宿主 `codex / gpt-6.1-terra / xhigh` 生效配置和结果；宿主 `next` 要求本轮返回，完成后实际唤醒并继续。此过程是 AC-001/010 的真实路径证据；正式状态接受仍以 lifecycle 命令为准。`executedModel=null`，实际 backend 和内部 effort 未知。
+- 真实取消、异常恢复、其他 native 宿主及资源释放仍未观察；本 Feature 未选择额外安全扫描，真实扫描 `NOT_RUN`，不称扫描通过。后续独立 Review 和发布仍待执行。
+
 ## 评审记录（实际）
 
-- **历史状态**：初次独立规划评审建议接受；恢复方案的接受情况以 state 中的 plan 指纹为准，不能把旧评审当作已覆盖本轮策略变化。正式 Feature Review 尚未进行。
+- **历史状态**：初次独立规划评审建议接受；恢复方案的接受情况以 state 中的 plan 指纹为准，不能把旧规划评审当作覆盖后续正式 Feature Review。
 - **范围、发现与处理**：[独立方案评审](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3Af57742ad-310a-4eff-8ea4-856c0f91998c)核对候选 SHA-256 `8e5b05a47f60988caa44643fa0286a1212a1ca9f25475b5564ba0badbe9b89ce`，未发现阻止登记的方案缺陷；后续只调整状态措辞并追加本条记录，未改变有效方案。评审请求和宿主配置为 Codex Sol/xhigh，`executedModel` 为 null，实际 backend 未知。必要正式 Review 仍须在适用独立 Validate 接受后执行。
+
+### 2026-11-15 正式 Feature Review — e68fa239aa83182f0fa0e2e96c4edc0e9afe4cc3
+
+- [独立 Sol 评审](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3A503c7b4c-2e27-42d5-9cbc-08a52b6b7797)检查了原基线 `0ccd06b1f08b7922882ab28c0ec9841ef5ad1154` 至验证 commit 的相关累计 diff，建议 `approved`；未发现有证据支持的阻断缺陷、重复实现或可避免工程债。
+- 评审核对了协议、adapter、失败隔离、使用文档、版本及覆盖报告；原始独立验证线程在评审者处返回 `thread_not_found`，其真实派发与唤醒判断依赖本上下文和主 Agent 的原始轨迹核对。请求和宿主配置为 Codex Sol/xhigh，`executedModel=null`，实际 backend 和内部 effort 未知。
+- 此结论仅覆盖本 Feature 和上述实现版本，不代替 Security Feature 的验证或发布；真实取消、异常恢复、其他 native 宿主、资源释放与真实安全扫描仍未观察或未运行。
 
 ## 发布与观察记录（实际）
 

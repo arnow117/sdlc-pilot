@@ -156,15 +156,15 @@
       "acceptance": {
         "plan": {
           "algorithm": "sha256",
-          "at": "2026-11-15T10:46:11Z",
+          "at": "2026-11-15T13:24:24Z",
           "documents": {
-            ".sdlc-v1/context/FEAT-security-scan.engineering.md": "d74568471eb2d74375d3773b74ab29c6cae7d46da0267c8cd95e5e4c0aa99e75",
+            ".sdlc-v1/context/FEAT-security-scan.engineering.md": "120024990b212ab4f46a58e5913f0e94eb9d0d1ec2779c1b34f65c9930edec10",
             ".sdlc-v1/context/REQ-security-scan.product.md": "1a81a7955cd44e01e5eb3eb6bc7823bd4056a03c22a49ea18cfce60a3e2c0844"
           },
           "normalization": "context-v1"
         }
       },
-      "branch": "feat/codex-security",
+      "branch": "fix/t3-stage-dispatch",
       "created_at": "2026-11-15T04:09:55Z",
       "engineering_context_ref": ".sdlc-v1/context/FEAT-security-scan.engineering.md",
       "id": "FEAT-security-scan",
@@ -186,24 +186,42 @@
           "id": "TASK-security-scan",
           "status": "done",
           "title": "接入安全验证、Codex Security 与只读依赖检查",
-          "updated_at": "2026-11-15T08:57:49Z"
+          "updated_at": "2026-11-15T13:24:25Z"
         }
       },
-      "updated_at": "2026-11-15T10:46:11Z",
+      "updated_at": "2026-11-15T13:24:25Z",
       "validation": {
-        "at": "2026-11-15T09:26:24Z",
-        "command": "PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills",
-        "commit": "44bfc27e58278a38ec28a4eeb24f27a33917bb91",
-        "result": "fail"
+        "at": null,
+        "command": null,
+        "commit": null,
+        "result": "pending"
       }
     },
     "FEAT-t3-stage-dispatch": {
       "acceptance": {
         "plan": {
           "algorithm": "sha256",
-          "at": "2026-11-15T11:53:44Z",
+          "at": "2026-11-15T12:19:33Z",
           "documents": {
-            ".sdlc-v1/context/FEAT-t3-stage-dispatch.engineering.md": "60cc5846aaa356de859259a1aea543e9b38d8566cbabac0322823122ae57666c",
+            ".sdlc-v1/context/FEAT-t3-stage-dispatch.engineering.md": "5791838c52f8b787c4915aebf74f4edf8c3e8670149f76bc843d57bab1f606c1",
+            ".sdlc-v1/context/REQ-t3-stage-dispatch.product.md": "b6b22862b52a75cc5e1125fa8e34a1a0501cff15d32c272ec89498e0680407f3"
+          },
+          "normalization": "context-v1"
+        },
+        "review": {
+          "algorithm": "sha256",
+          "at": "2026-11-15T12:19:33Z",
+          "documents": {
+            ".sdlc-v1/context/FEAT-t3-stage-dispatch.engineering.md": "5791838c52f8b787c4915aebf74f4edf8c3e8670149f76bc843d57bab1f606c1",
+            ".sdlc-v1/context/REQ-t3-stage-dispatch.product.md": "b6b22862b52a75cc5e1125fa8e34a1a0501cff15d32c272ec89498e0680407f3"
+          },
+          "normalization": "context-v1"
+        },
+        "validation": {
+          "algorithm": "sha256",
+          "at": "2026-11-15T12:19:33Z",
+          "documents": {
+            ".sdlc-v1/context/FEAT-t3-stage-dispatch.engineering.md": "5791838c52f8b787c4915aebf74f4edf8c3e8670149f76bc843d57bab1f606c1",
             ".sdlc-v1/context/REQ-t3-stage-dispatch.product.md": "b6b22862b52a75cc5e1125fa8e34a1a0501cff15d32c272ec89498e0680407f3"
           },
           "normalization": "context-v1"
@@ -220,11 +238,11 @@
       },
       "requirement_id": "REQ-t3-stage-dispatch",
       "review": {
-        "at": null,
+        "at": "2026-11-15T12:19:33Z",
         "by": null,
-        "decision": "pending"
+        "decision": "approved"
       },
-      "status": "in_progress",
+      "status": "reviewed",
       "tasks": {
         "TASK-t3-stage-dispatch-core": {
           "depends_on": [],
@@ -234,12 +252,12 @@
           "updated_at": "2026-11-15T11:53:44Z"
         }
       },
-      "updated_at": "2026-11-15T11:53:44Z",
+      "updated_at": "2026-11-15T12:19:33Z",
       "validation": {
-        "at": null,
-        "command": null,
-        "commit": null,
-        "result": "pending"
+        "at": "2026-11-15T12:19:33Z",
+        "command": "PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills; 工程上下文实施层决定 3 完整离线 branch coverage 命令块; git diff --check; git archive HEAD 解包比较和 CLI help",
+        "commit": "e68fa239aa83182f0fa0e2e96c4edc0e9afe4cc3",
+        "result": "pass"
       }
     }
   },
@@ -317,7 +335,7 @@
       "product_context_ref": ".sdlc-v1/context/REQ-security-scan.product.md",
       "status": "in_delivery",
       "title": "Codex Security 安全扫描接入与依赖提示",
-      "updated_at": "2026-11-15T09:26:24Z"
+      "updated_at": "2026-11-15T13:24:25Z"
     },
     "REQ-t3-stage-dispatch": {
       "acceptance": {
@@ -338,9 +356,9 @@
       "id": "REQ-t3-stage-dispatch",
       "priority": "P1",
       "product_context_ref": ".sdlc-v1/context/REQ-t3-stage-dispatch.product.md",
-      "status": "in_delivery",
+      "status": "validated",
       "title": "按宿主能力修复 T3 阶段调度",
-      "updated_at": "2026-11-15T11:53:44Z"
+      "updated_at": "2026-11-15T12:19:33Z"
     }
   },
   "state_format": "sdlc-lightweight-state-v1",

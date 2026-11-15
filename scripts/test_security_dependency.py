@@ -4,6 +4,7 @@
 import json
 import os
 from pathlib import Path
+import shlex
 import subprocess
 import sys
 import tempfile
@@ -27,19 +28,30 @@ class DependencyProbeTests(unittest.TestCase):
         suffix = ".cmd" if os.name == "nt" else ""
         candidate = self.bin_dir / (name + suffix)
         if os.name == "nt":
-            candidate.write_text(f"@echo ran > {self.marker}\n", encoding="utf-8")
+            candidate.write_text(f'@echo ran > "{self.marker}"\n', encoding="utf-8")
         else:
-            candidate.write_text(f"#!/bin/sh\ntouch '{self.marker}'\n", encoding="utf-8")
+            marker = shlex.quote(str(self.marker))
+            candidate.write_text(f"#!/bin/sh\n: > {marker}\n", encoding="utf-8")
             candidate.chmod(0o755)
         return candidate
 
-    def run_probe(self):
+    def candidate_command(self, candidate):
+        if os.name == "nt":
+            command_processor = os.environ.get("COMSPEC") or os.path.join(
+                os.environ["SystemRoot"], "System32", "cmd.exe"
+            )
+            return [command_processor, "/d", "/c", str(candidate)]
+        return [str(candidate)]
+
+    def run_probe(self, probe_path=None):
+        if probe_path is None:
+            probe_path = PROBE
         environment = os.environ.copy()
         environment["PATH"] = str(self.bin_dir)
         environment["OPENAI_API_KEY"] = SECRET_SENTINEL
         environment["CODEX_API_KEY"] = SECRET_SENTINEL
         result = subprocess.run(
-            [sys.executable, str(PROBE)],
+            [sys.executable, str(probe_path)],
             env=environment,
             capture_output=True,
             text=True,
@@ -60,6 +72,34 @@ class DependencyProbeTests(unittest.TestCase):
         self.assertEqual(report["plugin"], "not_checked")
         self.assertEqual(report["authentication"], "not_checked")
         self.assertEqual(report["scan"], "not_run")
+
+    def test_candidate_marker_is_written_with_restricted_path(self):
+        candidate = self.make_candidate("codex-security")
+        environment = os.environ.copy()
+        environment["PATH"] = str(self.bin_dir)
+        result = subprocess.run(
+            self.candidate_command(candidate),
+            env=environment,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=5,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertTrue(self.marker.is_file(), "candidate did not create its marker")
+
+    def test_probe_execution_assertion_rejects_candidate_execution(self):
+        candidate = self.make_candidate("codex-security")
+        unsafe_probe = Path(self.directory.name) / "unsafe_probe.py"
+        unsafe_probe.write_text(
+            "import subprocess\n"
+            f"subprocess.run({self.candidate_command(candidate)!r}, check=True)\n"
+            "print('{}')\n",
+            encoding="utf-8",
+        )
+        with self.assertRaisesRegex(AssertionError, "probe executed a PATH candidate"):
+            self.run_probe(unsafe_probe)
+        self.assertTrue(self.marker.is_file())
 
     def test_long_name_is_only_a_candidate_and_is_not_executed(self):
         candidate = self.make_candidate("codex-security")
