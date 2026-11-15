@@ -122,9 +122,15 @@
 - 验证者复核了上述实际 Agent 轨迹及 synthetic 消费边界，确认 README 导航缺口已修复；真实扫描仍为 `NOT_RUN`。当前宿主报告的执行上下文为 `codex / gpt-6.1-terra / xhigh`，但 `executedModel` 为 null，实际后端模型未证实。
 - `INCONCLUSIVE`：验证者认为实际模型元数据缺失导致必要执行者条件尚不能确认，按其请求记录 validation `fail`；没有发现新的 `IMPLEMENTATION_FAILED`。完整检查时间、命令和结果见[独立重验轨迹](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3Ae02d7050-a36d-4103-a80e-bc4533cca934)，跨宿主可访问性未知。
 
+### 2026-11-15 独立重验证据归因补充
+
+- 原独立重验的运行期间，子任务 activity 40 的 `orchestrator_capabilities` 返回 `inheritedProviderInstanceId=codex`、`inheritedModel=gpt-6.1-terra` 和 `reasoningEffort=xhigh`。这提供了与该执行上下文及时段关联的宿主生效配置证据，不只是派工请求回显。`executedModel` 仍为 null，实际后端模型及其内部推理强度仍未知。
+- [后续 Sol 只读分析](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3Aa184d04b-5a4f-4d7e-84f6-1df1ca3348e4)核对原始轨迹后指出：上条不能概括为宿主生效配置也未核实；通用普通验证没有已定位的统一规则要求 `executedModel` 非空。上述事实不证明实际后端，也不自动改变原 `INCONCLUSIVE`、validation `fail` 或任何验收状态。
+- 该分析确认当前计划指纹漂移来自追加验证记录，未发现原产品、有效方案或验证策略变化。仍须按现有流程重新接受计划并刷新指纹，再获得适用于最终候选的新独立 Validate 结论和正式 Review；真实扫描仍为 `NOT_RUN`。
+
 ## 评审记录
 
-已由实现者对相关代码、路由、权限和缺口做串行自查；不称独立评审。正式 Review 为 `NOT_RUN`，当前会话不具备符合项目要求的独立评审上下文。
+已由实现者对相关代码、路由、权限和缺口做串行自查；不称独立评审。此前认为当前会话不能取得独立评审上下文的判断已被 T3 子任务执行事实修正；本 Feature 的正式 Review 仍为 `NOT_RUN`。
 
 ## 发布与观察记录
 

@@ -12,8 +12,9 @@
 - `goal` 写可观察结果；`out_of_scope` 明确未授权范围；`settled_interfaces` 只写已定 API、DTO、所有权或兼容性合同。
 - `context_refs` 指向当前项目、产品、工程上下文和已有证据；详细背景放在这些权威位置，不在 brief 重复粘贴。
 - `allowed_transitions` 只列当前已获授权的、有序 lifecycle 请求；没有时保留空列表。`--repo` 由主 Agent 固定，子 Agent 不提供或覆盖。
+- T3 child 为终端执行者：brief 明确禁止嵌套执行者或创建另一控制者；其他宿主遵循其 adapter。
 - 模型选择与独立性由宿主 adapter 记录，不把 `qa`、`security` 等专业视角当作运行时角色。canonical 结果仍只使用本模板和阶段协议已有字段。
-- 准备批次在同一原生消息中为每个阶段各附一份本合同；共享事实可引用，但每块保留自身的 `stage`、`write_scope` 和 `allowed_transitions`。完整规则见[阶段协议](../stage-agent-protocol.md#bounded-preparation-batch-for-small-projects)。
+- 准备批次在所选 adapter 的同一派工消息中为每个阶段各附一份本合同；共享事实可引用，但每块保留自身的 `stage`、`write_scope` 和 `allowed_transitions`。完整规则见[阶段协议](../stage-agent-protocol.md#bounded-preparation-batch-for-small-projects)。
 - 若 `required_verification` 会启动服务、浏览器、模拟器、容器、VM 或明显占用主机资源，按[验证资源生命周期](../stage-agent-protocol.md#verification-resource-lifecycle)在既有字段中说明归属、收尾和核对。
 - 实现派工在 `context_refs`/`dependencies` 中引用规划基线与前置结果，`required_verification` 包含写入前的基线复核及实际完成检查；`completion_conditions` 给出期望退出码和关键结果。特有停止条件写入下方补充，不复制阶段协议 §5 的计数规则。
 - 引用需在实际执行 worktree 可读；未提交或跨环境不可读的必要来源只内联最小事实/摘录并注明来源，不能只给不存在的路径。交接自足不等于粘贴整份上下文。
@@ -64,7 +65,7 @@ allowed_transitions:
 
 ## 子 Agent 结果
 
-结果只报告实际观察到的变更和证据。只有主 Agent 接受结果；子 Agent 不使用 `completed`。
+结果只报告实际观察到的变更和证据；分别注明请求配置、run 或时段绑定的宿主生效配置、执行观察和实际后端的来源，缺失标未知，不能以请求或角色标签推断后端。只有主 Agent 接受结果；子 Agent 不使用 `completed`。
 
 ```yaml
 stage: <stage>

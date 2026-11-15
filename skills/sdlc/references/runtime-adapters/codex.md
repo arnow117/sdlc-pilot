@@ -8,11 +8,14 @@ does not define lifecycle, dispatch, result, acceptance, or checkpoint semantics
 [`stage-agent-protocol.md`](../stage-agent-protocol.md) is authoritative.
 
 Use the protocol's [runtime selection](../stage-agent-protocol.md#runtime-selection)
-before applying this mapping. The native mapping below is the default. When the
-current task explicitly selects and authorizes Claude execution through T3 Code,
+before applying this mapping. Use the native mapping only where the host supports
+and authorizes it. When the current host and task select and authorize a T3 child,
 the main Agent directly uses the [T3 Code adapter](t3-code.md) for that dispatch,
-without a native stage child around it. This choice does not by itself satisfy
-configured model or independence requirements.
+without a native stage child around it. In the T3-hosted Codex environment covered
+by this restriction, neither the main Agent nor a child may use native
+`spawn_agent` or `followup_task`. An authorized main Agent may use T3 child tasks;
+its children must not delegate further. Other hosts follow their actual capabilities.
+This choice does not by itself satisfy configured model or independence requirements.
 
 ## Interface map
 

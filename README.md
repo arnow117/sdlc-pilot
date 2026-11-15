@@ -42,16 +42,24 @@ Requirement: captured → ready → in_delivery → validated → released
 确定进入生命周期后，才在状态缺失时初始化；已有源码但缺少 `project.md` 时先运行 onboard。
 完整入口规则见 [`sdlc`](skills/sdlc/SKILL.md#2-入口)。
 
-### 可选的 Claude 执行者
+### 阶段运行时：SCN-t3-stage-dispatch
 
-例如“将这个已跟踪 Task 的实现委托给 Claude”，主 Agent 仍先按当前阶段准备完整 brief，并核对本次任务、provider 和
-适用的运行权限。整套阶段技能共用[运行时选择](skills/sdlc/references/stage-agent-protocol.md#runtime-selection)：明确选择 Claude 后，
-主 Agent 直接使用已连接的 T3 Code MCP，按[包内适配说明](skills/sdlc/references/runtime-adapters/t3-code.md)执行，不经过原生子 Agent 包装。
-缺少工具或授权时报告缺口；未选择 Claude 时原生路径不依赖 T3。独立普通委托无需创建 Feature。
+主 Agent 按[共享协议的运行时选择](skills/sdlc/references/stage-agent-protocol.md#runtime-selection)，
+基于实际宿主能力、当前授权及项目模型路由选择路径。T3 支持且已授权时直接按
+[T3 child 适配说明](skills/sdlc/references/runtime-adapters/t3-code.md)派发；支持 native 的其他宿主可用
+[Codex 原生说明](skills/sdlc/references/runtime-adapters/codex.md)。T3 child 是终端执行者，不再嵌套派工；
+顶层 thread 只在用户明确要求新会话时创建。三个产品故事分别说明
+[独立阶段](.sdlc-v1/context/REQ-t3-stage-dispatch.product.md#用户故事-1--获授权的主-agent-派发独立阶段p1)、
+[模型证据](.sdlc-v1/context/REQ-t3-stage-dispatch.product.md#用户故事-2--看清模型证据与接受边界p1)和
+[等待与恢复](.sdlc-v1/context/REQ-t3-stage-dispatch.product.md#用户故事-3--正确等待恢复和继续目标p1)。
 
-主 Agent 按阶段协议核对实际文件、检查结果和版本后验收，仍负责状态写入与必要的独立验证、评审。等待超时不代表任务结束：
-先读取已有结果或继续等待同一 run；取消和恢复时核对线程归属、保留证据并确认资源状态。适配说明列出实际参数和限制；
-外部执行不自动满足项目指定的模型角色或独立性要求。
+工具参数与可用能力以当前宿主工具合同为准；provider/model/options 来自目标项目生效路由，工作区、写范围和验收来自
+当前阶段 brief。缺工具、权限、必需路由或独立执行上下文时报告缺口，不静默换路径。主 Agent 核对实际文件、检查、
+版本、配置证据与独立性后接受结果并独占状态写入；请求值、宿主生效配置和实际后端分别报告，未知不推断。
+
+按宿主返回的 `next` 等待或结束当前轮次；结束轮次不表示 Goal 完成。恢复时核对原句柄、结果和写者，取消回执不证明
+任务及专属资源已终止。必要证据缺失阻止依赖它的接受与后续阶段；满足依赖、写入互斥和授权的独立工作可继续，
+但 fail 记录被拒时仍停止该 Feature 派发，用户停止与非收敛限制继续生效。
 
 阶段 Agent 在约定范围内自主完成实现与必要验证，集中返回证据和反馈。已有连续执行授权在原范围内延续，
 不新增逐阶段审批；缺少用户决策或外部授权时仍需暂停。默认主 Agent 到子 Agent 只有一层；主 Agent 只有在接口、

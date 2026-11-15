@@ -49,7 +49,7 @@ node --test skills/sdlc-prototype/assets/shared-state/runtime.test.cjs
 
 这些检查不自动运行模型。结构检查和脚本不能代替对产品确认、语义变化、实际执行者身份及授权副作用的判断。
 
-## T3 Code MCP 有界实测记录
+## T3 Code MCP 有界实测记录（历史 top-level Scratch，非当前 child 合同）
 
 2026-11-10 使用 T3 Code 0.1.8 与已连接的原生 MCP/OAuth，按授权在 Scratch 启动空闲线程，显式选择 Claude provider 实例、目录模型 `glm-5.3-flash[1M]`、low effort 和 `auto-accept-edits`。核对绑定后发送一次任务：读取输入中的 31 和 11，只写 `result.txt`，内容为 42 和一个行末换行。该 run 约 11.4 秒完成；活动记录包含实际 Read 与结果文件创建 diff（T3 将 Write 归一化为 `file_change`），输入 hash 未变，没有其他新增 artifact。settle 回执仅包含 sequence；后续线程读取显示 `settled=true`、`activeRunId=null`，该任务的 Claude 进程退出，共享 T3 服务仍运行。配置或报告的 GLM 标识不构成 Anthropic 模型身份认证。
 
@@ -68,6 +68,7 @@ node --test skills/sdlc-prototype/assets/shared-state/runtime.test.cjs
 | 产品确认、委托或准备阶段的选择处理 | 选择 B02；影响正常交付推进时补 B01。 |
 | 验证归因、旧通过失效、证据适用性或上下文交接 | 按影响选择 B03、B04A/B；修改复用判断时保留 B04A/B 成对比较，兼顾漏验与不必要重跑。 |
 | 安全扫描接入或依赖提醒 | 运行标准检查中的依赖探针测试，人工核对风险选择、未运行归因、原生产物与 review 复用；真实扫描与 Agent 提醒需各自的实际执行证据。 |
+| T3 阶段派发、等待或局部停止合同 | 标准结构检查含 child 合同形状及反例；B03 的隔离变体验证 fail 撤销旧批准和拒绝时状态保留，B05 验证部分登记恢复。人工走查授权、模型证据、独立工作与停止动作；这些不证明 live child、取消、恢复、native 或资源释放。当前候选的必要真实阶段及独立接受另行记录。 |
 | 准备批次、部分成功或恢复登记 | 选择 B05；影响完整链路时补 B01。 |
 | 独立评审、集成或实际交付配置 | B01 可检查基础交付；多端兼容、并发、返修 delta 和 feature flags 等风险仍需相应原生测试或有界专项，不能把六题通过外推为全部覆盖。 |
 | 更换模型、通用工具权限或整体编排 | 对实际受影响能力选择代表集；整体路径改变时以六题为起点。只改配置标签而未实跑，记录 NOT_RUN，不宣称性能改善。 |

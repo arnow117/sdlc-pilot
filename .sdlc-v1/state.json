@@ -156,9 +156,9 @@
       "acceptance": {
         "plan": {
           "algorithm": "sha256",
-          "at": "2026-11-15T09:18:56Z",
+          "at": "2026-11-15T10:46:11Z",
           "documents": {
-            ".sdlc-v1/context/FEAT-security-scan.engineering.md": "3d8614c5c6b19acd61a0b915e13819b1318729da107fdc9bb217c1d3dace5777",
+            ".sdlc-v1/context/FEAT-security-scan.engineering.md": "d74568471eb2d74375d3773b74ab29c6cae7d46da0267c8cd95e5e4c0aa99e75",
             ".sdlc-v1/context/REQ-security-scan.product.md": "1a81a7955cd44e01e5eb3eb6bc7823bd4056a03c22a49ea18cfce60a3e2c0844"
           },
           "normalization": "context-v1"
@@ -189,12 +189,57 @@
           "updated_at": "2026-11-15T08:57:49Z"
         }
       },
-      "updated_at": "2026-11-15T09:26:24Z",
+      "updated_at": "2026-11-15T10:46:11Z",
       "validation": {
         "at": "2026-11-15T09:26:24Z",
         "command": "PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills",
         "commit": "44bfc27e58278a38ec28a4eeb24f27a33917bb91",
         "result": "fail"
+      }
+    },
+    "FEAT-t3-stage-dispatch": {
+      "acceptance": {
+        "plan": {
+          "algorithm": "sha256",
+          "at": "2026-11-15T11:10:46Z",
+          "documents": {
+            ".sdlc-v1/context/FEAT-t3-stage-dispatch.engineering.md": "c853cfbe592bdb061747811da0f4b88d7df6cdd5e473a26509393b1315b3dfa1",
+            ".sdlc-v1/context/REQ-t3-stage-dispatch.product.md": "b6b22862b52a75cc5e1125fa8e34a1a0501cff15d32c272ec89498e0680407f3"
+          },
+          "normalization": "context-v1"
+        }
+      },
+      "branch": "fix/t3-stage-dispatch",
+      "created_at": "2026-11-15T10:23:14Z",
+      "engineering_context_ref": ".sdlc-v1/context/FEAT-t3-stage-dispatch.engineering.md",
+      "id": "FEAT-t3-stage-dispatch",
+      "release": {
+        "at": null,
+        "commit": null,
+        "status": "pending"
+      },
+      "requirement_id": "REQ-t3-stage-dispatch",
+      "review": {
+        "at": null,
+        "by": null,
+        "decision": "pending"
+      },
+      "status": "in_progress",
+      "tasks": {
+        "TASK-t3-stage-dispatch-core": {
+          "depends_on": [],
+          "id": "TASK-t3-stage-dispatch-core",
+          "status": "done",
+          "title": "修复阶段调度合同并完成必要回归与使用说明",
+          "updated_at": "2026-11-15T11:10:46Z"
+        }
+      },
+      "updated_at": "2026-11-15T11:10:46Z",
+      "validation": {
+        "at": null,
+        "command": null,
+        "commit": null,
+        "result": "pending"
       }
     }
   },
@@ -273,6 +318,29 @@
       "status": "in_delivery",
       "title": "Codex Security 安全扫描接入与依赖提示",
       "updated_at": "2026-11-15T09:26:24Z"
+    },
+    "REQ-t3-stage-dispatch": {
+      "acceptance": {
+        "spec_ready": {
+          "algorithm": "sha256",
+          "at": "2026-11-15T09:59:56Z",
+          "documents": {
+            ".sdlc-v1/context/REQ-t3-stage-dispatch.product.md": "b6b22862b52a75cc5e1125fa8e34a1a0501cff15d32c272ec89498e0680407f3"
+          },
+          "normalization": "context-v1"
+        }
+      },
+      "created_at": "2026-11-15T09:35:50Z",
+      "depends_on": [],
+      "description": "区分执行机制，通过获授权的 T3 子任务完成独立阶段，准确披露模型证据与验收限制。",
+      "domain": "sdlc-orchestration",
+      "feature_id": "FEAT-t3-stage-dispatch",
+      "id": "REQ-t3-stage-dispatch",
+      "priority": "P1",
+      "product_context_ref": ".sdlc-v1/context/REQ-t3-stage-dispatch.product.md",
+      "status": "in_delivery",
+      "title": "按宿主能力修复 T3 阶段调度",
+      "updated_at": "2026-11-15T11:10:46Z"
     }
   },
   "state_format": "sdlc-lightweight-state-v1",

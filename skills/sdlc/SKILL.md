@@ -11,8 +11,7 @@ description: >
 `/sdlc` 读取当前状态、选择阶段、编排受控的阶段执行、验证结果并推进。实际工作仍由阶段技能完成；阶段子 Agent
 协作规则唯一见 [`stage-agent-protocol.md`](references/stage-agent-protocol.md)。单个阶段结果不是在已有授权目标内结束编排的信号。
 
-整套阶段技能共用协议中的[运行时选择](references/stage-agent-protocol.md#runtime-selection)：默认使用宿主原生路径；
-当前任务明确选择并授权 Claude 时，主 Agent 直接通过 T3 Code MCP 控制该阶段执行者。只加载所选适配说明。
+整套阶段技能共用协议中的[运行时选择](references/stage-agent-protocol.md#runtime-selection)：按宿主能力、授权和项目路由选择；T3 主 Agent 可直接调度获授权的 child，受托执行者不得嵌套派工。只加载所选适配说明。
 
 当当前阶段实际需要使用 Codex Security 时，按其 [依赖检查](references/integrations/codex-security.md#按需检查执行机器)
 确认执行机器的可用性；缺少工具或配置时说明缺口并提供安装或配置入口。普通 `/sdlc` 工作不因未选用该工具而检查或提醒；
@@ -61,7 +60,7 @@ Git 保存历史并负责跨 clone 同步。状态变化可以与相关文档或
 登记完整性唯一见协议。
 
 `onboard` 需要 `init` 时由主 Agent 先完成。`needs_selection`、缺少用户决策或外部授权、未通过验收、或证据不足时，
-按 protocol 暂停而不推进状态。只有未处于主 Agent 编排中的独立直接调用才是 standalone mode；已开始的
+按 protocol 停止依赖缺失证据的状态流转，并在授权和依赖允许时继续独立工作；fail 记录被拒的 Feature 停止派发例外仍适用。只有未处于主 Agent 编排中的独立直接调用才是 standalone mode；已开始的
 编排中，即使直接调用阶段 skill 也继承 orchestrated mode。
 
 ## 3. 路由

@@ -59,21 +59,31 @@ Product confirmation and prototype restrictions remain under
 
 ### Runtime selection
 
-Stage skills share one runtime decision for each bounded dispatch. Use the host's
-native path by default; the [Codex adapter](runtime-adapters/codex.md) maps that
-host's controls and configured roles. If the current task explicitly selects and
-authorizes Claude Code through a connected T3 Code MCP, the main Agent instead
-uses the [T3 Code adapter](runtime-adapters/t3-code.md) for that executor. A direct
-stage invocation follows this same selection; it does not route back to a native
-child merely because a stage skill mentions an Agent.
+Stage skills select an adapter for each bounded dispatch from the current host's
+actual capabilities, user authorization and target project routing. A supported
+native host uses the [Codex adapter](runtime-adapters/codex.md) when applicable.
+A T3 main Agent directly uses the [T3 Code adapter](runtime-adapters/t3-code.md)
+for an authorized child task, regardless of provider; it does not wrap that task
+in a native child. A top-level thread is a separate user-requested session, not a
+stage child. A T3 child is a terminal executor: its brief prohibits nested
+executors or another controller. Only the selected adapter is needed.
 
-The selected T3 thread is the stage execution context: the main Agent sends the
-complete brief, observes the run, accepts evidence and applies allowed lifecycle
-operations. A native child must not launch it, and T3 must not create another
-controller. This transport choice neither grants permissions nor overrides
-configured model/role requirements, independent validation or review. Missing
-capabilities or incompatible model requirements must be reported before dispatch.
-Only the selected adapter is needed; the native path has no T3 dependency.
+The main Agent supplies a complete brief, verifies evidence and owns lifecycle
+mutations. Transport does not grant permissions, change required models, roles,
+independent validation or review. Report missing capability, authorization, required
+routing or independent context and stop the dependent action; do not silently
+substitute. Record separately the requested provider/model/options, host-effective
+configuration bound to the run or time, observed execution behavior and actual
+backend model. A request or role label proves only the request; unavailable or null
+facts are unknown, and an explicitly mismatched required configuration is not
+acceptable. An unresolved inheritance flag, request echo, role file, title or
+later unbound configuration does not prove the run-effective configuration; even
+a confirmed host configuration does not prove the backend or internal effort. Missing required role/model evidence prevents that acceptance. A missing
+backend field alone is not a universal failure for ordinary functional checks;
+stricter applicable contracts retain their own evidence requirements. A distinct
+context or ID alone does not prove independent work: Validate must actually check
+the current candidate in a different context, and Review must retain its
+independent read-only responsibility.
 
 ## 2. Dispatch contract
 
@@ -130,14 +140,14 @@ sections. Do not repeat the product text, entire solution, conversation, failure
 logs, or prior brief. Replacing a brief does not delete the child's existing
 messages; do not resend that history or create a history store. A routine
 clarification, local correction, or repair already within the existing acceptance
-scope uses a short native follow-up instead. If it materially changes the listed
-contract, send the replacement brief.
+scope uses a short follow-up via the selected adapter instead. If it materially
+changes the listed contract, send the replacement brief.
 
 The main Agent may reuse an unchanged lifecycle CLI `--help` contract only in its
 current context; it creates no cache or store for that contract. A semantic or
 material brief change still requires the complete `supersedes` brief above. A
-routine correction that leaves the contract unchanged remains a short native
-follow-up.
+routine correction that leaves the contract unchanged remains a short follow-up
+via the selected adapter.
 
 For a small tracked project, use the same complete brief and result shape with
 short current facts and precise context references. Do not repeat unchanged
@@ -207,8 +217,9 @@ external authorization, or complex interface, migration, concurrency, recovery, 
 compatibility decision. Those concrete conditions keep their normal stages and may
 not be inferred away because a batch would be shorter.
 
-One native preparation dispatch message contains the existing complete stage brief
-for each consecutive, not-yet-accepted stage it includes, in order. It may state
+One preparation dispatch message via the selected adapter contains the existing
+complete stage brief for each consecutive, not-yet-accepted stage it includes,
+in order. It may state
 shared settled facts and context references once and let each brief reference them,
 but every brief separately declares its own `stage`, `write_scope`, and
 `allowed_transitions`, together with the existing target-identity and authorization
@@ -264,28 +275,30 @@ be executed.
 
 ### Waiting and recovery
 
-An ordinary wait keeps the original dispatched child's event mailbox as its target.
-If a wait returns only its normal timeout, with no new result, actual blocker or
-execution error, or user request, and the original handle has not been established
-as terminated or missing, wait on that same child again within the host's actual
-single-wait limit. Do not finish the work turn or return a final solely for that
-timeout; do not start Goal continuation, redo recovery, inspect the runtime tree,
-poll or message the child, replace it, or create a checkpoint. This rule applies
-whether or not a Goal exists. A timeout is not evidence that the child is still
-running.
+Follow the host `next` for the original dispatched handle. If it requires ending
+the current turn, return control immediately without polling, sleeping, messaging,
+waiting again or redispatching; retain the binding. This does not complete a Goal
+or accept a stage. Lifecycle `next` selects a stage and is distinct from host
+`next`. When no end-turn instruction applies and a wait returns only its normal
+timeout, follow that host's wait guidance on the same handle, within its limits;
+do not infer liveness or termination, poll, send repeated messages, cancel,
+replace the child, or create a checkpoint solely because of that timeout.
 
 Give necessary user-facing commentary while waiting. For a user question, answer
-briefly from the evidence already available and then resume the same wait unless
-the user explicitly pauses, stops, or cancels the work. Honor an explicit
+briefly from the evidence already available and then follow host `next` or resume
+the same wait when permitted, unless the user explicitly pauses, stops, or
+cancels the work. Honor an explicit
 pause/stop under the existing protocol; this rule cannot continue it. Treat actual
 execution or tool errors by their observed facts: they are not ordinary timeouts
 and do not automatically count as nonconvergence under section 5.
 
-Only an actual runtime restart or connection failure permits one authoritative
-runtime-tree check. Continue waiting only when that check confirms the original
-child is still executing and its event mailbox can wait. If it returns an existing
-result, including one not yet accepted, resume the existing result-acceptance
-process. If it confirms the handle is missing or the child has terminated without
+An actual runtime restart, connection failure, or ambiguous dispatch result permits
+one bounded recovery using the selected adapter and available original handle; do
+not assume a runtime-tree check or idempotency capability exists. Continue waiting
+only when available evidence confirms the original child is still executing and
+the selected adapter can wait. If recovery finds an existing result, including
+one not yet accepted, resume the result-acceptance process without repeating
+already applied operations. If it confirms the handle is missing or the child has terminated without
 a result, first reconcile the original lifecycle status or projection, the
 current effective solution and relevant context, and necessary Git evidence for unaccepted
 work and its writer; then apply the existing replacement-brief and authorization
@@ -326,8 +339,8 @@ liveness check. Answer status questions from the evidence already known, then
 resume the original work.
 
 Send a routine clarification or correction that remains within the current
-acceptance scope as a short native follow-up only to the affected current
-executor. For a material change to the contract, the main Agent first updates the
+acceptance scope as a short follow-up via the selected adapter only to the
+affected current executor. For a material change to the contract, the main Agent first updates the
 one current effective solution, then sends the affected executor a complete
 replacement brief marked `supersedes`, following the existing writer-handoff and
 review rules. Do not let an old and replacement writer edit the same work, and do
@@ -357,7 +370,12 @@ authorization for one Feature does not authorize another. Do not consume or
 enable external services, commit, push, publish, or deploy without the existing
 authorization required for that action. `needs_selection`, an unresolved material
 decision, a missing external authorization, an explicit pause or stop, missing or
-failed evidence, and the mandatory nonconvergence rule still stop progression.
+failed evidence, and the mandatory nonconvergence rule still stop the dependent
+acceptance and downstream progression. Continue other authorized work only when
+its dependencies, evidence, write ownership, permissions and budget are independent
+and ready. If none exists, report the minimum recovery input. Explicit user stop
+and the Feature-wide fail-record rejection below remain controlling; neither a host
+turn return nor one stage completion establishes Goal completion.
 The same stage owner keeps its implementation, tests, and corrections until the
 main Agent accepts the result; ordinary repairs already inside the accepted
 contract do not create an additional user-approval step.
@@ -374,10 +392,10 @@ reversible implementation defaults remain within the existing authorization and
 do not become a product questionnaire.
 
 The product child returns its verified facts, options, recommendation, affected
-work, and an explicit missing decision through its existing native message or
+work, and an explicit missing decision through its existing host message or
 result (normally `unresolved_items`). It does not add a result status, field,
 inbox, or waiting state. The main Agent asks the user, then passes the answer to
-the current product/spec context writer through the existing native message or
+the current product/spec context writer through the existing host message or
 follow-up dispatch so that writer records it. The main Agent edits that context
 itself only after the writer has handed off and the write scopes are confirmed
 not to overlap. Where no intermediate-message capability exists, retain the
@@ -539,8 +557,9 @@ or corrections. The configured role routing still applies.
 After a child returns, the main Agent verifies the declared diff, required checks,
 revision, workspace state, and lifecycle-request contract before accepting it.
 Missing or failed required verification prevents acceptance. On stage completion,
-the main Agent stops or releases the child when the runtime offers that control;
-otherwise it discloses the limitation. The next stage reads the accepted summary
+the main Agent handles any task-owned resources under the selected adapter and
+discloses unverified termination or release. A completed result does not itself
+require cancellation or prove resource release. The next stage reads the accepted summary
 and necessary references, not the prior conversation or a running-agent state.
 
 ## 4. Results, transitions, and correction

@@ -1,25 +1,55 @@
 # T3 Code MCP runtime adapter
 
-Read this adapter only when the protocol's
-[runtime selection](../stage-agent-protocol.md#runtime-selection) chooses T3 for
-the current dispatch. It is the complete T3 execution path, without a local driver
-or terminal-automation fallback. The public skill is optional for this package;
-the mapping below is sufficient for SDLC stage execution.
+Apply the shared [stage protocol](../stage-agent-protocol.md) and its
+[runtime selection](../stage-agent-protocol.md#runtime-selection). This adapter
+maps an authorized main Agent's direct T3 child task, for any supported provider;
+it does not alter role, model, verification, authorization or state ownership.
 
-This reference maps explicitly selected and authorized Claude Code execution through the connected T3 Code MCP to the existing [stage protocol](../stage-agent-protocol.md) and [brief/result template](../templates/TASK.md). The main Agent directly controls the executor, checks its result and owns lifecycle mutations. Do not insert a native stage child, use T3 delegation/workflows to create another orchestration flow, or treat a completed run as acceptance. Existing model, role and independence constraints still apply; a Claude invocation or instance label is not proof of the actual role or model. Independent bounded delegation uses the public `driving-claude-code-sessions` entry without requiring a Feature.
+## Select and dispatch
 
-## Select and bind
+Check the current host tool contract, permissions, project routing and task budget.
+Before the first `delegate_task`, call `orchestrator_capabilities` as required by
+the host; repeat only under its stated conditions. Request the full provider,
+model and options required by the project and bind the authorized workspace,
+revision, write scope, dependencies and complete canonical brief. The child is a
+terminal executor: explicitly prohibit nested executors and controllers. Record
+available original task/run handles and binding evidence. If tools, authorization,
+required routing or an independent context are unavailable, report the specific
+gap and stop the dependent dispatch; do not silently switch provider or mechanism.
+A top-level thread is only for a user explicitly requesting a new thread, never a
+substitute for a stage child.
 
-Require current task, provider, workspace and runtime permissions. Connect through the host's native MCP/OAuth and T3 Sharing & access; never store credentials in the repository. If access, tools, a registered project or required permissions are missing, report the gap without silently changing executor, broadening permissions or using a privileged host CLI. A new or reloaded host session may be needed for new tools. The native SDLC path does not require T3.
+## Observe, accept and recover
 
-Read `t3_environment_read` and `orchestrator_capabilities`. Bind the environment, project and checkout/worktree, selected provider instance, model and options, runtime and interaction modes, and current brief (including revision, write scope and ownership). Scratch is for appropriate disposable work, not a substitute for a repository task. Launch idle via `t3_thread_launch` with an explicit title, project and `workspaceStrategy` (or `scratch: true`), `modelSelection`, modes and stable `clientRequestId`; then verify the binding with `t3_thread_read`. Send the brief via `t3_thread_send` with `mode: "queue"` for the next turn. Retain the environment, `threadId`, exact `runId` and request IDs. An ambiguous launch/send reply can be retried with the same `clientRequestId`, not a new worker.
+Follow the running delegate's actual host `next`. If it requires ending the turn,
+return without polling, sleep, extra messages or redispatch; a turn ending is not
+Goal completion. An ordinary timeout without that instruction follows the host's
+same-handle waiting guidance and proves neither liveness nor termination. Recover
+only from actual restart, connection failure or ambiguous dispatch: inspect the
+available original handle and existing result, state/context and Git as needed.
+Do not assume an idempotency key, wakeup or settlement API. Unknown writer status
+forbids a concurrent replacement in the same scope.
 
-## Observe and accept
+For a routine in-scope implementation correction, use the host-supported message
+or continuation control for the same implementer, subject to current host rules.
+Where supported and allowed, `t3_thread_send` may continue that implementer; a
+send to a finished child can start a new task, whose returned handle must be kept.
+New independent reviews or rechecks use a new `delegate_task`, not a thread send.
+Preserve writer exclusivity and failure history across either path.
 
-Use bounded `t3_thread_wait` on the exact run, with `untilDelegatedWorkSettled: true` when relevant; read messages or activity with bounded pagination via `t3_thread_read`. Timeout or transport loss is an observation failure, not a stop: continue observing the same run without resending or launching another. Rely only on actual host-supported signaling, not an inferred wakeup. Send corrections to the same available implementer; `auto`, `steer` and `restart` have different effects. Do not use restart, `freshContext` or replacement to reset failure, stop or diagnosis history. Material contract changes follow the existing complete `supersedes` rule.
+The main Agent checks the canonical result, actual diff, commands and exit codes,
+revision, required checks, independence and allowed transitions before acceptance.
+Separate requested configuration, run-bound host-effective configuration, observed
+behavior and backend model; null or absent backend is unknown, not proof of the
+requested model. Apply the project's required evidence and any stricter contract;
+do not invent a universal backend-field requirement for ordinary checks. A child
+completion or distinct identifier does not prove independent checks were executed.
 
-The main Agent checks the canonical result, actual files, commands and exit codes, worktree and revision against the brief. A transport acknowledgement or completed run is not acceptance. Required independent Validate and Review remain separate, and the main Agent checks and executes any permitted transition request.
+## Cancel and release
 
-## Interrupt and settle
-
-Follow the existing protocol for cancellation, recovery, single-writer handoff and nonconvergence. For authorized cancellation, interrupt the bound active run with `t3_thread_interrupt` and verify its actual terminal state; an idle thread is unaffected. After terminal work, request settlement using `t3_thread_organize` with `action: "settle"`. Then read the task-bound status to confirm it is settled and has no active or pending work, and independently verify task-owned resource release. A receipt or timeout does not prove settlement. If status is unsatisfied or unobservable, report it and follow the existing control protocol; do not repeatedly settle on that basis. Never stop shared services or delete unrelated resources. A timeout alone is not a reason to interrupt or relaunch.
+For an authorized child cancellation use `task_cancel`, never `t3_thread_interrupt`
+on its child thread. A cancellation receipt, task termination, task-owned writing
+process termination and exclusive resource release are separate facts; verify each
+using available evidence before handoff. Unknown termination prevents overlapping
+writers. Do not stop shared services or infer resource release from task completion.
+Preserve failure and nonconvergence history through any recovery or replacement.

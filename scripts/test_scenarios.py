@@ -451,6 +451,51 @@ class ScenarioTest(unittest.TestCase):
                     assert_result(self, repo, scenario, initial)
 
 
+    def test_b03_failure_record_and_independent_fixture(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            repo = root / "failed-validation"
+            initial = prepare(repo, "B03")
+            # The old pass must not satisfy the result oracle before revalidation.
+            with self.assertRaises(AssertionError):
+                assert_result(self, repo, "B03", initial)
+            reference(repo, "B03")
+            assert_result(self, repo, "B03", initial)
+            feature = lifecycle.load(repo)["features"][FEATURE]
+            self.assertEqual(feature["validation"]["result"], "fail")
+            self.assertEqual(feature["review"]["decision"], "pending")
+
+            independent = root / "independent"
+            other_initial = prepare(independent, "B05")
+            reference(independent, "B05")
+            assert_result(self, independent, "B05", other_initial)
+            assert_result(self, repo, "B03", initial)
+
+    def test_b03_rejected_fail_preserves_old_state_and_business(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = Path(temporary) / "repo"
+            initial = prepare(repo, "B03")
+            state_path = repo / ".sdlc-v1/state.json"
+            before_state = state_path.read_bytes()
+            business_path = repo / "cli.py"
+            business_path.write_text(SOLUTION + "\n# uncommitted change\n", encoding="utf-8")
+            before_business = business_files(repo)
+            probe, command = run_check(repo, [sys.executable, "-c", PROBE_CODE])
+            self.assertEqual((probe.returncode, probe.stdout.strip()), (2, "missing"))
+            result, _ = run_check(repo, [
+                sys.executable, str(HERE / "lifecycle_state.py"), "--repo", str(repo),
+                "record-validation", "--feature-id", FEATURE, "--result", "fail",
+                "--test-command", command,
+            ])
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("validation-and-release-require-clean-worktree", result.stderr + result.stdout)
+            self.assertEqual(state_path.read_bytes(), before_state)
+            self.assertEqual(lifecycle.load(repo), initial["state"])
+            self.assertEqual(business_files(repo), before_business)
+            # Rejection is not a successful fail record and must fail the normal oracle.
+            with self.assertRaises(AssertionError):
+                assert_result(self, repo, "B03", initial)
+
     def test_b01_accepts_state_only_handoff_commit(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             repo = Path(temporary) / "repo"

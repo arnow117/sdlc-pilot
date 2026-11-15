@@ -40,6 +40,7 @@ for path in \
   "$REF/lifecycles/software-delivery.md" \
   "$REF/stage-agent-protocol.md" \
   "$REF/runtime-adapters/codex.md" \
+  "$REF/runtime-adapters/t3-code.md" \
   "$REF/templates/TASK.md" \
   "$REF/templates/CHECKPOINT.md" \
   "$REF/roles" \
@@ -267,7 +268,29 @@ PY
   fi
 fi
 
+# These scoped checks validate documentation shape, not host behavior.
+check_t3_child_contract() {
+  local adapter="$1" protocol="$2" template="$3" readme="$4"
+  for token in delegate_task task_cancel 'terminal executor' 'host `next`'; do
+    grep -Fq -- "$token" "$adapter" || return 1
+  done
+  for token in 'runtime-adapters/t3-code.md' 'host `next`'; do
+    grep -Fq -- "$token" "$protocol" || return 1
+  done
+  grep -Fq -- '终端执行者' "$template" || return 1
+  grep -Fq -- 'stage-agent-protocol.md' "$adapter" || return 1
+  grep -Fq -- 'SCN-t3-stage-dispatch' "$readme" || return 1
+  grep -Fq -- 'runtime-adapters/t3-code.md' "$readme" || return 1
+  # Reject the old affirmative top-level stage sequence, not native mappings or prohibitions.
+  if grep -Fq -- 'Launch idle via `t3_thread_launch`' "$adapter"; then return 1; fi
+}
+
 echo "== 8. Stage agent orchestration =="
+if check_t3_child_contract "$REF/runtime-adapters/t3-code.md" "$REF/stage-agent-protocol.md" "$REF/templates/TASK.md" "README.md"; then
+  ok "T3 child 文档合同形状已检查"
+else
+  err "T3 child 文档合同形状缺失或保留旧阶段路径"
+fi
 for expected in \
   "$ROOT/sdlc/SKILL.md:stage-agent-protocol.md" \
   "$REF/role-routing.md:stage-agent-protocol.md" \
@@ -397,6 +420,43 @@ if [ -n "$checkpoint_fixture" ]; then
     err "旧 completed 结果反例未被拒绝"
   else
     ok "旧 completed 结果反例已拒绝"
+  fi
+fi
+
+# Test the scoped contract against temporary copies and representative omissions.
+t3_fixture=$(mktemp -d "${TMPDIR:-/tmp}/sdlc-t3-contract.XXXXXX") || {
+  err "无法创建 T3 合同测试临时目录"
+  t3_fixture=""
+}
+if [ -n "$t3_fixture" ]; then
+  trap 'rm -rf "$checkpoint_fixture" "$arch_fixture" "$t3_fixture"' EXIT
+  cp "$REF/runtime-adapters/t3-code.md" "$t3_fixture/adapter.md"
+  cp "$REF/stage-agent-protocol.md" "$t3_fixture/protocol.md"
+  cp "$REF/templates/TASK.md" "$t3_fixture/task.md"
+  cp README.md "$t3_fixture/readme.md"
+  if check_t3_child_contract "$t3_fixture/adapter.md" "$t3_fixture/protocol.md" "$t3_fixture/task.md" "$t3_fixture/readme.md"; then
+    ok "T3 合同副本正例已执行"
+  else
+    err "T3 合同副本正例失败"
+  fi
+  grep -v 'terminal executor' "$t3_fixture/adapter.md" > "$t3_fixture/no-terminal.md"
+  if check_t3_child_contract "$t3_fixture/no-terminal.md" "$t3_fixture/protocol.md" "$t3_fixture/task.md" "$t3_fixture/readme.md"; then
+    err "缺少终端执行者反例未被拒绝"
+  else
+    ok "缺少终端执行者反例已拒绝"
+  fi
+  cp "$t3_fixture/adapter.md" "$t3_fixture/old-path.md"
+  printf '\nLaunch idle via `t3_thread_launch`\n' >> "$t3_fixture/old-path.md"
+  if check_t3_child_contract "$t3_fixture/old-path.md" "$t3_fixture/protocol.md" "$t3_fixture/task.md" "$t3_fixture/readme.md"; then
+    err "旧 top-level 阶段路径反例未被拒绝"
+  else
+    ok "旧 top-level 阶段路径反例已拒绝"
+  fi
+  grep -v 'runtime-adapters/t3-code.md' "$t3_fixture/protocol.md" > "$t3_fixture/no-reference.md"
+  if check_t3_child_contract "$t3_fixture/adapter.md" "$t3_fixture/no-reference.md" "$t3_fixture/task.md" "$t3_fixture/readme.md"; then
+    err "缺少 T3 引用反例未被拒绝"
+  else
+    ok "缺少 T3 引用反例已拒绝"
   fi
 fi
 
