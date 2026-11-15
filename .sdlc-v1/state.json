@@ -156,9 +156,9 @@
       "acceptance": {
         "plan": {
           "algorithm": "sha256",
-          "at": "2026-11-15T04:41:52Z",
+          "at": "2026-11-15T05:00:26Z",
           "documents": {
-            ".sdlc-v1/context/FEAT-security-scan.engineering.md": "fadb58878aea19b7bbda44ed0c97cb0b68c0206e30587d176af78a68e1cdb2a6",
+            ".sdlc-v1/context/FEAT-security-scan.engineering.md": "a61be977a74be64d128865813a174adcc868ff27d983194d2cbdfd1c61ee2cd4",
             ".sdlc-v1/context/REQ-security-scan.product.md": "1a81a7955cd44e01e5eb3eb6bc7823bd4056a03c22a49ea18cfce60a3e2c0844"
           },
           "normalization": "context-v1"
@@ -186,10 +186,10 @@
           "id": "TASK-security-scan",
           "status": "done",
           "title": "接入安全验证、Codex Security 与只读依赖检查",
-          "updated_at": "2026-11-15T04:40:50Z"
+          "updated_at": "2026-11-15T05:00:31Z"
         }
       },
-      "updated_at": "2026-11-15T04:41:52Z",
+      "updated_at": "2026-11-15T05:00:31Z",
       "validation": {
         "at": null,
         "command": null,
@@ -272,7 +272,7 @@
       "product_context_ref": ".sdlc-v1/context/REQ-security-scan.product.md",
       "status": "in_delivery",
       "title": "Codex Security 安全扫描接入与依赖提示",
-      "updated_at": "2026-11-15T04:40:50Z"
+      "updated_at": "2026-11-15T05:00:31Z"
     }
   },
   "state_format": "sdlc-lightweight-state-v1",
