@@ -202,6 +202,15 @@ T3 的产品/工程绑定文件和业务实现未被本修订改变，其已有 
 - 派工返回 `codex / gpt-6.1-terra / xhigh`，验证者报告相同宿主运行声明；其调用的 capabilities 返回继承配置为空，`executedModel=null`，运行绑定配置与实际 backend 的证据边界须在后续接受时分别判断。真实 CLI 扫描、认证、模型调用和扫描效果仍为 `NOT_RUN` / 未知；历史失败及未知诊断次数保留。
 - 本轮原始数据暂存于 `/tmp/security-validate-ab68-zRxNWQy0/`：T3 `coverage.json` SHA-256 `1fdbb4326fa28a5a4738fe392ba0692f2bf20f0faf05efe6999e5a91d82e19f6`，其 `.coverage` 为 `287914df0d57551c6c3bb2e03036a822e2e39566b260fc4856a5dc2432ae710d`；Security `security.json` 为 `d8d8176f1a75c4fa290bf6726a660d4d527d88d1daefedd023cd7fe4d33aaa67`。完整命令和日志见该任务目录及原始线程，接受前不清理。
 
+### 2026-11-15 平台补测后的独立验证 — 1c5a590ab8236efcb31f21197ffeea66cc132af4
+
+- [独立验证原始记录](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3A7ab5e499-eeb4-4429-a803-951fef1520e0)给出新的 `PASS` 候选，等待主 Agent 接受。14:03:33–14:04:26 UTC，`PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills` exit 0，184 项及结构检查通过；既有 HTTPError 清理 `ResourceWarning` 保留。
+- Security 六项测试通过；受限 PATH 的标记正控制成功，临时生产探针分别执行长、短候选时对应测试均因标记断言失败。移除 Windows 标记路径引号的临时测试副本亦被构造测试拒绝。Windows 路径由隔离模拟检查，不表示 Windows shell 实测；自建反例和解包目录已清理。
+- 离线 Python 3.12.16 / coverage.py 7.17.2：相对 `e68fa239` 的新增或修改函数完整函数体及变动模块行共 61/61 行、6/6 分支，无遗漏，包含 `make_candidate` 两条受影响弧。未变的生产探针原始数据为 20/20 行、5/6 分支；T3 未变范围的共同数据为 82/82 行、16/16 分支，helper 10/10 行、8/8 分支，不代替 T3 阶段接受。
+- 从当前提交新解包的 16 个关键文件与 Git blob 一致；包内 Security 6 项、T3 场景 10 项、CLI help 和只读探针 smoke 通过。三处版本均为 7.0.1，两份无日期变更清单正文与对应历史来源一致。五条历史场景均以完整编码 ID 读取；实际 router 行为与 synthetic 消费证据按相关源码和契约变化判断适用，后者不证明真实扫描。
+- 宿主只读配置为 `codex / gpt-6.1-terra / reasoningEffort=xhigh`；`executedModel=null`，实际 backend 和内部 effort 未知。真实 CLI 扫描、认证、模型调用、扫描效果及 Windows shell 仍为 `NOT_RUN` / 未知。此前 `ab68`、`e68`、`44b` 的失败和 R1、首次 coverage/包校验失败均保留，未知诊断次数不重置。
+- 本轮数据暂存 `/tmp/security-r1-validation.ZxguuM1l/`：`security.json` SHA-256 `af16d44f7ece1c11396c2c27ad3bdb6d20418354a5eb17f3b6940a8763f9c406`，`security.coverage` 为 `b93a35494c69aed5104dfedae86e540b80b2379b243eb7afee37ce707c82bd07`；完整日志及脚本与原始线程可供接受核对。
+
 ## 评审记录
 
 实现者此前对相关代码、路由、权限和缺口做过串行自查；不称独立评审。此前认为当前会话不能取得独立评审上下文的判断已被 T3 子任务执行事实修正；后续正式 Review 见下。
@@ -214,6 +223,15 @@ T3 的产品/工程绑定文件和业务实现未被本修订改变，其已有 
 - **开发分支迁移决定**：为在现有集成候选上修复 R1，先将 Security 的开发登记从 `feat/codex-security` 迁到当前已检出的 `fix/t3-stage-dispatch`。预期 repo 为 `/Users/mac/hansen_agent_team/external/sdlc-pilot`，完整 HEAD 为 `e68fa239aa83182f0fa0e2e96c4edc0e9afe4cc3`；原因为“在集成分支修复 Security 正式评审 R1”。本次只变更协作登记，不 checkout 或改变产品与发布目标；同 Feature 的独立评审已完成，当前无已知活动写入者。完整参数：`--feature-id FEAT-security-scan --expected-branch feat/codex-security --branch fix/t3-stage-dispatch --expected-head e68fa239aa83182f0fa0e2e96c4edc0e9afe4cc3 --reason 在集成分支修复 Security 正式评审 R1`。
 - **迁移结果**：2026-11-15T13:03:52Z，`migrate-feature-branch` exit 0，返回上述 root、HEAD、原因及 `feat/codex-security → fix/t3-stage-dispatch`；Task、validation 和 review 未由迁移改变。
 - **Task 恢复**：确认 R1 需要测试修复后，2026-11-15T13:04:13Z 按 `done → todo → in_progress` 连续执行 `set-task-status`，两次均 exit 0。CLI 按合同清除机器状态中的 validation/review/release 记录；本节及前述验证记录保留其历史，不表示缺陷已修复。
+
+### 2026-11-15 正式重新 Review — 1c5a590ab8236efcb31f21197ffeea66cc132af4
+
+- [独立 Sol 重新评审](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3A0ca93f5d-36ba-48f3-a5a8-08cae1f1d643)建议 `approved`；主 Agent 于 14:27:07Z 按原请求记录，评审者为 `Codex Sol independent reviewer`。该结论绑定上述验证 commit。
+- **R1 处置**：当前候选的内建标记、正控制及长短候选执行反例提供了修复证据；Windows 构造测试为隔离模拟，不证明 Windows shell 实测。原 R1、`changes_requested` 与全部历史失败仍保留。
+- **P3，非阻塞，violates**：README 测试说明将探针不执行 PATH 候选与测试正反控制执行自建临时脚本混为一谈。主 Agent 将在原 Task 内修正文案；新候选须按实际差异重新验证和评审，不能将本次批准直接转移到新业务内容。
+- 2026-11-15T14:27:40Z，主 Agent 为修正该文案按 `done → todo → in_progress` 重新打开原 Task；两次 CLI 均 exit 0，并按合同清除机器状态中的 validation/review/release。上述通过与批准保持为历史事实。
+- **P3 文案返修（未提交候选）**：`README.md` 现区分探针不执行 PATH 候选与测试正反控制执行自建临时候选脚本；业务 diff SHA-256 为 `a84542c47c30fdf37df1ebc7555e8a5d409af865c60f834492fc92d3f056648a`。主 Agent 对照测试调用核对文案，`PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills` exit 0，184 项及结构检查通过，`git diff --check` exit 0；既有 HTTPError 清理 `ResourceWarning` 保留。此为 Build 检查，不代替新候选的独立验证或评审。
+- 真实扫描、认证、模型调用、Windows shell 及实际 backend 仍为 `NOT_RUN` / 未知；本轮未发现其他必须修复项。运行期间宿主配置为 `codex / gpt-6.1-sol / reasoningEffort=xhigh`，`executedModel=null`，实际 backend 和内部 effort 未知。
 
 ## 发布与观察记录
 

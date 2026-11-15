@@ -420,7 +420,7 @@ git diff --check
 - `test_hallmark_catalog.py`：随包 Hallmark 风格目录的召回、来源完整性和原子增量同步。
 - `test_vibe_test.py`：离线 battery、oracle、合成报告与路径保护。
 - `test_vibe_host.py`：受控宿主回调的 stub 合同；不启动模型。
-- `test_security_dependency.py`：隔离 PATH 中的依赖发现、重名候选与凭据不输出；不执行候选命令或模型。
+- `test_security_dependency.py`：隔离 PATH 中的依赖发现、重名候选与凭据不输出；探针不执行 PATH 候选，正反控制会执行自建临时候选脚本，不调用模型。
 
 它还检查阶段协议、brief/result 模板、检查点模板和已知冲突文案的机械形状；主 Agent 的语义判断仍不能由字符串检查替代。
 
