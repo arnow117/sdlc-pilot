@@ -107,6 +107,21 @@
 - 真实模型扫描 `NOT_RUN`：产品成功标准未自动要求本 Feature 运行真实模型扫描；若后续按实际风险选择其为必要项，仍须实际完成或提供契约允许的等效证据。CLI 未发现，插件、版本及认证未知。
 - 纠正此前环境归因：Codex 原生子代理限制不等于 T3 无法调度独立子任务，本轮验证实际通过 T3 子任务执行；该事实不自动证明独立 Review 或验证通过。按本轮结果通过 lifecycle CLI 记录 `fail`，Review / Release 保持 pending。
 
+### 2026-11-15 修复与实际 Agent 场景 — 44bfc27e58278a38ec28a4eeb24f27a33917bb91
+
+- 修复 README：`SCN-security-scan` 导航至既有用户场景和成功标准。修复时 `PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills` exit 0、176 项测试通过；README 场景 ID、两个链接及对应标题检查通过，`git diff --check` exit 0。这是 Build 检查，仍须独立重验。
+- 普通 Feature 状态查询：实际 T3 Agent 在该候选版本读取 `skills/sdlc/SKILL.md` 并查询状态，轨迹中未运行 Codex Security 探针，回复没有安装提醒。[轨迹](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3Afafbc420-4f41-4062-827b-070dc4ecb589)。
+- 选择 Semgrep 的只读验证准备：实际 T3 Agent 读取 `sdlc-validate` 和 `security-scan` 等文件，轨迹中未运行 Codex Security 探针，回复没有安装提醒；轨迹未见单独读取 router 正文。[轨迹](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3A2adf4859-66e9-4b2c-a424-59c8c5512e28)。
+- 实际选用 Codex Security 的准备检查：Agent 读取 router 与适配说明，运行 `PYTHONDONTWRITEBYTECODE=1 python3 skills/sdlc/scripts/check_security_dependency.py`，输出 CLI `not_found`、插件/版本/认证 `not_checked`、扫描 `not_run`；回复给出普通安装入口，并保留版本及认证未知。轨迹中未见安装、登录或扫描。[轨迹](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3Ab90315fe-28dc-4020-a112-b5fda1139c75)。探针没有检查插件；Agent 的插件状态说明不代替可加载性验证。
+- Synthetic 结果消费：Agent 读取上游示例并核对产物 SHA-256，指出覆盖和处置缺口；目标版本不匹配或缺少产物均为 `INCONCLUSIVE`，同版本 review 复用适用证据而不默认重复扫描。[完整和版本不匹配场景](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3Ab40b726b-ac3c-46bd-9777-84e9552c54d8)；[实际缺失 manifest/findings 场景](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3Af7c90763-a085-413b-a50c-e2ce5c203d9f)。缺失样本由上游 `173483d7c658be7a512c93d9559bf01a05d5b196` 示例分别复制并省略一文件构造；自建临时目录已核对并清理。
+- 以上各场景均请求 `codex / gpt-6.1-terra / xhigh`，宿主未提供 `executedModel`，实际模型未知。T3 轨迹由当前宿主持有，跨宿主可访问性未验证。合成产物和这些 Agent 行为不证明真实扫描已运行或通过；真实扫描仍为 `NOT_RUN`。
+
+### 2026-11-15 独立重验 — 44bfc27e58278a38ec28a4eeb24f27a33917bb91
+
+- 17:20:31–17:21:20 +08:00，独立 T3 上下文执行 `PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills`，exit 0，176 项测试及结构检查通过；既有 HTTPError 清理 `ResourceWarning` 仍出现。`python3 -B scripts/test_security_dependency.py`、`git diff --check`、README 场景 ID/链接核对、源码包内探针测试与 7.0.0 版本一致性核对均通过。
+- 验证者复核了上述实际 Agent 轨迹及 synthetic 消费边界，确认 README 导航缺口已修复；真实扫描仍为 `NOT_RUN`。当前宿主报告的执行上下文为 `codex / gpt-6.1-terra / xhigh`，但 `executedModel` 为 null，实际后端模型未证实。
+- `INCONCLUSIVE`：验证者认为实际模型元数据缺失导致必要执行者条件尚不能确认，按其请求记录 validation `fail`；没有发现新的 `IMPLEMENTATION_FAILED`。完整检查时间、命令和结果见[独立重验轨迹](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3Ae02d7050-a36d-4103-a80e-bc4533cca934)，跨宿主可访问性未知。
+
 ## 评审记录
 
 已由实现者对相关代码、路由、权限和缺口做串行自查；不称独立评审。正式 Review 为 `NOT_RUN`，当前会话不具备符合项目要求的独立评审上下文。
