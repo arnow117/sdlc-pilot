@@ -156,9 +156,9 @@
       "acceptance": {
         "plan": {
           "algorithm": "sha256",
-          "at": "2026-11-15T05:05:17Z",
+          "at": "2026-11-15T05:06:20Z",
           "documents": {
-            ".sdlc-v1/context/FEAT-security-scan.engineering.md": "acbf98b40b353f781c9eb6bfea5cf97dc4ea3f2525ac1f9b91446bfae6bc864c",
+            ".sdlc-v1/context/FEAT-security-scan.engineering.md": "1a27324c15d5dfad83453b73bfb00236b3cc3e65f6c9b428a538198a3b621b3c",
             ".sdlc-v1/context/REQ-security-scan.product.md": "1a81a7955cd44e01e5eb3eb6bc7823bd4056a03c22a49ea18cfce60a3e2c0844"
           },
           "normalization": "context-v1"
@@ -189,7 +189,7 @@
           "updated_at": "2026-11-15T05:00:31Z"
         }
       },
-      "updated_at": "2026-11-15T05:05:17Z",
+      "updated_at": "2026-11-15T05:06:20Z",
       "validation": {
         "at": "2026-11-15T05:02:14Z",
         "command": "bash scripts/validate-skills",
