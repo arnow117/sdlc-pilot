@@ -247,4 +247,6 @@ T3 的产品/工程绑定文件和业务实现未被本修订改变，其已有 
 
 ## 发布与观察记录
 
-NOT_RUN；产品观察计划见对应产品上下文。
+- **交付与回退参考**：2026-11-15，主 Agent 以普通 fast-forward 将 GitHub `origin/main` 从 `3093e85725a30078f2666886766ef4175bfb1d20` 更新到源码交付提交 `ebc2ed5c1354014648a1894e0bdce28eb1379668`；`git push` 和随后 `git ls-remote --heads origin refs/heads/main` 均 exit 0，后者返回该交付提交。前者是前一 main 源码回退锚点，不代表其运行健康已验证；需要回退时先核对远端，并恢复整套兼容版本或修复后重验。发布实现仍对应独立验证和 Review 的 `2b59ea683c86eef4be7c7c99ccd105fb4986aa54`，后续提交只改变 `.sdlc-v1/**` 时不作为新业务实现。
+- **交付检查**：[交付后隔离 smoke](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3A2ff0f036-243e-4acb-98c0-df490d08bfa0)从上述交付提交新解包；`/private/var/folders/zn/9h5xx7817g1byxssf2d_8k7w0000gn/T/sdlc-ship-ebc2-7edg2lkn/package` 中 240/240 条目与 Git blob 一致，三处版本均为 7.0.1。2026-11-15 15:45:43–15:45:53 UTC 在该目录运行 T3 scenario 10 项、Security dependency 6 项、lifecycle CLI help 和只读依赖探针，均 exit 0；探针在隔离环境报告 CLI 候选 `not_found`，未检查认证、插件或扫描。自建目录已清理。此前 15:28:32–15:29:25 UTC 的包内 184 项标准检查为发布前证据。
+- **观察与缺口**：产品观察计划见 `.sdlc-v1/context/REQ-security-scan.product.md`。本次是源码分发，未安装插件或启动生产服务，没有自然生产流量和运行信号；真实扫描、认证、模型调用、扫描效果及 Windows shell 仍未运行或未知。下次技术检查计划为 2026-11-22 15:00 UTC，或首次获授权实际使用时；该计划未创建自动任务。评估反馈后按现有 Requirement 流程处理。

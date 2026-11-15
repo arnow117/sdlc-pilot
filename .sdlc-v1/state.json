@@ -156,27 +156,27 @@
       "acceptance": {
         "plan": {
           "algorithm": "sha256",
-          "at": "2026-11-15T14:52:23Z",
+          "at": "2026-11-15T15:58:33Z",
           "documents": {
-            ".sdlc-v1/context/FEAT-security-scan.engineering.md": "1b968375271a6d42a3b6c79a87f18b1c38d9522fd39c099e2307d6673a9d5626",
+            ".sdlc-v1/context/FEAT-security-scan.engineering.md": "89cf2ae6b8303f0119b0e59d3cf985f7d20853910d6a555ed46e0dfded29e20d",
             ".sdlc-v1/context/REQ-security-scan.product.md": "1a81a7955cd44e01e5eb3eb6bc7823bd4056a03c22a49ea18cfce60a3e2c0844"
           },
           "normalization": "context-v1"
         },
         "review": {
           "algorithm": "sha256",
-          "at": "2026-11-15T14:52:23Z",
+          "at": "2026-11-15T15:58:33Z",
           "documents": {
-            ".sdlc-v1/context/FEAT-security-scan.engineering.md": "1b968375271a6d42a3b6c79a87f18b1c38d9522fd39c099e2307d6673a9d5626",
+            ".sdlc-v1/context/FEAT-security-scan.engineering.md": "89cf2ae6b8303f0119b0e59d3cf985f7d20853910d6a555ed46e0dfded29e20d",
             ".sdlc-v1/context/REQ-security-scan.product.md": "1a81a7955cd44e01e5eb3eb6bc7823bd4056a03c22a49ea18cfce60a3e2c0844"
           },
           "normalization": "context-v1"
         },
         "validation": {
           "algorithm": "sha256",
-          "at": "2026-11-15T14:52:23Z",
+          "at": "2026-11-15T15:58:33Z",
           "documents": {
-            ".sdlc-v1/context/FEAT-security-scan.engineering.md": "1b968375271a6d42a3b6c79a87f18b1c38d9522fd39c099e2307d6673a9d5626",
+            ".sdlc-v1/context/FEAT-security-scan.engineering.md": "89cf2ae6b8303f0119b0e59d3cf985f7d20853910d6a555ed46e0dfded29e20d",
             ".sdlc-v1/context/REQ-security-scan.product.md": "1a81a7955cd44e01e5eb3eb6bc7823bd4056a03c22a49ea18cfce60a3e2c0844"
           },
           "normalization": "context-v1"
@@ -187,17 +187,17 @@
       "engineering_context_ref": ".sdlc-v1/context/FEAT-security-scan.engineering.md",
       "id": "FEAT-security-scan",
       "release": {
-        "at": null,
-        "commit": null,
-        "status": "pending"
+        "at": "2026-11-15T15:58:33Z",
+        "commit": "2b59ea683c86eef4be7c7c99ccd105fb4986aa54",
+        "status": "released"
       },
       "requirement_id": "REQ-security-scan",
       "review": {
-        "at": "2026-11-15T14:52:23Z",
+        "at": "2026-11-15T15:58:33Z",
         "by": "Codex Sol independent reviewer",
         "decision": "approved"
       },
-      "status": "reviewed",
+      "status": "released",
       "tasks": {
         "TASK-security-scan": {
           "depends_on": [],
@@ -207,9 +207,9 @@
           "updated_at": "2026-11-15T14:30:31Z"
         }
       },
-      "updated_at": "2026-11-15T14:52:23Z",
+      "updated_at": "2026-11-15T15:58:33Z",
       "validation": {
-        "at": "2026-11-15T14:52:23Z",
+        "at": "2026-11-15T15:58:33Z",
         "command": "PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills",
         "commit": "2b59ea683c86eef4be7c7c99ccd105fb4986aa54",
         "result": "pass"
@@ -219,27 +219,27 @@
       "acceptance": {
         "plan": {
           "algorithm": "sha256",
-          "at": "2026-11-15T15:23:18Z",
+          "at": "2026-11-15T15:58:34Z",
           "documents": {
-            ".sdlc-v1/context/FEAT-t3-stage-dispatch.engineering.md": "c398e1c6ae48c10992576279281b3882172c799c904af4faa0f0666c25cf9bbc",
+            ".sdlc-v1/context/FEAT-t3-stage-dispatch.engineering.md": "825de220d7fce7884338e7b15b72bfd3a1fdb7b3ffa2f12430c6b96a08de4b74",
             ".sdlc-v1/context/REQ-t3-stage-dispatch.product.md": "b6b22862b52a75cc5e1125fa8e34a1a0501cff15d32c272ec89498e0680407f3"
           },
           "normalization": "context-v1"
         },
         "review": {
           "algorithm": "sha256",
-          "at": "2026-11-15T15:23:18Z",
+          "at": "2026-11-15T15:58:34Z",
           "documents": {
-            ".sdlc-v1/context/FEAT-t3-stage-dispatch.engineering.md": "c398e1c6ae48c10992576279281b3882172c799c904af4faa0f0666c25cf9bbc",
+            ".sdlc-v1/context/FEAT-t3-stage-dispatch.engineering.md": "825de220d7fce7884338e7b15b72bfd3a1fdb7b3ffa2f12430c6b96a08de4b74",
             ".sdlc-v1/context/REQ-t3-stage-dispatch.product.md": "b6b22862b52a75cc5e1125fa8e34a1a0501cff15d32c272ec89498e0680407f3"
           },
           "normalization": "context-v1"
         },
         "validation": {
           "algorithm": "sha256",
-          "at": "2026-11-15T15:23:18Z",
+          "at": "2026-11-15T15:58:34Z",
           "documents": {
-            ".sdlc-v1/context/FEAT-t3-stage-dispatch.engineering.md": "c398e1c6ae48c10992576279281b3882172c799c904af4faa0f0666c25cf9bbc",
+            ".sdlc-v1/context/FEAT-t3-stage-dispatch.engineering.md": "825de220d7fce7884338e7b15b72bfd3a1fdb7b3ffa2f12430c6b96a08de4b74",
             ".sdlc-v1/context/REQ-t3-stage-dispatch.product.md": "b6b22862b52a75cc5e1125fa8e34a1a0501cff15d32c272ec89498e0680407f3"
           },
           "normalization": "context-v1"
@@ -250,17 +250,17 @@
       "engineering_context_ref": ".sdlc-v1/context/FEAT-t3-stage-dispatch.engineering.md",
       "id": "FEAT-t3-stage-dispatch",
       "release": {
-        "at": null,
-        "commit": null,
-        "status": "pending"
+        "at": "2026-11-15T15:58:34Z",
+        "commit": "2b59ea683c86eef4be7c7c99ccd105fb4986aa54",
+        "status": "released"
       },
       "requirement_id": "REQ-t3-stage-dispatch",
       "review": {
-        "at": "2026-11-15T15:23:18Z",
+        "at": "2026-11-15T15:58:34Z",
         "by": "Codex Sol independent reviewer",
         "decision": "approved"
       },
-      "status": "reviewed",
+      "status": "released",
       "tasks": {
         "TASK-t3-stage-dispatch-core": {
           "depends_on": [],
@@ -270,9 +270,9 @@
           "updated_at": "2026-11-15T11:53:44Z"
         }
       },
-      "updated_at": "2026-11-15T15:23:18Z",
+      "updated_at": "2026-11-15T15:58:34Z",
       "validation": {
-        "at": "2026-11-15T15:23:18Z",
+        "at": "2026-11-15T15:58:34Z",
         "command": "PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills; 工程上下文实施层决定 3 完整离线 branch coverage 命令块; git diff --check; git archive HEAD 包检查及 CLI/suite smoke",
         "commit": "2b59ea683c86eef4be7c7c99ccd105fb4986aa54",
         "result": "pass"
@@ -351,9 +351,9 @@
       "id": "REQ-security-scan",
       "priority": "P1",
       "product_context_ref": ".sdlc-v1/context/REQ-security-scan.product.md",
-      "status": "validated",
+      "status": "released",
       "title": "Codex Security 安全扫描接入与依赖提示",
-      "updated_at": "2026-11-15T14:52:23Z"
+      "updated_at": "2026-11-15T15:58:33Z"
     },
     "REQ-t3-stage-dispatch": {
       "acceptance": {
@@ -374,9 +374,9 @@
       "id": "REQ-t3-stage-dispatch",
       "priority": "P1",
       "product_context_ref": ".sdlc-v1/context/REQ-t3-stage-dispatch.product.md",
-      "status": "validated",
+      "status": "released",
       "title": "按宿主能力修复 T3 阶段调度",
-      "updated_at": "2026-11-15T15:23:18Z"
+      "updated_at": "2026-11-15T15:58:34Z"
     }
   },
   "state_format": "sdlc-lightweight-state-v1",

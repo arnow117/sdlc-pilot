@@ -408,4 +408,6 @@ PY
 ## 发布与观察记录（实际）
 
 - **产品观察计划引用**：`.sdlc-v1/context/REQ-t3-stage-dispatch.product.md` 的“发布后观察计划（SDLC 补充）”。
-- **技术发布准备、实际结果、反馈证据与缺口**：发布/集成/远端状态刷新/解包 smoke 均 NOT_RUN；仅核对本地 refs 与元数据。后续按实施计划的集成与发布安排记录最终版本、内容核对、smoke、接受来源和真实观察范围；取消、恢复、native 与资源释放没有观察时保持未观察，不能由 child 完成推断。
+- **交付与回退参考**：2026-11-15，主 Agent 以普通 fast-forward 将 GitHub `origin/main` 从 `3093e85725a30078f2666886766ef4175bfb1d20` 更新到 `ebc2ed5c1354014648a1894e0bdce28eb1379668`；`git push` 和随后 `git ls-remote --heads origin refs/heads/main` 均 exit 0，后者返回该交付提交。前者是前一 main 源码回退锚点，不代表其运行健康已验证；需要回退时先核对远端，并恢复整套兼容版本或修复后重验。独立验证与正式 Review 的实现版本仍为 `2b59ea683c86eef4be7c7c99ccd105fb4986aa54`。
+- **交付检查**：[交付后隔离 smoke](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A16e5cada-5bff-48d9-8308-fafce8d3f34e%3Adelegate-task%3A2ff0f036-243e-4acb-98c0-df490d08bfa0)从交付提交新解包；`/private/var/folders/zn/9h5xx7817g1byxssf2d_8k7w0000gn/T/sdlc-ship-ebc2-7edg2lkn/package` 中 240/240 条目与 Git blob 一致，三处版本为 7.0.1。2026-11-15 15:45:43–15:45:53 UTC 在该目录运行 T3 scenario 10 项、Security dependency 6 项、lifecycle CLI help 和只读依赖探针，均 exit 0；自建目录已清理。此前 15:28:32–15:29:25 UTC 的包内 184 项标准检查为发布前证据。
+- **观察与缺口**：源码交付后本次 T3 Ship child 实际完成并由主 Agent 接续核对；该事实不证明真实取消、异常恢复、其他 native 宿主或所属资源释放。本次未安装插件或启动生产服务，没有自然生产流量和运行信号；真实扫描和额外模型实验未运行。下次技术检查计划为 2026-11-22 15:00 UTC，或下次获授权适用阶段交付时；该计划未创建自动任务。其他观察按产品计划回流。
