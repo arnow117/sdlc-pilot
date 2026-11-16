@@ -2,17 +2,17 @@
 
 Apply the shared [stage protocol](../stage-agent-protocol.md) and its
 [runtime selection](../stage-agent-protocol.md#runtime-selection). This adapter
-maps an authorized main Agent's direct T3 child task, for any supported provider;
-it does not alter role, model, verification, authorization or state ownership.
+maps a host-selected, authorized app-owned T3 child task; the shared
+[T3 layer boundary](../stage-agent-protocol.md#t3-layer-boundary) governs any
+further dispatch. It does not alter role, model, verification or state ownership.
 
 ## Select and dispatch
 
 Check the current host tool contract, permissions, project routing and task budget.
-Before the first `delegate_task`, call `orchestrator_capabilities` as required by
-the host; repeat only under its stated conditions. Request the full provider,
+When the host selects `delegate_task`, call `orchestrator_capabilities` before the
+first call if the host requires it; repeat only under its stated conditions. Request the full provider,
 model and options required by the project and bind the authorized workspace,
-revision, write scope, dependencies and complete canonical brief. The child is a
-terminal executor: explicitly prohibit nested executors and controllers. Record
+revision, write scope, dependencies and complete canonical brief. Record
 available original task/run handles and binding evidence. If tools, authorization,
 required routing or an independent context are unavailable, report the specific
 gap and stop the dependent dispatch; do not silently switch provider or mechanism.

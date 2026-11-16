@@ -11,7 +11,7 @@ description: >
 `/sdlc` 读取当前状态、选择阶段、编排受控的阶段执行、验证结果并推进。实际工作仍由阶段技能完成；阶段子 Agent
 协作规则唯一见 [`stage-agent-protocol.md`](references/stage-agent-protocol.md)。单个阶段结果不是在已有授权目标内结束编排的信号。
 
-整套阶段技能共用协议中的[运行时选择](references/stage-agent-protocol.md#runtime-selection)：按宿主能力、授权和项目路由选择；T3 主 Agent 可直接调度获授权的 child，受托执行者不得嵌套派工。只加载所选适配说明。
+整套阶段技能共用协议中的[运行时选择](references/stage-agent-protocol.md#runtime-selection)：按宿主合同、授权和项目路由选择；T3 进一步派工遵循[适用边界](references/stage-agent-protocol.md#t3-layer-boundary)。只加载所选适配说明。
 
 当当前阶段实际需要使用 Codex Security 时，按其 [依赖检查](references/integrations/codex-security.md#按需检查执行机器)
 确认执行机器的可用性；缺少工具或配置时说明缺口并提供安装或配置入口。普通 `/sdlc` 工作不因未选用该工具而检查或提醒；

@@ -45,13 +45,16 @@ Requirement: captured → ready → in_delivery → validated → released
 ### 阶段运行时：SCN-t3-stage-dispatch
 
 主 Agent 按[共享协议的运行时选择](skills/sdlc/references/stage-agent-protocol.md#runtime-selection)，
-基于实际宿主能力、当前授权及项目模型路由选择路径。T3 支持且已授权时直接按
-[T3 child 适配说明](skills/sdlc/references/runtime-adapters/t3-code.md)派发；支持 native 的其他宿主可用
-[Codex 原生说明](skills/sdlc/references/runtime-adapters/codex.md)。T3 child 是终端执行者，不再嵌套派工；
+基于实际宿主合同、当前授权及项目模型路由选择路径。选中 app-owned T3 child 时使用
+[T3 child 适配说明](skills/sdlc/references/runtime-adapters/t3-code.md)；获准的 native 宿主可用
+[Codex 原生说明](skills/sdlc/references/runtime-adapters/codex.md)。进一步派工遵循
+[T3 适用边界](skills/sdlc/references/stage-agent-protocol.md#t3-layer-boundary)；
 顶层 thread 只在用户明确要求新会话时创建。三个产品故事分别说明
 [独立阶段](.sdlc-v1/context/REQ-t3-stage-dispatch.product.md#用户故事-1--获授权的主-agent-派发独立阶段p1)、
 [模型证据](.sdlc-v1/context/REQ-t3-stage-dispatch.product.md#用户故事-2--看清模型证据与接受边界p1)和
 [等待与恢复](.sdlc-v1/context/REQ-t3-stage-dispatch.product.md#用户故事-3--正确等待恢复和继续目标p1)。
+
+当前故事 **SCN-t3-nested-delegation** 在上述默认路径上说明按任务明确要求进行有界 T3 进一步派工、逐层汇总和 Desktop 兼容；完整场景及验收见[产品规格](.sdlc-v1/context/REQ-t3-nested-delegation.product.md)。
 
 工具参数与可用能力以当前宿主工具合同为准；provider/model/options 来自目标项目生效路由，工作区、写范围和验收来自
 当前阶段 brief。缺工具、权限、必需路由或独立执行上下文时报告缺口，不静默换路径。主 Agent 核对实际文件、检查、

@@ -18,7 +18,8 @@ contexts retain their current roles.
 - Actual stage work, including a small implementation task, is performed by the
   dispatched child. The main Agent does not treat a brief as completed work.
 - The default hierarchy is one layer: **main Agent → one child Agent**. A child
-  must not fan out, create another lifecycle, or delegate its contract. The main
+  must not fan out, create another lifecycle, or delegate its contract, except
+  for the scoped [T3 layer boundary](#t3-layer-boundary). The main
   Agent may request one or more independent, bounded read-only analyses when it
   records the reason, boundary, and aggregation point first. A further execution
   layer requires the same record. Every layer returns a summary before the main
@@ -41,6 +42,60 @@ unresolved decisions. Those notes are inputs only: they do not write the unified
 current effective solution, change scope, or authorize implementation. The main
 Agent resolves conflicts and records the one current effective solution.
 
+### T3 layer boundary
+
+For T3, a child normally performs its own task. It may dispatch a specific bounded
+subtask only when its current task explicitly requires that dispatch, the current
+host permits the selected mechanism, and routing, authorization and remaining
+resources allow it. A generic “continue”, a tool's availability, an ancestor's
+authority or a template does not request dispatch; an explicit prohibition prevails.
+If a required dispatch is unavailable, report the concrete missing requirement and
+affected work; continue other authorized work. The request identifies the
+authorized executor, bounded subtask and aggregation point. A further layer must
+independently meet these same conditions. The original main Agent names the finite
+objective and aggregation point; no layer creates another lifecycle or expands itself.
+
+Each existing brief conveys a subset of the original goal, readable sources,
+revision, write scope, dependencies, completion and verification conditions,
+allowed transitions, aggregate budget, concurrency, resource ownership and stop
+boundaries. Subtasks share the original total limits; they do not each receive a
+copy. Unknown remaining limits, resource ownership or writer exclusivity stop the
+dependent new launch, not independent authorized work. No layer enlarges file,
+external-action or model permissions. The same two sensitive-material and
+untrusted-content restrictions in §2 accompany every brief.
+
+Each direct superior collects a canonical candidate and preserves the actual
+executor and context, files and revision, commands and exits, unknowns, incomplete
+work and ordered transition requests. It does not claim another's checks as its
+own, accept the global result, change the effective solution or mutate state.
+Requests are subsets of each direct superior's allow-list and the original one.
+Only the original main Agent
+checks the current projection, diff, verification and independence, accepts or
+rejects candidates and applies allowed mutations. A new ID or a check of an old
+candidate does not establish independent validation or review of the current one.
+
+Each layer follows the actual host's `next`, wait and cancellation rules for the
+original handle. A timeout or returned turn proves neither termination nor Goal
+completion. Preserve valid independent results and failure evidence when another
+branch fails; stop only dependent work. An explicit user stop remains controlling.
+On cancellation, stop new launches in the affected branch and use the host's
+authorized control for known owned tasks; do not assume cascading cancellation.
+A cancellation receipt, task termination, owned writing-process termination and
+exclusive resource release are separate facts. Unknown termination forbids
+overlapping writers; do not stop shared or unowned resources. Apply the existing
+resource lifecycle and §5 failure history and diagnosis rules across layers, names
+and providers without resetting them.
+
+The host's current tool contract selects the mechanism. For the machine's
+2026-11-11 T3-hosted Codex with `openai_token_sharing`, native Codex multi-agent
+input (`agent_message` carrying `encrypted_content`) was rejected with
+`subscription_sharing_unsupported_capability` and could pollute thread history.
+If that affected host requires this native path, report the conflict without
+trying it or silently changing mechanism. This history neither proves other T3
+paths unavailable nor proves the failure fixed. A top-level thread is not a child.
+The T3 exception does not alter Codex Desktop's native defaults or model/role
+routing; actual Desktop behavior requires its own evidence.
+
 ### Model responsibilities and specialist lenses
 
 The portable protocol assigns responsibilities, not model names. The main Agent
@@ -62,11 +117,11 @@ Product confirmation and prototype restrictions remain under
 Stage skills select an adapter for each bounded dispatch from the current host's
 actual capabilities, user authorization and target project routing. A supported
 native host uses the [Codex adapter](runtime-adapters/codex.md) when applicable.
-A T3 main Agent directly uses the [T3 Code adapter](runtime-adapters/t3-code.md)
-for an authorized child task, regardless of provider; it does not wrap that task
-in a native child. A top-level thread is a separate user-requested session, not a
-stage child. A T3 child is a terminal executor: its brief prohibits nested
-executors or another controller. Only the selected adapter is needed.
+Follow the actual host contract when selecting a path. When it selects an authorized
+app-owned T3 child, use the [T3 Code adapter](runtime-adapters/t3-code.md) without
+a native wrapper; [T3 layer boundary](#t3-layer-boundary) governs any further
+dispatch. A top-level thread is a separate user-requested session, not a stage
+child. Only the selected adapter is needed.
 
 The main Agent supplies a complete brief, verifies evidence and owns lifecycle
 mutations. Transport does not grant permissions, change required models, roles,
@@ -168,6 +223,14 @@ deliverable, settled dependencies and write scope, or an explicit reason such as
 unavailable runtime; unfinished edits or missing tests alone are not enough. A
 child never edits `.sdlc-v1/state.json` or calls lifecycle mutation commands in
 orchestrated mode.
+
+Only when the current T3 host explicitly requires the original main Agent to fix a
+small review finding, that Agent may do so within the original scope after the
+writer has handed it back and its owned writing has been confirmed stopped. Run
+necessary checks and retain applicable independent review, evidence applicability
+and failure history. Unknown handoff prevents the edit; this exception does not
+transfer unfinished implementation or change Desktop responsibilities. New
+independent reviews and rechecks follow the actual host contract.
 
 New children receive minimal relevant context. In Codex, request `fork_turns="none"`
 when supported, use the repository's configured model/role routing, and report the

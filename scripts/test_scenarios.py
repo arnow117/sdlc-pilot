@@ -427,25 +427,65 @@ T3_CONTRACT_PATHS = {
     "protocol": HERE.parent / "skills/sdlc/references/stage-agent-protocol.md",
     "template": HERE.parent / "skills/sdlc/references/templates/TASK.md",
     "readme": HERE.parent / "README.md",
+    "router": HERE.parent / "skills/sdlc/SKILL.md",
+    "codex": HERE.parent / "skills/sdlc/references/runtime-adapters/codex.md",
 }
 T3_REQUIRED_TOKENS = {
-    "adapter": ("delegate_task", "task_cancel", "terminal executor", "host `next`", "stage-agent-protocol.md"),
+    "adapter": ("delegate_task", "task_cancel", "host `next`"),
     "protocol": ("runtime-adapters/t3-code.md", "host `next`"),
-    "template": ("终端执行者",),
-    "readme": ("SCN-t3-stage-dispatch", "runtime-adapters/t3-code.md"),
+    "template": (),
+    "readme": ("SCN-t3-stage-dispatch", "SCN-t3-nested-delegation"),
+    "router": (),
+    "codex": (),
 }
 T3_OLD_PATH = "Launch idle via `t3_thread_launch`"
+T3_HEADING = "### T3 layer boundary"
+T3_LINKS = {
+    "adapter": "../stage-agent-protocol.md#t3-layer-boundary",
+    "template": "../stage-agent-protocol.md#t3-layer-boundary",
+    "readme": "skills/sdlc/references/stage-agent-protocol.md#t3-layer-boundary",
+    "router": "references/stage-agent-protocol.md#t3-layer-boundary",
+    "codex": "../stage-agent-protocol.md#t3-layer-boundary",
+}
+T3_OBSOLETE_BANS = {
+    "adapter": "terminal executor: explicitly prohibit nested executors",
+    "protocol": "A T3 child is a terminal executor",
+    "template": "T3 child 为终端执行者",
+    "readme": "T3 child 是终端执行者，不再嵌套派工",
+    "router": "受托执行者不得嵌套派工",
+    "codex": "its children must not delegate further",
+}
 
 
-def t3_child_contract_errors(adapter: Path, protocol: Path, template: Path, readme: Path) -> list:
+def t3_child_contract_errors(
+    adapter: Path, protocol: Path, template: Path, readme: Path, router: Path, codex: Path
+) -> list:
     """Check document contract shape; this does not establish live host behavior."""
-    paths = {"adapter": adapter, "protocol": protocol, "template": template, "readme": readme}
+    paths = {
+        "adapter": adapter,
+        "protocol": protocol,
+        "template": template,
+        "readme": readme,
+        "router": router,
+        "codex": codex,
+    }
     texts = {name: path.read_text(encoding="utf-8") for name, path in paths.items()}
     errors = []
     for name, tokens in T3_REQUIRED_TOKENS.items():
         for token in tokens:
             if token not in texts[name]:
                 errors.append(f"{name}: missing {token}")
+    if T3_HEADING not in texts["protocol"].splitlines():
+        errors.append("protocol: missing T3 layer boundary heading")
+    for name, link in T3_LINKS.items():
+        if f"{link})" not in texts[name]:
+            errors.append(f"{name}: missing T3 layer boundary link")
+    for name, phrase in T3_OBSOLETE_BANS.items():
+        inspected = texts[name]
+        if name == "codex":
+            inspected = inspected.split("## Interface map\n", 1)[0]
+        if phrase in " ".join(inspected.split()):
+            errors.append(f"{name}: obsolete unconditional T3 ban")
     if T3_OLD_PATH in texts["adapter"]:
         errors.append("adapter: obsolete affirmative top-level stage path")
     return errors
@@ -477,6 +517,59 @@ class T3ChildContractTest(unittest.TestCase):
                 self.assertEqual(
                     {key: path.read_bytes() for key, path in T3_CONTRACT_PATHS.items()}, originals
                 )
+
+    def test_boundary_references_and_obsolete_bans(self) -> None:
+        originals = {name: path.read_bytes() for name, path in T3_CONTRACT_PATHS.items()}
+        cases = [("protocol", T3_HEADING, "missing T3 layer boundary heading")]
+        cases += [(name, link, "missing T3 layer boundary link") for name, link in T3_LINKS.items()]
+        for name, original, error in cases:
+            for replacement in ("", original + "-wrong"):
+                with self.subTest(document=name, replacement=replacement), tempfile.TemporaryDirectory() as temporary:
+                    copies = {key: Path(temporary) / key for key in originals}
+                    for key, path in copies.items():
+                        path.write_bytes(originals[key])
+                    content = copies[name].read_text(encoding="utf-8")
+                    self.assertIn(original, content)
+                    copies[name].write_text(content.replace(original, replacement), encoding="utf-8")
+                    self.assertIn(f"{name}: {error}", t3_child_contract_errors(**copies))
+        for name, phrase in T3_OBSOLETE_BANS.items():
+            with self.subTest(document=name, ban=True), tempfile.TemporaryDirectory() as temporary:
+                copies = {key: Path(temporary) / key for key in originals}
+                for key, path in copies.items():
+                    path.write_bytes(originals[key])
+                content = copies[name].read_text(encoding="utf-8")
+                if name == "codex":
+                    content = content.replace("## Interface map\n", phrase + "\n\n## Interface map\n")
+                else:
+                    content += "\n" + phrase + "\n"
+                copies[name].write_text(content, encoding="utf-8")
+                self.assertIn(f"{name}: obsolete unconditional T3 ban", t3_child_contract_errors(**copies))
+        self.assertEqual({key: path.read_bytes() for key, path in T3_CONTRACT_PATHS.items()}, originals)
+
+    def test_scoped_desktop_prohibition_and_unknown_capability_are_allowed(self) -> None:
+        originals = {name: path.read_bytes() for name, path in T3_CONTRACT_PATHS.items()}
+        with tempfile.TemporaryDirectory() as temporary:
+            copies = {key: Path(temporary) / key for key in originals}
+            for key, path in copies.items():
+                path.write_bytes(originals[key])
+            with copies["adapter"].open("a", encoding="utf-8") as stream:
+                stream.write(
+                    "\nDesktop children must not fan out under its native default. "
+                    "The capability of `spawn_agent` or `delegate_task` is unknown.\n"
+                )
+            self.assertEqual(t3_child_contract_errors(**copies), [])
+        self.assertEqual({key: path.read_bytes() for key, path in T3_CONTRACT_PATHS.items()}, originals)
+
+    def test_missing_document_surfaces_read_error(self) -> None:
+        originals = {name: path.read_bytes() for name, path in T3_CONTRACT_PATHS.items()}
+        with tempfile.TemporaryDirectory() as temporary:
+            copies = {key: Path(temporary) / key for key in originals}
+            for key, path in copies.items():
+                if key != "router":
+                    path.write_bytes(originals[key])
+            with self.assertRaises(FileNotFoundError):
+                t3_child_contract_errors(**copies)
+        self.assertEqual({key: path.read_bytes() for key, path in T3_CONTRACT_PATHS.items()}, originals)
 
     def test_old_affirmative_path_is_rejected_in_new_copy(self) -> None:
         originals = {name: path.read_bytes() for name, path in T3_CONTRACT_PATHS.items()}
