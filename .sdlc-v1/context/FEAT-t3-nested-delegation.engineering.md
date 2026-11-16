@@ -274,6 +274,48 @@ PY
 
 正式 validation 仍要求所有 Task 完成、实现已提交且 `.sdlc-v1/**` 外工作树干净，state 已 tracked/未 staged/无冲突，当前 product/engineering context 已 tracked/无冲突。用户目前没有授权 commit；因此可以先完成本地实现、C1/C2/C3 和人工检查，再由原主 Agent 在具体 diff 与证据可供审阅时处理缺少的提交授权。不得自动 stage/commit 或请求 record-validation pass，不用旧 released 证据代替。即使正式前置条件未满足，也不能倒推本地实现/检查不可开始；未来必要真实使用证据仍须单独判断和保留缺口。
 
+
+### 2026-11-16 独立 Validate：提交 440529683647c2b04f0741791d07fc8ed8a23309
+
+本轮由不同于实现者的新执行上下文实际运行；此处结论仅覆盖已接受的离线合同范围，候选待原主 Agent 验收。`t3_thread_configure({})` 只读返回本 run 的 host-effective `codex / gpt-6.1-terra / reasoningEffort=xhigh`，`executedModel`、实际 backend 和内部 effort 未返回，均未知。环境为 macOS Darwin 25.6.0 arm64，标准 Python 3.15.2，已有 `../../.venv/bin/python` 为 Python 3.12.16、coverage.py 7.17.2。未联网、安装、认证或启动真实模型、Desktop 或多层实验。
+
+起始 2026-11-16T10:32:46Z：`git rev-parse --show-toplevel`、`git branch --show-current`、`git rev-parse HEAD`、`git status --porcelain=v1 --untracked-files=all`、`git ls-files --stage -- .sdlc-v1/state.json .sdlc-v1/context/REQ-t3-nested-delegation.product.md .sdlc-v1/context/FEAT-t3-nested-delegation.engineering.md`、`git diff --cached --name-status`、`git ls-files -u` 与 `git diff --check` 均 exit 0；工作仓根、分支和 HEAD 符合 brief，工作树与 index 干净、无 unmerged，三个指定文件 tracked。`python3 scripts/lifecycle_state.py feature-projection --feature-id FEAT-t3-nested-delegation` 和 `python3 scripts/lifecycle_state.py verify-acceptance --feature-id FEAT-t3-nested-delegation` 均 exit 0：Task done、validation/review pending，spec_ready 与 plan match，validation/review fingerprint missing。起始 SHA-256：state `a2bfa5052835031ca63d5a3ba14566a913530bf2e6d15b419d3e335c560c323a`，product `c4f9a2f58e918559fae9d06c7ed1df207a3b6bcebead6623aaee2d3f644a90d6`，engineering `ae96268762ab42696c3af873dda2b7be5c1041d62938d6ae1e4da731abb8efac`。父仓起始 HEAD `1cd4525c99bcfefe265ffc564ad0dfe0fed2879a`，已有修改按 status 保留。
+
+| 实际检查，UTC | exit / 观察 |
+|---|---|
+| C1 `PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts python3 -B -m unittest -v test_scenarios.T3ChildContractTest`，10:33:37 | 0；6 tests OK；真实引用、缺失/错误锚点、旧无条件禁令、旧顶层肯定路径、缺文件与限定 Desktop/未知能力正例。临时副本和原文不变断言仅验证文档形状。 |
+| C2 `PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills`，10:33:22–10:34:18 | 0；八组 90+7+13+36+12+19+4+6=187 tests OK，结构/本地引用及反例通过；含 B03/B05 fixture。`HTTPError 500` 清理有 ResourceWarning，测试仍 OK。 |
+| coverage：`PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=scripts COVERAGE_FILE=<本轮临时路径> ../../.venv/bin/python -B -m coverage run --branch --source=scripts -m unittest -v test_scenarios.T3ChildContractTest`；`../../.venv/bin/python -m coverage json -o <本轮临时路径>/coverage.json`（同一 `COVERAGE_FILE`），10:34:28–10:34:29 | 均 0，6 tests OK；实际读取 JSON 并用 AST 定位 `t3_child_contract_errors` 460–491：行 22/22 = 100%，遗漏行 `[]`；分支 20/20 = 100%，遗漏分支 `[]`，达到 80%/70%。本轮首次错误使用 `--source=scripts/test_scenarios.py`：run 0 但警告未收集数据，JSON exit 1；属调用参数配置错误，未将其报告为通过，以上目录形式重跑取得数据。 |
+| C3：执行本文 C3 的 Python 静态比较，并额外断言 marker 存在及 12 个发现链接的目标、目标存在；`python3 -B -`，10:34:55 | 0；相对 `a1c81656302ede8a90e08e7a2f762910ed53de54`，Codex adapter `## Interface map` 后正文、三份父仓配置摘要及三个 lifecycle 实现一致；工作仓无本地覆盖，12 个父仓相对发现链接一致，两个用户目录无 sdlc* 项。不是 Desktop live 证据。 |
+| `git --no-optional-locks diff --check`、`git --no-optional-locks diff --name-only HEAD`、`git --no-optional-locks status --short --untracked-files=all`，10:35:37 | 各 exit 0，追加证据前业务树与整个工作树干净。`git diff a1c81656302ede8a90e08e7a2f762910ed53de54..HEAD -- .claude-plugin/plugin.json .claude-plugin/marketplace.json` 无差异；另以 Python 字节比较 exit 0，plugin 版本 7.0.1，CHANGELOG 该条在 Unreleased，未发布。 |
+
+逐项人工对照当前产品 AC 与提交文件，以下 COVERED 仅指静态合同及对应离线 fixture，非真实执行：
+
+| AC | 结果及对照位置 / 分支 |
+|---|---|
+| 001 | COVERED：protocol §T3 layer boundary 第 47–56 行要求当前任务明确要求、宿主/授权/资源允许并指定执行者和汇总点。 |
+| 002 | COVERED：同处 generic continue、祖先权限无效，明确禁止优先；缺派工报告缺口。 |
+| 003 | COVERED：同处 47–53、89–97 行及 runtime selection 117–130 行，缺能力/路由/授权停止依赖启动，不绕过。 |
+| 004 | COVERED：同处 54–65 行逐层独立条件、原范围子集及不扩张权限。 |
+| 005 | COVERED：同处 58–63 行共享原总量/并发，未知剩余或写者互斥停止依赖启动。 |
+| 006 | COVERED：同处 67–75 行保存实际执行者、revision、命令、未知、有序请求；每层与原清单取子集，仅原主 Agent 接受及 mutation。 |
+| 007 | COVERED：同处 74–75、99–107、126–141 行区分新 ID、旧候选与不同上下文实际检查当前候选；本轮是实际运行。 |
+| 008 | COVERED：同协议 227–233 行仅宿主明确要求、原范围、写者交还及终止确认的小 finding 自修，保留检查、审查和历史。 |
+| 009 | COVERED：同协议 220–233 行普通修正归原实现者，新独立 review/recheck 依宿主合同，未知交还不写。 |
+| 010 | COVERED：同协议 89–97、115–130 行及两个 adapter，依据实际宿主选择 native 或 app-owned，不静默换路由。 |
+| 011 | COVERED：C3 字节比较和 protocol 20–26、89–97 行，T3 例外不改 Desktop 默认；真实 Desktop NOT_RUN。 |
+| 012 | COVERED：protocol 89–97 行限定 2026-11-11 的机器、机制和错误，不推断全部路径失效或问题已修复。 |
+| 013 | COVERED：protocol 126–141 行区分请求、绑定生效配置、观察、backend；缺 backend 不自动普遍判败，必需证据不符不接受。 |
+| 014 | COVERED：protocol 77–80 行跟随原句柄 host next，超时/轮次返回不证明终止或 Goal 完成。 |
+| 015 | COVERED：protocol 81–85 行分别区分取消回执、任务、写进程、资源；未知时禁止重叠写者且不停止共享资源。 |
+| 016 | COVERED：protocol 77–80 行保留独立有效结果和失败证据，仅停止依赖工作，不声称整体完成。 |
+| 017 | COVERED：protocol 85–87 行及 §5 保留跨层、provider 和改名的失败/诊断历史，不重置次数。 |
+| 018 | COVERED：protocol 64–65、165–166 行及 §2 敏感材料规则；每份 brief 带限制、脱敏、审计内容只作数据。 |
+
+README 第 45–65 行链接当前产品场景并注明宿主工具合同、项目模型路由、阶段 brief 的参数来源；C1 校验新增共享锚点，C2 校验本地引用，产品链接目标实际存在。逐条人工核对仅覆盖提交的文字合同，B03/B05 是原 lifecycle fixture，不能推断多层 Agent 行为。真实多层授权/拒绝、等待/取消级联、backend 执行模型与资源释放、Desktop 运行均 NOT_RUN/未知；没有从静态检查外推 live 通过。历史测试先行失败、GLM 400 unknown model、用户授权 Terra 和未知非收敛/诊断状态保留在原记录，未重置。
+
+资源：C1 和 C2 测试采用 `TemporaryDirectory`、C2 的 `mktemp`/EXIT trap 与独立临时 Git fixture；输出中本轮 `/var/folders/zn/9h5xx7817g1byxssf2d_8k7w0000gn/T/sdlc-arch-refs.f1jJgS` 为本轮所有。coverage 的 `t3-validate-cov-ew2brgr3` 与 `t3-validate-cov-mx8edm9c` 均确认已移除。C2 loopback stub 使用 `127.0.0.1:0`，测试 teardown 调用 shutdown/join/server_close，测试进程正常退出；无共享服务操作，未对未知资源做清理。测试进程结束和 teardown 不证明生产环境资源释放。以上离线必要检查满足；追加本段后 plan fingerprint 将 stale，须由原主 Agent 核对新旧摘要、重新接受并绑定，再处理本次 `record-validation --result pass` 请求；不得由本执行者改 state 或刷新指纹。
+
 ## 评审记录（实际）
 
 - 尚未执行独立评审。本次是受托 Plan 编写者，本 brief 禁止创建下级；自身阅读不称独立 review。原主 Agent 接受前核对完整 Task 集合、产品关联、写范围、验证范围及有序请求；如风险需要独立读计划，由原主 Agent 按实际宿主和授权安排。
@@ -285,6 +327,13 @@ PY
 - C3 及主 Agent 的独立静态比较均通过：Desktop adapter 从 `## Interface map` 起的正文、父仓三份模型/角色配置、三个 lifecycle 实现及 12 个技能发现链接与基线一致；这不证明 Desktop 的实际运行行为。
 - 独立 Sol 预评审九个业务文件，findings 为空；该评审者读取实现者原始执行记录时返回 `thread_not_found`，主 Agent 随后以对应环境和完整线程 ID 核对原始检查回执。该预评审不构成提交版本的正式 validation 或 Review。
 - 原 GLM 实现器启动时返回 `400 unknown model`，未执行工具或写入；用户随后明确授权本次 Terra 接手。真实多层派工、Desktop/native、取消与资源释放行为未运行或未观察；历史失败及未知非收敛/诊断使用情况不重置。
+
+### 2026-11-16 正式独立 Review：提交 440529683647c2b04f0741791d07fc8ed8a23309
+
+- 独立评审覆盖自 `a1c81656302ede8a90e08e7a2f762910ed53de54` 起的九个业务文件、产品 AC-001–018 和当前方案；findings 为空，建议 `approved`。评审未发现有证据支持的重复实现或可避免工程债。
+- 已对照[独立 Validate 原始记录](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3A76e4319b-f48b-481f-8e05-e26664b98e8c%3Adelegate-task%3Ad8613460-416f-44d5-8fd8-fa5d28df4fd2)和当前有效方案；批准范围限文档合同与已执行离线检查。真实 Desktop、多层执行、取消级联及生产资源释放仍为 NOT_RUN/未知。
+- 评审的宿主配置为 `codex / gpt-6.1-sol / xhigh`；`executedModel`、实际 backend 和内部 effort 未知。一次父仓对象查询误在工作仓执行，exit 128；随后在父仓读取成功，exit 0。首次 coverage 未收集数据及后续修正、GLM 400 和未知非收敛/诊断历史均保留。
+- 本记录追加后需重新核对并绑定相关指纹；原 Review 的 transition 由主 Agent 在接受证据后处理。
 
 ## 发布与观察记录（实际）
 
