@@ -219,27 +219,27 @@
       "acceptance": {
         "plan": {
           "algorithm": "sha256",
-          "at": "2026-11-16T11:01:00Z",
+          "at": "2026-11-16T12:16:03Z",
           "documents": {
-            ".sdlc-v1/context/FEAT-t3-nested-delegation.engineering.md": "4326be6de4316830080f3e6a5fff936d88e5253b86e357779fce7ef7c4576dbd",
+            ".sdlc-v1/context/FEAT-t3-nested-delegation.engineering.md": "112a9db45f551f0c42b1e873a1f7152f5334663c87f76627547d98bf976f279e",
             ".sdlc-v1/context/REQ-t3-nested-delegation.product.md": "c4f9a2f58e918559fae9d06c7ed1df207a3b6bcebead6623aaee2d3f644a90d6"
           },
           "normalization": "context-v1"
         },
         "review": {
           "algorithm": "sha256",
-          "at": "2026-11-16T11:01:01Z",
+          "at": "2026-11-16T12:16:03Z",
           "documents": {
-            ".sdlc-v1/context/FEAT-t3-nested-delegation.engineering.md": "4326be6de4316830080f3e6a5fff936d88e5253b86e357779fce7ef7c4576dbd",
+            ".sdlc-v1/context/FEAT-t3-nested-delegation.engineering.md": "112a9db45f551f0c42b1e873a1f7152f5334663c87f76627547d98bf976f279e",
             ".sdlc-v1/context/REQ-t3-nested-delegation.product.md": "c4f9a2f58e918559fae9d06c7ed1df207a3b6bcebead6623aaee2d3f644a90d6"
           },
           "normalization": "context-v1"
         },
         "validation": {
           "algorithm": "sha256",
-          "at": "2026-11-16T11:01:00Z",
+          "at": "2026-11-16T12:16:03Z",
           "documents": {
-            ".sdlc-v1/context/FEAT-t3-nested-delegation.engineering.md": "4326be6de4316830080f3e6a5fff936d88e5253b86e357779fce7ef7c4576dbd",
+            ".sdlc-v1/context/FEAT-t3-nested-delegation.engineering.md": "112a9db45f551f0c42b1e873a1f7152f5334663c87f76627547d98bf976f279e",
             ".sdlc-v1/context/REQ-t3-nested-delegation.product.md": "c4f9a2f58e918559fae9d06c7ed1df207a3b6bcebead6623aaee2d3f644a90d6"
           },
           "normalization": "context-v1"
@@ -250,17 +250,17 @@
       "engineering_context_ref": ".sdlc-v1/context/FEAT-t3-nested-delegation.engineering.md",
       "id": "FEAT-t3-nested-delegation",
       "release": {
-        "at": null,
-        "commit": null,
-        "status": "pending"
+        "at": "2026-11-16T12:16:03Z",
+        "commit": "4922c2830385600dc6f2c9b3c2ff0360e276d9f4",
+        "status": "released"
       },
       "requirement_id": "REQ-t3-nested-delegation",
       "review": {
-        "at": "2026-11-16T11:01:01Z",
+        "at": "2026-11-16T12:16:03Z",
         "by": "Codex Sol independent reviewer",
         "decision": "approved"
       },
-      "status": "reviewed",
+      "status": "released",
       "tasks": {
         "TASK-t3-nested-contract": {
           "depends_on": [],
@@ -270,11 +270,11 @@
           "updated_at": "2026-11-16T10:22:56Z"
         }
       },
-      "updated_at": "2026-11-16T11:01:01Z",
+      "updated_at": "2026-11-16T12:16:03Z",
       "validation": {
-        "at": "2026-11-16T11:01:00Z",
+        "at": "2026-11-16T12:16:03Z",
         "command": "PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills",
-        "commit": "440529683647c2b04f0741791d07fc8ed8a23309",
+        "commit": "4922c2830385600dc6f2c9b3c2ff0360e276d9f4",
         "result": "pass"
       }
     },
@@ -439,9 +439,9 @@
       "id": "REQ-t3-nested-delegation",
       "priority": "P1",
       "product_context_ref": ".sdlc-v1/context/REQ-t3-nested-delegation.product.md",
-      "status": "validated",
+      "status": "released",
       "title": "按需 T3 多层派工与桌面兼容",
-      "updated_at": "2026-11-16T11:01:01Z"
+      "updated_at": "2026-11-16T12:16:03Z"
     },
     "REQ-t3-stage-dispatch": {
       "acceptance": {
