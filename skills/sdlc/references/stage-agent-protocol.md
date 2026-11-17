@@ -142,6 +142,33 @@ independent read-only responsibility.
 
 ## 2. Dispatch contract
 
+### Dispatch unit and acceptance scope
+
+Select an independently acceptable stage deliverable, rather than an individual
+file, check, or tool call. For tracked Build, use a planned Task or an independently
+acceptable increment already defined in the current effective solution. Identify
+its stage, Feature/Task, observable result and return conditions through the
+existing brief fields; adding a Task ID does not make an internal step a separate
+deliverable. The existing qualified preparation batch remains available.
+
+Before dispatch, the main Agent checks the proposed outcome and verification
+against the applicable stage requirements, product context and current effective
+solution (or the authorized evolve brief). A brief may clarify those requirements;
+it must not silently add acceptance conditions, supported deployment combinations,
+or fault matrices. A newly observed defect within the contract returns to its
+implementer. A risk requiring a material contract change first follows the current
+effective solution and `supersedes` rules below, preserving existing authorization,
+required protections and deferred product work. Record the concrete requirement,
+supported-environment risk or observed failure that makes the change necessary.
+
+Group related read-only analysis by the decision it resolves and the point where
+its findings will be used. A new analysis assignment needs a distinct question or
+independence requirement; each finding does not automatically require a new
+analysis, plan and review chain. Coordination reads needed to dispatch or accept
+work remain with the main Agent. An orchestration-only instruction does not turn
+each such read into a child task; actual stage execution retains its assigned
+owner and applicable runtime rules.
+
 Every child receives a complete current brief. Use
 [`templates/TASK.md`](templates/TASK.md) as a message shape when useful; it is an
 optional prompt template, never a stored task card or another progress record.
@@ -217,12 +244,16 @@ interface conflict, authorization gap, or write-scope conflict. A runtime with
 child capability still uses one child for a small actual work item; only the stated
 inline fallback applies when that capability is absent.
 
-The same implementer owns implementation, necessary tests, and corrections until
-the work item is accepted. A replacement needs an independently verifiable
-deliverable, settled dependencies and write scope, or an explicit reason such as an
-unavailable runtime; unfinished edits or missing tests alone are not enough. A
-child never edits `.sdlc-v1/state.json` or calls lifecycle mutation commands in
-orchestrated mode.
+The same implementer owns implementation, necessary tests, corrections, and the
+unit's candidate/evidence preparation until the work item is accepted. Ordinary
+implementation choices and test steps remain internal to that assignment; an
+intermediate report does not transfer ownership or create another dispatch unit.
+A replacement needs an independently verifiable deliverable, settled dependencies
+and write scope, or an explicit reason such as an unavailable runtime; unfinished
+edits or missing tests alone are not enough. Required independent Validate/Review
+and the later Ship unit retain their separate responsibilities. A child never
+edits `.sdlc-v1/state.json` or calls lifecycle mutation commands in orchestrated
+mode.
 
 Only when the current T3 host explicitly requires the original main Agent to fix a
 small review finding, that Agent may do so within the original scope after the
@@ -599,6 +630,12 @@ The main Agent selects bounded integration checks from the relevant user journey
 recovery/concurrency behavior, and permission isolation; it may use a small set or
 run them serially instead of mechanically splitting roles. A child supplies
 reproducible evidence and coverage gaps; the main Agent chooses the repair order.
+Concentrate formal Validate and Review at the planned candidate boundaries. A
+local correction does not by itself require a new planning pass, full packaging,
+or full review cycle: use the affected scope and evidence-applicability rules in
+[section 5](#5-evidence-git-and-mandatory-stop), while retaining required independent
+checks on the current candidate. New independent reviews and rechecks still use
+the selected host's required mechanism.
 Review is read-only with respect to implementation. When the runtime can create an
 actually independent reviewer, the main Agent dispatches one after implementation.
 If it cannot, it records a serial fallback and never labels it independent. Review
