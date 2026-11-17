@@ -11,6 +11,7 @@
 
 - `goal` 写可观察结果；`out_of_scope` 明确未授权范围；`settled_interfaces` 只写已定 API、DTO、所有权或兼容性合同。
 - `context_refs` 指向当前项目、产品、工程上下文和已有证据；详细背景放在这些权威位置，不在 brief 重复粘贴。
+- 按[交付单位与验收范围](../stage-agent-protocol.md#dispatch-unit-and-acceptance-scope)选择完整工作，用现有 `goal`、`completion_conditions`、`required_verification` 说明交付物、交回条件和必要检查；内部步骤不各自派单，新增验收要求不能只写在 brief 中。
 - `allowed_transitions` 只列当前已获授权的、有序 lifecycle 请求；没有时保留空列表。`--repo` 由主 Agent 固定，子 Agent 不提供或覆盖。
 - T3 brief 按[适用边界](../stage-agent-protocol.md#t3-layer-boundary)写明当次任务要求、有限授权和汇总责任；其他宿主遵循其 adapter。
 - 模型选择与独立性由宿主 adapter 记录，不把 `qa`、`security` 等专业视角当作运行时角色。canonical 结果仍只使用本模板和阶段协议已有字段。
