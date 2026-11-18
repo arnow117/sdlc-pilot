@@ -12,7 +12,7 @@ distilled-from:
 
 供 sdlc-pilot 的 role 卡（server-dev / client-dev）、validate/correctness、build TDD、ai-readiness（LSP 维度）按语言加载。命令均已在本机用 `uvx` 验证过 flag，可直接照抄。
 
-> 工具基线：`test=pytest`（+`pytest-cov`，覆盖率阈值用 `--cov-fail-under`）；`lint=ruff`（兼容 flake8 规则）+ 格式化 `ruff format`（或 `black`）；`typecheck=mypy`；`lsp=pyright`（或 `pylsp`）。
+> 工具基线：`test=pytest`（需要覆盖率时可用 `pytest-cov`）；`lint=ruff`（兼容 flake8 规则）+ 格式化 `ruff format`（或 `black`）；`typecheck=mypy`；`lsp=pyright`（或 `pylsp`）。
 > 推荐用 `uv` 管理：`uv run pytest …` / `uvx ruff …`，免污染全局环境。
 
 ## 语言陷阱（常见 pitfall + 怎么防）
@@ -64,11 +64,11 @@ pytest -m "not slow"                   # 按 marker 筛
 pytest --cov=<pkg> --cov-report=term-missing
 uvx --with pytest-cov pytest --cov=<pkg> --cov-report=term-missing   # 临时环境
 
-# 覆盖率检查（CI / validate/correctness 用，低于阈值 exit 非 0）
+# 阈值检查示例：项目已明确约定采用 80
 pytest --cov=<pkg> --cov-branch --cov-fail-under=80
 ```
 
-把 `<pkg>` 换成被测包/`apps` 目录名。建议在 `pyproject.toml` 的 `[tool.pytest.ini_options].addopts` 固化 `--strict-markers --cov=<pkg> --cov-report=term-missing`。
+把 `<pkg>` 换成被测包/`apps` 目录名。覆盖率和阈值按 [correctness 规则](../validate-modes/correctness.md#5-覆盖率阈值)及项目既有配置选用。
 
 ## Lint（linter + 确切命令）
 
@@ -126,7 +126,6 @@ ai-readiness「LSP 就绪」判定：仓库能用 `pyright`（或 `pylsp`）跑�
 - **测试客户端：** 普通视图用 `client`（`client.force_login(user)` 跳登录）；DRF 用 `rest_framework.test.APIClient`（`force_authenticate(user=...)`）。URL 一律 `reverse('ns:name')`，别硬编码路径。
 - **外部服务（Stripe/邮件等）必 mock：** `@patch('apps.payments.services.stripe')`；邮件断言用 `django.core.mail.outbox`（配 `locmem` backend 或 `@override_settings`）。
 - **必测权限/授权**：未登录应 302 跳登录或 401。
-- 覆盖率阈值同样用 `pytest --cov=apps --cov-fail-under=80`；分层目标参考 models 90%+ / views 80%+。
 - Django pitfall 补充：测试别打生产库；别测 Django/三方内部；`full_clean()` 才触发 model 字段校验（`save()` 默认不校验）。
 
 ## 接入 sdlc
@@ -136,10 +135,5 @@ ai-readiness「LSP 就绪」判定：仓库能用 `pyright`（或 `pylsp`）跑�
   ```bash
   pytest -x            # 或 uv run pytest -x ；Django: pytest -x（已配 DJANGO_SETTINGS_MODULE）
   ```
-- **validate / correctness 用这条 coverage 命令（低于阈值即判负）：**
-  ```bash
-  pytest --cov=<pkg> --cov-branch --cov-fail-under=80
-  # Django: pytest --cov=apps --cov-branch --cov-fail-under=80
-  ```
-  并行接 lint+type 检查：`ruff check . && ruff format --check . && mypy <pkg>`。
+- **覆盖率（适用时）**：使用上方 `pytest-cov` 入口与已约定阈值，Django 的被测包可为 `apps`。lint 和类型检查用 `ruff check . && ruff format --check . && mypy <pkg>`。
 - **ai-readiness LSP 维度：** `pyright`（或 `pylsp`）可跑 + 有 `pyproject.toml`/`pyrightconfig.json` → 判就绪。

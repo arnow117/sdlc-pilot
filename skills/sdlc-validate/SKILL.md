@@ -9,8 +9,9 @@ description: >
 
 ## Orchestrated mode
 
-遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。validate Agent 不修改实现或 state，只记录
-验证证据和请求 `record-validation`；主 Agent 核对运行输出、当前 commit 与工作树后执行。产品 `eval-bench` 仍按实际
+遵循 [`stage-agent-protocol.md`](../sdlc/references/stage-agent-protocol.md)。validate Agent 按
+[correctness 的候选边界](../sdlc/references/validate-modes/correctness.md#核心原则)执行检查，不修改被测候选或 state，只记录验证证据并请求
+`record-validation`；主 Agent 核对运行输出、当前 commit 与工作树后执行。产品 `eval-bench` 仍按实际
 改动面选择，不增加新的行为评估流程。配置运行时支持独立执行者时，由与实现者不同的执行者实际运行当前候选的必要检查；
 模型映射与不可用 fallback 按协议的[运行时选择](../sdlc/references/stage-agent-protocol.md#runtime-selection)读取所选适配；T3 run 完成不能代替独立验证。
 
@@ -65,11 +66,11 @@ description: >
 2. 读取 [`Global usage-document, story, and parameter contract`](../sdlc/references/lifecycles/software-delivery.md#11-global-usage-document-story-and-parameter-contract)，并为受影响的故事按当前文档选择代表目标、参数来源和实际操作证据。
 3. 根据 [`role-routing.md`](../sdlc/references/role-routing.md) 选择验证方式，并读取对应 `validate-modes/*.md`。
    选择 `security-scan` 时按其契约检查实际执行、版本、范围、原生产物和未覆盖项；需要 Codex Security 时读取其适配说明，不能以依赖探针或 dry-run 代替扫描。
-4. 逐条验证产品验收条件，并按“验收条件与证据对应”记录；同时运行相关单元测试、类型检查、构建和必要的端到端检查。实际使用为未运行或失败时，不能写成通过。合成或局部真实目标是环境/数据范围：相关检查可在明确该范围时通过，但不得外推为 live、部署或真人试用通过。若本次独立 Validate 的覆盖率命令确实运行了完整相关单元套件，它可同时证明覆盖率和该套件；在同一证据条目记录一次即可，不为报告格式重跑相同命令。Build 的通过不能替代这次独立运行；源码或配置改变、失败、缺少证据或阶段特有需要时，仍按影响重验。
+4. 优先在当前候选验证主流程的实际结果，按“验收条件与证据对应”核对必要边界及其他产品条件。执行适用的单元测试、类型检查、构建、端到端检查和项目要求的完整回归。根据[覆盖率规则](../sdlc/references/validate-modes/correctness.md#5-覆盖率阈值)确定覆盖率是否必检。合成或局部真实检查按实际环境和数据记录结果，不外推为 live、部署或真人试用通过。覆盖率命令实际运行了完整相关单元套件时，同一证据可支持两项检查。Build 的通过不能替代独立验证，按阶段协议核对证据适用性和重验范围。
    若检查会启动服务、浏览器、模拟器、容器、VM 或明显占用主机资源，按唯一的
    [验证资源生命周期](../sdlc/references/stage-agent-protocol.md#verification-resource-lifecycle)记录必要的收尾和资源状态。
 5. 按上面的归因规则记录本轮证据到研发上下文。
-6. 任一必要检查失败、受阻或证据不足，都请求 `record-validation --result fail`；实际执行过时附 `--test-command <command>`，全部未运行时省略该参数并在上下文写明原因。这里的 `fail` 只表示未通过必要验证，不代表已证明代码有错。主 Agent 按允许的 lifecycle 命令记录后，按归因决定修复实现、解决环境或补证据；不要仅凭 `fail` 自动重做实现。Task 均为 done 时，当前 `next` 仍选择 validate。只有已确认需要实现修复时，才按[Task 状态错误输出与恢复](../sdlc/references/lightweight-runtime.md#task-状态错误输出与恢复)将相关 Task 合法地恢复为 `in_progress`，再进入 build；`ENV_BLOCKED` 本身不触发该转换。
+6. 任一必要检查失败、受阻或证据不足，都请求 `record-validation --result fail`；实际执行过时附 `--test-command <command>`，全部未运行时省略该参数并在上下文写明原因。这里的 `fail` 只表示未通过必要验证，不代表已证明代码有错。主 Agent 记录后按归因解决问题。仅需修复临时环境时保留原 Task 状态，补验受影响的检查。已确认需要修改候选实现、仓库内测试或被测配置时，按[Task 状态错误输出与恢复](../sdlc/references/lightweight-runtime.md#task-状态错误输出与恢复)恢复相关 Task，由原实现者修正并验证新版。
 7. 全部必要检查通过，且 `.sdlc-v1/**` 之外的业务代码工作树干净时，在 orchestrated mode 请求；只有独立、
    不在主 Agent 编排中的 standalone mode 才直接调用：
 

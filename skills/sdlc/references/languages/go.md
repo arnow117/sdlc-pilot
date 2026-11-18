@@ -49,7 +49,7 @@ go test ./...
 # 单测 + race（build TDD 的主要检查，强烈建议默认带 -race）
 go test -race ./...
 
-# 单测 + race + 覆盖率（一条命令同时给 build 与 correctness 用）
+# 项目需要采集覆盖率时，可与 race 检查同次运行
 go test -race -cover ./...
 
 # 跑某个测试 / 某个子测试
@@ -109,7 +109,7 @@ golangci-lint run --fix ./...
 | 钩子 | 用哪条命令 |
 |------|-----------|
 | **build（TDD 绿灯）** | `go test -race ./...`（编译 + 测试 + 竞态一把过；race 是 Go 的强信号，默认开） |
-| **validate / correctness（覆盖率检查）** | `go test -race -coverprofile=coverage.out ./...` 后 `go tool cover -func=coverage.out`；取 `total` 行百分比与阈值比较（general 80% / public API 90% / 关键逻辑 100%，见 ECC 覆盖表）。解析命令：`go tool cover -func=coverage.out \| grep total \| awk '{print $3}'` |
+| **覆盖率（按 [correctness 规则](../validate-modes/correctness.md#5-覆盖率阈值)选用）** | `go test -race -coverprofile=coverage.out ./...` 后用 `go tool cover -func=coverage.out` 获取语句覆盖统计。采用该指标时按项目约定比较。 |
 | **lint 检查** | `gofmt -l .`（非空即失败）+ `go vet ./...` + `golangci-lint run ./...`（装了则强制，未装则降级到前两条） |
 | **ai-readiness（LSP）** | `gopls version` 可用 ⇒ 就绪 |
 | **role 卡归属** | **server-dev**。Go 在本族主要承载后端/CLI/服务（net/http、gRPC、database/sql、并发服务）。无前端浏览器渲染面，不归 client-dev |

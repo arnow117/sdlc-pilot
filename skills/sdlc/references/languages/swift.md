@@ -161,10 +161,10 @@ ai-readiness 的 "LSP 就绪" 维度判断要点：
 | 环节 | SwiftPM 包 | Xcode 工程 |
 |------|-----------|-----------|
 | **build（TDD 跑测试）** | `swift test`（迭代）/ `swift test --filter <name>`（聚焦） | `xcodebuild test -scheme <S> -destination '<dest>'` |
-| **validate/correctness（coverage 检查）** | `swift test --enable-code-coverage` → `swift test --show-code-coverage-path` 取 profdata → `xcrun llvm-cov report` 算覆盖率 | `xcodebuild test ... -enableCodeCoverage YES -resultBundlePath <p>` → `xcrun xccov view --report --json <p>` 算覆盖率 |
+| **覆盖率（适用时）** | `swift test --enable-code-coverage` → `swift test --show-code-coverage-path` 取 profdata → `xcrun llvm-cov report` 算覆盖率 | `xcodebuild test ... -enableCodeCoverage YES -resultBundlePath <p>` → `xcrun xccov view --report --json <p>` 算覆盖率 |
 | **lint 检查** | `swiftlint lint --strict`（违规即非零退出） | 同左 |
 | **role 卡** | **client-dev**（iOS / 移动端面） | **client-dev** |
 
 build 阶段默认用 `swift test`（SPM）或 `xcodebuild test`（Xcode 工程，需 scheme + destination）。
-validate/correctness 的覆盖率检查：SPM 走 `llvm-cov`，Xcode 走 `xccov --json`。
+覆盖率按 [correctness 规则](../validate-modes/correctness.md#5-覆盖率阈值)选择。SPM 走 `llvm-cov`，Xcode 走 `xccov --json`。
 lint 检查统一用 `swiftlint lint --strict`。

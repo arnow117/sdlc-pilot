@@ -15,7 +15,8 @@ Decision = resolve(
 ```
 
 `.sdlc-v1/project.md` 的 surface map 是项目特化输入，路径映射优先于本文件的通用规则。本文件负责未覆盖路径和跨区域补充。
-项目配置可以细化范围，但不能免除适用验证方式的必要检查或工具要求。改动实际影响 Web 或移动 App 用户旅程时，
+路径和扩展名用于发现候选角色和专项验证方式。根据实际受影响的入口、业务结果和验收条件选择模式，保留项目明确要求的检查。
+已选验证方式的必要检查和工具要求适用。改动实际影响 Web 或移动 App 用户旅程时，
 必须包含对应的 `e2e:Web` 或 `e2e:App`，并遵循 [Web 验证约束](validate-modes/e2e.md#web) 或
 [App 验证约束](validate-modes/e2e.md#app)；不能因项目已有其他测试工具而降级。
 
@@ -27,9 +28,9 @@ Decision = resolve(
 1. 产品澄清阶段先读取原始请求和产品上下文。请求包含页面、组件、表单、导航、空态、loading/error 反馈、响应式、
    无障碍或视觉方向时加入 `design`，即使还没有代码 diff；纯后端且不影响用户可见交互时不加入。
 2. 取得改动文件：工作区使用 `git diff --name-only HEAD`；已提交分支使用 `git diff --name-only <base>...HEAD`。
-3. 每个路径先匹配 `project.md` surface map，合并其 roles 与 modes。
-4. 未匹配的路径使用下表；一条路径可命中多条规则，结果取并集。
-5. 任意代码 diff 至少加入 `qa + correctness`。
+3. 每个路径先匹配 `project.md` surface map，收集 roles 与 modes，并识别项目明确要求的验证。
+4. 未匹配的路径使用下表；一条路径可命中多条规则，合并相关角色与候选模式。按真实影响确认候选专项。例如，服务端 Kotlin 本身由服务端和接口要求决定验证。
+5. 任意代码 diff 至少加入 `qa + correctness`，执行项目约定的适用回归。
 6. 命中两个以上不同 surface，或需要 full-chain e2e 时加入 `architect`。
 7. 认证、授权、支付、密钥、个人数据、原始 SQL、文件系统或外部输入发生变化时加入 `security`；按受影响的安全义务评估并选择 `security-scan`，具体工具与模型调用另按授权决定。
 8. 产品澄清阶段默认加入 `product-owner`；术语、业务规则或归属复杂时加入 `domain-expert`。
@@ -40,7 +41,7 @@ Decision = resolve(
 
 ## 2. 通用路径规则
 
-| 改动路径或信号 | 角色 | validate modes | 说明 |
+| 改动路径或信号 | 候选角色 | 候选 validate modes | 说明 |
 |---|---|---|---|
 | `**/*.tsx`、`**/*.jsx`、`**/*.vue`、`**/*.svelte`、`**/*.css`、`**/components/**`、`**/pages/**` | `client-dev`, `design` | `correctness`, `e2e:Web` | Web 行为、视觉、响应式与无障碍 |
 | `**/*.swift`、`**/*.kt`、`**/*.dart`、`ios/**`、`android/**`、`mobile/**` | `client-dev`, `design` | `correctness`, `e2e:App` | 原生或跨端应用 |

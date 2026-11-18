@@ -58,10 +58,12 @@ describe('calculateTotal', () => {
 })
 ```
 
-### Coverage（validate/correctness 覆盖率检查）
+### Coverage
+
+按 [correctness 的覆盖率规则](../validate-modes/correctness.md#5-覆盖率阈值)选用项目现有入口。
 
 ```bash
-# vitest（需装 @vitest/coverage-v8，配置里设 coverage.thresholds）
+# vitest（需 @vitest/coverage-v8）
 npx vitest run --coverage
 
 # jest（内置 coverage）
@@ -71,11 +73,13 @@ npx jest --coverage
 npx nyc <test-command>
 ```
 
-阈值设在配置文件里更稳（避免 CLI flag 漂移）：vitest 在 `vitest.config.ts` 的
+覆盖率列为必检时优先读取项目配置中的阈值。vitest 在 `vitest.config.ts` 的
 `test.coverage.thresholds`（`lines/functions/branches/statements`）；jest 在
 `jest.config` 的 `coverageThreshold.global`。低于阈值时进程非零退出，可直接作为失败结果。
 
-### E2E：Playwright（client-dev / 关键用户流）
+### Playwright 补充检查
+
+正式 Web 旅程遵循 [Web 验证约束](../validate-modes/e2e.md#web)。项目已有的 Playwright 套件可补充专项浏览器检查。
 
 ```bash
 # 首次装浏览器
@@ -135,8 +139,8 @@ correctness 检查，build/validate 都应运行。
 | 用途 | 命令 | 归属 role 卡 |
 |---|---|---|
 | build TDD 跑测 | `npx vitest run`（或 `npx jest`） | — |
-| validate/correctness 覆盖率检查 | `npx vitest run --coverage`（或 `npx jest --coverage` / `npx nyc <cmd>`），阈值配在 config 里 | — |
+| 覆盖率（适用时） | `npx vitest run --coverage`（或 `npx jest --coverage` / `npx nyc <cmd>`），使用项目已约定的范围与阈值 | — |
 | 类型检查 | `npx tsc --noEmit` | — |
 | lint 检查 | `npx eslint .` | — |
-| E2E（关键流验证） | `npx playwright test` | **client-dev** |
+| Web E2E | 按 [Web 验证约束](../validate-modes/e2e.md#web)运行主框架。已有 Playwright 可用 `npx playwright test` 补充 | **client-dev** |
 | role 归属 | 后端 Node/Express/API → **server-dev**；前端 React/Next/浏览器 → **client-dev**（同仓两端则两张卡都加载本包） |

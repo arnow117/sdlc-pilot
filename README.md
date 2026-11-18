@@ -82,6 +82,8 @@ Feature 阶段变化本身不触发 Onboard。
 输入变化、失败、证据缺失或阶段另有要求时执行相应检查。详见
 [`阶段协作协议`](skills/sdlc/references/stage-agent-protocol.md#5-evidence-git-and-mandatory-stop)。
 完整 coverage 若实际运行同一相关 unit suite，可以记录一次满足两个目的；提交身份变化本身不要求重跑。独立 Validate 仍须对当前候选实际执行。
+验收以实际主流程、必要边界和项目要求的完整回归为依据。覆盖率默认用于发现漏测，项目或当次交付明确约定时才按数值判定对应环节。
+适用范围、证据复用和发布前检查见[覆盖率规则](skills/sdlc/references/validate-modes/correctness.md#5-覆盖率阈值)。
 生命周期 CLI 不会因 `.sdlc-v1` 上下文文字的语义变化自动失效既有验证；主 Agent 必须按
 [evidence applicability 规则](skills/sdlc/references/stage-agent-protocol.md#context-prose-and-evidence-applicability)
 重新判断当前要求是否仍被覆盖。

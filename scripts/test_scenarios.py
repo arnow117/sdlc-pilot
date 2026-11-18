@@ -195,7 +195,7 @@ def prepare(repo: Path, scenario: str, *, coverage_python: Path | None = None) -
         )
     else:
         coverage_command = "none"
-        coverage_note = "\nCoverage tool unavailable in this fixture; default correctness coverage is NOT_RUN.\n"
+        coverage_note = "\nThis fixture does not require numeric coverage. No coverage tool is configured.\n"
     project = f"""# Project context: local Python CLI
 
 This repository contains a single-module Python standard-library CLI. The checked-out
@@ -307,6 +307,9 @@ at review. Other verification resources and context sources: none.
 def reference(repo: Path, scenario: str) -> None:
     """Scripted lifecycle transitions are not independent Agent validation/review."""
     if scenario == "B01":
+        project = (repo / ".sdlc-v1/project.md").read_text(encoding="utf-8")
+        if "## Coverage" in project.splitlines():
+            raise ValueError("B01 scripted reference requires a fixture without a coverage threshold")
         (repo / "cli.py").write_text(SOLUTION, encoding="utf-8")
         result, command = run_check(repo, [sys.executable, "-m", "unittest", "-q", "test_cli"])
         assert result.returncode == 0
@@ -315,8 +318,8 @@ def reference(repo: Path, scenario: str) -> None:
         commit(repo, "implement CLI")
         with (repo / ".sdlc-v1/context/engineering.md").open("a", encoding="utf-8") as stream:
             stream.write(
-                "Scripted reference transitions only; independent validation and review "
-                "and default correctness coverage are NOT_RUN.\n"
+                "Scripted reference transitions only; independent validation, independent review, "
+                "and coverage measurement are NOT_RUN.\n"
             )
         cli(repo, "record-validation", "--feature-id", FEATURE, "--result", "pass", "--test-command", command)
         cli(repo, "record-review", "--feature-id", FEATURE, "--decision", "approved", "--by", "scripted reference")
@@ -678,6 +681,17 @@ class ScenarioTest(unittest.TestCase):
             test_support.git(repo, "add", ".sdlc-v1")
             test_support.git(repo, "commit", "-m", "handoff")
             assert_result(self, repo, "B01", initial)
+
+    def test_b01_scripted_reference_rejects_required_coverage(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = Path(temporary) / "repo"
+            initial = prepare(repo, "B01", coverage_python=Path(sys.executable))
+
+            with self.assertRaisesRegex(ValueError, "B01 scripted reference requires a fixture without a coverage threshold"):
+                reference(repo, "B01")
+
+            self.assertEqual(lifecycle.load(repo), initial["state"])
+            self.assertFalse((repo / "cli.py").exists())
 
     def test_business_write_boundary_rejects_added_file(self) -> None:
         for scenario in REQUESTS:
