@@ -1,7 +1,7 @@
 # Codex runtime adapter
 
 > distilled-from: session:sdlc-codex-compat-2026-06-17
-> updated: 2026-11-10
+> updated: 2026-11-18
 
 This reference maps the portable protocol to currently available Codex tools. It
 does not define lifecycle, dispatch, result, acceptance, or checkpoint semantics;
@@ -52,16 +52,18 @@ model settings; an installation of this skill alone does not provide them.
 
 | SDLC responsibility | Codex role | Configured model and effort |
 |---|---|---|
-| Product decisions, Plan acceptance, lifecycle acceptance, final acceptance | primary Agent | `gpt-6.1-sol` / `xhigh` |
-| Actual Backlog → Spec → Plan preparation batch | fresh Sol stage child | `gpt-6.1-sol` / `xhigh` |
+| Product decisions, Plan acceptance, lifecycle acceptance, final acceptance | primary Agent | `gpt-6.2-sol` / `xhigh` |
+| Actual Backlog → Spec → Plan preparation batch | fresh Sol stage child | `gpt-6.2-sol` / `xhigh` |
 | One complete Build Task and its in-scope corrections | `worker` | `gpt-6.1-terra` / `xhigh` |
 | Independent Validate of the current candidate | fresh `worker` distinct from the implementer | `gpt-6.1-terra` / `xhigh` |
-| Independent read-only Review | `reviewer` | `gpt-6.1-sol` / `xhigh` |
+| Independent read-only Review | `reviewer` | `gpt-6.2-sol` / `xhigh` |
 | Ship execution after the required approval | Terra execution Agent selected for the accepted delivery unit | `gpt-6.1-terra` / `xhigh` |
 
 The main Agent explicitly requests these roles when the runtime supports them and
-records any deviation from the configured model or effort. If a required Terra
-implementer or independent Terra validator cannot be created, it reports that
+records any deviation from the configured model or effort. An already-running
+session or loaded role may retain an earlier model; verify the effective settings
+instead of inferring them from the role name or the updated configuration. If a
+required Terra implementer or independent Terra validator cannot be created, it reports that
 concrete limitation and does not silently substitute Sol work or call the outcome
 independent. If an independent Sol reviewer is unavailable, it likewise discloses a
 non-independent fallback. Authorized read-only analysis and simple documentation
