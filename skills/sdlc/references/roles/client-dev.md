@@ -164,8 +164,7 @@ distilled-from:
 | **sdlc-spec** | 对前端/移动需求把"状态态、a11y、性能预算（CWV/bundle）、离线行为"写进 spec 的验收点；点出跨端差异 |
 | **sdlc-plan** | 提醒任务拆出"状态建模 / 性能 / a11y / 跨端"独立验收项，而非笼统"做个页面" |
 | **sdlc-build** | diff 命中前端/移动 glob → 加载本卡作为 TDD/实现时的自查镜（按上面清单写测试 + 实现） |
-| **sdlc-validate** | 触发 **correctness**（组件/widget 单测 + 覆盖率）；前端面改动触发 **e2e（Web/App）模式**；用本卡判断 e2e 旅程该覆盖哪些状态/断点 |
+| **sdlc-validate** | 按 **correctness** 验证相关组件行为。实际影响 Web 或 App 用户旅程时，按对应 e2e 模式验证本次涉及的状态和断点。覆盖率按 [correctness 规则](../validate-modes/correctness.md#5-覆盖率阈值)选择。 |
 | **sdlc-review** | 当前 review Agent 按“常见翻车”表逐条核，返回 severity、confidence 与证据；不自行派工或强制生成每角色评审文件 |
 
-> 路由对照（见 `role-routing.md`）：`*.tsx/*.vue/*.css/components/**` → client-dev + design + e2e:Web；
-> `*.swift/*.kt/*.dart/ios/**/android/**/mobile/**` → client-dev + design + e2e:App。
+> 根据[验证路由](../role-routing.md)和实际受影响的用户旅程选择专项。

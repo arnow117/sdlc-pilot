@@ -213,7 +213,7 @@
 
 ###### 技术栈
 
-- Python 3 标准库；`unittest` 作为计划测试框架。版本、项目阈值和命令均 NOT_RUN，不能声称通过；若项目没有阈值，Validate 的 `correctness` 默认行 80%/分支 70%仍适用。
+- 使用 Python 3 标准库，计划用 `unittest`。版本和命令均为 NOT_RUN。本例未约定数值覆盖率，适用性见 [correctness 覆盖率规则](../skills/sdlc/references/validate-modes/correctness.md#5-覆盖率阈值)。
 
 ###### 实施层决定
 
@@ -224,13 +224,13 @@
 | 风险 | 可能性 | 影响 | 缓解措施 |
 |---|---|---|---|
 | 先展示增量时跳过文件保护 | 中 | 高 | add/list 的读/写保护和相关失败测试先完成；覆盖率汇总、格式化和提交收尾可在展示后完成 |
-| 重新跑同一检查只为报告 | 中 | 低 | Build 保留受影响检查；独立 Validate 在最终快照运行必要套件，一次全量覆盖命令可同时作为套件证据 |
+| 重新跑同一检查只为报告 | 中 | 低 | Build 保留受影响检查，独立 Validate 在最终快照运行项目要求的完整回归，按阶段协议判断证据是否可复用 |
 
 ###### 实施阶段
 
 - **阶段 1 / 完整 Task 的首增量**：创建 `todo.py`、严格 store、`add`/`list` 和其数据文件的 UTF-8、JSON、surrogate、输入/数据路径、原子失败测试。最早可检验结果是两个进程的 add/list；可在覆盖率汇总、格式化和提交收尾前展示，但中途消息必须给出实际命令、版本、工作树和剩余限制，不能把 Task 标为 done。
 - **阶段 2 / 同一 Task 的完成范围**：完成 `complete`、状态筛选、Markdown export、重复完成不写入，以及导出路径/symlink/hardlink 保护，并加入命令回归和全部 AC 的测试。
-- **阶段 3 / 完整 Task 后**：Build 保留有意义的 TDD/累计检查；独立 Validate 在最终源码/配置快照执行所需测试、覆盖/类型/构建检查。相同独立覆盖率命令若实际跑完整相关 unit suite，可记录一次；Build 通过不是 Validate 证据。
+- **阶段 3 / 完整 Task 后**：Build 保留有意义的 TDD 和累计检查。独立 Validate 在最终源码与配置快照验证必要行为及完整回归，按 [correctness](../skills/sdlc/references/validate-modes/correctness.md#5-覆盖率阈值) 判断数值检查是否适用。
 
 ###### 需求覆盖
 
@@ -265,7 +265,7 @@
 
 #### 验证记录（实际）
 
-- **状态**：NOT_RUN；没有通过的测试、覆盖、格式化或 commit。未来独立 Validate 必须在最终相关快照运行自己的必要命令；未测量的分支覆盖或其他指标仍是缺口。
+- **状态**：NOT_RUN。独立 Validate 仍须在最终候选验证主流程、相关边界和完整回归。
 
 #### 评审记录（实际）
 

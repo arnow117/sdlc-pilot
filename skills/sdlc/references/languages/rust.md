@@ -57,13 +57,14 @@ cargo install cargo-llvm-cov          # 一次性安装
 cargo llvm-cov                        # 摘要
 cargo llvm-cov --html                 # HTML 报告
 cargo llvm-cov --lcov --output-path lcov.info   # 给 CI 的 LCOV
-cargo llvm-cov --fail-under-lines 80  # 行覆盖率 < 80% 时退出码 1
+# 阈值检查示例：项目明确约定行覆盖率 80%
+cargo llvm-cov --fail-under-lines 80
 
 # 备选：cargo-tarpaulin（纯 Linux x86_64 最稳）
 cargo tarpaulin --out Lcov --fail-under 80
 ```
 
-覆盖率目标：核心业务逻辑 100%，公开 API 90%+，一般代码 80%+，生成代码/FFI 绑定排除。
+覆盖率和阈值按 [correctness 规则](../validate-modes/correctness.md#5-覆盖率阈值)及项目既有配置选用。
 
 ## Lint（linter + 确切命令）
 
@@ -100,7 +101,6 @@ cargo fmt                                                           # 本地格�
 
 - **build / TDD（RED-GREEN-REFACTOR）用的 test 命令**：
   `cargo test`（含 doc tests）；并行加速可选 `cargo nextest run`（注意补一条 `cargo test --doc` 跑 doc tests）。
-- **validate/correctness 的 coverage 命令**：
-  `cargo llvm-cov --fail-under-lines 80`（默认 80% 行覆盖阈值，按 role 调整；备选 `cargo tarpaulin --fail-under 80`）。
+- **覆盖率（适用时）**：使用上方 `cargo llvm-cov` 或 `cargo tarpaulin` 入口，按项目约定指标与范围比较。
 - **lint/format 检查**：`cargo clippy --all-targets --all-features --locked -- -D warnings` + `cargo fmt --check`。
 - **归属 role 卡**：Rust 同时服务 **server-dev**（axum/actix/tokio 服务、sqlx）与 **client-dev**（CLI 工具、Tauri/WASM、嵌入式）。判定看 crate 类型——网络服务/守护进程 → server-dev；本地 CLI/桌面/库 → client-dev。两类共用上面同一套 test/coverage/lint 命令。

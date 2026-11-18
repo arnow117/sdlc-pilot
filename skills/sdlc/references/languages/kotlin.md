@@ -31,7 +31,7 @@ Kotlin 特有易错点，code review / correctness 重点盯这些：
 
 ## 测试（test runner / 写法 / coverage 命令）
 
-供 build TDD 与 validate/correctness 用的确切命令（JUnit / Kotest + MockK，coverage 用 Kover）。
+供 build TDD 与 validate/correctness 使用的命令（JUnit / Kotest + MockK，适用时用 Kover 采集覆盖率）。
 
 **Runner**：Kotest（推荐，spec 风格表达力强）或 JUnit5（kotlin-test）。MockK 做 mock；suspend 函数用 `coEvery`/`coVerify`；协程测试用 `kotlinx-coroutines-test` 的 `runTest` + `advanceTimeBy`（**禁止 `Thread.sleep`**）。
 
@@ -66,22 +66,20 @@ Kotlin 特有易错点，code review / correctness 重点盯这些：
 - 数据驱动用 `withData`。
 - mock 在 `beforeTest { clearMocks(...) }` 复位。
 
-**Coverage（Kover）命令**——validate/correctness 的覆盖率检查：
+**覆盖率（Kover）**按 [correctness 规则](../validate-modes/correctness.md#5-覆盖率阈值)选用。
 
 ```bash
 # 生成 HTML 报告（顺带跑测试）
 ./gradlew koverHtmlReport
 
-# 覆盖率检查：低于阈值则 build 失败
+# 按项目配置校验覆盖率阈值
 ./gradlew koverVerify
 
 # CI 用 XML 报告
 ./gradlew koverXmlReport
 ```
 
-Kover 阈值在 `build.gradle.kts` 配置（`kover { reports { verify { rule { minBound(80) } } } }`），默认 80%。也可用 JaCoCo（任务名 `jacocoTestReport` / `jacocoTestCoverageVerification`），但新项目优先 Kover（原生支持 Kotlin、KMP）。
-
-覆盖率目标：关键业务逻辑 100%，公开 API 90%+，一般代码 80%+，生成/配置代码排除。
+Kover 阈值由项目在 `build.gradle.kts` 配置。项目采用 JaCoCo 时，使用其 `jacocoTestReport` 或 `jacocoTestCoverageVerification`。
 
 ## Lint（linter + 确切命令）
 
@@ -129,5 +127,5 @@ Kover 阈值在 `build.gradle.kts` 配置（`kover { reports { verify { rule { m
 ## 接入 sdlc
 
 - **build / TDD 用的 test 命令**：纯 Kotlin/JVM/KMP 模块 `./gradlew test`；Android 模块 `./gradlew testDebugUnitTest`。RED/GREEN 循环以此为准；`--tests "<FQN>"` 跑单测，`--continuous` 监听。
-- **validate/correctness 的 coverage 命令**：`./gradlew koverVerify`（阈值在 `build.gradle.kts`，默认 80%）；报告产出用 `./gradlew koverXmlReport`（CI）/ `koverHtmlReport`（本地）。lint 检查：`./gradlew ktlintCheck detekt`。
-- **归哪个 role 卡**：主归 **client-dev**（Android 移动面：UI/ViewModel/Compose/生命周期）。当模块是 Ktor / KMP 共享后端逻辑时，对应部分归 **server-dev**（用 Ktor `testApplication` 测试约定 + 同样的 `./gradlew test` / `koverVerify` 检查）。
+- **覆盖率（适用时）**：`./gradlew koverXmlReport` 或 `koverHtmlReport` 产出报告，按项目约定使用 `./gradlew koverVerify` 校验阈值。lint 检查用 `./gradlew ktlintCheck detekt`。
+- **归哪个 role 卡**：Android 移动面（UI/ViewModel/Compose/生命周期）归 **client-dev**。Ktor / KMP 共享后端逻辑归 **server-dev**，可用 Ktor `testApplication` 和 `./gradlew test` 检查。

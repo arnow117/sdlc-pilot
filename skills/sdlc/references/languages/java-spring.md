@@ -44,7 +44,7 @@ mvn -T 4 test            # 并行
 ./gradlew test
 ```
 
-**Coverage 检查（validate/correctness 运行）：** JaCoCo，绑定到 verify 阶段。
+**覆盖率（按 [correctness 规则](../validate-modes/correctness.md#5-覆盖率阈值)选用）：** 项目已配置 JaCoCo 时使用其现有入口。
 ```bash
 # Maven —— verify 触发 jacoco prepare-agent + report，报告在 target/site/jacoco/
 mvn verify
@@ -52,7 +52,7 @@ mvn verify
 ./gradlew test jacocoTestReport
 ```
 报告位置：Maven `target/site/jacoco/index.html`；Gradle `build/reports/jacoco/test/html/index.html`。
-覆盖率阈值用 JaCoCo 的 `jacocoTestCoverageVerification`（Gradle）或 Maven 插件 `check` goal 强制 80%+。
+项目把数值列为必要检查时，使用项目已配置阈值和 `jacocoTestCoverageVerification`（Gradle）或 Maven 插件的 `check` goal。
 
 ## Lint（linter + 确切命令）
 
@@ -100,7 +100,7 @@ Language server：**jdtls** = Eclipse JDT Language Server（`eclipse.jdt.ls`）�
 | 用途 | 命令 / 归属 |
 |------|-------------|
 | **build TDD 的 test 命令** | Maven `mvn test`（或 `mvn -T 4 test`）；Gradle `./gradlew test` |
-| **validate/correctness 的 coverage 命令** | Maven `mvn verify`（JaCoCo 绑 verify，插件 `check` goal 强制 80%+）；Gradle `./gradlew test jacocoTestReport`（+ `jacocoTestCoverageVerification`） |
+| **覆盖率命令（适用时）** | Maven `mvn verify`（依项目绑定的 JaCoCo 目标）；Gradle `./gradlew test jacocoTestReport`（阈值检查使用已配置的 `jacocoTestCoverageVerification`） |
 | **lint 检查** | `mvn checkstyle:check` + spotbugs `check`；Gradle `./gradlew check` |
 | **role 卡** | **server-dev** |
 | **ai-readiness LSP 维度** | jdtls（eclipse.jdt.ls），需 `pom.xml`/`build.gradle` + 一致的 package 结构 + 可发现 JDK |
