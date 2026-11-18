@@ -356,8 +356,8 @@ regenerated, and an old Plan candidate is never reused. For a captured Requireme
 without a Feature, use the existing revise rule; this batch adds no fallback or
 cancellation operation.
 
-Recovery starts with a read-only reconciliation of state, context, Git, and the
-original results. It resumes at the first unaccepted block or unapplied operation;
+Recovery follows [§6](#6-context-and-checkpoints), reconciling the state, context, Git,
+and original results relevant to the next action. It resumes at the first unaccepted block or unapplied operation;
 it never repeats a successful capture, ready, feature, or Task operation. If the
 operation outcome is uncertain, inspect the resulting state before deciding whether
 to retry it. Once `start-feature` or any `add-task` has succeeded, the main Agent
@@ -540,9 +540,9 @@ not copy, relax, or add thresholds to them.
 
 The main Agent gives concise progress at recovery/start, when a material choice
 or failure appears, when a candidate artifact or earliest real increment is ready,
-and after it is accepted or corrected. It derives the update from the current
-state/projection, referenced product and engineering contexts, project facts, Git,
-and actual current-stage evidence. It does not create `STATUS.md`, `progress.json`,
+and after it is accepted or corrected. It uses relevant facts already checked for
+the current action; at recovery, [section 6](#6-context-and-checkpoints) governs
+what still needs checking. It does not create `STATUS.md`, `progress.json`,
 an event record, or another progress table.
 
 A useful update states only the current known Requirement/Feature/Task and stage;
@@ -936,8 +936,37 @@ exactly these five sections:
    references.
 
 The checkpoint is not a Spec, current effective solution, chat transcript, full log, state replacement,
-or credential, private material, or unnecessary local-path store. On recovery,
-first verify branch, HEAD, and workspace. If the recorded version differs,
-reassess the evidence before continuing. The main Agent updates the single file in
-place; Git preserves its history. The main Agent deletes it when the Feature
-completes.
+or credential, private material, or unnecessary local-path store.
+
+For recovery, locate the repository and selected Feature. For a selected, unfinished
+Feature with an available checkpoint, read that one file first to identify the
+proposed action and evidence references. Check the actual repository, branch, HEAD
+and working tree, and the current state, dependencies, evidence and version facts
+needed for that action. If they agree and the applicable stage conditions and
+existing authorization still hold, continue. Do not reload unrelated Features or
+rewrite a consistent checkpoint solely because recovery occurred.
+
+If a difference affects the action, authoritative sources conflict, or essential
+evidence is missing or no longer applicable, pause the affected action and read only
+the state, Git, contexts and evidence needed to resolve it. Apply existing rules,
+then update the same checkpoint in place once clarified. Independent authorized work
+may continue. On an ordinary pause, cross-conversation handoff or environment change,
+the main Agent updates the checkpoint before pausing; an unexpected interruption
+may leave it stale. Git preserves its history. The main Agent deletes it when the
+Feature completes.
+
+Without an available checkpoint, use the selected Feature's exact projection and
+relevant Git facts and evidence to locate the next action. If the target is unknown,
+retain `needs_selection` and select under the existing rules, without scanning all
+checkpoints to choose for the user. If no Feature exists, use the Requirement
+projection and relevant product records; an already completed Feature is not restarted.
+
+The checkpoint is a recovery aid, not authority for progress, design, code, evidence
+or authorization. Preserve Feature branch rules and Task dependencies. Before relying
+on an accepted conclusion, apply `verify-acceptance` and the semantic evidence
+applicability rules in §5 and the [runtime guide](lightweight-runtime.md#71-验收内容指纹核对),
+including its existing `missing` handling. Stage inputs, checks and external
+authorizations still apply on entering the stage. If a state-write result is unknown,
+inspect actual state before retrying as specified in the [runtime guide](lightweight-runtime.md#task-状态错误输出与恢复).
+If dispatch was interrupted, follow [Waiting and recovery](#waiting-and-recovery) for
+the original handle, result and writer ownership before any replacement.

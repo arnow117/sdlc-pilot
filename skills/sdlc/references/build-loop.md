@@ -21,6 +21,11 @@
 
 ## 2. 外层循环
 
+中断后先按[阶段协议 §6](stage-agent-protocol.md#6-context-and-checkpoints)定位并恢复。已有未完成目标时继续该目标；
+目标未确定时按现有选择规则处理，遇到 `needs_selection` 先确定目标。
+
+仅在首次从队列取项，或当前目标已完成且已有授权继续取项时，才读取以下队列。
+
 ```bash
 python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> readyqueue
 ```
@@ -68,26 +73,19 @@ plan
 
 ## 4. 可恢复性
 
-任意时刻中断后：
-
-1. 运行 `status` 和 `feature-projection`。
-2. 读取 `project.md`、`product_context_ref` 和 `engineering_context_ref`；只有存在按 canonical protocol 创建的按需
-   checkpoint 时才读取它。
-3. 从第一个未完成 Task 或当前 Feature 状态继续。
-
-不要依赖对话历史恢复目标，也不要重新生成已存在的 Feature 或 Task。checkpoint 与 HEAD/分支/workspace 不一致时，
-先重新判断证据；Feature 完成后删除 checkpoint。
+中断后按[阶段协议 §6](stage-agent-protocol.md#6-context-and-checkpoints)恢复；不要依赖对话历史恢复目标，
+也不要重新生成已存在的 Feature 或 Task。
 
 ## 5. 每轮复述目标
 
-进入一个 Feature、回到 build 或上下文变长时，重新读取：
+进入阶段后按阶段要求加载必要输入；需要重述目标时，按下一动作的需要核对：
 
 - 产品验收条件；
 - 当前 Task 完成条件；
 - 未完成 Task 与依赖；
 - 最近一次失败的根因和下一假设。
 
-这只是恢复注意力，不是重新规划。
+已选 Feature 的恢复顺序遵循[阶段协议 §6](stage-agent-protocol.md#6-context-and-checkpoints)；这些核对不是固定的批量恢复加载，也不是重新规划。
 
 ## 6. 有价值的失败结论
 
