@@ -171,7 +171,7 @@ lifecycle_state.py --repo <repo> product-projection --requirement-id <REQ-id>
 lifecycle_state.py --repo <repo> feature-projection --feature-id <FEAT-id>
 ```
 
-`next` 在只有一个明确目标时返回下一阶段；并行工作超过一个时返回 `needs_selection` 和候选项，不替用户猜选。恢复工作时先查询 projection，再只读取其中引用的项目、产品和研发上下文。
+`next` 在只有一个明确目标时返回下一阶段；并行工作超过一个时返回 `needs_selection` 和候选项，不替用户猜选。恢复加载顺序遵循[阶段协议 §6](stage-agent-protocol.md#6-context-and-checkpoints)；上述查询仍可用于普通只读定位。
 
 ### 7.1 验收内容指纹核对
 

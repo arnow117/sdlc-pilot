@@ -41,16 +41,18 @@ Git 保存历史并负责跨 clone 同步。状态变化可以与相关文档或
 
 仅要求存量代码审计、体检或改进建议时，先进入 `sdlc-backlog` 的“存量代码审计来源”，按其中引用的方法只读分析；不因审计自动 init、创建 Requirement 或开始交付。已有 tracked 目标的查询、实现与正式评审仍服从当前阶段。选中维护结果并进入生命周期后，再执行下列初始化和项目测绘步骤。
 
+恢复已选且未完成的 Feature 时直接按[阶段协议 §6](references/stage-agent-protocol.md#6-context-and-checkpoints)开始；以下通用启动步骤不先于该恢复路径执行。
+
 1. 确认目标仓库和请求范围。仅查询进度时只读已有状态及其引用；状态不存在就如实报告，不 init、不自动进入执行阶段。
 2. 未纳入已有 Requirement/Feature/Task 的小型、局部、可逆修改，可直接实现并做必要验证，不为此创建完整生命周期记录。用户明确要求完整流程、修改已有跟踪任务，或涉及跨客户端/服务端协同、公共协议兼容性、持久化及并发/恢复风险时，仍走对应 SDLC 阶段；不得拆小任务绕过这些条件。
-3. 确定进入生命周期后，若 `.sdlc-v1/state.json` 不存在，执行 `lifecycle_state.py --repo <repo> init`。
-4. 若项目已有源码而 `.sdlc-v1/project.md` 不存在，进入 `sdlc-onboard`。
-5. 读取 `state.json`，再读取当前记录引用的上下文；若 `project.md` 列出当前 commit 已验证的长期工程上下文，再按需读取其中相关路径；不要扫描无关历史文件。
-6. `/sdlc next` 根据当前状态直接进入下一阶段。
+3. 确定进入生命周期后，若 `.sdlc-v1/state.json` 不存在，执行 `lifecycle_state.py --repo <repo> init`；恢复既有工作缺少必要状态时报告缺口，不以 init 替代恢复。
+4. 除已选 Feature 的恢复外，若项目已有源码而 `.sdlc-v1/project.md` 不存在，进入 `sdlc-onboard`。
+5. 恢复已选 Feature 时，先按[阶段协议 §6](references/stage-agent-protocol.md#6-context-and-checkpoints)定位和核对；其他启动按现有状态读取当前记录引用的上下文。若 `project.md` 列出当前 commit 已验证的长期工程上下文，按需读取相关路径；不要扫描无关历史文件。
+6. 其他启动可用 `/sdlc next` 根据当前状态进入下一阶段；已选 Feature 的恢复按协议 §6。
 
 ## 2.1 编排执行
 
-默认以 orchestrated mode 执行。主 Agent 先读取 `next`，再按唯一的
+默认以 orchestrated mode 执行。恢复已选 Feature 先遵循[阶段协议 §6](references/stage-agent-protocol.md#6-context-and-checkpoints)；其他启动由主 Agent 先读取 `next`。随后按唯一的
 [`stage-agent-protocol.md`](references/stage-agent-protocol.md) 形成完整 brief、串行派发一个子 Agent、验收其证据、
 执行已有 lifecycle CLI，并重新读取 `next`。执行期间的用户交流、早期产品选择、原授权内连续推进、用户可见进展和最早真实增量
 展示均遵循该协议；本 router 不重复 brief、结果、检查点、并行资格、纠偏或这些行为规则。
@@ -130,7 +132,7 @@ Requirement 恢复为 `validated`。正文证据写入 Feature 工程上下文�
 
 ## 5. 恢复与交接
 
-- 恢复工作时先读 `status` 或具体 projection，再读它引用的上下文。
+- 恢复和交接的加载顺序唯一遵循[阶段协议 §6](references/stage-agent-protocol.md#6-context-and-checkpoints)。
 - 若当前 worktree 与 Feature 登记 branch 不一致，查询仍保持只读；Build 前按
   [开发分支登记迁移](references/lightweight-runtime.md#51-开发分支登记迁移)核对或受控修正，不能自行 checkout
   或把登记值当作全局 Git 分支一致性检查。
