@@ -189,12 +189,12 @@
           "updated_at": "2026-11-20T16:33:00Z"
         }
       },
-      "updated_at": "2026-11-20T16:33:00Z",
+      "updated_at": "2026-11-20T16:50:23Z",
       "validation": {
-        "at": null,
-        "command": null,
-        "commit": null,
-        "result": "pending"
+        "at": "2026-11-20T16:50:23Z",
+        "command": "env NODE_OPTIONS= NODE_PATH= node --test /Users/mac/hansen_agent_team/workspace/20261120-sdlc-combined-acceptance/continuation/repair-validation-5c52bf8/diagnostic-check.test.cjs",
+        "commit": "5c52bf85058abbd60a0d2e3dfb6c49a7a21ce024",
+        "result": "fail"
       }
     },
     "FEAT-security-scan": {
@@ -461,7 +461,7 @@
       "product_context_ref": ".sdlc-v1/context/REQ-human-validation.product.md",
       "status": "in_delivery",
       "title": "按需人工验收与自主推进",
-      "updated_at": "2026-11-20T16:33:00Z"
+      "updated_at": "2026-11-20T16:50:23Z"
     },
     "REQ-security-scan": {
       "acceptance": {
