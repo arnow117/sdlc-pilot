@@ -69,6 +69,15 @@
     return result;
   }
 
+  function readErrorField(error, name) {
+    try {
+      const value = error[name];
+      return typeof value === "string" ? value : null;
+    } catch (_error) {
+      return null;
+    }
+  }
+
   function readErrorParts(error) {
     if (!error) {
       return { code: null, message: "操作未返回结果。" };
@@ -78,10 +87,17 @@
       return { code: null, message: error };
     }
 
-    return {
-      code: typeof error.code === "string" ? error.code : null,
-      message: typeof error.message === "string" && error.message ? error.message : String(error),
-    };
+    const code = readErrorField(error, "code");
+    const message = readErrorField(error, "message");
+    if (message) {
+      return { code: code, message: message };
+    }
+
+    try {
+      return { code: code, message: String(error) };
+    } catch (_error) {
+      return { code: code, message: "无法读取错误信息。" };
+    }
   }
 
   function isPlainRecord(value) {
@@ -129,8 +145,10 @@
       return null;
     }
 
-    const code = typeof error.code === "string" && error.code.trim() ? error.code.trim() : null;
-    const message = typeof error.message === "string" && error.message.trim() ? error.message.trim() : null;
+    const rawCode = readErrorField(error, "code");
+    const rawMessage = readErrorField(error, "message");
+    const code = rawCode && rawCode.trim() ? rawCode.trim() : null;
+    const message = rawMessage && rawMessage.trim() ? rawMessage.trim() : null;
 
     if (!code && !message) {
       return null;

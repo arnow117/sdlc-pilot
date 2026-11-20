@@ -2,7 +2,7 @@
 
 ## 定位
 
-- 仓库：/Users/mac/hansen_agent_team/external/sdlc-pilot；branch：main；HEAD：5c6c92c729cd13e8deef9ef4e32cdca1a2ecadd0
+- 仓库：/Users/mac/hansen_agent_team/external/sdlc-pilot；branch：main；HEAD：653ee405ea9e08d4e5224a4ab69f9bc3a0a78627（仅状态和证据提交）
 - Requirement：REQ-human-validation；Task：TASK-human-validation
 
 ## 已确认
@@ -17,7 +17,7 @@
 
 ## 未完成
 
-- Task 当前为 done，`validation=fail@5c6c92c`、review pending；原候选 f62b6fe 的结果保存在 f044bfb，`pass@fba6705` 和 Review `changes_requested` 保存在 cf64de1。Ship 未执行。
+- Task 返修已登记 done，validation/review pending；`fail@5c6c92c` 已保存于 653ee40，`pass@fba6705` 和 Review `changes_requested` 保存在 cf64de1。Ship 未执行。
 - 候选 `fba6705` 的独立 Validate 曾通过标准检查 233 项、Python 3.9 场景 59 项、Node 组件 131 项及受限浏览器点验；其后独立复评发现三个边界问题并已退回。该通过只适用于原候选。
 - 原 14 次试次及 43 run 结果保留。B01 后续补充试次经历评审退回、局部修复、独立重验和 Review，机械 oracle 通过；仅规划样本与桌面候选补充样本的定向检查通过。桌面补充样本明确增加 T3 路线提示，原失败不被覆盖。真人样本仍无指定观察者的实际答复。
 - SCN-07 联合反馈及处理、SCN-08 明确答复后续接、SCN-09 变化后的定向重验均已取得同机合成机制证据并经独立 Validate 判定符合；模拟输入不得冒充该用户真人答复。
@@ -31,7 +31,7 @@
 
 ## 下一步
 
-- `5c6c92c` 的独立 Validate 发现错误格式化在无原型异常对象上再次抛错，导致面板挂载中断或动作重复；fail 已登记。保留失败证据后重开 Task 并修复共用错误处理；候选外 Validate 文件保持原样。
+- `5c6c92c` 的独立 Validate 发现错误格式化在无原型异常对象上再次抛错；失败已登记并保存。共用错误处理已修复：4 项新反例由失败转为通过，独立边界探针 8/8、Node 全量 143/143 及原 Chromium 反例通过；候选尚未固定或独立复验。
 - 回填工程验证记录前核对 Plan 内容漂移、批准来源、写者独占及必要的批准型重记；不得以干净副本直接代替权威主仓状态。新增续验按用户新预算单独记录，不重复催问已有真人观察。
 
 ## 必要引用
@@ -56,4 +56,4 @@
 - 返修定向检查与失败原始记录：../../workspace/20261120-sdlc-combined-acceptance/continuation/repair-node-{red,target}.json、repair-python-{red,target}.json
 - 返修隔离快照及完整检查：../../workspace/20261120-sdlc-combined-acceptance/continuation/repair-build-check-xv6zmn18/
 - 独立验证与 Review 登记回执：../../workspace/20261120-sdlc-combined-acceptance/continuation/repair-validation-fba6705/；Review 登记守护：../../workspace/20261120-sdlc-combined-acceptance/continuation/register_review_fba6705_guard.py
-- 最新独立失败与登记回执：../../workspace/20261120-sdlc-combined-acceptance/continuation/repair-validation-5c6c92c/；前次返修检查：同目录上层 `repair-review-r2-{red,target,node-final,standard}.log`
+- 独立失败及登记回执：../../workspace/20261120-sdlc-combined-acceptance/continuation/repair-validation-5c6c92c/；本轮反例、Node、Chromium 日志：同目录上层 `repair-error-format-{red,target,boundary,node,browser}.log`

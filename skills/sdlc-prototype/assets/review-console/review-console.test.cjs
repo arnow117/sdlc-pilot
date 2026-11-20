@@ -268,6 +268,83 @@ test("a changing toJSON observation stops replay without retrying the action", (
   assert.equal(serializations, 1);
 });
 
+test("non-coercible read errors stop progress and replay without repeating actions", () => {
+  const revoked = Proxy.revocable({}, {});
+  revoked.revoke();
+  const hostile = Object.defineProperties(Object.create(null), {
+    code: { get() { throw new Error("code getter"); } },
+    message: { get() { throw new Error("message getter"); } },
+    toString: { value() { throw new Error("toString"); } },
+  });
+
+  for (const error of [Object.create(null), hostile, revoked.proxy]) {
+    let calls = 0;
+    let shouldThrow = true;
+    const review = PrototypeReviewConsole.createConsole({
+      adapter: stubAdapter({
+        scenarios: () => [scenarioWith([
+          { id: "s1", kind: "act", call: "act", check: { read: "x", equals: "done" } },
+        ])],
+        call: () => { calls += 1; return { ok: true }; },
+        read: () => { if (shouldThrow) throw error; return "done"; },
+      }),
+    });
+
+    assert.equal(review.start("s").ok, true);
+    assert.equal(review.next().ok, false);
+    assert.equal(review.state().phase, "failed");
+    assert.equal(review.next().ok, false);
+    assert.equal(calls, 1);
+
+    shouldThrow = false;
+    assert.equal(review.start("s").ok, true);
+    assert.equal(review.next().ok, true);
+    shouldThrow = true;
+    assert.equal(review.replayTo(0).ok, false);
+    assert.equal(review.state().phase, "failed");
+    assert.equal(review.state().replayTarget, null);
+    assert.equal(review.next().ok, false);
+    assert.equal(calls, 3);
+  }
+});
+
+test("unreadable rejection evidence cannot be mistaken for an expected rejection", () => {
+  const revoked = Proxy.revocable({}, {});
+  revoked.revoke();
+  let calls = 0;
+  const review = PrototypeReviewConsole.createConsole({
+    adapter: stubAdapter({
+      scenarios: () => [scenarioWith([
+        { id: "s1", kind: "act", call: "act", expectError: true },
+      ])],
+      call: () => { calls += 1; return { ok: false, error: revoked.proxy }; },
+    }),
+  });
+
+  assert.equal(review.start("s").ok, true);
+  assert.equal(review.next().ok, false);
+  assert.equal(review.state().phase, "failed");
+  assert.equal(review.next().ok, false);
+  assert.equal(calls, 1);
+});
+
+test("a readable rejection code is retained when its message getter throws", () => {
+  const error = { code: "DECLINED", get message() { throw new Error("message getter"); } };
+  const review = PrototypeReviewConsole.createConsole({
+    adapter: stubAdapter({
+      scenarios: () => [scenarioWith([
+        { id: "s1", kind: "act", call: "act", expectError: { code: "DECLINED" } },
+      ])],
+      call: () => ({ ok: false, error }),
+    }),
+  });
+
+  assert.equal(review.start("s").ok, true);
+  assert.equal(review.next().ok, true);
+  assert.equal(review.state().steps[0].status, "rejected");
+  assert.equal(review.state().steps[0].rejection.code, "DECLINED");
+});
+
 test("scenario inspection preserves adapter arguments and strict object comparison", () => {
   const expected = { value: 1 };
   const when = new Date("2026-01-01T00:00:00Z");

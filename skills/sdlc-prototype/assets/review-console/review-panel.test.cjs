@@ -364,6 +364,30 @@ test("an unreadable array entry does not block a valid scenario", () => {
   panel.destroy();
 });
 
+test("non-coercible errors from invalid scenarios cannot block a valid panel", () => {
+  const revoked = Proxy.revocable({}, {});
+  revoked.revoke();
+  const hostile = Object.defineProperties(Object.create(null), {
+    code: { get() { throw new Error("code getter"); } },
+    message: { get() { throw new Error("message getter"); } },
+    toString: { value() { throw new Error("toString"); } },
+  });
+
+  for (const error of [Object.create(null), hostile, revoked.proxy]) {
+    const scenarios = [null, scenario("good", "可用场景")];
+    Object.defineProperty(scenarios, 0, { get() { throw error; } });
+    const { review, panel, host, calls } = createHarness(scenarios);
+    const select = host.querySelector(".pr-scenario");
+    assert.equal(select.childNodes[0].hasAttribute("disabled"), true);
+    assert.equal(select.value, "good");
+    click(host.querySelector('[data-pr="start"]'));
+    assert.equal(review.state().scenarioId, "good");
+    assert.equal(review.next().ok, true);
+    assert.deepEqual(calls, ["act"]);
+    panel.destroy();
+  }
+});
+
 test("a malformed duplicate id does not shadow a valid scenario in the panel", () => {
   for (const invalidFirst of [false, true]) {
     const valid = scenario("same", "可用场景");
