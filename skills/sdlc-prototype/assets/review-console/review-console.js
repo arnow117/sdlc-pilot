@@ -78,7 +78,10 @@
     // Capture product evidence before any diagnostic conversion can mutate it.
     const error = result.error;
     const evidence = readErrorEvidence(error);
-    const diagnostic = evidence && evidence.message ? evidence.message : stringifyError(error);
+    // The diagnostic is produced on demand and at most once. It is read only
+    // after the factual observation of this step, so a product conversion
+    // that runs adapter code can no longer change what was already observed.
+    const diagnostic = createDiagnosticReader(error, evidence);
     return { ok: false, evidence: evidence, diagnostic: diagnostic };
   }
 
@@ -91,11 +94,33 @@
     }
   }
 
+  // A native error formats itself from its own name and message. Its
+  // conversion would read the message again, so it is never used for an
+  // error whose message was already read.
+  function isErrorLike(value) {
+    try {
+      if (value instanceof Error) {
+        return true;
+      }
+      return Object.prototype.toString.call(value) === "[object Error]";
+    } catch (_error) {
+      return false;
+    }
+  }
+
+  function errorName(error) {
+    const name = readErrorField(error, "name");
+    return name && name.trim() ? name : "Error";
+  }
+
   function stringifyError(error) {
     if (!error) {
       return "操作未返回结果。";
     }
     try {
+      if (isErrorLike(error)) {
+        return errorName(error);
+      }
       const text = String(error);
       return text.trim() ? text : "无法读取错误信息。";
     } catch (_error) {
@@ -178,6 +203,22 @@
     // The message stays null when the product did not give one. A fallback
     // must never stand in for a real error.message.
     return { code: code, message: message };
+  }
+
+  // The wording shown to a reviewer. It is never used to satisfy an expected
+  // reason, and it is resolved at most once so that a product conversion
+  // cannot run again later.
+  function createDiagnosticReader(error, evidence) {
+    let resolved = false;
+    let text = null;
+
+    return function readDiagnostic() {
+      if (!resolved) {
+        resolved = true;
+        text = evidence && evidence.message ? evidence.message : stringifyError(error);
+      }
+      return text;
+    };
   }
 
   // The wording shown to a reviewer. It is never used to satisfy an
@@ -1042,28 +1083,49 @@
         return { ok: false, error: message };
       }
 
-      const logEntry = {
-        stepId: step.id,
-        kind: step.kind,
-        kindLabel: step.kindLabel,
-        call: step.call,
-        ok: result.ok !== false,
-        error: result.ok === false ? result.diagnostic : null,
+      // The log entry is written when the factual result of this step is
+      // known. Its diagnostic is resolved at that moment, so a product
+      // conversion can no longer run before the observation was read.
+      const appendLog = function appendLog() {
+        return state.log.concat([{
+          stepId: step.id,
+          kind: step.kind,
+          kindLabel: step.kindLabel,
+          call: step.call,
+          ok: result.ok !== false,
+          error: result.ok === false ? result.diagnostic() : null,
+        }]);
       };
-      const nextLog = state.log.concat([logEntry]);
 
       if (result.ok === false) {
         const expectation = evaluateExpectedRejection(step, result.evidence);
+        let rejectionObservation = null;
+        let failureMessage = null;
 
         // A step that did not declare an expected rejection fails here. Only a
         // declared, evidenced and actually matched rejection counts.
         if (!expectation.declared || !expectation.matched) {
-          const message = expectation.declared
+          failureMessage = expectation.declared
             ? expectation.reason
             : rejectionText(expectation.rejection);
+        } else if (step.check) {
+          // A step that also declares a check must still satisfy it after the
+          // rejection. The check is read once: the verdict and the stored
+          // observation come from the same reading. It is read before anything
+          // is formatted, so a diagnostic conversion cannot change it.
+          rejectionObservation = evaluateCheck(step);
+          if (!rejectionObservation.ok) {
+            failureMessage = rejectionObservation.error
+              || `拒绝后的状态检查与预期不符：实际 ${JSON.stringify(rejectionObservation.actual)}`;
+          }
+        }
+
+        const nextLog = appendLog();
+
+        if (failureMessage !== null) {
           const steps = withStep(state.steps, index, {
             status: STEP_STATUSES.failed,
-            error: message,
+            error: failureMessage,
             rejection: expectation.rejection,
             reasonVerified: null,
           });
@@ -1072,35 +1134,9 @@
             log: nextLog,
             stepIndex: index,
             phase: PHASES.failed,
-            lastError: message,
+            lastError: failureMessage,
           }));
-          return { ok: false, error: message };
-        }
-
-        // A step that also declares a check must still satisfy it after the
-        // rejection. The check is read once: the verdict and the stored
-        // observation come from the same reading.
-        let rejectionObservation = null;
-        if (step.check) {
-          rejectionObservation = evaluateCheck(step);
-          if (!rejectionObservation.ok) {
-            const message = rejectionObservation.error
-              || `拒绝后的状态检查与预期不符：实际 ${JSON.stringify(rejectionObservation.actual)}`;
-            const steps = withStep(state.steps, index, {
-              status: STEP_STATUSES.failed,
-              error: message,
-              rejection: expectation.rejection,
-              reasonVerified: null,
-            });
-            commit(Object.assign({}, state, {
-              steps: steps,
-              log: nextLog,
-              stepIndex: index,
-              phase: PHASES.failed,
-              lastError: message,
-            }));
-            return { ok: false, error: message };
-          }
+          return { ok: false, error: failureMessage };
         }
 
         const message = rejectionText(expectation.rejection);
@@ -1129,7 +1165,7 @@
         });
         commit(Object.assign({}, state, {
           steps: steps,
-          log: nextLog,
+          log: appendLog(),
           stepIndex: index,
           phase: PHASES.failed,
           lastError: message,
@@ -1139,7 +1175,7 @@
 
       if (result.pending === true) {
         const steps = withStep(state.steps, index, { status: STEP_STATUSES.waiting });
-        commit(Object.assign({}, state, { steps: steps, log: nextLog }));
+        commit(Object.assign({}, state, { steps: steps, log: appendLog() }));
         armSettleTimer(index);
         return { ok: true, pending: true, step: step.id };
       }
@@ -1154,7 +1190,7 @@
         });
         commit(Object.assign({}, state, {
           steps: steps,
-          log: nextLog,
+          log: appendLog(),
           stepIndex: index,
           phase: PHASES.failed,
           lastError: message,
@@ -1169,7 +1205,7 @@
       });
       commit(Object.assign({}, state, {
         steps: steps,
-        log: nextLog,
+        log: appendLog(),
         stepIndex: index,
         phase: phaseAfterStep(steps, index),
         lastError: null,
@@ -1294,33 +1330,43 @@
         }
 
         const evidence = result.ok === false ? result.evidence : null;
-        log.push({
-          stepId: step.id,
-          kind: step.kind,
-          kindLabel: step.kindLabel,
-          call: step.call,
-          ok: result.ok !== false,
-          error: result.ok === false ? result.diagnostic : null,
-        });
+        // The log entry is written when the factual result of this step is
+        // known. Its diagnostic is resolved at that moment, so a product
+        // conversion can no longer run before the observation was read.
+        const writeLogEntry = function writeLogEntry() {
+          log.push({
+            stepId: step.id,
+            kind: step.kind,
+            kindLabel: step.kindLabel,
+            call: step.call,
+            ok: result.ok !== false,
+            error: result.ok === false ? result.diagnostic() : null,
+          });
+        };
 
         if (result.ok === false) {
           const expectation = evaluateExpectedRejection(step, evidence);
+          let rejectionObservation = null;
+          let failureMessage = null;
 
           if (!expectation.declared || !expectation.matched) {
-            const message = expectation.declared
+            failureMessage = expectation.declared
               ? expectation.reason
               : rejectionText(expectation.rejection);
-            return failReplay(index, message, steps, log, expectation.rejection);
-          }
-
-          let rejectionObservation = null;
-          if (step.check) {
+          } else if (step.check) {
+            // The check after a rejection is read once, before anything is
+            // formatted, so a diagnostic conversion cannot change it.
             rejectionObservation = evaluateCheck(step);
             if (!rejectionObservation.ok) {
-              const message = rejectionObservation.error
+              failureMessage = rejectionObservation.error
                 || `拒绝后的状态检查与预期不符：实际 ${JSON.stringify(rejectionObservation.actual)}`;
-              return failReplay(index, message, steps, log, expectation.rejection);
             }
+          }
+
+          writeLogEntry();
+
+          if (failureMessage !== null) {
+            return failReplay(index, failureMessage, steps, log, expectation.rejection);
           }
 
           steps[index] = Object.assign({}, step, {
@@ -1335,10 +1381,12 @@
 
         if (step.expectError) {
           const message = "预期此步骤被拒绝，但产品动作成功了；不能记为已验证。";
+          writeLogEntry();
           return failReplay(index, message, steps, log);
         }
 
         if (result.pending === true) {
+          writeLogEntry();
           steps[index] = Object.assign({}, step, { status: STEP_STATUSES.waiting });
           commit(Object.assign({}, state, {
             steps: steps,
@@ -1355,9 +1403,11 @@
         if (!observation.ok) {
           const message = observation.error
             || `观察结果与预期不符：实际 ${JSON.stringify(observation.actual)}`;
+          writeLogEntry();
           return failReplay(index, message, steps, log);
         }
 
+        writeLogEntry();
         steps[index] = Object.assign({}, step, {
           status: STEP_STATUSES.done,
           error: null,

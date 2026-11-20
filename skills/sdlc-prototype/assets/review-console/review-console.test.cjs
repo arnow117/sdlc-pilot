@@ -414,6 +414,101 @@ test("rejection evidence is read once during progress and replay", () => {
   assert.equal(calls, 2);
 });
 
+test("a native error message getter is read once during progress and replay", () => {
+  for (const replay of [false, true]) {
+    let calls = 0;
+    let codeReads = 0;
+    let messageReads = 0;
+    let actionReads = 0;
+    // A native error formats itself from its own message. The controller must
+    // not use that conversion, because it would read the getter again.
+    const error = Object.defineProperties(new Error(), {
+      code: { get() { codeReads += 1; return "DENIED"; } },
+      message: { get() {
+        messageReads += 1;
+        actionReads += 1;
+        return actionReads === 1 ? undefined : "second read";
+      } },
+    });
+    const review = PrototypeReviewConsole.createConsole({
+      adapter: stubAdapter({
+        scenarios: () => [scenarioWith([
+          { id: "s1", kind: "act", call: "act", expectError: { message: "never given" } },
+        ])],
+        call: () => { calls += 1; actionReads = 0; return { ok: false, error }; },
+      }),
+    });
+
+    assert.equal(review.start("s").ok, true);
+    if (replay) {
+      // The first run reaches the step, the replay runs it again.
+      assert.equal(review.next().ok, false);
+    }
+    const result = replay ? review.replayTo(0) : review.next();
+
+    assert.equal(result.ok, false);
+    assert.equal(review.state().phase, "failed");
+    assert.deepEqual(review.state().steps[0].rejection, { code: "DENIED", message: null });
+    assert.doesNotMatch(review.state().log[0].error, /second read/);
+    // One read of every rejection field per product action.
+    assert.equal(messageReads, calls);
+    assert.equal(codeReads, calls);
+  }
+});
+
+test("a diagnostic conversion cannot change the observation that decides a rejection", () => {
+  for (const replay of [false, true]) {
+    let calls = 0;
+    let formations = 0;
+    let receipt = "unchanged";
+    const observed = [];
+    const review = PrototypeReviewConsole.createConsole({
+      adapter: stubAdapter({
+        scenarios: () => [scenarioWith([
+          {
+            id: "s1",
+            kind: "act",
+            call: "act",
+            expectError: { code: "DENIED" },
+            check: { read: "receipt", equals: "unchanged" },
+          },
+        ])],
+        reset: () => { receipt = "unchanged"; return { ok: true }; },
+        call: () => {
+          calls += 1;
+          receipt = "changed";
+          return { ok: false, error: {
+            code: "DENIED",
+            // The conversion runs product code. It must not run before the
+            // check has read the product state.
+            [Symbol.toPrimitive]() {
+              formations += 1;
+              receipt = "unchanged";
+              return "diagnostic-only text";
+            },
+          } };
+        },
+        read: () => { observed.push(receipt); return receipt; },
+      }),
+    });
+
+    assert.equal(review.start("s").ok, true);
+    if (replay) {
+      // The first run reaches the step, the replay runs it again.
+      review.next();
+      observed.length = 0;
+    }
+    const result = replay ? review.replayTo(0) : review.next();
+
+    assert.equal(result.ok, false, "a diagnostic conversion repaired the product state before the check");
+    assert.deepEqual(observed, ["changed"]);
+    assert.equal(review.state().steps[0].status, "failed");
+    assert.equal(review.state().replayTarget, null);
+    // The conversion ran once per product action, and only after the check.
+    assert.equal(formations, calls);
+  }
+});
+
 test("throwing action-result fields stop progress and replay without repeating actions", () => {
   for (const field of ["error", "pending"]) {
     for (const replay of [false, true]) {
