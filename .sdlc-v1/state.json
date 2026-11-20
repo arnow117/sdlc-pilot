@@ -162,6 +162,15 @@
             ".sdlc-v1/context/REQ-human-validation.product.md": "c82fda329e5f53866434dcc53a745f813bbd2a4c5aa9ab73d7dc0d624475f903"
           },
           "normalization": "context-v1"
+        },
+        "validation": {
+          "algorithm": "sha256",
+          "at": "2026-11-20T17:49:45Z",
+          "documents": {
+            ".sdlc-v1/context/FEAT-human-validation.engineering.md": "9ffa2a2e39ddacca83237eb1c7e26fc3bcfe754df04620f8135cd5043182201a",
+            ".sdlc-v1/context/REQ-human-validation.product.md": "c82fda329e5f53866434dcc53a745f813bbd2a4c5aa9ab73d7dc0d624475f903"
+          },
+          "normalization": "context-v1"
         }
       },
       "branch": "main",
@@ -179,7 +188,7 @@
         "by": null,
         "decision": "pending"
       },
-      "status": "in_progress",
+      "status": "validated",
       "tasks": {
         "TASK-human-validation": {
           "depends_on": [],
@@ -189,12 +198,12 @@
           "updated_at": "2026-11-20T17:42:29Z"
         }
       },
-      "updated_at": "2026-11-20T17:42:29Z",
+      "updated_at": "2026-11-20T17:49:45Z",
       "validation": {
-        "at": null,
-        "command": null,
-        "commit": null,
-        "result": "pending"
+        "at": "2026-11-20T17:49:45Z",
+        "command": "env NODE_OPTIONS= NODE_PATH= node --test skills/sdlc-prototype/assets/shared-state/runtime.test.cjs skills/sdlc-prototype/assets/review-console/review-console.test.cjs skills/sdlc-prototype/assets/review-console/review-panel.test.cjs",
+        "commit": "2b1cee55edff4b763e3c3c3088edef47b42fdd59",
+        "result": "pass"
       }
     },
     "FEAT-security-scan": {
@@ -459,9 +468,9 @@
       "id": "REQ-human-validation",
       "priority": "P1",
       "product_context_ref": ".sdlc-v1/context/REQ-human-validation.product.md",
-      "status": "in_delivery",
+      "status": "validated",
       "title": "按需人工验收与自主推进",
-      "updated_at": "2026-11-20T17:42:29Z"
+      "updated_at": "2026-11-20T17:49:45Z"
     },
     "REQ-security-scan": {
       "acceptance": {
