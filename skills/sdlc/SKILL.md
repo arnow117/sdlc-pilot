@@ -42,6 +42,9 @@ Git 保存历史并负责跨 clone 同步。状态变化可以与相关文档或
 仅要求存量代码审计、体检或改进建议时，先进入 `sdlc-backlog` 的“存量代码审计来源”，按其中引用的方法只读分析；不因审计自动 init、创建 Requirement 或开始交付。已有 tracked 目标的查询、实现与正式评审仍服从当前阶段。选中维护结果并进入生命周期后，再执行下列初始化和项目测绘步骤。
 
 恢复已选且未完成的 Feature 时直接按[阶段协议 §6](references/stage-agent-protocol.md#6-context-and-checkpoints)开始；以下通用启动步骤不先于该恢复路径执行。
+明确选中某个 Feature 且其交付或登记回执尚待核对时，即使投影已为 `released`、`next` 为 `done`，
+也先按[阶段协议 §6](references/stage-agent-protocol.md#6-context-and-checkpoints)读取可用检查点，
+再按[未决交付恢复](../sdlc-ship/SKILL.md#先恢复未决交付)只读核对该操作和现行状态；这不是重启已完成 Feature，也不自行重复交付或登记。
 
 1. 确认目标仓库和请求范围。仅查询进度时只读已有状态及其引用；状态不存在就如实报告，不 init、不自动进入执行阶段。
 2. 未纳入已有 Requirement/Feature/Task 的小型、局部、可逆修改，可直接实现并做必要验证，不为此创建完整生命周期记录。用户明确要求完整流程、修改已有跟踪任务，或涉及跨客户端/服务端协同、公共协议兼容性、持久化及并发/恢复风险时，仍走对应 SDLC 阶段；不得拆小任务绕过这些条件。
@@ -89,10 +92,13 @@ Git 保存历史并负责跨 clone 同步。状态变化可以与相关文档或
 
 ## 3.1 包内原型方法
 
-[`sdlc-prototype`](../sdlc-prototype/SKILL.md) 是产品和规格阶段可按需加载的方法，不是新的 lifecycle stage 或
-`/sdlc` 主路由。首次设计、实质交互迭代、复用或跳过的唯一选择策略、阶段写入边界和证据归属见
-[包内原型适配](references/integrations/product-prototype.md)。直接调用 `sdlc-prototype` 可以独立制作原型；若它已经属于
-tracked 工作，则必须服从当前 stage 和 brief，不能绕过生命周期。
+[`sdlc-prototype`](../sdlc-prototype/SKILL.md) 是产品和规格阶段在每次开始时主动召回的方法，不是新的 lifecycle stage 或
+`/sdlc` 主路由。召回时机、三种选择（使用原型方法、复用已确认足够的基线、说明依据后跳过）的适用条件、制作范围、记录
+方式和阶段边界唯一见[包内原型适配](references/integrations/product-prototype.md)；本 router 不复制该判断矩阵。
+
+路由到 product-design 或 spec 时，主 Agent 在形成该阶段 brief 前按该参考完成一次召回判断；需要创建或更新原型时，亦把有界
+可写目录和范围写进 brief。直接调用 `sdlc-prototype` 可以独立制作原型；若
+它已经属于 tracked 工作，则必须服从当前 stage 和 brief，不能绕过生命周期。
 
 ## 4. 状态写入
 
@@ -125,8 +131,8 @@ Task、validation、review 或 release 的转换。
 `retract-release` 只用于纠正尚未完成声明发布目标及该目标要求的 smoke、
 观测，却误写成 `released` 的记录；发布目标可以是明确约定的源码分发，
 也可以是环境部署。它要求说明原因，并把 Feature 恢复为 `reviewed`、
-Requirement 恢复为 `validated`。正文证据写入 Feature 工程上下文，Git
-保留原记录与纠正历史。普通发布失败不得先 `record-release` 再撤回。
+Requirement 恢复为 `validated`。证据写入 Feature 工程上下文或其中已有的稳定引用；若更改已绑定
+正文，按指纹和证据适用性规则处理后续引用。Git 保留原记录与纠正历史。普通发布失败不得先 `record-release` 再撤回。
 
 产品或研发正文直接编辑其 Markdown；`state.json` 只保存 `product_context_ref`、`engineering_context_ref` 和进度字段。上下文路径必须是 `.sdlc-v1/context/*.md` 下的仓库相对路径。
 
@@ -138,7 +144,7 @@ Requirement 恢复为 `validated`。正文证据写入 Feature 工程上下文�
   或把登记值当作全局 Git 分支一致性检查。
 - `record-validation` 记录测试时的业务代码 commit；评审和发布始终对应这个实现版本。
 - 引用已验收结论（spec ready、plan、validation、review）前，先运行只读 `verify-acceptance` 机械核对该点
-  绑定的 context 内容；`stale` 时暂停引用，重新获批后显式重记。用法、三态与恢复唯一见
+  绑定的 context 内容；`stale` 时暂停引用，按原批准及可证明的委托核对有权责任人，再按适用权限显式重记或补验。用法、三态与恢复唯一见
   [验收内容指纹核对](references/lightweight-runtime.md#71-验收内容指纹核对)；语义适用性判断仍按协议执行。
 - 验证后允许提交仅修改 `.sdlc-v1/**` 的状态、上下文和证据。若 validation commit 到当前 HEAD 在该目录之外有差异，或业务代码工作树不干净，则回到 build/validate。
 - `project.md` 只索引长期工程上下文，不复制其正文；`.sdlc-v1/context/*.md` 只记录当前 Requirement/Feature 的决定、证据和发布后观察。二者通过路径引用协作，不共享状态文件。

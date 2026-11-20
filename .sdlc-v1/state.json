@@ -152,6 +152,51 @@
         "result": "pass"
       }
     },
+    "FEAT-human-validation": {
+      "acceptance": {
+        "plan": {
+          "algorithm": "sha256",
+          "at": "2026-11-20T06:31:58Z",
+          "documents": {
+            ".sdlc-v1/context/FEAT-human-validation.engineering.md": "11e1b6405436252b13bb3ac62a00553c6166a3b8d451923a3faf451317153e63",
+            ".sdlc-v1/context/REQ-human-validation.product.md": "c82fda329e5f53866434dcc53a745f813bbd2a4c5aa9ab73d7dc0d624475f903"
+          },
+          "normalization": "context-v1"
+        }
+      },
+      "branch": "main",
+      "created_at": "2026-11-20T02:05:17Z",
+      "engineering_context_ref": ".sdlc-v1/context/FEAT-human-validation.engineering.md",
+      "id": "FEAT-human-validation",
+      "release": {
+        "at": null,
+        "commit": null,
+        "status": "pending"
+      },
+      "requirement_id": "REQ-human-validation",
+      "review": {
+        "at": null,
+        "by": null,
+        "decision": "pending"
+      },
+      "status": "in_progress",
+      "tasks": {
+        "TASK-human-validation": {
+          "depends_on": [],
+          "id": "TASK-human-validation",
+          "status": "done",
+          "title": "实现按需人工验收与自主推进",
+          "updated_at": "2026-11-20T06:32:42Z"
+        }
+      },
+      "updated_at": "2026-11-20T06:32:42Z",
+      "validation": {
+        "at": null,
+        "command": null,
+        "commit": null,
+        "result": "pending"
+      }
+    },
     "FEAT-security-scan": {
       "acceptance": {
         "plan": {
@@ -394,6 +439,29 @@
       "status": "released",
       "title": "SDLC 小项目派工与证据减量",
       "updated_at": "2026-10-25T12:06:56Z"
+    },
+    "REQ-human-validation": {
+      "acceptance": {
+        "spec_ready": {
+          "algorithm": "sha256",
+          "at": "2026-11-20T01:17:53Z",
+          "documents": {
+            ".sdlc-v1/context/REQ-human-validation.product.md": "c82fda329e5f53866434dcc53a745f813bbd2a4c5aa9ab73d7dc0d624475f903"
+          },
+          "normalization": "context-v1"
+        }
+      },
+      "created_at": "2026-11-20T01:09:39Z",
+      "depends_on": [],
+      "description": "规划对齐并获实施授权后持续推进至适用验收，由 Agent 完成可可靠验证的检查，按已确认条件安排人工体验。",
+      "domain": "sdlc-orchestration",
+      "feature_id": "FEAT-human-validation",
+      "id": "REQ-human-validation",
+      "priority": "P1",
+      "product_context_ref": ".sdlc-v1/context/REQ-human-validation.product.md",
+      "status": "in_delivery",
+      "title": "按需人工验收与自主推进",
+      "updated_at": "2026-11-20T06:32:42Z"
     },
     "REQ-security-scan": {
       "acceptance": {

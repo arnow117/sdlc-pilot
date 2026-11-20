@@ -147,6 +147,30 @@ repo-context 的 `sync`/`refine` 若会改动业务路径或长期文档，应�
 依赖冲突的工作暂停，独立授权工作继续。存量项目缺规范时按当前改动涉及的模块边界补齐并确认必要约束；局部小改动无新
 架构决定时说明适用性即可。
 
+### 按需人工验收与自主推进：SCN-human-validation
+
+**全局场景 ID：`SCN-human-validation`。** 已对齐并获授权的工作由 Agent 自行推进；可可靠自验证的
+修复、功能和客观 UI 改动不要求用户试用；确需真人判断时才交接可操作的候选、步骤和待确认事项。
+已确认的故事、场景和验收条件以当前 Requirement 的产品上下文为准，本节只作入口，不复制规格：
+[产品规格](.sdlc-v1/context/REQ-human-validation.product.md)。
+
+- **仅规划**：只授权规划时，Agent 交付计划，Build 与实现写入不开始。缺少实质决定、外部授权或
+  必要前提时，说明具体缺口及受影响动作，继续独立且已授权的工作。单独查询状态时生命周期没有写入。
+- **授权交付**：实施获授权后，Agent 在已登记 Task 内连续推进并完成适用验证。阶段切换、普通实现
+  选择和常规等待不产生额外的继续授权请求。
+- **真人交接**：确需真人时，对话给出旅程与 Feature、可打开入口、可核对候选、操作步骤与预期、
+  已检查项与缺口、负责观察的人和具体问题。首次验收只等待约定真人时保持 `pending`；沉默、
+  普通等待超时、泛化“继续”和模拟结果都不能充当必要的人类观察。
+- **状态说明**：当前阶段、候选、已检查内容、待项和下一步按所选 Feature 的实际状态、已有工程记录
+  和可用 checkpoint 说明。`待体验`、`反馈待处理`是说明性表述，不是新的状态。
+- **恢复**：跨会话按实际状态、候选、环境、判据、原授权和已有答复恢复，复用仍然适用的证据，
+  变化时只重验受影响项。已暂停或无法续跑时如实说明，不假定会自动唤醒。
+
+所选 Feature、验收条件及观察者来源取自当前上下文和已授权角色；候选、分支和 HEAD 取自状态投影
+和 Git；命令参数由原 CLI 和[轻量运行时](skills/sdlc/references/lightweight-runtime.md)负责。
+结果缺失或不明时给出现有恢复路径。共享规则见
+[阶段协议 §5](skills/sdlc/references/stage-agent-protocol.md#5-evidence-git-and-mandatory-stop)。
+
 ## 技能体系
 
 | 层 | 内容 | 作用 |
@@ -288,7 +312,7 @@ python3 scripts/lifecycle_state.py --repo <target-repo> record-validation \
 python3 scripts/lifecycle_state.py --repo <target-repo> record-review \
   --feature-id FEAT-001 --decision approved --by reviewer
 python3 scripts/lifecycle_state.py --repo <target-repo> record-release \
-  --feature-id FEAT-001
+  --feature-id FEAT-001 --commit <validation-commit>
 ```
 
 Task 状态转换必须遵循允许的下一状态；失败时的 stderr 详情、恢复查询和重开 Task 对交付检查的影响见
@@ -296,8 +320,8 @@ Task 状态转换必须遵循允许的下一状态；失败时的 stderr 详情�
 
 `released` 只表示声明的发布目标及该目标要求的 smoke、观测已经完成；
 发布目标可以是明确约定的源码分发，也可以是环境部署。它不表示代码仅仅
-合入了主分支。若历史记录误把合并或发布准备当成发布，先在工程上下文
-记录原因，再纠正机器状态：
+合入了主分支。若历史记录误把合并或发布准备当成发布，先在工程上下文或其中已有的稳定
+证据引用记录原因，再纠正机器状态；正文改动引起的 stale 按既有指纹规则处理：
 
 ```bash
 python3 scripts/lifecycle_state.py --repo <target-repo> retract-release \
@@ -337,9 +361,9 @@ python3 scripts/lifecycle_state.py --repo <target-repo> verify-acceptance --requ
 python3 scripts/lifecycle_state.py --repo <target-repo> verify-acceptance --feature-id FEAT-001 --point plan
 ```
 
-结果为 `match`/`stale`/`missing`：`stale` 退出码 1，表示绑定内容已漂移，先暂停引用并重新批准；
+结果为 `match`/`stale`/`missing`：`stale` 退出码 1，表示绑定内容已漂移，先暂停引用，按原批准与可证明的委托核对有权责任人，再显式重记或补验；
 `missing` 表示该点未绑定内容、未验证当前适用性，不报错也不当作已核验。`mark-requirement-ready` 与
-`start-feature` 的 `--refresh-acceptance` 用于主 Agent 重新获批后显式重记既有快照。JSON 形状、错误
+`start-feature` 的 `--refresh-acceptance` 用于有权责任人按原批准或可证明的委托显式重记既有快照。JSON 形状、错误
 处理与恢复流程见
 [轻量运行时的验收内容指纹核对](skills/sdlc/references/lightweight-runtime.md#71-验收内容指纹核对)。
 

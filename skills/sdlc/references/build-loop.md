@@ -61,9 +61,13 @@ plan
 发布前同时满足：
 
 1. 所有有效 Task 为 `done`。
-2. 产品上下文中的每条验收条件都有实际检查结果。
-3. 必要测试与静态检查本轮真实执行成功。
-4. review 已批准 validation commit。
+2. 产品上下文中的每条验收条件都有适用的实际检查结果；仍待必要真人观察时按
+   [阶段协议的按需人工验收与验证历史](stage-agent-protocol.md#按需人工验收与验证历史)
+   记录候选、待项和接续方式，但尚未满足发布条件。
+3. 必要测试与静态检查本轮真实执行成功，或按
+   [阶段协议 §5 的证据适用性](stage-agent-protocol.md#5-evidence-git-and-mandatory-stop)
+   证明既有证据仍适用且覆盖当前候选。
+4. validation 已通过，review 已批准对应的 validation commit。
 5. validation commit 到当前 HEAD 在 `.sdlc-v1/**` 之外无差异，且业务代码工作树干净。
 
 未满足时列出具体缺口：实现或测试缺口回 build；验证过期回 validate；评审问题回 build 后重新 validate/review。
@@ -109,5 +113,7 @@ plan
 - 达到用户设置的 Feature 数量或时间范围：停止并汇报进度。
 - 测试基础设施不可用、产品问题未决或需要新的外部授权：停止当前循环并给出所需输入；重复工作无新证据时按
   canonical protocol 的强制停止处理。
-- 每次通过判断都必须来自本轮实际命令、输出和 exit code；没有运行就不能声称通过。
+- 每次通过判断都必须来自本轮实际命令、输出和 exit code，或来自按
+  [阶段协议 §5 的证据适用性](stage-agent-protocol.md#5-evidence-git-and-mandatory-stop)
+  证明仍然适用的既有证据；没有运行且不适用就不能声称通过。
 - `next` 要求选择、需要用户决策/外部授权、或阶段结果缺少证据时暂停当前 Feature，不执行 transition。

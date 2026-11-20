@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>合成示例 · 移动端取件</title>
+    <style>
+      :root {
+        --surface: #f5f6f4;
+        --surface-raised: #ffffff;
+        --text: #23282a;
+        --text-muted: #6a7370;
+        --border: #d8ded9;
+        --primary: #2f6b52;
+        --danger: #a5341f;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font: 15px/1.6 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+        color: var(--text);
+        background: var(--surface);
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: minmax(320px, 420px) minmax(300px, 380px);
+        gap: 24px;
+        padding: 24px;
+        align-items: start;
+      }
+
+      .device {
+        background: var(--surface-raised);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 20px;
+        min-height: 420px;
+      }
+
+      .device h1 { margin: 0 0 4px; font-size: 19px; }
+      .device .sub { margin: 0 0 18px; color: var(--text-muted); font-size: 13px; }
+      .field { margin-bottom: 14px; }
+      .field label { display: block; font-size: 13px; color: var(--text-muted); margin-bottom: 4px; }
+      .field input { width: 100%; padding: 10px 12px; font: inherit; border: 1px solid var(--border); border-radius: 8px; }
+      .row { display: flex; gap: 10px; flex-wrap: wrap; }
+      button { font: inherit; padding: 9px 15px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface-raised); cursor: pointer; }
+      button.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+      button:disabled { opacity: .5; cursor: default; }
+      .status { margin-top: 16px; padding: 12px; border-radius: 8px; background: var(--surface); border: 1px solid var(--border); font-size: 14px; }
+      .status.error { border-color: var(--danger); color: var(--danger); }
+      .notices { margin-top: 16px; padding-left: 18px; font-size: 14px; }
+      .dependency { margin: 0 0 12px; padding: 10px 12px; border: 1px solid #d8ded9; border-radius: 8px; background: #f5f6f4; font-size: 13px; color: #6a7370; }
+
+      .review {
+        background: var(--surface-raised);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 18px;
+      }
+
+      .review h2 { margin: 0 0 6px; font-size: 16px; }
+      .pr-root { font-size: 14px; }
+      .pr-header h2 { margin: 0 0 4px; }
+      .pr-note { margin: 0 0 12px; color: var(--text-muted); font-size: 12px; }
+      .pr-section { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 12px; }
+      .pr-section h3 { margin: 0 0 8px; font-size: 14px; }
+      .pr-pages { margin: 0; padding-left: 18px; }
+      .pr-page-note { display: block; color: var(--text-muted); font-size: 12px; }
+      .pr-field { display: block; margin-bottom: 10px; font-size: 13px; }
+      .pr-field select { width: 100%; padding: 7px 9px; font: inherit; border: 1px solid var(--border); border-radius: 7px; margin-top: 4px; }
+      .pr-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+      .pr-actions button { padding: 6px 11px; font-size: 13px; }
+      .pr-steps { margin: 0; padding: 0; list-style: none; }
+      .pr-step { display: flex; gap: 9px; padding: 8px 0; border-top: 1px solid var(--border); align-items: flex-start; }
+      .pr-step-index { color: var(--text-muted); font-size: 12px; min-width: 16px; }
+      .pr-step-body { flex: 1; }
+      .pr-tags { display: inline-flex; gap: 5px; margin-left: 6px; }
+      .pr-tag { font-size: 11px; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-muted); }
+      .pr-expect { display: block; color: var(--text-muted); font-size: 12px; margin-top: 3px; }
+      .pr-error { display: block; color: var(--danger); font-size: 12px; margin-top: 3px; }
+      .pr-entry, .pr-goal, .pr-paused, .pr-message { font-size: 12px; color: var(--text-muted); margin: 4px 0; }
+      .pr-status-done .pr-tag.pr-state { border-color: var(--primary); color: var(--primary); }
+      .pr-status-failed .pr-tag.pr-state { border-color: var(--danger); color: var(--danger); }
+      .pr-status-waiting .pr-tag.pr-state { border-color: #8a6d1f; color: #8a6d1f; }
+      .pr-current { background: #f1f5f2; }
+      .pr-empty { color: var(--text-muted); font-size: 13px; }
+
+      @media (max-width: 820px) {
+        .layout { grid-template-columns: 1fr; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="layout">
+      <section class="device">
+        <h1>我的取件</h1>
+        <p class="sub">合成演示 · 不连接真实柜机、账号或快递服务</p>
+        <div class="field">
+          <label for="code">取件码</label>
+          <input id="code" inputmode="numeric" autocomplete="off" placeholder="6 位数字">
+        </div>
+        <div class="row">
+          <button class="primary" id="submit" type="button">查询包裹</button>
+          <button id="confirm" type="button">确认取件</button>
+          <button id="reset" type="button">重置演示</button>
+        </div>
+        <p class="status" id="status">输入取件码后查询。</p>
+        <ul class="notices" id="notices"></ul>
+      </section>
+
+      <aside class="review">
+        <p class="dependency" id="dependency-notice" hidden></p>
+        <div id="review-host"></div>
+      </aside>
+    </div>
+
+    <script src="../../shared-state/runtime.js"></script>
+    <script src="../review-console.js"></script>
+    <script src="../review-panel.js"></script>
+    <script src="./mobile-parcel.js"></script>
+    <script>
+      "use strict";
+
+      const app = MobileParcel.createParcelApp();
+      const codeInput = document.querySelector("#code");
+      const statusLine = document.querySelector("#status");
+      const noticeList = document.querySelector("#notices");
+      const dependencyNotice = document.querySelector("#dependency-notice");
+
+      // The review console is optional. If its scripts are missing the product
+      // area still works and says what is missing.
+      let review = null;
+      if (typeof PrototypeReviewConsole === "undefined" || typeof PrototypeReviewPanel === "undefined") {
+        dependencyNotice.hidden = false;
+        dependencyNotice.textContent = "审阅台脚本未加载：产品区仍可使用，但没有导览与回看。";
+      } else {
+        review = PrototypeReviewConsole.createConsole({ adapter: app.adapter });
+        PrototypeReviewPanel.createPanel({
+          console: review,
+          host: document.querySelector("#review-host"),
+          title: "审阅台 · 取件",
+        });
+      }
+
+      // The input follows the product state, so a reset cannot leave a stale
+      // code on screen.
+      function syncInput(state) {
+        if (state.parcel.code) {
+          if (codeInput.value !== state.parcel.code) {
+            codeInput.value = state.parcel.code;
+          }
+        } else if (codeInput.value && document.activeElement !== codeInput) {
+          codeInput.value = "";
+        }
+      }
+
+      function render() {
+        const state = app.store.getState();
+        const parcel = state.parcel;
+        syncInput(state);
+        const messages = {
+          idle: "输入取件码后查询。",
+          entered: "取件码已接受，可以查询。",
+          checking: "正在查询柜机…",
+          opened: "柜门已打开，柜号 " + parcel.locker + "。",
+          rejected: parcel.error,
+          picked: "已取出包裹。",
+        };
+
+        statusLine.textContent = parcel.error || messages[parcel.phase] || "";
+        statusLine.className = parcel.error ? "status error" : "status";
+        noticeList.innerHTML = state.notices
+          .map(function toItem(notice) { return "<li>" + notice.text + "</li>"; })
+          .join("");
+      }
+
+      document.querySelector("#submit").addEventListener("click", function onSubmit() {
+        const entered = app.actions.enterCode(codeInput.value);
+        if (!entered.ok) {
+          statusLine.textContent = entered.error.message;
+          statusLine.className = "status error";
+          return;
+        }
+        const requested = app.actions.requestScan();
+        if (!requested.ok) {
+          statusLine.textContent = requested.error.message;
+          statusLine.className = "status error";
+          render();
+          return;
+        }
+        app.store.schedule({ type: "apply-scan" }, 600);
+        render();
+      });
+
+      document.querySelector("#confirm").addEventListener("click", function onConfirm() {
+        const confirmed = app.actions.confirmPickup();
+        if (!confirmed.ok) {
+          statusLine.textContent = confirmed.error.message;
+          statusLine.className = "status error";
+          return;
+        }
+        render();
+      });
+
+      document.querySelector("#reset").addEventListener("click", function onReset() {
+        // The product resets itself first, so a pending scan cannot land after
+        // the reset even when the review console is not loaded.
+        app.reset();
+        if (review) {
+          review.reset();
+        }
+        codeInput.value = "";
+        render();
+      });
+
+      app.store.subscribe(render);
+      render();
+    </script>
+  </body>
+</html>

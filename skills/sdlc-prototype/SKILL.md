@@ -36,6 +36,8 @@ description: 从需求、PRD 或已有 HTML 创建和迭代可交互的产品交
 - 新的产品界面尚无已确认设计，或用户明确要求风格灵感：读 [hallmark-catalog.md](references/hallmark-catalog.md)，用随包目录中的 Hallmark 风格目录给出三个可预览候选；它不是新的 skill、全局样式或页面生成器。
 - 需要实际共享数据的独立 HTML：读 [runtime.md](references/runtime.md)，评估复用附带的最小状态层与双端示例。已有状态方案优先复用，不强制迁移。
 - 涉及业务联动或迭代回归：读 [verification.md](references/verification.md)，分别验证状态不变量与用户实际操作。
+- 复杂原型需要页面/场景映射或可复现场景脚本：读 [interaction-contract.md](references/interaction-contract.md)。
+- 需要审阅区、导览、回看或交付依赖检查：读 [review-console.md](references/review-console.md)。按需引入，不是每个原型都需要。
 - 准备 PRD/研发交接或接入 SDLC：读 [handoff.md](references/handoff.md)。
 - 要了解此技能如何从智觅两份样例提炼、哪些做法不能照搬：读 [sample-analysis.md](references/sample-analysis.md)。普通使用无需加载样例分析。
 
@@ -53,6 +55,8 @@ description: 从需求、PRD 或已有 HTML 创建和迭代可交互的产品交
 - 尚未确认的规则；原型已经表现出的行为属于观察证据，未经确认不自动成为产品决定。
 
 复杂原型用 `SCN-*`、`PAGE-*`、`RULE-*` 等稳定 ID 建立关联；小修改直接复用现有名称或 ID，不额外制造编号体系。
+
+复杂原型先建立轻量的页面与场景映射，再写可复现场景脚本。脚本里的每一步标明是准备、状态注入、产品操作还是观察，并分别记录普通用户入口、审阅直达和注入步骤三种到达方式。用户操作从普通入口实际走过的，记为该入口的局部或模拟旅程证据；外部结果由演示注入的逐步写明，不写成真实外部行为已发生；只走过审阅直达的不写成普通入口已走通。格式与口径见 [interaction-contract.md](references/interaction-contract.md) 与 [review-console.md](references/review-console.md)。小原型用简短列表即可，不为此新建文件。
 
 `both` 模式先确定共用的实体标识、状态词汇、数值单位和规则。跨端联动程度按交互规范选择并告知用户；不能让两个独立 HTML 暗示它们在同步。
 
@@ -93,6 +97,8 @@ description: 从需求、PRD 或已有 HTML 创建和迭代可交互的产品交
 复用状态层时，运行其附带测试，并为本产品增加真实业务不变量测试。测试应使用 UI 调用的同一套 action/reducer；只有通用示例通过，不能证明产品联动正确。状态测试通过后，再按验证规范从 UI 入口检查跨端投影。
 
 不要求每次迭代扫描所有旧功能；覆盖受影响旅程及其共享导航、状态或组件。无变化的有效证据可以复用。
+
+对每条核心旅程按 [verification.md](references/verification.md) 单独说明交付依赖：能否启动、依赖哪些相邻文件或外链、约定环境下实际用哪种运行方式。资源失败时用户看到什么也要写。只有用户要求离线时才按离线承诺验收；未约定离线时如实列出外链即可。
 
 ### 5. 交付与继续迭代
 

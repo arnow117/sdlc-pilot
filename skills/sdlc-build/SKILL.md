@@ -53,7 +53,10 @@ description: >
    指派正文写者，Build 身份不自带长期正文维护权。实质变更涉及适用条目时核对并记录适用性、检查证据与偏离，不静默扩大例外范围。
    涉及已有图示时遵循
    [图示辅助对齐](../sdlc/references/lifecycles/software-delivery.md#图示辅助对齐)的同步约定。
-10. 逐条核对完成条件与验收条件，记录实际检查命令和结果；满足后在 orchestrated mode 请求
+10. 逐条核对 Task 的完成条件及其对应验收条件，记录实际检查命令和结果。Task 自身的完成条件
+   已满足，而当前有效方案把必要真人观察或独立验证明确留给 Validate 时，记录实际候选、待验
+   条件与责任人并交接 Validate；无需在 Build 冒充这项观察已通过。若真人决定或观察本身就是
+   该 Task 的明确完成前提，则仍须先满足该前提。满足 Task 完成条件后在 orchestrated mode 请求
    `set-task-status ... --status done`，只有独立、不在主 Agent 编排中的 standalone mode 才直接调用 CLI。
 
 若检查会启动服务、浏览器、模拟器、容器、VM 或明显占用主机资源，按唯一的

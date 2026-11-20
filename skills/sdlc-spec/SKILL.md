@@ -15,6 +15,9 @@ distilled-from: [Zts0hg/codexspec]
 和用户决定已完整时执行。只有没有当前主 Agent 编排的独立调用才使用 standalone mode。
 准备批次中，本阶段保留同样的产品确认和原型边界，并只返回自己的 canonical 候选块；未接受的 Plan 产物不得据此开始研发。
 
+编排模式下，原型适用性判断及需要创建或更新时的有界写权由主 Agent 在 brief 中给出；发现新事实会改变判断，或所需写权
+缺失时，按包内适配反馈主 Agent，不静默跳过或扩大写域。standalone 直接调用时，由本阶段按下方流程自行完成召回与判断。
+
 ## 输入
 
 - `product-projection --requirement-id <REQ-id>` 返回的 Requirement。
@@ -25,20 +28,25 @@ distilled-from: [Zts0hg/codexspec]
 ## 流程
 
 1. 加载 `sdlc-product-design` 和 [`lifecycles/product-design.md`](../sdlc/references/lifecycles/product-design.md)。
-2. 先核对产品上下文中的方向来源、预期结果和成功指标；长期文档只作为约束来源，不复制为当前需求正文。
-3. 先复用已确认的来源和明确委托的选择，再按[尽早处理实质产品选择](../sdlc/references/lifecycles/product-design.md#尽早处理实质产品选择)
-   提出会影响范围、行为或验收的少量问题；需要外部事实时按[调研上下文](../sdlc/references/research-context.md)
+2. 原型召回与选择：展开场景、规则和验收条件前，先读包内 [`sdlc-prototype`](../sdlc-prototype/SKILL.md) 的技能入口和
+   [sdlc-prototype 包内适配](../sdlc/references/integrations/product-prototype.md)，按其唯一选择策略得出使用原型方法、
+   复用已确认足够的基线、说明依据后跳过三者之一，并把判断与依据写回既有产品上下文或当前 brief。召回不依赖用户点名
+   该技能，也不推迟到规格末尾；不要求每个需求都产出 HTML。编排模式下沿用 brief 已给出的判断与写权范围。
+3. 先核对产品上下文中的方向来源、预期结果和成功指标；长期文档只作为约束来源，不复制为当前需求正文。
+4. 先复用已确认的来源和明确委托的选择，再按[尽早处理实质产品选择](../sdlc/references/lifecycles/product-design.md#尽早处理实质产品选择)和
+   [阶段协议的判断边界](../sdlc/references/stage-agent-protocol.md#judgment-boundary)提出需要人决定的少量问题；需要外部事实时按[调研上下文](../sdlc/references/research-context.md)
    记录问题、约束和证据范围，不把普通实现默认值或已经给出的答案重问一遍。
-4. 用 Given/When/Then 或具体例子覆盖主路径、失败路径和边界。
-5. 明确术语、业务规则、不变量、体验约束和非功能要求。
-6. 将结论直接写回 `product_context_ref` 指向的 Markdown；按
+5. 用 Given/When/Then 或具体例子覆盖主路径、失败路径和边界。
+6. 明确术语、业务规则、不变量、体验约束和非功能要求。
+7. 将结论直接写回 `product_context_ref` 指向的 Markdown；按
    [`sdlc-product-design` 的产品决策来源规则](../sdlc-product-design/SKILL.md#产品上下文结构)
    保留当前决定的确认或委托来源、未决问题与结果指标。
-   按 [sdlc-prototype 包内适配](../sdlc/references/integrations/product-prototype.md) 的唯一选择策略，使用它作为本阶段方法；适用时展示候选版本、
+   按第 2 步的判断结果处理原型；适用时展示候选版本、
    定向反馈动作、实际检查范围和模拟边界，并把反馈造成的决定/版本变化写回当前产品上下文。
    小项目以语义完整且无重复为准：每项规则、数据 schema、接口和验收条件只保留一个权威定义，设计、计划和 Task 引用它，不复述它。
-7. 仅对尚未有确认来源或明确委托、且会阻塞产品行为或验收的选择请求用户回答；未确认的建议、假设或开放替代项不能升格为 Requirement 或验收条件。
-8. 条件满足后在 orchestrated mode 请求 `mark-requirement-ready`；只有独立、不在主 Agent 编排中的 standalone
+8. 按[阶段协议的判断边界](../sdlc/references/stage-agent-protocol.md#judgment-boundary)处理尚无确认来源或明确委托且须由人决定的事项，
+   包括实质主观视觉方向；可先展示候选，依赖选择的验收待确认。未确认的建议、假设或开放替代项不能升格为 Requirement 或验收条件。
+9. 条件满足后在 orchestrated mode 请求 `mark-requirement-ready`；只有独立、不在主 Agent 编排中的 standalone
    mode 才直接调用 CLI。
 
 ## 完成条件

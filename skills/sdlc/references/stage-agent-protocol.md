@@ -515,9 +515,10 @@ recommended defaults and confirm exceptions only. For example, when an API
 already specifies that empty strings are rejected, adding that validation is not
 re-asked; changing it to accept them with undefined meaning is asked first.
 
-When a question is required, ask one decision question at a time. Each question
-names the person or owner who should decide it, and carries the completed
-analysis, a recommendation, the principal trade-offs, and
+When decisions are required, group independent material questions that can be
+judged together; ask complex or dependent choices one at a time when that makes
+the decision clearer. Each names the person or owner who should decide it, and
+carries the completed analysis, a recommendation, the principal trade-offs, and
 the next action; other independent work may continue while it is open. No answer
 is not consent, and dependent acceptance or implementation does not advance from
 silence. Do not expand one question into a series of low-risk implementation
@@ -808,6 +809,43 @@ smoke result, and one recorded evidence location; it does not copy or reread the
 entire history. Equivalent suite evidence does not remove approval, content, smoke,
 or formal commit-binding requirements.
 
+### 发布前登记预检与中断去重
+
+发布前的只读预检与登记前后的版本一致性按
+[Ship 的流程](../../sdlc-ship/SKILL.md#流程)执行，本节只规定该检查不可省略的事实与
+恢复行为。
+
+- **只读预检。** 从当前 Feature/Requirement 投影和现有目标配置核对仓库、worktree、
+  登记分支、对应的有效状态与 Feature/目标环境身份。读取 HEAD 的实际 commit、现行
+  `validation.commit`、适用的 validation/review 内容、批准来源及必需证据。Feature 须为
+  `reviewed`，拟交付和拟登记 commit 必须与 `validation.commit` 相同。预检使用
+  `git rev-parse --is-inside-work-tree`、`git rev-parse --verify 'HEAD^{commit}'`、
+  `git status --porcelain=v1 --untracked-files=all -- . ':(glob,exclude).sdlc-v1/**'`
+  和 `git diff --quiet <validation-commit> HEAD -- . ':(glob,exclude).sdlc-v1/**'`，
+  逐个用 `git ls-files --error-unmatch -- <ref>` 核对 state、产品和工程正文已跟踪，
+  用 `git ls-files -u -- <三个路径>` 确认无冲突，`git diff --cached --quiet --
+  .sdlc-v1/state.json` 须退出 0、`git check-ignore -q -- .sdlc-v1/state.json` 须退出
+  1，再用现有只读 CLI 确认 state 可读、有效且投影身份一致，逐个验证绑定路径并实际
+  读取正文。旧 v3 的未绑定点沿用原有证据规则。任何必要证据、Git 前置、外部权限或实际
+  目标存疑，先暂停外部动作。仓库 clean 和预检通过只反映当时事实；从外部动作到登记
+  要保护候选、索引、状态和相关绑定的受控写入，继续核对实际目标和版本。预检不保证最终
+  写入、锁、磁盘或宿主回执成功。
+- **登记版本与实际交付一致。** 当 `validation.commit=A`，仅状态/上下文交接后
+  `HEAD=B`，全仓等价且上述条件成立时，实际交付、smoke 和显式
+  `record-release --commit A` 都绑定 A。在 B 重记 Validation 会改绑 B，不能事后把已
+  交付的 A 填成 B。历史 closed 记录沿用只读审计和维护流程。
+- **中断后先核实真实结果。** 执行外部动作前用原有阶段/平台证据记录保存各操作和目标
+  环境的可核对标识、目标原版本、预期版本/变更及回执查询入口。重启后先逐操作只读比对
+  记录、可取得的执行回执、目标实际版本与环境变更，确认它们属于同一次授权动作；目标
+  碰巧已是 A 不证明本次动作成功。确认某一步已执行时不重发该步，先补其欠缺的 smoke、
+  验证或观察；仍有明确约定且已授权的后续阶段时，核对其前置条件、目标与原授权，分别
+  预检并记录后继续。全部必需阶段成功后才可登记。任一动作仍在执行或结果无法确认，暂停
+  该动作及依赖它的步骤；只有确认原动作未生效且不在执行，预检和授权仍覆盖时才可执行。
+  登记回执未知时先读回现行 Feature 状态和实际 commit，不重发已经成功的登记。即使裸
+  `next=done`、Feature 已 `released`，对明确选中的未决交付或登记回执仍可按 §6 及
+  [Ship 的恢复入口](../../sdlc-ship/SKILL.md#先恢复未决交付)只读核对；这不重启 Feature。
+  若实际目标或必要 smoke 未完成却已登记发布，按既有 `retract-release` 纠错条件处理。
+
 After a complete change segment passes its required checks, commit it on the
 Feature branch when existing authorization permits. A partial checkpoint commit
 must say that work remains incomplete. Merge to the release branch or main line
@@ -908,6 +946,130 @@ authorized, or that the prose still covers the current requirements. The semanti
 applicability judgment in this section remains the authority for whether recorded
 evidence still applies.
 
+### 按需人工验收与验证历史
+
+验收条件不共享同一种验收归属。规划阶段为每条当前验收条件确定由谁验证：Agent
+能可靠自验证的（可复现 Bug、请求与响应行为、有明确判据的客观 UI），由 Agent 取得
+适用证据后直接完成适用验证，不要求用户试用；确需真人判断的（用户明确要求、已确认
+条件已约定真人义务，或存在 Agent 无法替代的具体人类观察），才进入真人验收。客观 UI
+判据可由实际运行或可靠检查证明；缺环境或缺可信证据按验证缺口处理，不改判为真人义务。
+用户主动试用可收集意见，是否属于正式义务按当前约定判断。
+
+真人验收是 Validate 内的环节，不是新阶段。Build 可提前展示候选，但未提交或模拟的
+候选按其实际身份标示，不记为正式 validation commit 或通过。
+
+汇总验收前先按现有状态、正式记录、Git 与交接证据确定验证历史，三种解释互斥：
+
+- **首次**：从未有过正式验证结果。适用 `validation.result=pending`，等待期间不写
+  `fail`，不重复催问，也不重跑无变化的检查。
+- **已知历史的重开候选**：Task 重开已清除 validation/review 记录及指纹。上一候选有
+  正式 `fail` 时，保留原失败与修复证据，说明当前新候选仍在验收，沿用此时的 `pending`，
+  并保留失败候选与修复后候选的区分；上一候选有 `pass` 但被重开清除时，按新候选完成
+  必要重验，当前 `pass` 不从历史恢复。两种情况都不按首次报告，也不因普通等待写入新
+  `fail`。
+- **历史不完整**：未提交的 `pass` 在重开并完成后可能不见于 Git 或当前投影。此时首次
+  资格未知，明确说明当前没有可用 `pass`，只暂停依赖该结论的动作，等待足够的真实证据
+  或权限。当前候选已知的失败、环境阻塞或实际结案仍按实际原因处置，不被历史未知遮蔽。
+
+任一分支出现明确人工拒绝、本轮验收实际结束仍缺必要证据，或另一项必要检查失败或受阻，
+按实际原因请求 `record-validation --result fail`；只为实际执行过的检查填
+`--test-command`。已有仍在状态中生效的 `pass` 时，必要重验遇到缺证或未通过须先使旧
+`pass` 及其下游批准失效，阻止 Review/Ship。状态写入被拒时保留证据并停止该 Feature 的
+后续调度；结果不明先读回实际状态。
+
+获得适用真人答复后，按本节核对候选、环境、判据、授权、原独立执行事实及必要检查的
+覆盖。跨会话可复用仍适用的命令、结果和版本，仅补因变化或缺证而必要的检查。正式通过
+须有全部必要证据；沉默、普通等待超时、泛化“继续”、模拟结果和客观检查通过都不能充当
+必要的人类观察。
+
+主 Agent 收到仅待约定真人的 `incomplete` 和空 `requested_transitions` 时，保留候选、
+待项和责任人，并继续独立且已授权的工作。续接或收到泛化“继续”时，先核对该候选、
+判据及已有答复；没有新答复或影响适用性的新事实时，不重新派发相同验证、不重复催问，
+也不重跑仍适用的检查。需要状态说明时据实报告待项；明确的人工答复或相关变化再触发
+受影响部分的核对。
+
+### 同一候选上的多个 Feature
+
+多个 Feature 共享同一候选时，各 Feature 保持自己的状态、Task、验证义务和判据。一次
+原观察可以同时关联多个 Feature，但每个 Feature 都要独立核对覆盖范围、集成缺口、
+branch、Task 与验证义务，并在自己的工程记录中保留可核对的原证据引用。跨 clone 引用
+使用已同步的 Git ref、路径和小节定位，不只留下对方无法读取的本地路径或私有对话。
+
+共享同一 checkout 的 A、B 先保留共同候选干净，分别按各自观察、集成义务和独立检查
+记录可接受的结果，再修复 B。A 自身条件通过但自己必需的集成检查未完成时，A 仍保留
+缺口，不能写成 A 的 `pass`。B 先产生非 `.sdlc-v1/**` 的工作树差异会阻止 A 的正式写入，
+此时保留 A 的可复用证据并暂停依赖动作。需要并行修复时，只有原授权覆盖且写者、登记
+branch、状态及被测版本都正确关联的隔离候选才可使用。B 的后续业务 commit 即使与 A 的
+界面或文件无交集，也要按现有全仓判断 validation commit 到 HEAD 是否在该目录之外等价，
+并对不等价候选按 Validate/Review 规则重验。人类观察仍可在等价可证的范围内复用，不能
+因此跳过对当前集成候选的正式检查。
+
+### 批准型重记、独占与读回
+
+重记一个验收点（`spec_ready`、`plan`、`validation` 或 `review`）的既有指纹时按以下顺序执行。本节不新增 schema、
+命令、指纹算法、常驻服务或第二状态库。
+
+1. **选择适用的选择器。** Feature 尚未登记时用
+   `verify-acceptance --requirement-id <REQ> --point spec_ready` 核对 Spec；登记后
+   也可用 `verify-acceptance --feature-id <FEAT> --point spec_ready` 通过其投影核对
+   关联 Requirement。其余 `plan`、`validation`、`review` 点使用已登记的 `--feature-id`。
+   `match` 只证明内容指纹一致，`missing` 说明未绑定并按旧约定判断，二者都要核实实际
+   证据与权限。`stale` 暂停依赖动作，记录绑定路径和差异原因。审批身份或证据的归属须
+   另核对。
+2. **保留原批准正文引用。** 对仅追加证据的主张，在实际接受各验收点时保留可访问的原
+   批准正文引用：优先使用已获 Git 授权的 `commit:path`、同一验收点的既有结果，或原有
+   证据中的可访问版本。续接时按保存的指纹、文件绑定集合和 `context-v1` 核对每份必要
+   原文。可从 `git show <approved-commit>:<bound-path>` 取得原始字节，在只读核对中用
+   既有 `_context_digest` 计算并比较 `expected_digest`。避免通过当前 HEAD 猜测批准
+   正文，避免用普通文件 SHA-256 代替归一化算法。原文不可取、指纹不符、授权来历不明
+   或存在实质变更时保留缺口，按原范围变更或补验流程处理受影响动作；已触发必要重验时
+   按[按需人工验收与验证历史](#按需人工验收与验证历史)处理失效。
+3. **逐点比较并确认权限。** 逐点比较正文差异、审批对象、判据、版本、相关环境及原批准
+   权限。记录原责任人、委托来源和允许其重记的具体点及变动范围、当前复核责任人与结果。
+   原批准责任人可显式重记，主 Agent 可按其已有且可证明的委托履行职责；旧批准人保留该
+   决定时由其明确批准。新 Plan 可将既有 Plan 验收职权内的纯证据追加复核写入接受记录，
+   明确只覆盖 `plan` 的当前绑定内容和同一产品/设计契约。该限定不转授产品批准、真人
+   观察、独立验证、评审或发布授权。普通继续或 Git 同步不会产生委托。
+4. **固定核准对象并交接写入。** 主 Agent 在核准当前正文前识别产品/工程文件、绑定引用、
+   候选工作树/HEAD 与状态的实际写者。通过既有写者交接确认其他执行者或外部协作者停止
+   写入，或使用经授权、版本和状态正确关联、可确认独占的隔离候选。从核准当前正文到
+   命令后读回，保持同一受控写者、绑定引用及候选，暂停受影响路径的其他写入。每个重记
+   都按该顺序操作，期间出现新写入须重新审核。仅看到 HEAD 或 `git status` 一致、state
+   文件加锁、子 Agent 无输出，均不足以证明独占。共享路径或活动写者无法排除时暂停
+   重记，保留证据并等现有交接条件成立。
+5. **核准、落盘及读回逐项核对。** 主 Agent 先固定已审阅的验收点、原快照及当前预期映射
+   （每个绑定路径及其 `context-v1` digest）、Feature/Requirement 投影身份、实际
+   worktree、HEAD、与本次相关的验证或拟交付 commit。用第 1 项的有效查询取得结构化
+   `files`，用现有归一化函数核对内容。任何依赖此映射的批准型重记调用前，按
+   [§6](#6-context-and-checkpoints) 持久保存核准记录并本机读回核准记录，独占下紧邻
+   CLI 再核对实际值。调用后读回 Feature/Requirement 投影与相应 `verify-acceptance`，
+   逐项比较已保存的路径集合、`expected_digest`、`current_digest`、绑定身份及相关候选。
+   `match` 仅表示已存内容等于这次查询读到的内容，不能替代与事先核准值的比较。若事先
+   比对失败则不调用。读回不符、结果不明或丢失独占时，立即停止依赖该记录的
+   Validate/Review/Ship 动作，保留原快照、核准映射、实际回执和版本差异，按
+   [§6](#6-context-and-checkpoints) 从检查点和原记录重建核准对象，再核对实际状态并在
+   授权内修正。不得自动重试、重签现存内容、回滚他人文件或仅凭后续 `match` 恢复。
+   CLI 的 state 锁和内部多次读取没有提供跨核准与写入的原子 compare-and-swap。
+6. **按验收点重记并区分评审结果。** 仅追加适用证据须集中文字写入。`spec_ready`/`plan`
+   用已有 `--refresh-acceptance`。Plan 的 `--requirement-id`、`--feature-id`、
+   `--branch`、`--engineering-context-ref` 取当前指定 Feature projection 的已登记身份，
+   产品路径也从当前 Requirement 核对。已有迁移从 `main` 到 `feature/fix` 时传新登记值，
+   原批准正文与授权仍追溯至原点。当前登记或 worktree 不一致按既有迁移规则处理，不自动
+   checkout 或变更 branch。`validation`/`review` 用现有 `record-*`。拟批准 Review 时，
+   若写入评审结论使验证指纹漂移，先证明覆盖与授权，处理所需验收点并按 validation →
+   review 顺序恢复。`record-validation` 会清旧 Review 和 Release。重记 Validation 的
+   `--commit` 只能等于当前 HEAD。优先在原实现 HEAD 上完成；若 HEAD 已变，先按本节证明
+   候选等价并保留实际执行的原 commit、命令和环境，否则重验。给新 HEAD 绑定时据实说明
+   复用，保留旧测试版本。
+7. **有必须修复发现时优先拒绝。** 已有 `reviewed` 时，新的实际必须修复项可以先保存在
+   工程评审记录。即使写该记录使 validation 指纹 `stale`，只要 Git 前提满足且具相应
+   评审权限，先记 `record-review --decision changes_requested`，撤销旧评审和其快照，
+   Release 维持 pending。该操作不会清掉 `validation.result=pass` 或补签其指纹，发现仍
+   按 Build、Validate、Review 正常修复和重验。拒绝路径不从 stale validation 继承通过，
+   也不等待原验证者上线；Review 的通过路径仍要求适用验证。CLI 前提不满足或拒绝写入时，
+   保存已确认的阻塞发现并停止该 Feature 后续调度，旧 approved 不可用于发布。只读核对
+   实际状态后处理阻塞。
+
 ## 6. Context and checkpoints
 
 Product behavior, scenarios, and rules belong in the Requirement product context.
@@ -920,7 +1082,8 @@ of dispatch/debug/rerun notes in the current effective solution.
 The current effective solution is authoritative for the present design;
 `state.json` is authoritative for lifecycle progress; Git history and the actual working-tree code
 are authoritative for what is present. An on-demand checkpoint is allowed only for
-pause, cross-conversation recovery, or execution-environment change. Its only path is
+pause, cross-conversation recovery, or execution-environment change, and for the
+approval re-record pre-write described below. Its only path is
 `.sdlc-v1/checkpoints/<feature-id>.md`; use
 [`templates/CHECKPOINT.md`](templates/CHECKPOINT.md). There is at most one per
 Feature, it has at most 60 lines, and only the main Agent creates, updates, or
@@ -939,8 +1102,10 @@ The checkpoint is not a Spec, current effective solution, chat transcript, full 
 or credential, private material, or unnecessary local-path store.
 
 For recovery, locate the repository and selected Feature. For a selected, unfinished
-Feature with an available checkpoint, read that one file first to identify the
-proposed action and evidence references. Check the actual repository, branch, HEAD
+Feature, or a selected Feature with an unresolved Ship action or registration
+receipt even if already `released`, read its available checkpoint first to identify
+the proposed action and evidence references. Retain its recovery references until
+the outstanding receipt is reconciled. Check the actual repository, branch, HEAD
 and working tree, and the current state, dependencies, evidence and version facts
 needed for that action. If they agree and the applicable stage conditions and
 existing authorization still hold, continue. Do not reload unrelated Features or
@@ -953,13 +1118,49 @@ then update the same checkpoint in place once clarified. Independent authorized 
 may continue. On an ordinary pause, cross-conversation handoff or environment change,
 the main Agent updates the checkpoint before pausing; an unexpected interruption
 may leave it stale. Git preserves its history. The main Agent deletes it when the
-Feature completes.
+Feature completes and its outstanding action and registration receipts are reconciled.
 
 Without an available checkpoint, use the selected Feature's exact projection and
 relevant Git facts and evidence to locate the next action. If the target is unknown,
 retain `needs_selection` and select under the existing rules, without scanning all
 checkpoints to choose for the user. If no Feature exists, use the Requirement
 projection and relevant product records; an already completed Feature is not restarted.
+For an explicitly selected Feature with an unresolved Ship action or registration
+receipt, this recovery path may inspect its recorded operation, current projection,
+target and evidence even when the Feature is `released` or bare `next` is `done`.
+Use the [Ship recovery entry](../../sdlc-ship/SKILL.md#先恢复未决交付); do not
+repeat the completed action or registration, reopen implementation, or infer that
+unverified steps succeeded.
+
+### 批准型重记的中断检查点
+
+为[批准型重记、独占与读回](#批准型重记独占与读回)第 5 项预先保存恢复信息。普通查询、
+正常等待和常规状态推进沿用上面的触发条件；只有可能改写批准指纹、且恢复必须比对核准
+映射的重记才预先保存。
+
+- 主 Agent 独占写 `.sdlc-v1/checkpoints/<feature-id>.md`，保存后从磁盘读回确认可用，
+  再调用 CLI。一个 Feature 一个文件、既有五节和 60 行限制全部保留。原位追加简要条目，
+  不覆盖既有未完成事项；无法在限制内无损保存时暂停该次重记。
+- 在「定位」记录实际工作树、branch、HEAD、Requirement/Feature 身份和必要 Task。在
+  「已确认」记录核准的验收点、路径集合及每个路径的 `context-v1` digest、相关
+  validation/交付 commit。在「未完成」标记待执行或结果仍待核对的重记及顺序，保留待
+  恢复的旧 Review。「下一步」给出对应操作和读回条件。「必要引用」定位原快照、原批准
+  正文、权限，以及实际旧评审的决定、reviewer 和证据。只存必要的脱敏引用。
+- 若 `spec_ready` 重记发生在登记前，只使用现有 brief 已固定的 Feature ID 定位同一
+  检查点，明确其未登记并保存实际 Requirement 投影；CLI 仍用 Requirement 选择器。没有
+  可定位的选定 ID 时，先按既有选择流程固定目标再重记。
+- 恢复先定位未完成重记及事先核准映射，再取得写者独占并查询实际状态、正文、引用及
+  Git。与保存的核准值和原快照比对每个路径及对应点。若已写入且一致，确认结果，不重复
+  调用；若 validation 已重记且清掉 Review，核对原评审、覆盖和权限后只处理仍待完成的
+  Review。若确认原记录从未改变且重记未发生，重新核对候选、权限和独占后才执行该原
+  动作。任何不一致、缺 checkpoint/原记录、未知的写入结果或缺权限都停止依赖该结论，
+  直到现有恢复流程取得充分证据。已知或疑似有未核对的批准重记时不能按普通 `match` 继续。
+  处理成功后只清理或更新本次条目，保留其他未完成事项，文件按原规则清理。
+- 换环境或 clone 只复用已经获授权同步并且当场可读的检查点、原文和证据引用。依赖此次
+  重记的结论须能追溯到中断检查点或已完结的核对记录。相关核准与读回来源无法辨明时只读
+  报告当前值，暂停依赖动作。不把本机文件或内存当成跨机器持久记录。检查点承载核对
+  所需的出处和事实，当前进度及批准仍以有效状态与原证据为准。读回比较及交接不能把现有
+  CLI 变成原子 CAS。
 
 The checkpoint is a recovery aid, not authority for progress, design, code, evidence
 or authorization. Preserve Feature branch rules and Task dependencies. Before relying

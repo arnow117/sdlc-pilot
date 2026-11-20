@@ -149,6 +149,13 @@ lifecycle_state.py --repo <repo> record-review \
 
 修复后重新验证，再重新评审。
 
+已有 `reviewed` 时，新的实际必须修复项可以先保存在工程评审记录。即使写该记录使 validation 指纹
+`stale`，只要 Git 前提满足且具相应评审权限，仍按上述拒绝路径记录：它撤销旧评审和其快照，Release
+维持 pending，不清掉 `validation.result=pass` 也不补签其指纹。拒绝路径不从 stale validation 继承
+通过，也不等待原验证者上线。CLI 前提不满足或拒绝写入被拒时，保存已确认的阻塞发现并停止该 Feature
+后续调度，旧 approved 不可用于发布。详见
+[阶段协议的批准型重记、独占与读回](../sdlc/references/stage-agent-protocol.md#批准型重记独占与读回)。
+
 5. 没有未处理的必须修复项时，在 orchestrated mode 请求；只有独立、不在主 Agent 编排中的 standalone mode 才执行：
 
 ```bash

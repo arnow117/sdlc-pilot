@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>合成示例 · 桌面工单台</title>
+    <style>
+      :root {
+        --surface: #f3f4f6;
+        --surface-raised: #ffffff;
+        --text: #1f2430;
+        --text-muted: #6b7280;
+        --border: #d7dbe0;
+        --primary: #2f5bd0;
+        --danger: #b02a1c;
+      }
+
+      * { box-sizing: border-box; }
+
+      body {
+        margin: 0;
+        font: 14px/1.55 -apple-system, BlinkMacSystemFont, "PingFang SC", sans-serif;
+        color: var(--text);
+        background: var(--surface);
+      }
+
+      .workbench {
+        display: grid;
+        grid-template-columns: 168px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        background: #1f2430;
+        color: #e6e8ec;
+        padding: 18px 12px;
+      }
+
+      .sidebar h1 { font-size: 15px; margin: 0 0 14px; padding: 0 8px; }
+      .sidebar nav { display: flex; flex-direction: column; gap: 2px; }
+      .sidebar button {
+        text-align: left;
+        background: transparent;
+        border: 0;
+        color: #c3c8d2;
+        padding: 7px 9px;
+        border-radius: 6px;
+        font: inherit;
+        cursor: pointer;
+      }
+
+      .sidebar button[aria-current="page"] { background: #333b4d; color: #fff; }
+
+      .main { padding: 20px 24px; min-width: 0; }
+      .topbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+      .topbar h2 { margin: 0; font-size: 18px; }
+      .topbar .spacer { flex: 1; }
+      .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+      .toolbar select, .toolbar button {
+        font: inherit;
+        padding: 6px 10px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        background: var(--surface-raised);
+      }
+
+      table { width: 100%; border-collapse: collapse; background: var(--surface-raised); border: 1px solid var(--border); }
+      th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); font-size: 13px; }
+      th { background: #f7f8fa; font-weight: 600; }
+      tr[aria-selected="true"] td { background: #eef2fb; }
+      td button { font: inherit; font-size: 12px; padding: 3px 9px; border: 1px solid var(--border); border-radius: 5px; background: var(--surface-raised); cursor: pointer; }
+      .pill { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; border: 1px solid var(--border); }
+      .pill.open { border-color: var(--primary); color: var(--primary); }
+      .notice { margin-top: 14px; padding: 10px 12px; background: var(--surface-raised); border: 1px solid var(--border); border-radius: 8px; font-size: 13px; }
+      .notice.error { border-color: var(--danger); color: var(--danger); }
+      .dependency { margin: 0 0 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font-size: 13px; color: var(--text-muted); }
+
+      .review {
+        margin-top: 22px;
+        background: var(--surface-raised);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 16px 18px;
+      }
+
+      .pr-root { font-size: 13px; }
+      .pr-header h2 { margin: 0 0 4px; font-size: 15px; }
+      .pr-note { margin: 0 0 12px; color: var(--text-muted); font-size: 12px; }
+      .pr-section { border-top: 1px solid var(--border); padding-top: 12px; margin-top: 12px; }
+      .pr-section h3 { margin: 0 0 8px; font-size: 13px; }
+      .pr-pages { margin: 0; padding-left: 18px; }
+      .pr-page-note { display: block; color: var(--text-muted); font-size: 12px; }
+      .pr-field { display: block; margin-bottom: 10px; font-size: 12px; }
+      .pr-field select { width: 100%; max-width: 420px; padding: 6px 8px; font: inherit; border: 1px solid var(--border); border-radius: 6px; margin-top: 4px; }
+      .pr-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+      .pr-actions button { padding: 5px 10px; font-size: 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-raised); cursor: pointer; }
+      .pr-steps { margin: 0; padding: 0; list-style: none; }
+      .pr-step { display: flex; gap: 9px; padding: 7px 0; border-top: 1px solid var(--border); align-items: flex-start; }
+      .pr-step-index { color: var(--text-muted); font-size: 12px; min-width: 16px; }
+      .pr-step-body { flex: 1; }
+      .pr-tags { display: inline-flex; gap: 5px; margin-left: 6px; }
+      .pr-tag { font-size: 11px; padding: 1px 6px; border-radius: 999px; border: 1px solid var(--border); color: var(--text-muted); }
+      .pr-expect { display: block; color: var(--text-muted); font-size: 12px; margin-top: 3px; }
+      .pr-error { display: block; color: var(--danger); font-size: 12px; margin-top: 3px; }
+      .pr-entry, .pr-goal, .pr-paused, .pr-message { font-size: 12px; color: var(--text-muted); margin: 4px 0; }
+      .pr-status-done .pr-tag.pr-state { border-color: var(--primary); color: var(--primary); }
+      .pr-status-failed .pr-tag.pr-state { border-color: var(--danger); color: var(--danger); }
+      .pr-current { background: #f4f6fb; }
+      .pr-empty { color: var(--text-muted); font-size: 12px; }
+
+      @media (max-width: 760px) {
+        .workbench { grid-template-columns: 1fr; }
+        .sidebar { display: flex; gap: 10px; align-items: center; }
+        .sidebar nav { flex-direction: row; flex-wrap: wrap; }
+        .main { padding: 16px; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="workbench">
+      <aside class="sidebar">
+        <h1>服务台</h1>
+        <nav aria-label="主导航">
+          <button type="button" aria-current="page">工单列表</button>
+          <button type="button">操作记录</button>
+          <button type="button">设置</button>
+        </nav>
+      </aside>
+
+      <main class="main">
+        <div class="topbar">
+          <h2>工单列表</h2>
+          <span class="spacer"></span>
+          <label for="role" class="pr-page-note">当前角色</label>
+          <select id="role">
+            <option value="agent">客服专员</option>
+            <option value="reviewer">复核专员</option>
+            <option value="readonly">只读观察员</option>
+          </select>
+        </div>
+
+        <div class="toolbar">
+          <label for="filter" class="pr-page-note">筛选</label>
+          <select id="filter">
+            <option value="all">全部</option>
+            <option value="pending">待受理</option>
+            <option value="mine">我受理的</option>
+          </select>
+          <button type="button" id="reset">重置演示</button>
+        </div>
+
+        <table>
+          <thead>
+            <tr><th>编号</th><th>标题</th><th>客户</th><th>级别</th><th>状态</th><th>处理人</th><th>操作</th></tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+
+        <p class="notice" id="notice" role="status"></p>
+
+        <section class="review">
+          <p class="dependency" id="dependency-notice" hidden></p>
+          <div id="review-host"></div>
+        </section>
+      </main>
+    </div>
+
+    <script src="../../shared-state/runtime.js"></script>
+    <script src="../review-console.js"></script>
+    <script src="../review-panel.js"></script>
+    <script src="./desktop-ticket-desk.js"></script>
+    <script>
+      "use strict";
+
+      const app = DesktopTicketDesk.createTicketDeskApp();
+
+      // The review console is optional. If its scripts are missing the workbench
+      // still works and says what is missing.
+      let review = null;
+      const dependencyNotice = document.querySelector("#dependency-notice");
+      if (typeof PrototypeReviewConsole === "undefined" || typeof PrototypeReviewPanel === "undefined") {
+        dependencyNotice.hidden = false;
+        dependencyNotice.textContent = "审阅台脚本未加载：工作台仍可使用，但没有导览与回看。";
+      } else {
+        review = PrototypeReviewConsole.createConsole({ adapter: app.adapter });
+        PrototypeReviewPanel.createPanel({
+          console: review,
+          host: document.querySelector("#review-host"),
+          title: "审阅台 · 工单",
+        });
+      }
+
+      const rows = document.querySelector("#rows");
+      const notice = document.querySelector("#notice");
+      const roleSelect = document.querySelector("#role");
+      const filterSelect = document.querySelector("#filter");
+
+      // The controls must show the state the product is actually in, not a
+      // value the page remembered from an earlier render.
+      function syncControls(state) {
+        if (roleSelect.value !== state.role) {
+          roleSelect.value = state.role;
+        }
+        if (filterSelect.value !== state.filter) {
+          filterSelect.value = state.filter;
+        }
+      }
+
+      function render() {
+        const state = app.store.getState();
+        syncControls(state);
+        const visible = state.filter === "pending"
+          ? state.tickets.filter(function isPending(ticket) { return ticket.status === "待受理"; })
+          : state.filter === "mine"
+            ? state.tickets.filter(function isMine(ticket) { return ticket.owner === "林岚"; })
+            : state.tickets;
+
+        rows.innerHTML = visible.map(function toRow(ticket) {
+          const selected = ticket.id === state.selected;
+          return "<tr" + (selected ? " aria-selected=\"true\"" : "") + ">"
+            + "<td>" + ticket.id + "</td>"
+            + "<td>" + ticket.title + "</td>"
+            + "<td>" + ticket.customer + "</td>"
+            + "<td>" + ticket.level + "</td>"
+            + "<td><span class=\"pill" + (ticket.status === "待受理" ? " open" : "") + "\">" + ticket.status + "</span></td>"
+            + "<td>" + (ticket.owner || "—") + "</td>"
+            + "<td><button type=\"button\" data-claim=\"" + ticket.id + "\">受理</button></td>"
+            + "</tr>";
+        }).join("");
+
+        notice.textContent = state.notice || "待受理 " + state.tickets.filter(function isPending(ticket) {
+          return ticket.status === "待受理";
+        }).length + " 条。";
+        notice.className = state.notice.indexOf("不能") >= 0 ? "notice error" : "notice";
+      }
+
+      rows.addEventListener("click", function onClick(event) {
+        const button = event.target.closest("[data-claim]");
+        if (!button) {
+          return;
+        }
+        const result = app.actions.claimTicket(button.getAttribute("data-claim"));
+        if (!result.ok) {
+          notice.textContent = result.error.message;
+          notice.className = "notice error";
+        }
+      });
+
+      roleSelect.addEventListener("change", function onRoleChange(event) {
+        const result = app.actions.setRole(event.target.value);
+        if (!result.ok) {
+          notice.textContent = result.error.message;
+          notice.className = "notice error";
+        }
+      });
+
+      filterSelect.addEventListener("change", function onFilterChange(event) {
+        const result = app.actions.setFilter(event.target.value);
+        if (!result.ok) {
+          notice.textContent = result.error.message;
+          notice.className = "notice error";
+        }
+      });
+
+      document.querySelector("#reset").addEventListener("click", function onReset() {
+        // The product resets itself: tickets, notice, role and filter all go
+        // back to the fixture, with or without the review console.
+        app.reset();
+        if (review) {
+          review.reset();
+        }
+        render();
+      });
+
+      app.store.subscribe(render);
+      render();
+    </script>
+  </body>
+</html>

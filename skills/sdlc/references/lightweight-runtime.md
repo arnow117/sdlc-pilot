@@ -160,6 +160,25 @@ lifecycle_state.py --repo <repo> record-release --feature-id <FEAT-id>
 - 评审和发布要求 validation commit 到当前 HEAD 在 `.sdlc-v1/**` 之外没有代码差异。
 - 代码变化或 Task 重新打开后，需要重新验证。
 - Feature 分支是协作提示；最终事实是被验证和发布的 commit。
+- `record-release --commit` 显式登记实际交付并被验证的版本。它必须等于 `validation.commit`；
+  不匹配时返回 `release-commit-does-not-match-validation`，不写发布记录。`validation.commit=A`
+  而 HEAD 仅因状态/上下文交接变为 B 且全仓等价时，仍登记 A。
+
+### 6.1 记录拒绝时清除的快照
+
+各验收点的指纹快照随对应结论一起存在，记录拒绝或重开时按既有规则清除：
+
+| 操作 | 清除的快照 | 保留 |
+|---|---|---|
+| `record-validation --result fail` | `validation`、`review` | `plan`、`spec_ready` |
+| `record-validation --result pass` | `review`（并重置 review/release 记录） | `plan`、`spec_ready`，新增 `validation` |
+| `record-review --decision changes_requested` | `review` | `validation`（即使因追加记录而 `stale`）、`plan`、`spec_ready` |
+| `record-review --decision approved` | 无 | 全部，并新增 `review` |
+| Task `done → todo` 重开 | `validation`、`review` | `plan`、`spec_ready` |
+
+因此拒绝路径可以先于通过型重记执行：写评审记录使 `validation` 指纹 `stale` 时，
+`record-review --decision changes_requested` 仍可成功，它不清掉 `validation.result=pass`，
+也不补签 `validation` 快照。
 
 ## 7. 查询与恢复
 
@@ -202,11 +221,11 @@ JSON，不靠退出码 0 推断 `match`。
 | 结果 | 含义与后续动作 |
 |---|---|
 | `match` | 该点有合法记录，绑定内容与验收时一致；可继续引用，仍须满足既有测试、授权与代码 commit 绑定条件。 |
-| `stale` | 绑定文件内容、路径或引用集合漂移；工具返回结果与退出码 1，由调用方决定暂停依赖该旧结论的工作，列出 `files` 中的漂移文件与原因，主 Agent 向原批准责任人请求重新批准。 |
+| `stale` | 绑定文件内容、路径或引用集合漂移；工具返回结果与退出码 1，暂停依赖该旧结论的工作，列出 `files` 中的漂移文件与原因。按[批准归属与委托](stage-agent-protocol.md#批准型重记独占与读回)核对原批准及权限：原责任人可重新批准，主 Agent 在已有且可证明的委托范围内可复核重记；缺少适用权限时再请求责任人决定。 |
 | `missing` | 该点没有指纹记录（旧 Feature 或该点尚未发生）；明示"未绑定内容，未验证当前适用性"，不报错也不阻断既有流程，不当作已核验，不自动补记录。 |
 
 恢复故事：引用批准 → `verify-acceptance` 查询 → `match` 继续、`stale` 暂停并说明差异、`missing`
-如实说明未绑定 → 主 Agent 取得对应批准后显式重记或补验。显式重记只对已有快照的同一验收点生效：
+如实说明未绑定 → 有权责任人按适用批准或可证明的委托显式重记或补验。显式重记只对已有快照的同一验收点生效：
 
 ```bash
 lifecycle_state.py --repo <repo> mark-requirement-ready --requirement-id <REQ-id> --refresh-acceptance
@@ -215,6 +234,43 @@ lifecycle_state.py --repo <repo> start-feature --requirement-id <REQ-id> --featu
   --branch <branch> --engineering-context-ref .sdlc-v1/context/<FEAT-id>.engineering.md \
   --refresh-acceptance
 ```
+
+#### 选择器与重记参数
+
+按验收点选择适用的选择器：
+
+| 验收点 | 选择器 | 说明 |
+|---|---|---|
+| `spec_ready`（Feature 尚未登记） | `--requirement-id <REQ-id>` | Requirement 选择器只接受 `spec_ready` |
+| `spec_ready`（Feature 已登记） | `--requirement-id <REQ-id>` 或 `--feature-id <FEAT-id>` | 两者均可；Feature 选择器通过其投影核对关联 Requirement 的产品正文 |
+| `plan` / `validation` / `review` | `--feature-id <FEAT-id>` | Feature 必须已登记 |
+
+`--requirement-id` 配 `--point plan` 返回 `invalid-acceptance-point`；未登记的 `--feature-id`
+返回 `feature-not-found`。两种合法选择器查同一 `spec_ready` 时得到同一产品文件的路径和摘要，
+只是 `target_type` 不同，且都不写 state 或上下文。
+
+`start-feature --refresh-acceptance` 要求 `--requirement-id`、`--feature-id`、`--branch` 和
+`--engineering-context-ref` 与现有登记完全相同，否则返回 `feature-identity-mismatch` 且 state
+不变。已有分支迁移后（例如从 `main` 迁到 `feature/fix`），重记必须传**新登记值**；传历史
+`main` 会得到 identity mismatch。原批准正文与授权仍追溯至原点，不因迁移产生新授权。
+
+#### 重记前的核对步骤
+
+重记是批准型操作，按
+[阶段协议 §5 的批准型重记、独占与读回](stage-agent-protocol.md#批准型重记独占与读回)执行。
+CLI 侧的机械事实：
+
+1. 用上表的有效选择器查询，取得结构化 `files`（每个绑定路径的 `expected_digest`、
+   `current_digest` 和 `reason`）。
+2. 对仅追加证据的主张，从 `git show <approved-commit>:<bound-path>` 取原始字节，用既有
+   `_context_digest` 计算并与 `expected_digest` 比较；不通过当前 HEAD 猜测批准正文。
+3. 写者独占由主 Agent 通过既有写者交接确认，不由 CLI 强制。
+4. 调用后读回 Feature/Requirement 投影与相应 `verify-acceptance`，逐项比较保存的路径集合、
+   `expected_digest`、`current_digest` 和绑定身份。`match` 只表示已存内容等于这次查询读到的
+   内容，不能替代与事先核准值的比较。
+
+CLI 的 state 锁和内部多次读取不提供跨核准与写入的原子 compare-and-swap；并发写入造成的
+映射误绑定只能靠主 Agent 的独占与读回比较发现，不能靠 CLI 预防。
 
 `--refresh-acceptance` 只刷新既有 `spec_ready`/`plan` 快照：不改变进度、Task 或 Feature 登记身份
 （start-feature 重记要求全部参数与现有登记完全相同），不创建新 Feature，不填补 missing 历史，也不

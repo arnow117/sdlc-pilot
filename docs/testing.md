@@ -23,7 +23,7 @@ git diff --check
 
 - [lifecycle](../scripts/test_lifecycle_state.py)：状态转换、Git 版本、恢复及多 clone；
 - [backlog](../scripts/test_backlog.py)：只读投影、看板和 HTML 转义；
-- [共享场景](../scripts/test_scenarios.py)：六个初始仓库、参考操作及正确和错误结果断言；
+- [共享场景](../scripts/test_scenarios.py)：六个初始仓库、参考操作及正确和错误结果断言；按需人工验收、批准型重记与发布登记的可观察行为断言；
 - [contrast](../scripts/test_contrast_check.py)：颜色解析、对比度和 CLI；
 - [Hallmark catalog](../scripts/test_hallmark_catalog.py)：目录、召回、同步及失败保护。
 - [vibe test 核心](../scripts/test_vibe_test.py)：离线 oracle、反例、合成报告、统计与路径保护；
@@ -66,7 +66,7 @@ node --test skills/sdlc-prototype/assets/shared-state/runtime.test.cjs
 | 项目级架构约束的集成、规范引用或阶段检查入口文字 | 标准结构与引用检查（含共享小节锚点防漏）；语义覆盖按 [项目级架构约束](../skills/sdlc/references/lifecycles/software-delivery.md#项目级架构约束)人工走查文档契约：沿用 B02 的未决选择边界与 B04A/B 的证据适用性边界核对场景路径。文档契约走查不证明真实 Agent 行为、真人确认、跨 Feature 采用或债务改善。 |
 | lifecycle、backlog、共享测试 helper 或场景断言 | 标准检查及受影响的原生测试；场景断言改变时先检查参考和错误结果，不能直接沿用旧评分。 |
 | 产品确认、委托或准备阶段的选择处理 | 选择 B02；影响正常交付推进时补 B01。 |
-| 验证归因、旧通过失效、证据适用性或上下文交接 | 按影响选择 B03、B04A/B；修改复用判断时保留 B04A/B 成对比较，兼顾漏验与不必要重跑。 |
+| 验证归因、旧通过失效、证据适用性或上下文交接 | 按影响选择 B03、B04A/B；修改复用判断时保留 B04A/B 成对比较，兼顾漏验与不必要重跑。按需人工验收、批准型重记独占与读回、发布登记预检或中断去重变更时，另跑[按需人工验收、批准型重记与发布登记变体](#按需人工验收批准型重记与发布登记变体)。 |
 | 主流程、必要边界和覆盖率规则 | 标准检查与规则走查。按 B01 检查行为和回归通过且未约定数值时的验收，按 B04B 检查主流程通过但缺少必要边界证据时的判定。再核对明确要求覆盖率的发布在未达标时保持未发布。 |
 | 安全扫描接入或依赖提醒 | 运行标准检查中的依赖探针测试，人工核对风险选择、未运行归因、原生产物与 review 复用；真实扫描与 Agent 提醒需各自的实际执行证据。 |
 | T3 阶段派发、进一步派工、等待或局部停止合同 | 标准检查覆盖共享边界引用、缺失或错误锚点及旧无条件禁令反例；B03 检查 fail 撤销旧批准与拒绝时状态保留，B05 检查部分登记恢复。逐例人工走查授权、逐层结果、模型证据、Desktop 静态兼容、独立检查与停止动作；这些不证明 live 多层 child、取消、恢复、native 或资源释放。真实运行与独立接受另需相应证据。 |
@@ -134,6 +134,10 @@ B04B 的工程上下文保留已确认产品范围并指出历史验证证据缺
 执行这些命令并记录结果；B04B 的历史缺口保留。未提供工具时，题目无数值覆盖率要求，默认脚本测试仍只需标准库。
 脚本生成的历史状态用于检查生命周期转换。真实 Agent 的验收和评审需单独取得实际证据。
 
+B01 的真人等待试次可在 Agent 交接后调用 `assert_human_wait(unittest.TestCase(), repo)`：它检查
+Task 已完成、候选 commit 可定位、业务工作树干净且验证、评审和发布仍为 pending。该断言不创建
+真人答复，也不验证是否正确提问或复用了证据；这些仍须核对实际轨迹。
+
 脚本参考执行本地 Git、lifecycle 操作和题目要求的 CLI 检查，不创建生产命令或 Agent 运行器。B01 脚本参考仅用于没有覆盖率阈值的 fixture，
 实际运行整数及错误输入业务断言，Validate/Review 转换由脚本执行。B02 断言状态与业务文件未推进，并允许更新澄清上下文；未决选择的语义须人工核对。B03 断言受控探针缺失、失败状态及
 旧批准失效；B04A/B 限定只核对现有证据，分别断言旧状态保留或失效；B05 核对完整计划任务的 ID、标题、依赖及原有记录，且不执行 Build。
@@ -141,6 +145,33 @@ B04B 的工程上下文保留已确认产品范围并指出历史验证证据缺
 
 这些断言不解析 Markdown 语义，也不能证明提问质量、决定授权、证据语义覆盖、实际执行者身份或独立 Validate/Review；
 真实 Agent 演练必须另留原生 transcript、执行者及命令证据并人工核对。
+
+## 按需人工验收、批准型重记与发布登记变体
+
+`scripts/test_scenarios.py` 中的 `HumanAcceptanceTest` 在一次性临时 Git 仓库里，用同一组
+`prepare_human` / `human_complete_task` / `human_pass_and_review` fixture 断言原 CLI 的可观察行为。
+这些变体只断言状态、指纹、退出码和错误码，不解析 Markdown 语义，也不模拟 Agent 的提问或等待。
+
+| 变体 | 实际检查 | 当前证据与缺口 |
+|---|---|---|
+| 首次等待 | Task 完成后 `validation.result`、`review.decision`、`release.status` 均为 `pending`，`next` 为 `validate`；连续查询不写 state；未记录的验收点为 `missing` | 断言 CLI 的 pending 语义。是否真的问了人、是否只问一次、是否在等待时催问，须由真实 Agent 试次核对。 |
+| 已知失败后重开 | 真实 CLI 测试失败并记录 `fail`，重开和修复后 `validation`/`review`/`release` 回到 `pending`，旧失败可从 Git 读取，修复前后的 CLI 内容不同 | 断言重开及历史候选的机械事实。失败与修复的归因仍须人工核对。 |
+| 已知通过后重开 | 旧 `pass` 不从历史恢复，重开后仍为 `pending` | 断言当前候选需重新验证。语义覆盖判断须人工核对。 |
+| 历史不完整 | 未提交的 `pass` 在重开后既不在当前投影也不在 Git 提交中 | 断言首次资格未知时的可观察事实。不能证明 Agent 会据此报告而非按首次处理。 |
+| 旧通过必要重验 | 缺证据时记录 `fail` 使旧 `pass`、`review` 快照同时失效，Feature 回到 `in_progress` | 断言失效顺序。归因措辞须人工核对。 |
+| 重验记录被拒 | 脏工作树下 `record-validation --result fail` 被拒，state 与业务文件逐字节不变，旧 `approved` 仍在 | 断言拒绝后的持久状态。停止该 Feature 调度是 Agent 行为，须人工核对。 |
+| 核准映射竞争 | 调用前插入实质产品条件后，CLI 仍返回 `match`，但已核准摘要与新绑定摘要不同 | 证明 CLI 的 `match` 不能替代与事先核准值的比较。独占获取与读回比较由 Agent 执行，须人工核对。 |
+| 拒绝优先 | 追加工程记录使 validation 指纹 `stale` 时，`record-review --decision changes_requested` 仍成功；旧评审快照消失、Release 保持 `pending`、`validation.result` 仍为 `pass` | 断言拒绝路径不依赖指纹新鲜。脏候选下同一命令被拒且 state 不变，另有一例反例。 |
+| 同仓双 Feature | 一个 Feature 的未提交业务变更使另一个 Feature 的正式写入被拒；业务 commit 落地后 Review/Release 以 commit 不等价被拒，原记录不变 | 断言 clean-worktree 与 commit 等价前置。多 Feature 各自判据、覆盖与集成缺口属于 Agent 语义。 |
+| state 已暂存 | 业务路径干净但 state 已暂存时，`record-release` 以 `state-is-staged-commit-or-unstage-before-update` 被拒，前后状态不变 | 断言暂存前置。 |
+| 状态交接后登记 | 仅状态交接使 HEAD 前移，保持绑定正文不变；从 A 的归档实际运行 CLI，`record-release --commit A` 仍登记 A。把 Validation 改绑到 B 后再登记 A 被拒且无发布记录 | 断言本地制品来源、smoke 和登记版本一致。真实部署未发生。 |
+| 部署中断 | 本地一次性目标目录记录已应用版本；回执无法对应时不重复应用，对应后只补登记，应用次数保持 1 | 仅模拟投递计数，不访问真实环境，不能证明真实部署幂等或回执查询可用。 |
+| 迁移后 refresh | 分支迁移后用历史 branch 重记返回 `feature-identity-mismatch`，用新登记值成功 | 断言身份参数与登记一致。授权来源是否可追溯须人工核对。 |
+| Spec 选择器 | Requirement 选择器查 `spec_ready` 返回 `match`；未登记 Feature 返回 `feature-not-found`；Requirement 查 `plan` 返回 `invalid-acceptance-point`；查询不写 state 或上下文 | 断言选择器与只读性。 |
+
+这些变体证明 CLI 的机械边界和状态后果，不能证明 Agent 是否按协议提问、等待、交接、取得独占或
+执行读回比较；真实 Agent 演练和正式独立 Validate/Review 仍需各自的实际证据。部署变体使用可丢弃的
+本地临时目录，不执行真实发布。
 
 ## 2026-11-08 真实 Agent 演练记录
 

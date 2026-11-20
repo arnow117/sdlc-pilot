@@ -60,17 +60,55 @@ description: >
 [context-prose-and-evidence-applicability](../sdlc/references/stage-agent-protocol.md#context-prose-and-evidence-applicability)
 判断既有结果对当前要求是否仍适用；本节不创建额外状态或自动失效规则。
 
+## 验收归属与真人交接
+
+每条验收条件按
+[阶段协议的按需人工验收与验证历史](../sdlc/references/stage-agent-protocol.md#按需人工验收与验证历史)
+确定验收归属。Agent 能可靠自验证的（可复现 Bug、请求与响应行为、有明确判据的客观 UI）
+由 Agent 在适用环境取得可靠证据后直接完成适用验证，不要求用户试用；确需真人判断的
+（用户明确要求、已确认条件已约定真人义务，或存在 Agent 无法替代的具体人类观察）才
+交接真人。客观 UI 判据可由实际运行或可靠检查证明；缺环境或缺可信证据按验证缺口处理，
+不改判为真人义务。用户主动试用可以收集意见，是否属于正式验收条件按当前约定判断。
+
+### 交接内容
+
+必要的人工交接复用当前对话和现有工程验证记录，包含：
+
+- 旅程与涉及的 Feature；
+- 可打开的入口或产物引用；
+- 可核对的候选身份（版本、commit 或快照）；
+- 操作步骤与每步的预期结果；
+- 已检查项与尚未检查的缺口，及缺口对试用和发布的影响；
+- 负责观察的人，以及需要其判断的具体问题。
+
+先完成适用预检并固定候选或隔离后续修改，无法固定时说明证据影响。提前展示的未提交
+候选和模拟结果按实际身份标示，只在其实际覆盖范围内作为证据。
+
+### 等待期间
+
+首次正式验收的其他必要检查均已通过、唯一待项是约定的真人操作或答复时，保留
+`validation.result=pending`，并在既有工程记录注明待验项、候选和接续方式。沉默、普通
+等待超时、泛化“继续”、模拟结果和客观检查通过都不填补真人证据，也不触发重复催问或
+无变化的重验。同一候选、判据和责任人未变时不重复询问。符合 `pending` 等待条件时，
+orchestrated mode 返回 `incomplete` 和空的 `requested_transitions`；standalone mode
+不写通过或失败状态。
+
+汇总前先按
+[验证历史](../sdlc/references/stage-agent-protocol.md#按需人工验收与验证历史)区分首次、
+已知历史的重开候选和历史不完整，三者的报告方式不同。已确认的失败、环境阻塞或实际
+结案按实际原因处置，不被“等待中”遮蔽。
+
 ## 流程
 
 1. 确认所有非取消 Task 均为 `done`。
 2. 读取 [`Global usage-document, story, and parameter contract`](../sdlc/references/lifecycles/software-delivery.md#11-global-usage-document-story-and-parameter-contract)，并为受影响的故事按当前文档选择代表目标、参数来源和实际操作证据。
-3. 根据 [`role-routing.md`](../sdlc/references/role-routing.md) 选择验证方式，并读取对应 `validate-modes/*.md`。
+3. 按“验收归属与真人交接”确定每条验收条件由谁验证，再根据 [`role-routing.md`](../sdlc/references/role-routing.md) 选择验证方式，并读取对应 `validate-modes/*.md`。
    选择 `security-scan` 时按其契约检查实际执行、版本、范围、原生产物和未覆盖项；需要 Codex Security 时读取其适配说明，不能以依赖探针或 dry-run 代替扫描。
 4. 优先在当前候选验证主流程的实际结果，按“验收条件与证据对应”核对必要边界及其他产品条件。执行适用的单元测试、类型检查、构建、端到端检查和项目要求的完整回归。根据[覆盖率规则](../sdlc/references/validate-modes/correctness.md#5-覆盖率阈值)确定覆盖率是否必检。合成或局部真实检查按实际环境和数据记录结果，不外推为 live、部署或真人试用通过。覆盖率命令实际运行了完整相关单元套件时，同一证据可支持两项检查。Build 的通过不能替代独立验证，按阶段协议核对证据适用性和重验范围。
    若检查会启动服务、浏览器、模拟器、容器、VM 或明显占用主机资源，按唯一的
    [验证资源生命周期](../sdlc/references/stage-agent-protocol.md#verification-resource-lifecycle)记录必要的收尾和资源状态。
-5. 按上面的归因规则记录本轮证据到研发上下文。
-6. 任一必要检查失败、受阻或证据不足，都请求 `record-validation --result fail`；实际执行过时附 `--test-command <command>`，全部未运行时省略该参数并在上下文写明原因。这里的 `fail` 只表示未通过必要验证，不代表已证明代码有错。主 Agent 记录后按归因解决问题。仅需修复临时环境时保留原 Task 状态，补验受影响的检查。已确认需要修改候选实现、仓库内测试或被测配置时，按[Task 状态错误输出与恢复](../sdlc/references/lightweight-runtime.md#task-状态错误输出与恢复)恢复相关 Task，由原实现者修正并验证新版。
+5. 按上面的归因规则记录本轮证据到研发上下文。需要真人观察时按“交接内容”一次性集中交接，不拆成多轮零散提问。
+6. 除上述满足条件且没有生效旧 `pass` 的真人等待外，任一必要检查失败、受阻或证据不足，都请求 `record-validation --result fail`；实际执行过时附 `--test-command <command>`，全部未运行时省略该参数并在上下文写明原因。这里的 `fail` 只表示未通过必要验证，不代表已证明代码有错。主 Agent 记录后按归因解决问题。仅需修复临时环境时保留原 Task 状态，补验受影响的检查。已确认需要修改候选实现、仓库内测试或被测配置时，按[Task 状态错误输出与恢复](../sdlc/references/lightweight-runtime.md#task-状态错误输出与恢复)恢复相关 Task，由原实现者修正并验证新版。
 7. 全部必要检查通过，且 `.sdlc-v1/**` 之外的业务代码工作树干净时，在 orchestrated mode 请求；只有独立、
    不在主 Agent 编排中的 standalone mode 才直接调用：
 
@@ -89,6 +127,21 @@ python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> \
 若工作树等前置条件使 `record-validation` 被拒绝，记录阻塞并停止该 Feature 的调度，不运行 review/ship、
 不直接改 state；满足前置条件后先记录本轮结果。已 released 的 Feature 不自动撤回发布，转入维护工作并报告
 已知验证风险；只有符合 `retract-release` 的误记录纠正条件时才使用该命令。
+
+没有生效旧 `pass`，且其余必要检查通过、只待约定真人观察时，可按上面的验证历史沿用当前
+`pending`，不因普通等待写入新的 `fail`。若旧 `pass` 仍在状态中生效，本轮必要重验缺少
+真人证据时，仍须先按本节记录 `fail` 使旧通过及下游批准失效。明确人工拒绝、本轮验收实际
+结束仍缺必要证据，或另一项必要检查失败或受阻时，也按实际原因记录 `fail`；只把实际执行过
+的检查写进 `--test-command`。
+
+## 跨会话续接与多 Feature
+
+恢复时核对候选、环境、判据、原授权和已明确的答复，复用实际适用的证据；变化时只重验受影响项。
+同一候选、判据和责任人未变时不重复询问已答且仍适用的事项。
+
+多个 Feature 共享同一候选时，各 Feature 独立关联自己的验收条件、覆盖范围和集成缺口。一次
+原观察可以同时关联多个 Feature，但每个 Feature 保留自己的状态、Task 和验证义务；某一项未通过
+不把其他项伪装为通过，也不让一个已完成项隐去集成缺口。跨 clone 引用须能定位到已同步的原证据。
 
 ## 完成条件
 
