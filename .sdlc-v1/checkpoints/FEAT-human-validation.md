@@ -2,7 +2,7 @@
 
 ## 定位
 
-- 仓库：/Users/mac/hansen_agent_team/external/sdlc-pilot；branch：main；HEAD：fba6705fdd2589bb12c1b647ecb4ffa4c6856664
+- 仓库：/Users/mac/hansen_agent_team/external/sdlc-pilot；branch：main；HEAD：cf64de1（仅状态、检查点与评审记录，不改变 fba6705 的业务文件）
 - Requirement：REQ-human-validation；Task：TASK-human-validation
 
 ## 已确认
@@ -17,7 +17,7 @@
 
 ## 未完成
 
-- Task 返修完成并已登记 done；原候选 f62b6fe 的 Validate PASS 与 Review changes_requested 保存在 f044bfb 的 Git 历史。新候选已登记 `pass@fba6705` 和 Review `changes_requested`，Ship 未执行。
+- Task 返修已登记 done，当前 validation/review pending；原候选 f62b6fe 的结果保存在 f044bfb，`pass@fba6705` 和 Review `changes_requested` 保存在 cf64de1。Ship 未执行。
 - 四项 P2 和两项 P3 返修改动已固定为本地候选 `fba6705`；定向 Node 测试由 4 项失败转为 6/6 通过，历史 pending 反例由失败转为通过，丢失回执检查点场景通过。独立 Validate PASS：标准检查 233 项、Python 3.9 场景 59 项、Node 组件 131 项和受限浏览器点验通过；Review 待执行。
 - 原 14 次试次及 43 run 结果保留。B01 后续补充试次经历评审退回、局部修复、独立重验和 Review，机械 oracle 通过；仅规划样本与桌面候选补充样本的定向检查通过。桌面补充样本明确增加 T3 路线提示，原失败不被覆盖。真人样本仍无指定观察者的实际答复。
 - SCN-07 联合反馈及处理、SCN-08 明确答复后续接、SCN-09 变化后的定向重验均已取得同机合成机制证据并经独立 Validate 判定符合；模拟输入不得冒充该用户真人答复。
@@ -31,7 +31,7 @@
 
 ## 下一步
 
-- 独立复评确认三项 P2：场景隔离、观察值重复序列化及异步等待。保留本轮验证与退回记录后重开 Task，修复并定向验证；保护候选外 Validate 改动，当前不执行 Ship。
+- 独立复评确认三项 P2：场景隔离、观察值重复序列化及异步等待。修复待固定新候选；6 项原复现由失败转为通过，另补适配器参数与数组读取异常回归。Node 全量 139 项和标准检查 233 项通过；标准检查运行于主仓，包含候选外 Validate 文件，独立验收须在固定候选上进行。
 - 回填工程验证记录前核对 Plan 内容漂移、批准来源、写者独占及必要的批准型重记；不得以干净副本直接代替权威主仓状态。新增续验按用户新预算单独记录，不重复催问已有真人观察。
 
 ## 必要引用
@@ -55,4 +55,5 @@
 - 返修 Plan 预核准映射：../../workspace/20261120-sdlc-combined-acceptance/continuation/repair-plan-approval.json
 - 返修定向检查与失败原始记录：../../workspace/20261120-sdlc-combined-acceptance/continuation/repair-node-{red,target}.json、repair-python-{red,target}.json
 - 返修隔离快照及完整检查：../../workspace/20261120-sdlc-combined-acceptance/continuation/repair-build-check-xv6zmn18/
-- 独立验证报告及回执：../../workspace/20261120-sdlc-combined-acceptance/continuation/repair-validation-fba6705/；Review 登记守护（仅预检，未执行）：../../workspace/20261120-sdlc-combined-acceptance/continuation/register_review_fba6705_guard.py
+- 独立验证与 Review 登记回执：../../workspace/20261120-sdlc-combined-acceptance/continuation/repair-validation-fba6705/；Review 登记守护：../../workspace/20261120-sdlc-combined-acceptance/continuation/register_review_fba6705_guard.py
+- 本轮返修检查：../../workspace/20261120-sdlc-combined-acceptance/continuation/repair-review-r2-{red,target,node-final,standard}.log

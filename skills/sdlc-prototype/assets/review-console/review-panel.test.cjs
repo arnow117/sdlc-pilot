@@ -332,6 +332,54 @@ test("an invalid scenario does not prevent the panel from running a valid one", 
   panel.destroy();
 });
 
+test("sparse entries and a throwing id getter do not block a valid scenario", () => {
+  const bad = {};
+  Object.defineProperty(bad, "id", { get() { throw new Error("坏场景 id"); } });
+  const scenarios = [, bad, scenario("good", "可用场景")];
+  const { review, panel, host, calls } = createHarness(scenarios);
+  const select = host.querySelector(".pr-scenario");
+
+  assert.equal(select.childNodes.length, 3);
+  assert.equal(select.childNodes[0].hasAttribute("disabled"), true);
+  assert.equal(select.childNodes[1].hasAttribute("disabled"), true);
+  assert.match(host.textContent, /坏场景 id/);
+  assert.equal(select.value, "good");
+  click(host.querySelector('[data-pr="start"]'));
+  assert.equal(review.state().scenarioId, "good");
+  assert.equal(review.next().ok, true);
+  assert.deepEqual(calls, ["act"]);
+  panel.destroy();
+});
+
+test("an unreadable array entry does not block a valid scenario", () => {
+  const scenarios = [null, scenario("good", "可用场景")];
+  Object.defineProperty(scenarios, 0, { get() { throw new Error("场景读取失败"); } });
+  const { review, panel, host, calls } = createHarness(scenarios);
+
+  assert.match(host.textContent, /场景读取失败/);
+  click(host.querySelector('[data-pr="start"]'));
+  assert.equal(review.state().scenarioId, "good");
+  assert.equal(review.next().ok, true);
+  assert.deepEqual(calls, ["act"]);
+  panel.destroy();
+});
+
+test("a malformed duplicate id does not shadow a valid scenario in the panel", () => {
+  for (const invalidFirst of [false, true]) {
+    const valid = scenario("same", "可用场景");
+    const invalid = Object.assign(scenario("same", "坏场景"), { title: 1n });
+    const { review, panel, host, calls } = createHarness(invalidFirst ? [invalid, valid] : [valid, invalid]);
+    const select = host.querySelector(".pr-scenario");
+    assert.equal(select.value, "same");
+    change(select);
+    click(host.querySelector('[data-pr="start"]'));
+    assert.equal(review.state().scenarioTitle, "可用场景");
+    assert.equal(review.next().ok, true);
+    assert.deepEqual(calls, ["act"]);
+    panel.destroy();
+  }
+});
+
 test("choosing a scenario survives a redraw", () => {
   const { review, host, calls } = createHarness([scenario("a", "场景一"), scenario("b", "场景二", "review")]);
 

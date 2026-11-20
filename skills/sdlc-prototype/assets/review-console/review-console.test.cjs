@@ -216,6 +216,143 @@ test("replay stops on an unserializable observation without repeating the action
   assert.equal(calls, 2);
 });
 
+test("a changing toJSON observation is snapshotted once before a failed action check", () => {
+  let calls = 0;
+  let serializations = 0;
+  const value = Object.create({
+    toJSON() { serializations += 1; return serializations === 1 ? "unexpected" : 1n; },
+  });
+  const review = PrototypeReviewConsole.createConsole({
+    adapter: stubAdapter({
+      scenarios: () => [scenarioWith([
+        { id: "s1", kind: "act", call: "act", check: { read: "x", equals: "done" } },
+      ])],
+      call: () => { calls += 1; return { ok: true }; },
+      read: () => value,
+    }),
+  });
+
+  assert.equal(review.start("s").ok, true);
+  assert.equal(review.next().ok, false);
+  assert.equal(review.state().phase, "failed");
+  assert.equal(review.next().ok, false);
+  assert.equal(calls, 1);
+  assert.equal(serializations, 1);
+});
+
+test("a changing toJSON observation stops replay without retrying the action", () => {
+  let calls = 0;
+  let serializations = 0;
+  let replaying = false;
+  const value = Object.create({
+    toJSON() { serializations += 1; return serializations === 1 ? "unexpected" : 1n; },
+  });
+  const review = PrototypeReviewConsole.createConsole({
+    adapter: stubAdapter({
+      scenarios: () => [scenarioWith([
+        { id: "s1", kind: "act", call: "act", check: { read: "x", equals: "done" } },
+      ])],
+      call: () => { calls += 1; return { ok: true }; },
+      read: () => replaying ? value : "done",
+    }),
+  });
+
+  assert.equal(review.start("s").ok, true);
+  assert.equal(review.next().ok, true);
+  replaying = true;
+  assert.equal(review.replayTo(0).ok, false);
+  assert.equal(review.state().phase, "failed");
+  assert.equal(review.state().replayTarget, null);
+  assert.equal(review.next().ok, false);
+  assert.equal(calls, 2);
+  assert.equal(serializations, 1);
+});
+
+test("scenario inspection preserves adapter arguments and strict object comparison", () => {
+  const expected = { value: 1 };
+  const when = new Date("2026-01-01T00:00:00Z");
+  const received = [];
+  const observed = [];
+  const review = PrototypeReviewConsole.createConsole({
+    adapter: stubAdapter({
+      scenarios: () => [scenarioWith([
+        { id: "s1", kind: "act", call: "act", args: { when }, check: { read: "x", args: { when }, equals: expected } },
+      ])],
+      call: (_name, args) => { received.push(args); return { ok: true }; },
+      read: (_name, args) => { observed.push(args); return expected; },
+    }),
+  });
+
+  assert.equal(review.start("s").ok, true);
+  assert.equal(review.next().ok, true);
+  assert.equal(review.replayTo(0).ok, true);
+  assert.equal(received.length, 2);
+  assert.equal(observed.length, 2);
+  assert.equal(received[0].when, when);
+  assert.equal(received[1].when, when);
+  assert.equal(observed[0].when, when);
+  assert.equal(observed[1].when, when);
+  assert.equal(review.state().phase, "complete");
+});
+
+test("an absent async receipt remains waiting until refresh confirms it", () => {
+  let calls = 0;
+  let receipt;
+  const review = PrototypeReviewConsole.createConsole({
+    adapter: stubAdapter({
+      scenarios: () => [scenarioWith([
+        { id: "s1", kind: "act", call: "act", check: { read: "status", equals: "done" } },
+      ])],
+      call: () => { calls += 1; return { ok: true, pending: true }; },
+      read: () => receipt?.status,
+    }),
+    settleTimeoutMs: 500,
+    pollIntervalMs: 100,
+  });
+
+  assert.equal(review.start("s").ok, true);
+  assert.equal(review.next().pending, true);
+  assert.equal(review.refresh().ok, false);
+  assert.equal(review.state().steps[0].status, "waiting");
+  receipt = { status: "done" };
+  assert.equal(review.refresh().ok, true);
+  assert.equal(review.state().phase, "complete");
+  assert.equal(calls, 1);
+});
+
+test("an absent async receipt remains waiting during polling and replay", async () => {
+  let calls = 0;
+  let receipt;
+  const review = PrototypeReviewConsole.createConsole({
+    adapter: stubAdapter({
+      scenarios: () => [scenarioWith([
+        { id: "s1", kind: "act", call: "act", check: { read: "status", equals: "done" } },
+      ])],
+      call: () => { calls += 1; return { ok: true, pending: true }; },
+      read: () => receipt?.status,
+    }),
+    settleTimeoutMs: 1000,
+    pollIntervalMs: 10,
+  });
+
+  assert.equal(review.start("s").ok, true);
+  assert.equal(review.next().pending, true);
+  await wait(35);
+  assert.equal(review.state().steps[0].status, "waiting");
+  receipt = { status: "done" };
+  assert.equal(review.refresh().ok, true);
+  receipt = undefined;
+  assert.equal(review.replayTo(0).pending, true);
+  await wait(35);
+  assert.equal(review.state().steps[0].status, "waiting");
+  assert.equal(review.state().replayTarget, 0);
+  receipt = { status: "done" };
+  assert.equal(review.refresh().ok, true);
+  assert.equal(review.state().phase, "complete");
+  assert.equal(review.state().replayTarget, null);
+  assert.equal(calls, 2);
+});
+
 test("desktop controls filter tickets by the role that claimed them", () => {
   function control(value = "") {
     const listeners = new Map();

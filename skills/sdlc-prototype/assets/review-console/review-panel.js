@@ -85,8 +85,8 @@
       return reviewConsole.listScenarios();
     }
 
-    function selectedScenario() {
-      const scenarios = knownScenarios();
+    function selectedScenario(scenarios) {
+      scenarios = scenarios || knownScenarios();
       const known = scenarios.some(function isKnown(scenario) {
         return !scenario.error && scenario.id === selectedScenarioId;
       });
@@ -181,7 +181,7 @@
         return null;
       }
 
-      const current = selectedScenario();
+      const current = selectedScenario(scenarios);
       const select = element("select", { className: "pr-scenario" });
 
       scenarios.forEach(function addOption(scenario) {
@@ -352,8 +352,12 @@
 
       if (action === "start") {
         const select = host.querySelector(".pr-scenario");
-        const scenarioId = select && select.value ? select.value : selectedScenario();
-        const invalid = knownScenarios().find(function isInvalid(scenario) {
+        const scenarios = knownScenarios();
+        const scenarioId = select && select.value ? select.value : selectedScenario(scenarios);
+        const hasValid = scenarios.some(function isValid(scenario) {
+          return scenario.id === scenarioId && !scenario.error;
+        });
+        const invalid = !hasValid && scenarios.find(function isInvalid(scenario) {
           return scenario.id === scenarioId && scenario.error;
         });
         if (invalid) {
@@ -389,7 +393,11 @@
     function onChange(event) {
       const target = event.target;
       if (target && target.classList && target.classList.contains("pr-scenario")) {
-        const invalid = knownScenarios().find(function isInvalid(scenario) {
+        const scenarios = knownScenarios();
+        const hasValid = scenarios.some(function isValid(scenario) {
+          return scenario.id === target.value && !scenario.error;
+        });
+        const invalid = !hasValid && scenarios.find(function isInvalid(scenario) {
           return scenario.id === target.value && scenario.error;
         });
         if (invalid) {

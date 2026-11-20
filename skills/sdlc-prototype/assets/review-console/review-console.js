@@ -269,6 +269,9 @@
     let settleTimer = null;
     let generation = 0;
     let state = createInitialState();
+    // Keep the adapter's original argument and comparison references; state
+    // remains a serializable snapshot of the same scenario.
+    let executionSteps = new Map();
 
     function createInitialState() {
       return {
@@ -307,13 +310,94 @@
       return snapshotState();
     }
 
-    function findScenario(scenarioId) {
+    function invalidScenario(id, index, error) {
+      return {
+        scenario: null,
+        summary: {
+          id: id,
+          title: id || `场景 ${index + 1}`,
+          goal: "",
+          entry: null,
+          stepCount: 0,
+          error: readErrorParts(error).message,
+        },
+      };
+    }
+
+    function inspectScenario(scenario, index) {
+      let id = "";
+      try {
+        if (!scenario || typeof scenario !== "object" || Array.isArray(scenario)) {
+          throw new TypeError("场景定义无效。");
+        }
+        id = typeof scenario.id === "string" ? scenario.id : "";
+        const originalError = validateScenario(scenario);
+        if (originalError) {
+          throw new TypeError(originalError);
+        }
+
+        // Capture only fields consumed by the controller. Validate a stable
+        // state snapshot before reset while retaining adapter input references.
+        const execution = Array.from(scenario.steps, function captureStep(step) {
+          return {
+            id: step.id, title: step.title, kind: step.kind, call: step.call,
+            args: step.args, check: step.check, expect: step.expect, expectError: step.expectError,
+          };
+        });
+        const stable = cloneJson({
+          id: scenario.id,
+          title: scenario.title,
+          goal: scenario.goal,
+          entry: scenario.entry,
+          steps: execution,
+        });
+        const snapshotError = validateScenario(stable);
+        if (snapshotError) {
+          throw new TypeError(snapshotError);
+        }
+        return {
+          scenario: stable,
+          execution: execution,
+          summary: {
+            id: stable.id,
+            title: stable.title || stable.id,
+            goal: stable.goal || "",
+            entry: stable.entry || null,
+            stepCount: stable.steps.length,
+          },
+        };
+      } catch (error) {
+        return invalidScenario(id, index, error);
+      }
+    }
+
+    function inspectScenarios() {
       const scenarios = requireSynchronous(adapter.scenarios(), "adapter.scenarios()");
       if (!Array.isArray(scenarios)) {
         throw new TypeError("adapter.scenarios() 必须返回场景数组。");
       }
-      return scenarios.find(function findById(scenario) {
-        return scenario && scenario.id === scenarioId;
+      const entries = [];
+      for (let index = 0; index < scenarios.length; index += 1) {
+        try {
+          entries.push(inspectScenario(scenarios[index], index));
+        } catch (error) {
+          // An array slot can itself have a throwing accessor.
+          entries.push(invalidScenario("", index, error));
+        }
+      }
+      return entries;
+    }
+
+    function findScenario(scenarioId) {
+      const entries = inspectScenarios();
+      const valid = entries.find(function findValid(entry) {
+        return entry.summary.id === scenarioId && entry.scenario;
+      });
+      if (valid) {
+        return valid;
+      }
+      return entries.find(function findInvalid(entry) {
+        return entry.summary.id === scenarioId;
       }) || null;
     }
 
@@ -499,18 +583,23 @@
       return requireSynchronous(adapter.read(check.read, check.args), "adapter.read()");
     }
 
+    function performAction(step) {
+      const execution = executionSteps.get(step.id);
+      return requireActionResult(adapter.call(step.call, execution ? execution.args || {} : step.args));
+    }
+
     function evaluateCheck(step) {
       if (!step.check) {
         return { ok: true, actual: undefined, hasCheck: false };
       }
 
+      const execution = executionSteps.get(step.id);
+      const check = execution && execution.check ? execution.check : step.check;
       let actual;
+      let result;
       try {
-        actual = readCheckValue(step.check);
-        const unsafe = assertJsonSafe(actual, "检查结果");
-        if (unsafe) {
-          return { ok: false, actual: undefined, hasCheck: true, error: unsafe };
-        }
+        actual = readCheckValue(check);
+        result = compareCheck(check, actual);
       } catch (error) {
         return {
           ok: false,
@@ -520,8 +609,27 @@
         };
       }
 
-      const result = compareCheck(step.check, actual);
-      return { ok: result.ok, actual: result.actual, hasCheck: true };
+      // An absent asynchronous receipt is a normal not-yet-matched value.
+      if (actual === undefined) {
+        return { ok: result.ok, actual: undefined, hasCheck: true };
+      }
+
+      try {
+        const unsafe = describeJsonUnsafe(actual, "检查结果", new Set());
+        if (unsafe) {
+          return { ok: false, actual: undefined, hasCheck: true, error: unsafe };
+        }
+        // Serialize exactly once. All later diagnostics and state snapshots
+        // consume this stable value, even if the adapter has a mutable toJSON.
+        const encoded = JSON.stringify(actual);
+        if (encoded === undefined) {
+          return { ok: false, actual: undefined, hasCheck: true, error: "检查结果不能序列化。" };
+        }
+        return { ok: result.ok, actual: JSON.parse(encoded), hasCheck: true };
+      } catch (error) {
+        return { ok: false, actual: undefined, hasCheck: true,
+          error: "检查结果不能序列化：" + readErrorParts(error).message };
+      }
     }
 
     function withStep(steps, index, patch) {
@@ -740,6 +848,7 @@
     }
 
     function failRun(message, report) {
+      executionSteps = new Map();
       return commit(Object.assign(createInitialState(), {
         phase: PHASES.failed,
         lastError: message,
@@ -750,20 +859,19 @@
     function start(scenarioId) {
       // Look up and validate before touching anything. An invalid scenario id
       // or an invalid definition must not destroy the current run.
-      let scenario;
+      let entry;
       try {
-        scenario = findScenario(scenarioId);
+        entry = findScenario(scenarioId);
       } catch (error) {
         return { ok: false, error: readErrorParts(error).message, state: snapshotState() };
       }
-      if (!scenario) {
+      if (!entry) {
         return { ok: false, error: `未找到场景：${scenarioId}`, state: snapshotState() };
       }
-
-      const definitionError = validateScenario(scenario);
-      if (definitionError) {
-        return { ok: false, error: definitionError, state: snapshotState() };
+      if (!entry.scenario) {
+        return { ok: false, error: entry.summary.error, state: snapshotState() };
       }
+      const scenario = entry.scenario;
 
       const rebuild = rebuildProduct();
       if (!rebuild.ok) {
@@ -771,17 +879,20 @@
         return { ok: false, error: rebuild.error, state: snapshotState() };
       }
 
-      const entry = scenario.entry;
+      const scenarioEntry = scenario.entry;
+      executionSteps = new Map(entry.execution.map(function executionInput(step, index) {
+        return [scenario.steps[index].id || `step-${index + 1}`, step];
+      }));
 
       const next = commit(Object.assign(createInitialState(), {
         scenarioId: scenario.id,
         scenarioTitle: scenario.title || scenario.id,
         scenarioGoal: scenario.goal || "",
         scenarioEntry: {
-          kind: entry.kind,
-          kindLabel: ENTRY_KIND_LABELS[entry.kind],
-          label: entry.label || "",
-          note: entry.note || "",
+          kind: scenarioEntry.kind,
+          kindLabel: ENTRY_KIND_LABELS[scenarioEntry.kind],
+          label: scenarioEntry.label || "",
+          note: scenarioEntry.note || "",
         },
         steps: buildSteps(scenario),
         phase: PHASES.running,
@@ -886,7 +997,7 @@
 
       let result;
       try {
-        result = requireActionResult(adapter.call(step.call, step.args));
+        result = performAction(step);
       } catch (error) {
         const message = "产品动作未按适配器契约执行：" + readErrorParts(error).message;
         markStepFailed(index, message);
@@ -1138,7 +1249,7 @@
 
         let result;
         try {
-          result = requireActionResult(adapter.call(step.call, step.args));
+          result = performAction(step);
         } catch (error) {
           const message = "产品动作未按适配器契约执行：" + readErrorParts(error).message;
           return failReplay(index, message, steps, log);
@@ -1393,6 +1504,7 @@
         return { ok: false, error: rebuild.error, state: snapshotState() };
       }
 
+      executionSteps = new Map();
       const next = commit(Object.assign(createInitialState(), {
         pendingReport: rebuild.report,
       }));
@@ -1409,38 +1521,8 @@
     }
 
     function listScenarios() {
-      const scenarios = requireSynchronous(adapter.scenarios(), "adapter.scenarios()");
-      if (!Array.isArray(scenarios)) {
-        throw new TypeError("adapter.scenarios() 必须返回场景数组。");
-      }
-      return scenarios.map(function summarize(scenario, index) {
-        let id = "";
-        try {
-          if (!scenario || typeof scenario !== "object" || Array.isArray(scenario)) {
-            throw new TypeError("场景定义无效。");
-          }
-          id = typeof scenario.id === "string" ? scenario.id : "";
-          const error = validateScenario(scenario);
-          if (error) {
-            throw new TypeError(error);
-          }
-          return cloneJson({
-            id: scenario.id,
-            title: scenario.title || scenario.id,
-            goal: scenario.goal || "",
-            entry: scenario.entry || null,
-            stepCount: (scenario.steps || []).length,
-          });
-        } catch (error) {
-          return {
-            id: id,
-            title: id || `场景 ${index + 1}`,
-            goal: "",
-            entry: null,
-            stepCount: 0,
-            error: readErrorParts(error).message,
-          };
-        }
+      return inspectScenarios().map(function summarize(entry) {
+        return entry.summary;
       });
     }
 
