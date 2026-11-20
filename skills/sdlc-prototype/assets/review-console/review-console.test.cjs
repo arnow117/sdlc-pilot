@@ -308,6 +308,46 @@ test("non-coercible read errors stop progress and replay without repeating actio
   }
 });
 
+test("read-error diagnostics do not change product state during progress or replay", () => {
+  for (const replay of [false, true]) {
+    let failing = !replay;
+    let calls = 0;
+    let productState = 0;
+    let formatCalls = 0;
+    const error = {
+      code: "READ_ERROR",
+      [Symbol.toPrimitive]() {
+        formatCalls += 1;
+        productState = -1;
+        return "diagnostic text";
+      },
+    };
+    const review = PrototypeReviewConsole.createConsole({
+      adapter: stubAdapter({
+        scenarios: () => [scenarioWith([
+          { id: "act", kind: "act", call: "act", check: { read: "x", equals: "ready" } },
+        ])],
+        call: () => { calls += 1; productState += 1; return { ok: true }; },
+        read: () => { if (failing) throw error; return "ready"; },
+      }),
+    });
+
+    assert.equal(review.start("s").ok, true);
+    if (replay) {
+      assert.equal(review.next().ok, true);
+      failing = true;
+    }
+    const result = replay ? review.replayTo(0) : review.next();
+    assert.equal(result.ok, false);
+    assert.match(result.error, /读取检查目标失败：READ_ERROR/);
+    assert.equal(review.state().phase, "failed");
+    assert.equal(productState, calls);
+    assert.equal(formatCalls, 0);
+    assert.equal(review.next().ok, false);
+    assert.equal(calls, replay ? 2 : 1);
+  }
+});
+
 test("unreadable rejection evidence cannot be mistaken for an expected rejection", () => {
   const revoked = Proxy.revocable({}, {});
   revoked.revoke();
@@ -324,6 +364,7 @@ test("unreadable rejection evidence cannot be mistaken for an expected rejection
   assert.equal(review.start("s").ok, true);
   assert.equal(review.next().ok, false);
   assert.equal(review.state().phase, "failed");
+  assert.equal(review.state().log[0].error, "（产品没有提供错误信息）");
   assert.equal(review.next().ok, false);
   assert.equal(calls, 1);
 });
@@ -343,11 +384,13 @@ test("a readable rejection code is retained when its message getter throws", () 
   assert.equal(review.next().ok, true);
   assert.equal(review.state().steps[0].status, "rejected");
   assert.equal(review.state().steps[0].rejection.code, "DECLINED");
+  assert.equal(review.state().log[0].error, "DECLINED");
 });
 
 test("formatting cannot create rejection evidence during progress or replay", () => {
   for (const replay of [false, true]) {
     let calls = 0;
+    let formatCalls = 0;
     let malicious = !replay;
     const review = PrototypeReviewConsole.createConsole({
       adapter: stubAdapter({
@@ -359,6 +402,7 @@ test("formatting cannot create rejection evidence during progress or replay", ()
           if (!malicious) return { ok: false, error: { message: "无法读取错误信息。" } };
           const error = {
             [Symbol.toPrimitive]() {
+              formatCalls += 1;
               this.message = "无法读取错误信息。";
               throw new Error("cannot stringify");
             },
@@ -378,6 +422,7 @@ test("formatting cannot create rejection evidence during progress or replay", ()
     assert.equal(review.state().phase, "failed");
     assert.equal(review.state().steps[0].rejection, null);
     assert.equal(review.state().replayTarget, null);
+    assert.equal(formatCalls, 0);
     assert.equal(review.next().ok, false);
     assert.equal(calls, replay ? 2 : 1);
   }
@@ -408,6 +453,7 @@ test("rejection evidence is read once during progress and replay", () => {
   assert.equal(review.start("s").ok, true);
   assert.equal(review.next().ok, true);
   assert.equal(review.state().steps[0].reasonVerified, true);
+  assert.equal(review.state().log[0].error, "declined");
   assert.equal(review.replayTo(0).ok, true);
   assert.equal(review.state().steps[0].reasonVerified, true);
   assert.deepEqual(messageReads, [1, 1]);
@@ -479,8 +525,7 @@ test("a diagnostic conversion cannot change the observation that decides a rejec
           receipt = "changed";
           return { ok: false, error: {
             code: "DENIED",
-            // The conversion runs product code. It must not run before the
-            // check has read the product state.
+            // Converting this object would execute product code.
             [Symbol.toPrimitive]() {
               formations += 1;
               receipt = "unchanged";
@@ -504,8 +549,70 @@ test("a diagnostic conversion cannot change the observation that decides a rejec
     assert.deepEqual(observed, ["changed"]);
     assert.equal(review.state().steps[0].status, "failed");
     assert.equal(review.state().replayTarget, null);
-    // The conversion ran once per product action, and only after the check.
-    assert.equal(formations, calls);
+    // Logging must not execute product code, even after the check.
+    assert.equal(formations, 0);
+  }
+});
+
+test("action diagnostics do not change the state observed by a later step or replay", () => {
+  for (const replay of [false, true]) {
+    let useSideEffect = !replay;
+    let calls = 0;
+    let formatCalls = 0;
+    let receipt = "unchanged";
+    const observed = [];
+    const review = PrototypeReviewConsole.createConsole({
+      adapter: stubAdapter({
+        scenarios: () => [scenarioWith([
+          {
+            id: "reject",
+            kind: "act",
+            call: "reject",
+            expectError: { code: "DENIED" },
+            check: { read: "receipt", equals: "changed" },
+          },
+          { id: "observe", kind: "observe", check: { read: "receipt", equals: "unchanged" } },
+        ])],
+        reset: () => { receipt = "unchanged"; return { ok: true }; },
+        call: () => {
+          calls += 1;
+          receipt = "changed";
+          return { ok: false, error: useSideEffect ? {
+            code: "DENIED",
+            [Symbol.toPrimitive]() {
+              formatCalls += 1;
+              receipt = "unchanged";
+              return "diagnostic-only text";
+            },
+          } : { code: "DENIED", message: "Denied" } };
+        },
+        read: () => { observed.push(receipt); return receipt; },
+      }),
+    });
+
+    assert.equal(review.start("s").ok, true);
+    let result;
+    if (replay) {
+      assert.equal(review.next().ok, true);
+      assert.equal(review.next().ok, false);
+      useSideEffect = true;
+      observed.length = 0;
+      result = review.replayTo(1);
+    } else {
+      assert.equal(review.next().ok, true);
+      result = review.next();
+    }
+
+    const state = review.state();
+    assert.equal(result.ok, false);
+    assert.deepEqual(observed, ["changed", "changed"]);
+    assert.equal(receipt, "changed");
+    assert.equal(state.phase, "failed");
+    assert.equal(state.steps[0].reasonVerified, true);
+    assert.equal(state.steps[1].status, "failed");
+    assert.equal(state.log[0].error, "DENIED");
+    assert.equal(formatCalls, 0);
+    assert.equal(calls, replay ? 2 : 1);
   }
 });
 

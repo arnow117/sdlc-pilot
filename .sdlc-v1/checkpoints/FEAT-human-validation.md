@@ -2,7 +2,7 @@
 
 ## 定位
 
-- 仓库：/Users/mac/hansen_agent_team/external/sdlc-pilot；branch：main；HEAD：95f612b7008b5afe654d5b89dea338f4d833b28c（本地返修候选）。
+- 仓库：/Users/mac/hansen_agent_team/external/sdlc-pilot；branch：main；HEAD：a0968a3（仅保存验证和复评证据）；控制台与测试有未提交返修，待固定新候选。
 - Requirement：REQ-human-validation；Task：TASK-human-validation
 
 ## 已确认
@@ -17,7 +17,7 @@
 
 ## 未完成
 
-- Task 当前 done，validation 为 `pass@95f612b`、review pending；其后只读复评发现新 P2，旧通过不得用于后续批准。`fail@5c52bf8` 保存在 53179e6，`pass@60240a9` 和 Review 退回保存在 262c555。Ship 未执行。
+- Task 返修已登记 done，validation/review 均为 pending；`pass@95f612b` 与其后只读复评的 P2 已保存于 a0968a3，旧通过不得用于后续批准。`fail@5c52bf8` 保存在 53179e6。Ship 未执行。
 - 候选 `fba6705` 的独立 Validate 曾通过标准检查 233 项、Python 3.9 场景 59 项、Node 组件 131 项及受限浏览器点验；其后独立复评发现三个边界问题并已退回。该通过只适用于原候选。
 - 原 14 次试次及 43 run 结果保留。B01 后续补充试次经历评审退回、局部修复、独立重验和 Review，机械 oracle 通过；仅规划样本与桌面候选补充样本的定向检查通过。桌面补充样本明确增加 T3 路线提示，原失败不被覆盖。真人样本仍无指定观察者的实际答复。
 - SCN-07 联合反馈及处理、SCN-08 明确答复后续接、SCN-09 变化后的定向重验均已取得同机合成机制证据并经独立 Validate 判定符合；模拟输入不得冒充该用户真人答复。
@@ -32,7 +32,7 @@
 ## 下一步
 
 - `60240a9` 的独立复评发现拒绝证据重复读取、动作结果 getter 抛错及空诊断；退回已保存。返修 `5c52bf8` 的独立 Validate 为 `IMPLEMENTATION_FAILED`：普通推进和回看均会二次读取原生 `Error.message`，且诊断转换的副作用可能使拒绝后的状态检查误通过；Node 148 项、历史边界 22 项及 Chromium 面板和桌面检查通过。fail 已登记、读回并保存于 53179e6，重开 Task 清除了当前投影中的失败；候选外文件已原样恢复。
-- 候选 `95f612b` 独立 Validate 的 190 项 Node 和真实 Chromium 面板通过，报告和回执见 `../../workspace/20261120-sdlc-combined-acceptance/continuation/repair-validation-95f612b/`。随后只读复评因业务工作树前提未满足而 incomplete，并复现日志转换在后续步骤前改变产品状态的 P2；未登记正式 Review。先保存验证和复评证据，再重开 Task，修复日志并定向验证。详见 `.sdlc-v1/evidence/FEAT-human-validation.review.md`。
+- 候选 `95f612b` 的验证通过及只读复评 P2 均已保留。主 Agent 返修仅使用已读取的错误信息或稳定兜底，避免动作日志及读取错误提示触发对象转换；组件 152 项、旧诊断 4 项、等待 8 项通过，旧动作证据 12/14、异常边界 13/14 的其余项通过。被排除的三项断言原先要求执行自定义转换，现由无副作用回归替代；原文件未改。固定候选后需独立 Validate 和 Review；详见 `.sdlc-v1/evidence/FEAT-human-validation.review.md`。
 - 回填工程验证记录前核对 Plan 内容漂移、批准来源、写者独占及必要的批准型重记；不得以干净副本直接代替权威主仓状态。新增续验按用户新预算单独记录，不重复催问已有真人观察。
 
 ## 必要引用

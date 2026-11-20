@@ -75,14 +75,10 @@
       return { ok: true, pending: result.pending === true };
     }
 
-    // Capture product evidence before any diagnostic conversion can mutate it.
-    const error = result.error;
-    const evidence = readErrorEvidence(error);
-    // The diagnostic is produced on demand and at most once. It is read only
-    // after the factual observation of this step, so a product conversion
-    // that runs adapter code can no longer change what was already observed.
-    const diagnostic = createDiagnosticReader(error, evidence);
-    return { ok: false, evidence: evidence, diagnostic: diagnostic };
+    // Capture evidence once. Diagnostics use only these strings: coercing the
+    // product's error object can execute product code and change later steps.
+    const evidence = readErrorEvidence(result.error);
+    return { ok: false, evidence: evidence, diagnostic: rejectionText(evidence) };
   }
 
   function readErrorField(error, name) {
@@ -94,33 +90,15 @@
     }
   }
 
-  // A native error formats itself from its own name and message. Its
-  // conversion would read the message again, so it is never used for an
-  // error whose message was already read.
-  function isErrorLike(value) {
-    try {
-      if (value instanceof Error) {
-        return true;
-      }
-      return Object.prototype.toString.call(value) === "[object Error]";
-    } catch (_error) {
-      return false;
-    }
-  }
-
-  function errorName(error) {
-    const name = readErrorField(error, "name");
-    return name && name.trim() ? name : "Error";
-  }
-
   function stringifyError(error) {
     if (!error) {
       return "操作未返回结果。";
     }
+    // Object coercion can call adapter code; display a stable fallback instead.
+    if (typeof error === "object" || typeof error === "function") {
+      return "无法读取错误信息。";
+    }
     try {
-      if (isErrorLike(error)) {
-        return errorName(error);
-      }
       const text = String(error);
       return text.trim() ? text : "无法读取错误信息。";
     } catch (_error) {
@@ -141,6 +119,9 @@
     const message = readErrorField(error, "message");
     if (message && message.trim()) {
       return { code: code, message: message };
+    }
+    if (code && code.trim()) {
+      return { code: code, message: code };
     }
 
     return { code: code, message: stringifyError(error) };
@@ -203,22 +184,6 @@
     // The message stays null when the product did not give one. A fallback
     // must never stand in for a real error.message.
     return { code: code, message: message };
-  }
-
-  // The wording shown to a reviewer. It is never used to satisfy an expected
-  // reason, and it is resolved at most once so that a product conversion
-  // cannot run again later.
-  function createDiagnosticReader(error, evidence) {
-    let resolved = false;
-    let text = null;
-
-    return function readDiagnostic() {
-      if (!resolved) {
-        resolved = true;
-        text = evidence && evidence.message ? evidence.message : stringifyError(error);
-      }
-      return text;
-    };
   }
 
   // The wording shown to a reviewer. It is never used to satisfy an
@@ -1083,9 +1048,7 @@
         return { ok: false, error: message };
       }
 
-      // The log entry is written when the factual result of this step is
-      // known. Its diagnostic is resolved at that moment, so a product
-      // conversion can no longer run before the observation was read.
+      // Record the captured diagnostic without reading the product again.
       const appendLog = function appendLog() {
         return state.log.concat([{
           stepId: step.id,
@@ -1093,7 +1056,7 @@
           kindLabel: step.kindLabel,
           call: step.call,
           ok: result.ok !== false,
-          error: result.ok === false ? result.diagnostic() : null,
+          error: result.ok === false ? result.diagnostic : null,
         }]);
       };
 
@@ -1330,9 +1293,7 @@
         }
 
         const evidence = result.ok === false ? result.evidence : null;
-        // The log entry is written when the factual result of this step is
-        // known. Its diagnostic is resolved at that moment, so a product
-        // conversion can no longer run before the observation was read.
+        // Record the captured diagnostic without reading the product again.
         const writeLogEntry = function writeLogEntry() {
           log.push({
             stepId: step.id,
@@ -1340,7 +1301,7 @@
             kindLabel: step.kindLabel,
             call: step.call,
             ok: result.ok !== false,
-            error: result.ok === false ? result.diagnostic() : null,
+            error: result.ok === false ? result.diagnostic : null,
           });
         };
 
