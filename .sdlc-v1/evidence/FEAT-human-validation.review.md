@@ -41,3 +41,15 @@
 - 结论 `IMPLEMENTATION_FAILED`；宿主实际执行模型 `gpt-6.2-sol`。原 139 项 Node 通过，额外边界 6 项通过、2 项失败；受限 Chromium 的普通隔离路径通过、异常对象反例失败。[报告与原始日志](../../../../workspace/20261120-sdlc-combined-acceptance/continuation/repair-validation-5c6c92c/report.md)。
 - 数组项或 `read()` 抛出无原型对象时，`readErrorParts` 的字符串转换再次抛错：真实面板无法挂载，或普通推进重复动作、回看仍停留 running。实际读取错误的格式化必须有安全退路；待修复后重验。
 - 现有异步等待、正常读取异常、变化的 `toJSON()`、适配器参数与对象比较已按报告通过；先前失败和未覆盖项继续保留。
+
+## 60240a9 的独立复验
+
+- 结论 `PASS`；执行者请求 `codex/gpt-6.2-sol/xhigh`，宿主确认 `executedModel=gpt-6.2-sol`。三个组件套件 143 项、上一轮边界脚本 8 项、本轮独立边界 14 项通过；Chromium 六组异常场景及桌面筛选通过。[完整报告与原始日志](../../../../workspace/20261120-sdlc-combined-acceptance/continuation/repair-validation-60240a9/report.md)。
+- 原标准检查 233 项沿用 fba6705 的独立执行记录，报告核对了相关输入依赖；原执行版本不变。B01 真人答复、共同 I、跨机器交割及真实发布仍未覆盖。
+
+## 60240a9 的独立复评
+
+- 结论 `changes_requested`；宿主确认执行模型 `gpt-6.2-sol`。[复评原文](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3Aa919fc85-eb27-47f2-b212-4d7af9bab58a%3Adelegate-task%3A234eed29-1582-4c18-a709-e9dc6528f205)。
+- **P2 · violates**：诊断转换与拒绝证据分别多次读取产品错误，可能伪造或丢失拒绝证据；普通推进和回看需使用同一次证据读取。
+- **P2 · violates**：动作结果的 `error` getter 抛错时在失败记录之前退出，导致动作重复或回看停留 running；读取动作结果需纳入失败收束。
+- **P2 · violates**：异常对象的字符串转换返回空值时，无效场景被面板当成有效默认项；无效摘要必须保留非空诊断。
