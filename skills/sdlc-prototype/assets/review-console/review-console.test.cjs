@@ -1,5 +1,8 @@
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const test = require("node:test");
+const vm = require("node:vm");
 const PrototypeRuntime = require("../shared-state/runtime.js");
 const PrototypeReviewConsole = require("./review-console.js");
 const MobileParcel = require("./examples/mobile-parcel.js");
@@ -165,6 +168,99 @@ test("a failed step is not executed twice", () => {
 
   assert.equal(enterCalls, 1);
   assert.equal(review.state().phase, "failed");
+});
+
+test("an unserializable observation fails without repeating the product action", () => {
+  let calls = 0;
+  const review = PrototypeReviewConsole.createConsole({
+    adapter: stubAdapter({
+      scenarios: () => [scenarioWith([
+        { id: "s1", kind: "act", call: "act", check: { read: "x", equals: 1 } },
+      ])],
+      call: () => { calls += 1; return { ok: true }; },
+      read: () => 1n,
+    }),
+  });
+
+  assert.equal(review.start("s").ok, true);
+  const result = review.next();
+  assert.equal(result.ok, false);
+  assert.match(result.error, /不能序列化/);
+  assert.equal(review.state().phase, "failed");
+  assert.equal(review.next().ok, false);
+  assert.equal(calls, 1);
+});
+
+test("replay stops on an unserializable observation without repeating the action", () => {
+  let calls = 0;
+  let actual = 1;
+  const review = PrototypeReviewConsole.createConsole({
+    adapter: stubAdapter({
+      scenarios: () => [scenarioWith([
+        { id: "s1", kind: "act", call: "act", check: { read: "x", equals: 1 } },
+        { id: "s2", kind: "act", call: "act" },
+      ])],
+      call: () => { calls += 1; return { ok: true }; },
+      read: () => actual,
+    }),
+  });
+
+  assert.equal(review.start("s").ok, true);
+  assert.equal(review.next().ok, true);
+  actual = 1n;
+  const replay = review.replayTo(0);
+  assert.equal(replay.ok, false);
+  assert.match(replay.error, /不能序列化/);
+  assert.equal(review.state().phase, "failed");
+  assert.equal(review.next().ok, false);
+  assert.equal(calls, 2);
+});
+
+test("desktop controls filter tickets by the role that claimed them", () => {
+  function control(value = "") {
+    const listeners = new Map();
+    return {
+      value,
+      innerHTML: "",
+      textContent: "",
+      className: "",
+      hidden: false,
+      addEventListener(type, listener) { listeners.set(type, listener); },
+      emit(type, target = this) { listeners.get(type)({ target }); },
+    };
+  }
+  const elements = {
+    "#dependency-notice": control(),
+    "#rows": control(),
+    "#notice": control(),
+    "#role": control("agent"),
+    "#filter": control("all"),
+    "#reset": control(),
+  };
+  const document = { querySelector: (selector) => elements[selector] };
+  const html = fs.readFileSync(path.join(__dirname, "examples/ticket-desk-console.html"), "utf8");
+  const scripts = Array.from(html.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g), (match) => match[1]);
+  const pageScript = scripts.find((script) => script.includes("const app = DesktopTicketDesk.createTicketDeskApp()"));
+  assert.ok(pageScript);
+  const context = { document, DesktopTicketDesk };
+  vm.runInNewContext(pageScript + "\nglobalThis.testApp = app;", context, { timeout: 1000 });
+
+  elements["#role"].value = "reviewer";
+  elements["#role"].emit("change");
+  elements["#rows"].emit("click", {
+    closest: () => ({ getAttribute: () => "T-102" }),
+  });
+  elements["#filter"].value = "mine";
+  elements["#filter"].emit("change");
+
+  assert.match(elements["#rows"].innerHTML, /T-102/);
+  assert.doesNotMatch(elements["#rows"].innerHTML, /T-103/);
+  assert.equal(context.testApp.selectors.visibleCount(), 1);
+  elements["#role"].value = "agent";
+  elements["#role"].emit("change");
+  assert.match(elements["#rows"].innerHTML, /T-103/);
+  assert.doesNotMatch(elements["#rows"].innerHTML, /T-102/);
+  assert.equal(context.testApp.selectors.visibleCount(), 1);
 });
 
 test("an expected rejection is recorded without failing the run", () => {

@@ -507,6 +507,10 @@
       let actual;
       try {
         actual = readCheckValue(step.check);
+        const unsafe = assertJsonSafe(actual, "检查结果");
+        if (unsafe) {
+          return { ok: false, actual: undefined, hasCheck: true, error: unsafe };
+        }
       } catch (error) {
         return {
           ok: false,
@@ -1409,15 +1413,35 @@
       if (!Array.isArray(scenarios)) {
         throw new TypeError("adapter.scenarios() 必须返回场景数组。");
       }
-      return cloneJson(scenarios.map(function summarize(scenario) {
-        return {
-          id: scenario.id,
-          title: scenario.title || scenario.id,
-          goal: scenario.goal || "",
-          entry: scenario.entry || null,
-          stepCount: (scenario.steps || []).length,
-        };
-      }));
+      return scenarios.map(function summarize(scenario, index) {
+        let id = "";
+        try {
+          if (!scenario || typeof scenario !== "object" || Array.isArray(scenario)) {
+            throw new TypeError("场景定义无效。");
+          }
+          id = typeof scenario.id === "string" ? scenario.id : "";
+          const error = validateScenario(scenario);
+          if (error) {
+            throw new TypeError(error);
+          }
+          return cloneJson({
+            id: scenario.id,
+            title: scenario.title || scenario.id,
+            goal: scenario.goal || "",
+            entry: scenario.entry || null,
+            stepCount: (scenario.steps || []).length,
+          });
+        } catch (error) {
+          return {
+            id: id,
+            title: id || `场景 ${index + 1}`,
+            goal: "",
+            entry: null,
+            stepCount: 0,
+            error: readErrorParts(error).message,
+          };
+        }
+      });
     }
 
     function subscribe(listener) {

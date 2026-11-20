@@ -298,6 +298,40 @@ test("the panel renders the scenario list and the page index", () => {
   assert.equal(host.querySelector(".pr-pages").children.length, 1);
 });
 
+test("an invalid scenario does not prevent the panel from running a valid one", () => {
+  let resets = 0;
+  const valid = scenario("good", "可用场景");
+  const invalid = Object.assign(scenario("bad", "无效场景"), { title: 1n });
+  const review = PrototypeReviewConsole.createConsole({
+    adapter: {
+      pages: () => [],
+      scenarios: () => [invalid, valid],
+      call: () => ({ ok: true }),
+      reset: () => { resets += 1; return { ok: true }; },
+      pendingPolicy: "none",
+    },
+  });
+  const { document, host } = createHost();
+  const panel = PrototypeReviewPanel.createPanel({ console: review, host, document });
+
+  const select = host.querySelector(".pr-scenario");
+  assert.equal(select.value, "good");
+  assert.match(host.textContent, /不能序列化/);
+  assert.equal(select.childNodes.find((option) => option.getAttribute("value") === "bad").hasAttribute("disabled"), true);
+  assert.equal(review.start("bad").ok, false);
+  assert.equal(resets, 0);
+
+  click(host.querySelector('[data-pr="start"]'));
+  assert.equal(review.state().scenarioId, "good");
+  assert.equal(resets, 1);
+  assert.equal(review.next().ok, true);
+  const running = review.state();
+  assert.equal(review.start("bad").ok, false);
+  assert.deepEqual(review.state(), running);
+  assert.equal(resets, 1);
+  panel.destroy();
+});
+
 test("choosing a scenario survives a redraw", () => {
   const { review, host, calls } = createHarness([scenario("a", "场景一"), scenario("b", "场景二", "review")]);
 

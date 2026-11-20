@@ -15,6 +15,11 @@
     readonly: "只读观察员",
   };
 
+  const OWNER_BY_ROLE = {
+    agent: "林岚",
+    reviewer: "复核专员",
+  };
+
   const INITIAL_TICKETS = [
     { id: "T-101", title: "打印机卡纸", customer: "前台", level: "普通", status: "待受理", owner: null },
     { id: "T-102", title: "无法登录工单系统", customer: "研发组", level: "紧急", status: "待受理", owner: null },
@@ -83,7 +88,7 @@
             error.code = "ALREADY_CLAIMED";
             throw error;
           }
-          const owner = state.role === "reviewer" ? "复核专员" : "林岚";
+          const owner = OWNER_BY_ROLE[state.role];
           return Object.assign({}, state, {
             tickets: tickets.map(function replaceTicket(item) {
               return item.id === ticket.id
@@ -184,8 +189,12 @@
         });
       }
       if (state.filter === "mine") {
+        const owner = OWNER_BY_ROLE[state.role];
+        if (!owner) {
+          return [];
+        }
         return state.tickets.filter(function isMine(ticket) {
-          return ticket.owner === "林岚";
+          return ticket.owner === owner;
         });
       }
       return state.tickets;
@@ -213,6 +222,7 @@
     };
 
     const selectors = {
+      visibleTickets: visibleTickets,
       pendingCount: function pendingCount() {
         return store.getState().tickets.filter(function isPending(ticket) {
           return ticket.status === "待受理";

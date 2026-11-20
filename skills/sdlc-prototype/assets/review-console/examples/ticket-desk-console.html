@@ -209,11 +209,7 @@
       function render() {
         const state = app.store.getState();
         syncControls(state);
-        const visible = state.filter === "pending"
-          ? state.tickets.filter(function isPending(ticket) { return ticket.status === "待受理"; })
-          : state.filter === "mine"
-            ? state.tickets.filter(function isMine(ticket) { return ticket.owner === "林岚"; })
-            : state.tickets;
+        const visible = app.selectors.visibleTickets();
 
         rows.innerHTML = visible.map(function toRow(ticket) {
           const selected = ticket.id === state.selected;

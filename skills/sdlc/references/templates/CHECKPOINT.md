@@ -1,7 +1,7 @@
 <!--
 恢复检查点。仅用于暂停、跨会话恢复、执行环境变化，或批准型重记的预写；
 路径：.sdlc-v1/checkpoints/<feature-id>.md。
-全文不超过 60 行，原位更新，Feature 完成后删除。只有主 Agent 可以创建、更新或删除；子 Agent 只能返回候选。
+全文不超过 60 行，原位更新；Feature 完成且未决交付操作和登记回执均已核清后才删除，详见下方 §6 权威来源。只有主 Agent 可以创建、更新或删除；子 Agent 只能返回候选。
 不要记录凭据、私密信息、不必要本地路径、聊天记录、Spec、当前有效方案全文或完整日志。
 权威来源：../stage-agent-protocol.md#6-context-and-checkpoints
 -->

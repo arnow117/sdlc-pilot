@@ -655,6 +655,10 @@ def checkpoint_recovery_mismatches(repo: Path, path: Path, feature_id: str, poin
         record = features[feature_id]
         original_validation = record.get("validation", {})
         original_review = record.get("review", {})
+        if require_prior_review and original_review.get("decision") not in {"approved", "changes_requested"}:
+            differences.append(
+                f"the Git reference {reference!r} has no completed review decision"
+            )
         if original is None:
             original = record
         else:
@@ -2080,6 +2084,25 @@ class HumanAcceptanceTest(unittest.TestCase):
                     self.assertEqual(state_path.read_bytes(), before)
                     self.assertEqual(human_state(repo)["review"]["decision"], "pending")
 
+    def test_review_recovery_rejects_pending_as_a_prior_decision(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            repo = Path(temporary) / "repo"
+            prepare_human(repo)
+            human_complete_task(repo)
+            cli(repo, "record-validation", "--feature-id", HUMAN_FEATURE, "--result", "pass")
+            validated = human_state(repo)["validation"]["commit"]
+            original_ref = commit(repo, "validation without review")
+            approved = approved_mapping(repo, HUMAN_FEATURE, "validation")
+            path = write_human_checkpoint(
+                repo, HUMAN_FEATURE, location="selected Feature and workspace",
+                point="validation", approved=approved, tested_commit=validated,
+                review="pending by None", pending="restore old Review",
+                next_step="read back validation", references=[f"原 state：{original_ref}:.sdlc-v1/state.json"],
+            )
+            before = (repo / ".sdlc-v1/state.json").read_bytes()
+            self.assertNotEqual(checkpoint_recovery_mismatches(repo, path, HUMAN_FEATURE, "validation"), [])
+            self.assertEqual((repo / ".sdlc-v1/state.json").read_bytes(), before)
+
     def test_interrupted_re_record_states_are_distinguishable_by_actual_files(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
             repo = Path(temporary) / "repo"
@@ -3083,13 +3106,23 @@ class HumanAcceptanceTest(unittest.TestCase):
             prepare_human(repo, with_cli=True)
             human_complete_task(repo)
             delivered = human_pass_and_review(repo)
+            review_ref = test_support.git(repo, "rev-parse", "HEAD").stdout.strip()
             operation = {
                 "operation": "op-staging",
                 "environment": "staging",
                 "original_version": "prev",
                 "expected_version": delivered,
             }
-            stage_operation_record(root, "staging", operation)
+            operation_path = stage_operation_record(root, "staging", operation)
+            checkpoint = write_human_checkpoint(
+                repo, HUMAN_FEATURE, location="selected Feature and workspace",
+                point="validation", approved=approved_mapping(repo, HUMAN_FEATURE, "validation"),
+                tested_commit=delivered, review="approved by scripted reference",
+                pending="registration receipt for op-staging has not been reconciled",
+                next_step="compare the original operation, target and receipt",
+                references=[f"原 state：{review_ref}:.sdlc-v1/state.json", f"operation：{operation_path}"],
+            )
+            checkpoint_before = checkpoint.read_bytes()
             target = root / "targets" / "staging"
             simulate_deploy(target, operation)
             # The smoke really ran before the registration.
@@ -3116,6 +3149,12 @@ class HumanAcceptanceTest(unittest.TestCase):
             self.assertEqual(feature["release"]["commit"], delivered)
             self.assertEqual(feature["status"], "released")
             self.assertEqual(lifecycle.next_action(repo)["stage"], "done")
+            # A completed state is not enough to discard the unresolved
+            # operation's checkpoint. Its original reference remains readable.
+            self.assertEqual(checkpoint.read_bytes(), checkpoint_before)
+            self.assertIn(str(operation_path), checkpoint.read_text(encoding="utf-8"))
+            self.assertEqual(read_deploy_receipt(target)["operation"], persisted["operation"])
+            self.assertEqual(read_deploy_receipt(target)["version"], persisted["expected_version"])
             # The recovery added no deployment call and no registration call.
             self.assertEqual(deploy_applications(target), applications_before)
             self.assertEqual((repo / ".sdlc-v1/state.json").read_bytes(), state_before)

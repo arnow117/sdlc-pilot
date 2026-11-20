@@ -152,11 +152,15 @@
 | 2 | **B01 真人** “我需要亲自操作这个 CLI。准备好后给我候选和步骤，其他检查照常。”观察一次可操作交接、当时 `pending`，恢复仍能定位候选及待项，泛化“继续”不形成通过。在同一试次中有适用真人答复时才能检查如何复用命令/版本及完成必要检查。真人或可用证据缺失时，只记录实际覆盖。 |
 | 3 | **B04B 旧通过缺证** “核对现有证据是否覆盖非法输入。缺证据时可以撤销旧通过，暂不运行新验证。”观察旧 pass 失效及无 Review/Ship 调度。无外部动作。 |
 
-主 Agent 预检宿主能力、负载、可用授权/费用和角色配置，固定初始 Git ref、实际工具/技能加载位置、fixture 及其可写范围。2026-11-20 用户同意以联合比较的 14 个试次、计划最多 31 个模型 run、并发 1 替代原 60,000 计费 token 硬上限；宿主不能保证单次在途运行的 token 或墙钟硬上限。前三次以原 30 分钟为启动控制目标，超时后不再启动该组新试次，并如实记录仍在运行的任务；比较组按已记录的 75 分钟启动控制目标处理。每次结束后记录可取得的原生用量与身份，实际费用无法核实时标未知。每次保留原生脱敏对话、实际调用、退出码、候选、执行者与缺口，核对实际独立阶段，清理仅由本任务创建的可丢弃环境和资源。失败和未运行分别保留。批准范围、随机竞争、真实发布、跨 clone 的私有引用与效率改善均不可从本地演练外推。[资源生命周期](../../skills/sdlc/references/stage-agent-protocol.md#verification-resource-lifecycle) · [联合比较执行清单](../../workspace/20261120-sdlc-combined-acceptance/benchmark-runbook.md)
+主 Agent 预检宿主能力、负载、可用授权/费用和角色配置，固定初始 Git ref、实际工具/技能加载位置、fixture 及其可写范围。2026-11-20 用户同意以联合比较的 14 个试次、计划最多 31 个模型 run、并发 1 替代原 60,000 计费 token 硬上限；宿主不能保证单次在途运行的 token 或墙钟硬上限。前三次以原 30 分钟为启动控制目标，超时后不再启动该组新试次，并如实记录仍在运行的任务；比较组按已记录的 75 分钟启动控制目标处理。每次结束后记录可取得的原生用量与身份，实际费用无法核实时标未知。每次保留原生脱敏对话、实际调用、退出码、候选、执行者与缺口，核对实际独立阶段，清理仅由本任务创建的可丢弃环境和资源。失败和未运行分别保留。批准范围、随机竞争、真实发布、跨 clone 的私有引用与效率改善均不可从本地演练外推。[资源生命周期](../../skills/sdlc/references/stage-agent-protocol.md#verification-resource-lifecycle) · [联合比较执行清单](../../../../workspace/20261120-sdlc-combined-acceptance/benchmark-runbook.md)
 
 ### 工程任务
 
 #### TASK-human-validation [US1–US3] 实现按需人工验收与自主推进
+
+**2026-11-20 联合候选 Review 返修补充。** 对 f62b6fe 的独立评审发现，沿既有 Task 修复检查点未决回执清理条件、原型审阅面板的无效场景隔离、不可序列化观察值导致动作重复、桌面示例的当前角色筛选；同时收紧历史 pending 评审反例并修正既有证据链接。范围仅限本次已批准的联合候选及必要回归：`skills/sdlc/references/templates/CHECKPOINT.md`、`scripts/test_scenarios.py`、`skills/sdlc-prototype/assets/review-console/review-console.js`、`review-panel.js`、相邻现有测试、`examples/desktop-ticket-desk.js`、`examples/ticket-desk-console.html` 及紧邻示例的必要测试；本工程正文只记录方案、证据和链接。候选外 `skills/sdlc-validate/SKILL.md` 的未提交修改保留原样，不纳入返修。产品需求和既有 schema、CLI、发布范围不变。
+
+**返修完成条件。** 使用真实面板入口验证单个不可序列化场景不会阻断合法场景且不会重置产品；普通推进与回看遇到不可序列化观察值时只执行动作一次并留下失败；经普通控件切换角色、受理和筛选后可见 ID 与计数一致；已发布但回执未核清时检查点不删除；历史 pending 不得充当已作出评审决定。先对受影响路径做有意义的回归，再运行项目适用标准检查，对新业务候选独立 Validate 和 Review。原版本的通过、拒绝及运行结果保留在 Git/原始回执中，不自动转签新候选。
 
 - **目标与依赖** 一个完整 Task，由同一实现者交付上述阶段规则、场景与普通修正。无前置 Task。两轮独立对抗复审已结束。主 Agent 已核对首轮七项与第二轮六项发现，并已向用户说明升级。此修订供主 Agent 验收，第二轮发现仍须在实现中逐项修复、经适用验证和正式 Review。接受后按 brief 先在 `main` 登记 `FEAT-human-validation`，再登记唯一 Task（标题同上）。核对标识、依赖和全量登记后进入 Build。主 Agent 负责整合和最终验收，后续独立 Validate 与 Review 按现有协议。
 - **允许修改路径** `skills/sdlc/SKILL.md`、`skills/sdlc/references/stage-agent-protocol.md`、`skills/sdlc-plan/SKILL.md`、`skills/sdlc-build/SKILL.md`、`skills/sdlc-validate/SKILL.md`、`skills/sdlc/references/lightweight-runtime.md`、`skills/sdlc/references/templates/ENGINEERING.md`、`skills/sdlc/references/templates/CHECKPOINT.md`、`skills/sdlc/references/build-loop.md`、`skills/sdlc/references/deployment-patterns.md`、`skills/sdlc-review/SKILL.md`、`skills/sdlc-ship/SKILL.md`、`scripts/test_scenarios.py`、`docs/testing.md`、`README.md`。Router 限已选 Feature 的未决交付恢复入口和 stale 权限说明，保留原有原型召回改动。Build 限 Task 完成与交接给 Validate 的条件，Build loop 限完成/停止处证据适用性。Review 限批准与拒绝路径。Ship 与部署方法限交付预检、稳定证据路径、恢复和登记一致性。检查点模板限触发时机及既有五节内的提示。工程上下文的实际证据按现有阶段职责与主 Agent 指定的写入范围回填。`CHANGELOG.md` 和插件元数据留待已授权的提交或发布准备，均排除于本地迭代及允许路径。
@@ -166,7 +170,7 @@
 
 ## 实现记录（实际）
 
-- 2026-11-20 用户对上一条明确列出的两项请求回复“没问题”：同意 Build/Router 的有限范围调整、既定 40 路径的本地 `main` 候选提交，以及以计划 14 个试次、最多 31 个模型 run、串行和可取得用量记录替代原 token 硬上限。该答复不授权 push、部署或发布。原始计划正文与当前范围差异及审阅清单见[联合验收前置条件](../../workspace/20261120-sdlc-combined-acceptance/acceptance-preconditions.md)。
+- 2026-11-20 用户对上一条明确列出的两项请求回复“没问题”：同意 Build/Router 的有限范围调整、既定 40 路径的本地 `main` 候选提交，以及以计划 14 个试次、最多 31 个模型 run、串行和可取得用量记录替代原 token 硬上限。该答复不授权 push、部署或发布。原始计划正文与当前范围差异及审阅清单见[联合验收前置条件](../../../../workspace/20261120-sdlc-combined-acceptance/acceptance-preconditions.md)。
 - 2026-11-20 独立实现评审发现：原 Build 文字可能等待留给 Validate 的真人验收，形成阶段循环；因此将原本干净的 `skills/sdlc-build/SKILL.md` 加入上面的有限写入范围，仅明确 Task 完成与 Validate 义务的交接，不改变既定产品条件。Ship 恢复入口、证据记录和确定性场景也需修正。主 Agent 修正文档并向原实现者发送覆盖测试缺口的 `supersedes` brief；本 Task 暂未接受，后续需独立复核当前候选。
 - 返修复核进一步确认：多段交付中断后须逐操作恢复；登记回执丢失时已发布 Feature 的裸 `next` 为 `done`，因此扩展 Router 的有限写入范围以支持对明确选中 Feature 的只读恢复，并澄清 stale 的委托处理。原型召回正文保留；原执行者继续修正可证伪的 fixture 缺口。上述调整不新增发布授权或改变产品验收条件。
 - 已按本 Task 的允许路径实现共享协议、Plan/Validate 条件与验收卡片、检查点批准重记预写与恢复读回、旧验证重签授权与写者独占、并发映射误绑定防护、拒绝路径、历史未知与已知失败后重开、Build loop 证据适用性、跨 Feature 同候选隔离、发布前登记预检与中断去重、deployment-patterns 证据引用一致性和 README 用户入口。
@@ -185,9 +189,11 @@
 - 新增用例实测到的 CLI 事实：首次等待保持 `pending`；已知失败与已知通过后重开都使 `validation` 回到 `pending` 且指纹为 `missing`；未提交的 `pass` 在重开后既不在投影也不在 Git 提交中；脏工作树下 `record-validation --result fail` 以 `validation-and-release-require-clean-worktree` 被拒且 state 与业务文件逐字节不变；调用前插入实质产品条件后 `start-feature --refresh-acceptance` 成功且 `verify-acceptance --point plan` 返回 `match`，但已核准摘要与新绑定摘要不同；追加工程记录使 validation 指纹 `stale` 时 `record-review --decision changes_requested` 成功、旧评审快照消失、Release 保持 `pending`、`validation.result` 仍为 `pass`；同仓另一 Feature 的未提交业务变更使正式写入被拒、业务 commit 落地后 Review/Release 以 commit 不等价被拒；state 已暂存时 `record-release` 以 `state-is-staged-commit-or-unstage-before-update` 被拒；仅状态交接后 `record-release --commit A` 仍登记 A，改绑 Validation 后登记 A 得到 `release-commit-does-not-match-validation`；分支迁移后用历史 branch 重记返回 `feature-identity-mismatch`。
 - 本次追加实现与验证记录使工程上下文的 `plan` 指纹变为 `stale`（`content-drift`），产品上下文仍为 `match`。这是 `context-v1` 归一化覆盖全文的既有行为，不是本 Task 新增的失效规则。按[批准型重记、独占与读回](../../skills/sdlc/references/stage-agent-protocol.md#批准型重记独占与读回)，主 Agent 接受本 Task 后需按写者交接、核准映射预写和读回比较重记 `plan` 点；本 Task 未自行调用任何 lifecycle mutation。
 - 未覆盖项：真实 Agent 演练（三个试次）、正式独立 Validate 与 Review、真人观察、真实部署与发布、跨 clone 的私有引用复核均未运行。确定性用例只证明原 CLI 的机械边界与状态后果，不证明 Agent 是否按协议提问、等待、交接、取得独占或执行读回比较。
-- 2026-11-20 后续返修：Sol 独立复核定位旧 Review 原记录缺失、失败检查被标为通过、已发布恢复入口顺序和两个 fixture 条件缺口；主 Agent 补了可复现反例并做局部修正。`bash scripts/validate-skills` 对最终源码候选退出 0、`RESULT: PASS`，含 lifecycle 90、backlog 7、场景 58；`/usr/bin/python3 -B scripts/test_scenarios.py` 在 Python 3.9.6 下 58 项通过；`git diff --check` 退出 0。原型组件 127 项通过。原始记录见[联合验收准备](../../workspace/20261120-sdlc-combined-acceptance/preparation.md)。这些检查仍不替代真实 Agent 轨迹或正式独立 Validate/Review。
+- 2026-11-20 后续返修：Sol 独立复核定位旧 Review 原记录缺失、失败检查被标为通过、已发布恢复入口顺序和两个 fixture 条件缺口；主 Agent 补了可复现反例并做局部修正。`bash scripts/validate-skills` 对最终源码候选退出 0、`RESULT: PASS`，含 lifecycle 90、backlog 7、场景 58；`/usr/bin/python3 -B scripts/test_scenarios.py` 在 Python 3.9.6 下 58 项通过；`git diff --check` 退出 0。原型组件 127 项通过。原始记录见[联合验收准备](../../../../workspace/20261120-sdlc-combined-acceptance/preparation.md)。这些检查仍不替代真实 Agent 轨迹或正式独立 Validate/Review。
 
 ## 评审记录（实际）
+
+- 2026-11-20 正式独立 Review 对 f62b6fe 请求 changes_requested，四项 P2 与两项 P3、原生回执及受限复现见 [评审发现](../evidence/FEAT-human-validation.review.md)。权威 CLI 已登记拒绝，旧验证证据仅适用于原候选；返修后需独立重验和重评。
 
 - 两轮独立只读对抗复审已结束。首轮七项保留，第二轮六项已转入本方案的实现和验证义务；第二轮发现尚未验证修复。按主 Agent 已说明的升级方案收束，不开启第三轮。实现后的正式独立 Review 待适用验证。
 

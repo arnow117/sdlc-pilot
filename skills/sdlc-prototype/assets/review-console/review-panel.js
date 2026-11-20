@@ -88,14 +88,15 @@
     function selectedScenario() {
       const scenarios = knownScenarios();
       const known = scenarios.some(function isKnown(scenario) {
-        return scenario.id === selectedScenarioId;
+        return !scenario.error && scenario.id === selectedScenarioId;
       });
 
       if (known) {
         return selectedScenarioId;
       }
 
-      selectedScenarioId = scenarios.length ? scenarios[0].id : "";
+      const firstValid = scenarios.find(function isValid(scenario) { return !scenario.error; });
+      selectedScenarioId = firstValid ? firstValid.id : "";
       return selectedScenarioId;
     }
 
@@ -185,12 +186,16 @@
 
       scenarios.forEach(function addOption(scenario) {
         const entry = scenario.entry && scenario.entry.label ? " · " + scenario.entry.label : "";
+        const attrs = { value: scenario.id };
+        if (scenario.error) {
+          attrs.disabled = "disabled";
+        }
         const option = element("option", {
-          text: scenario.title + entry,
-          attrs: { value: scenario.id },
+          text: scenario.title + entry + (scenario.error ? " · 无效：" + scenario.error : ""),
+          attrs: attrs,
         });
 
-        if (scenario.id === current) {
+        if (!scenario.error && scenario.id === current) {
           option.selected = true;
           option.setAttribute("selected", "selected");
         }
@@ -348,6 +353,14 @@
       if (action === "start") {
         const select = host.querySelector(".pr-scenario");
         const scenarioId = select && select.value ? select.value : selectedScenario();
+        const invalid = knownScenarios().find(function isInvalid(scenario) {
+          return scenario.id === scenarioId && scenario.error;
+        });
+        if (invalid) {
+          lastMessage = invalid.error;
+          render();
+          return;
+        }
         selectedScenarioId = scenarioId;
         result = reviewConsole.start(scenarioId);
       } else if (action === "next") {
@@ -376,8 +389,15 @@
     function onChange(event) {
       const target = event.target;
       if (target && target.classList && target.classList.contains("pr-scenario")) {
-        selectedScenarioId = target.value;
-        lastMessage = "";
+        const invalid = knownScenarios().find(function isInvalid(scenario) {
+          return scenario.id === target.value && scenario.error;
+        });
+        if (invalid) {
+          lastMessage = invalid.error;
+        } else {
+          selectedScenarioId = target.value;
+          lastMessage = "";
+        }
         render();
       }
     }
