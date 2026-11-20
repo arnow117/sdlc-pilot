@@ -162,6 +162,15 @@
             ".sdlc-v1/context/REQ-human-validation.product.md": "c82fda329e5f53866434dcc53a745f813bbd2a4c5aa9ab73d7dc0d624475f903"
           },
           "normalization": "context-v1"
+        },
+        "validation": {
+          "algorithm": "sha256",
+          "at": "2026-11-20T15:22:50Z",
+          "documents": {
+            ".sdlc-v1/context/FEAT-human-validation.engineering.md": "9ffa2a2e39ddacca83237eb1c7e26fc3bcfe754df04620f8135cd5043182201a",
+            ".sdlc-v1/context/REQ-human-validation.product.md": "c82fda329e5f53866434dcc53a745f813bbd2a4c5aa9ab73d7dc0d624475f903"
+          },
+          "normalization": "context-v1"
         }
       },
       "branch": "main",
@@ -175,9 +184,9 @@
       },
       "requirement_id": "REQ-human-validation",
       "review": {
-        "at": null,
-        "by": null,
-        "decision": "pending"
+        "at": "2026-11-20T15:32:08Z",
+        "by": "Codex gpt-6.2-sol (independent Review)",
+        "decision": "changes_requested"
       },
       "status": "in_progress",
       "tasks": {
@@ -189,12 +198,12 @@
           "updated_at": "2026-11-20T15:09:19Z"
         }
       },
-      "updated_at": "2026-11-20T15:09:19Z",
+      "updated_at": "2026-11-20T15:32:08Z",
       "validation": {
-        "at": null,
-        "command": null,
-        "commit": null,
-        "result": "pending"
+        "at": "2026-11-20T15:22:50Z",
+        "command": "bash scripts/validate-skills",
+        "commit": "fba6705fdd2589bb12c1b647ecb4ffa4c6856664",
+        "result": "pass"
       }
     },
     "FEAT-security-scan": {
@@ -461,7 +470,7 @@
       "product_context_ref": ".sdlc-v1/context/REQ-human-validation.product.md",
       "status": "in_delivery",
       "title": "按需人工验收与自主推进",
-      "updated_at": "2026-11-20T15:09:19Z"
+      "updated_at": "2026-11-20T15:32:08Z"
     },
     "REQ-security-scan": {
       "acceptance": {
