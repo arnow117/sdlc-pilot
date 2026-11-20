@@ -345,6 +345,128 @@ test("a readable rejection code is retained when its message getter throws", () 
   assert.equal(review.state().steps[0].rejection.code, "DECLINED");
 });
 
+test("formatting cannot create rejection evidence during progress or replay", () => {
+  for (const replay of [false, true]) {
+    let calls = 0;
+    let malicious = !replay;
+    const review = PrototypeReviewConsole.createConsole({
+      adapter: stubAdapter({
+        scenarios: () => [scenarioWith([
+          { id: "s1", kind: "act", call: "act", expectError: { message: "无法读取错误信息。" } },
+        ])],
+        call: () => {
+          calls += 1;
+          if (!malicious) return { ok: false, error: { message: "无法读取错误信息。" } };
+          const error = {
+            [Symbol.toPrimitive]() {
+              this.message = "无法读取错误信息。";
+              throw new Error("cannot stringify");
+            },
+          };
+          return { ok: false, error };
+        },
+      }),
+    });
+
+    assert.equal(review.start("s").ok, true);
+    if (replay) {
+      assert.equal(review.next().ok, true);
+      malicious = true;
+    }
+    const result = replay ? review.replayTo(0) : review.next();
+    assert.equal(result.ok, false);
+    assert.equal(review.state().phase, "failed");
+    assert.equal(review.state().steps[0].rejection, null);
+    assert.equal(review.state().replayTarget, null);
+    assert.equal(review.next().ok, false);
+    assert.equal(calls, replay ? 2 : 1);
+  }
+});
+
+test("rejection evidence is read once during progress and replay", () => {
+  let calls = 0;
+  const messageReads = [];
+  const review = PrototypeReviewConsole.createConsole({
+    adapter: stubAdapter({
+      scenarios: () => [scenarioWith([
+        { id: "s1", kind: "act", call: "act", expectError: { message: "declined" } },
+      ])],
+      call: () => {
+        const index = calls++;
+        messageReads[index] = 0;
+        return { ok: false, error: {
+          get message() {
+            messageReads[index] += 1;
+            if (messageReads[index] > 1) throw new Error("message read twice");
+            return "declined";
+          },
+        } };
+      },
+    }),
+  });
+
+  assert.equal(review.start("s").ok, true);
+  assert.equal(review.next().ok, true);
+  assert.equal(review.state().steps[0].reasonVerified, true);
+  assert.equal(review.replayTo(0).ok, true);
+  assert.equal(review.state().steps[0].reasonVerified, true);
+  assert.deepEqual(messageReads, [1, 1]);
+  assert.equal(calls, 2);
+});
+
+test("throwing action-result fields stop progress and replay without repeating actions", () => {
+  for (const field of ["error", "pending"]) {
+    for (const replay of [false, true]) {
+      let calls = 0;
+      let failing = !replay;
+      const review = PrototypeReviewConsole.createConsole({
+        adapter: stubAdapter({
+          scenarios: () => [scenarioWith([{ id: "s1", kind: "act", call: "act" }])],
+          call: () => {
+            calls += 1;
+            if (!failing) return { ok: true };
+            const result = { ok: field === "pending" };
+            Object.defineProperty(result, field, { get() { throw Object.create(null); } });
+            return result;
+          },
+        }),
+      });
+
+      assert.equal(review.start("s").ok, true);
+      if (replay) {
+        assert.equal(review.next().ok, true);
+        failing = true;
+      }
+      const result = replay ? review.replayTo(0) : review.next();
+      assert.equal(result.ok, false);
+      assert.equal(review.state().phase, "failed");
+      assert.equal(review.state().replayTarget, null);
+      assert.equal(review.next().ok, false);
+      assert.equal(calls, replay ? 2 : 1);
+    }
+  }
+});
+
+test("action result fields are read once before rejection is recorded", () => {
+  let okReads = 0;
+  let errorReads = 0;
+  const review = PrototypeReviewConsole.createConsole({
+    adapter: stubAdapter({
+      scenarios: () => [scenarioWith([{ id: "s1", kind: "act", call: "act", expectError: true }])],
+      call: () => ({
+        get ok() { okReads += 1; return okReads === 1 ? false : true; },
+        get error() { errorReads += 1; return "denied"; },
+      }),
+    }),
+  });
+
+  assert.equal(review.start("s").ok, true);
+  assert.equal(review.next().ok, true);
+  assert.equal(review.state().steps[0].status, "rejected");
+  assert.equal(okReads, 1);
+  assert.equal(errorReads, 1);
+});
+
 test("scenario inspection preserves adapter arguments and strict object comparison", () => {
   const expected = { value: 1 };
   const when = new Date("2026-01-01T00:00:00Z");

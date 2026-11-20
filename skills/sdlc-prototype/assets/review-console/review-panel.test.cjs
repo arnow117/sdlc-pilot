@@ -388,6 +388,23 @@ test("non-coercible errors from invalid scenarios cannot block a valid panel", (
   }
 });
 
+test("empty error diagnostics do not select an invalid scenario", () => {
+  for (const text of ["", "   "]) {
+    const error = { get code() { throw new Error("code getter"); }, toString() { return text; } };
+    const scenarios = [null, scenario("good", "可用场景")];
+    Object.defineProperty(scenarios, 0, { get() { throw error; } });
+    const { review, panel, host, calls } = createHarness(scenarios);
+    const select = host.querySelector(".pr-scenario");
+    assert.equal(select.childNodes[0].hasAttribute("disabled"), true);
+    assert.equal(select.value, "good");
+    click(host.querySelector('[data-pr="start"]'));
+    assert.equal(review.state().scenarioId, "good");
+    assert.equal(review.next().ok, true);
+    assert.deepEqual(calls, ["act"]);
+    panel.destroy();
+  }
+});
+
 test("a malformed duplicate id does not shadow a valid scenario in the panel", () => {
   for (const invalidFirst of [false, true]) {
     const valid = scenario("same", "可用场景");

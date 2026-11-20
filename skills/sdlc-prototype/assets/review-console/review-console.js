@@ -63,10 +63,23 @@
 
   function requireActionResult(value) {
     const result = requireSynchronous(value, "adapter.call()");
-    if (!result || typeof result !== "object" || typeof result.ok !== "boolean") {
+    if (!result || typeof result !== "object") {
       throw new TypeError("adapter.call() 必须返回包含布尔值 ok 的结果。");
     }
-    return result;
+    // Read untrusted result fields once, inside the caller's failure boundary.
+    const ok = result.ok;
+    if (typeof ok !== "boolean") {
+      throw new TypeError("adapter.call() 必须返回包含布尔值 ok 的结果。");
+    }
+    if (ok) {
+      return { ok: true, pending: result.pending === true };
+    }
+
+    // Capture product evidence before any diagnostic conversion can mutate it.
+    const error = result.error;
+    const evidence = readErrorEvidence(error);
+    const diagnostic = evidence && evidence.message ? evidence.message : stringifyError(error);
+    return { ok: false, evidence: evidence, diagnostic: diagnostic };
   }
 
   function readErrorField(error, name) {
@@ -78,26 +91,34 @@
     }
   }
 
+  function stringifyError(error) {
+    if (!error) {
+      return "操作未返回结果。";
+    }
+    try {
+      const text = String(error);
+      return text.trim() ? text : "无法读取错误信息。";
+    } catch (_error) {
+      return "无法读取错误信息。";
+    }
+  }
+
   function readErrorParts(error) {
     if (!error) {
       return { code: null, message: "操作未返回结果。" };
     }
 
     if (typeof error === "string") {
-      return { code: null, message: error };
+      return { code: null, message: error.trim() ? error : "无法读取错误信息。" };
     }
 
     const code = readErrorField(error, "code");
     const message = readErrorField(error, "message");
-    if (message) {
+    if (message && message.trim()) {
       return { code: code, message: message };
     }
 
-    try {
-      return { code: code, message: String(error) };
-    } catch (_error) {
-      return { code: code, message: "无法读取错误信息。" };
-    }
+    return { code: code, message: stringifyError(error) };
   }
 
   function isPlainRecord(value) {
@@ -709,8 +730,7 @@
     // A rejection only counts as the expected rejection when the step declared
     // one and the action really failed. When the step did not name a reason,
     // the run can only prove that a rejection happened.
-    function evaluateExpectedRejection(step, error) {
-      const parts = readErrorEvidence(error);
+    function evaluateExpectedRejection(step, parts) {
       const expect = step.expectError;
 
       if (!parts) {
@@ -1028,12 +1048,12 @@
         kindLabel: step.kindLabel,
         call: step.call,
         ok: result.ok !== false,
-        error: result.ok === false ? readErrorParts(result.error).message : null,
+        error: result.ok === false ? result.diagnostic : null,
       };
       const nextLog = state.log.concat([logEntry]);
 
       if (result.ok === false) {
-        const expectation = evaluateExpectedRejection(step, result.error);
+        const expectation = evaluateExpectedRejection(step, result.evidence);
 
         // A step that did not declare an expected rejection fails here. Only a
         // declared, evidenced and actually matched rejection counts.
@@ -1273,18 +1293,18 @@
           return failReplay(index, message, steps, log);
         }
 
-        const evidence = result.ok === false ? readErrorEvidence(result.error) : null;
+        const evidence = result.ok === false ? result.evidence : null;
         log.push({
           stepId: step.id,
           kind: step.kind,
           kindLabel: step.kindLabel,
           call: step.call,
           ok: result.ok !== false,
-          error: evidence ? evidence.message : null,
+          error: result.ok === false ? result.diagnostic : null,
         });
 
         if (result.ok === false) {
-          const expectation = evaluateExpectedRejection(step, result.error);
+          const expectation = evaluateExpectedRejection(step, evidence);
 
           if (!expectation.declared || !expectation.matched) {
             const message = expectation.declared
