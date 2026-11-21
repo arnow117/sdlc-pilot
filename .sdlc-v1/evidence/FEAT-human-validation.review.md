@@ -65,3 +65,19 @@
 - 结论 `approved`，未发现阻塞项；执行者与宿主实际模型均为 `codex/gpt-6.2-sol`，推理强度 `xhigh`。[子线程评审原文](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3Aa919fc85-eb27-47f2-b212-4d7af9bab58a%3Adelegate-task%3Asdlc-human-validation-2b1cee5-independent-child-review-20261121)。
 - **preserves**：上轮跨步骤误通过已修复。普通推进和回看从已捕获的拒绝证据生成诊断；已验证第一步拒绝后第二步仍读取实际 `changed` 状态，诊断不执行产品对象转换，失败动作不重复。无证据支持的新重复实现或可避免工程债未发现。
 - 复用独立 Validate 的 152 项组件检查、37 项适用旧探针与 Chromium 面板证据，三个要求对象转换的旧断言按报告过滤。[验证报告](../../../../workspace/20261120-sdlc-combined-acceptance/continuation/repair-validation-2b1cee5/report.md)。B01 真人答复、共同 I、跨机器交割与真实发布均未覆盖，不外推为已完成。
+
+## v8.0.0 发布候选的独立验证
+
+- 候选 `4869345cd7feec0a9730a72635afc78b51d63d51` 为 `2b1cee5` 加两份插件版本元数据与 CHANGELOG，三个版本均为 `8.0.0`。独立执行者 `codex/gpt-6.2-sol/xhigh` 的标准检查退出 0、233 项通过，既有行为证据按输入适用范围复用。[验证报告](../../../../workspace/20261120-sdlc-combined-acceptance/continuation/release-8.0.0-validation/report.md)。
+- 首轮因执行环境额外设置 `GIT_NO_REPLACE_OBJECTS` 导致检查拒绝；移除该设置后的同候选重跑通过。发布和实际分发 smoke 尚待执行。
+
+## v8.0.0 发布差异的独立复评
+
+- 候选 `4869345cd7feec0a9730a72635afc78b51d63d51` 的复评结论为 `approved`，未发现必须修复项。宿主实际执行模型为 `gpt-6.2-sol/xhigh`；评审核对了三处版本、CHANGELOG、兼容说明、与前一已审业务源码的差异及本候选验证证据。[子线程评审](t3-thread://v2/cb0ab126-b88e-4134-8282-a4e59f62c293/thread:delegated-task:command%3Amcp%3Aa919fc85-eb27-47f2-b212-4d7af9bab58a%3Adelegate-task%3Asdlc-v8-4869345-independent-review-20261121)。
+- **P3 · violates**：发布说明草稿的验证状态仍为待执行；主 Agent 在发布前将 233 项候选检查及旧业务证据的版本分别标明，实际分发与发布后检查不得提前记为通过。
+
+## v8.0.0 发布预检
+
+- 用户已授权发布新版。操作标识 `FEAT-human-validation-v8.0.0-20261121`；目标为公开仓库 `arnow117/sdlc-pilot` 的默认分支和 GitHub Release。发布候选、验证 commit、拟创建标签 `v8.0.0` 的目标均为 `4869345cd7feec0a9730a72635afc78b51d63d51`。
+- 外部动作前读回：远端 `main` 为 `e587eb1a2abf6ca40b3f0b790f902f3c64e349c6`；上一正式 Release 为 `v7.3.0`，标签所指 commit 为 `3d8c7903b7fa23bc9743d930f194b4fb114f97fc`；远端尚无 `v8.0.0` 标签或 Release。发布说明 SHA-256 为 `6cfa4cb7a145ca3af999a438e02d77b0ef3369c4978faa73f98e6974f1ba8048`。
+- 预期依次为更新 `main` 和创建指向验证候选的标签、创建公开 Release、从该 Release 下载源码进行版本及行为 smoke、核对默认分支安装入口，再登记实际发布。中断时先查询 `https://api.github.com/repos/arnow117/sdlc-pilot/git/ref/heads/main`、`https://api.github.com/repos/arnow117/sdlc-pilot/git/ref/tags/v8.0.0` 和 `https://api.github.com/repos/arnow117/sdlc-pilot/releases/tags/v8.0.0`，核对回执与目标，不盲目重发。若需恢复，保留现场并以 `v7.3.0` 为 last-good；使用正常的前向修复或经授权的回退，不强推或重写历史。

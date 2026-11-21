@@ -165,7 +165,7 @@
         },
         "review": {
           "algorithm": "sha256",
-          "at": "2026-11-21T01:47:05Z",
+          "at": "2026-11-21T03:20:01Z",
           "documents": {
             ".sdlc-v1/context/FEAT-human-validation.engineering.md": "9ffa2a2e39ddacca83237eb1c7e26fc3bcfe754df04620f8135cd5043182201a",
             ".sdlc-v1/context/REQ-human-validation.product.md": "c82fda329e5f53866434dcc53a745f813bbd2a4c5aa9ab73d7dc0d624475f903"
@@ -174,7 +174,7 @@
         },
         "validation": {
           "algorithm": "sha256",
-          "at": "2026-11-20T17:49:45Z",
+          "at": "2026-11-21T03:05:50Z",
           "documents": {
             ".sdlc-v1/context/FEAT-human-validation.engineering.md": "9ffa2a2e39ddacca83237eb1c7e26fc3bcfe754df04620f8135cd5043182201a",
             ".sdlc-v1/context/REQ-human-validation.product.md": "c82fda329e5f53866434dcc53a745f813bbd2a4c5aa9ab73d7dc0d624475f903"
@@ -193,7 +193,7 @@
       },
       "requirement_id": "REQ-human-validation",
       "review": {
-        "at": "2026-11-21T01:47:05Z",
+        "at": "2026-11-21T03:20:01Z",
         "by": "Codex gpt-6.2-sol (independent Review)",
         "decision": "approved"
       },
@@ -207,11 +207,11 @@
           "updated_at": "2026-11-20T17:42:29Z"
         }
       },
-      "updated_at": "2026-11-21T01:47:05Z",
+      "updated_at": "2026-11-21T03:20:01Z",
       "validation": {
-        "at": "2026-11-20T17:49:45Z",
-        "command": "env NODE_OPTIONS= NODE_PATH= node --test skills/sdlc-prototype/assets/shared-state/runtime.test.cjs skills/sdlc-prototype/assets/review-console/review-console.test.cjs skills/sdlc-prototype/assets/review-console/review-panel.test.cjs",
-        "commit": "2b1cee55edff4b763e3c3c3088edef47b42fdd59",
+        "at": "2026-11-21T03:05:50Z",
+        "command": "PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills",
+        "commit": "4869345cd7feec0a9730a72635afc78b51d63d51",
         "result": "pass"
       }
     },
@@ -479,7 +479,7 @@
       "product_context_ref": ".sdlc-v1/context/REQ-human-validation.product.md",
       "status": "validated",
       "title": "按需人工验收与自主推进",
-      "updated_at": "2026-11-21T01:47:05Z"
+      "updated_at": "2026-11-21T03:20:01Z"
     },
     "REQ-security-scan": {
       "acceptance": {

@@ -2,7 +2,7 @@
 
 ## 定位
 
-- 仓库：/Users/mac/hansen_agent_team/external/sdlc-pilot；branch：main；上一交接提交 a6bf2dad7291239514266d72c95fc1a353ff86c6；验证实现候选为 2b1cee55edff4b763e3c3c3088edef47b42fdd59。
+- 仓库：/Users/mac/hansen_agent_team/external/sdlc-pilot；branch：main；拟发布候选 4869345cd7feec0a9730a72635afc78b51d63d51；已验证实现候选为 2b1cee55edff4b763e3c3c3088edef47b42fdd59。
 - Requirement：REQ-human-validation；Task：TASK-human-validation
 
 ## 已确认
@@ -17,7 +17,7 @@
 
 ## 未完成
 
-- Task 返修已登记 done，validation 为 `pass@2b1cee5`，独立 review 为 `approved`；`pass@95f612b` 与其后只读复评的 P2 保存在 a0968a3，旧通过未用于后续批准。`fail@5c52bf8` 保存在 53179e6。Ship 未执行。
+- Task 返修已登记 done；`4869345` 的独立验证已登记 `pass`，独立 Review 已登记 `approved`。前一候选的 `pass@2b1cee5` 与 `approved` 保存在 79588be；`pass@95f612b` 和后续 P2、`fail@5c52bf8` 分别保存在 a0968a3、53179e6。Ship 尚待执行。
 - 候选 `fba6705` 的独立 Validate 曾通过标准检查 233 项、Python 3.9 场景 59 项、Node 组件 131 项及受限浏览器点验；其后独立复评发现三个边界问题并已退回。该通过只适用于原候选。
 - 原 14 次试次及 43 run 结果保留。B01 后续补充试次经历评审退回、局部修复、独立重验和 Review，机械 oracle 通过；仅规划样本与桌面候选补充样本的定向检查通过。桌面补充样本明确增加 T3 路线提示，原失败不被覆盖。真人样本仍无指定观察者的实际答复。
 - SCN-07 联合反馈及处理、SCN-08 明确答复后续接、SCN-09 变化后的定向重验均已取得同机合成机制证据并经独立 Validate 判定符合；模拟输入不得冒充该用户真人答复。
@@ -32,7 +32,7 @@
 ## 下一步
 
 - `60240a9` 的独立复评发现拒绝证据重复读取、动作结果 getter 抛错及空诊断；退回已保存。返修 `5c52bf8` 的独立 Validate 为 `IMPLEMENTATION_FAILED`：普通推进和回看均会二次读取原生 `Error.message`，且诊断转换的副作用可能使拒绝后的状态检查误通过；Node 148 项、历史边界 22 项及 Chromium 面板和桌面检查通过。fail 已登记、读回并保存于 53179e6，重开 Task 清除了当前投影中的失败；候选外文件已原样恢复。
-- 候选 `2b1cee5` 的独立 Validate 通过并已登记：152 项组件、37 项旧探针及真实 Chromium 面板通过；旧探针另有 3 项要求对象转换，原文件保留，相关拒绝判据由无副作用回归覆盖。只读子线程独立 Review 为 `approved`，已登记并读回，四处验收指纹均为 `match`。记录见 `.sdlc-v1/evidence/FEAT-human-validation.review.md`；候选外文件已原样恢复。下一阶段 Ship 仍需单独授权。
+- 候选 `2b1cee5` 的独立 Validate 和 Review 已通过；152 项组件、37 项旧探针及真实 Chromium 面板通过，3 项旧断言按报告过滤。`4869345` 的独立定向 Validate 与 Review 已通过并登记，标准检查 233 项通过；用户已授权发布新版。按[发布预检记录](../evidence/FEAT-human-validation.review.md#v800-发布预检)核对并执行，完成分发 smoke 后再登记 release。
 - 回填工程验证记录前核对 Plan 内容漂移、批准来源、写者独占及必要的批准型重记；不得以干净副本直接代替权威主仓状态。新增续验按用户新预算单独记录，不重复催问已有真人观察。
 
 ## 必要引用
