@@ -2,7 +2,7 @@
 
 ## 定位
 
-- 仓库：/Users/mac/hansen_agent_team/external/sdlc-pilot；branch：main；状态交接提交 3160001d9caf3344b89f241b7629db8808e6cde0；验证实现候选为 2b1cee55edff4b763e3c3c3088edef47b42fdd59。
+- 仓库：/Users/mac/hansen_agent_team/external/sdlc-pilot；branch：main；上一交接提交 a6bf2dad7291239514266d72c95fc1a353ff86c6；验证实现候选为 2b1cee55edff4b763e3c3c3088edef47b42fdd59。
 - Requirement：REQ-human-validation；Task：TASK-human-validation
 
 ## 已确认
@@ -17,7 +17,7 @@
 
 ## 未完成
 
-- Task 返修已登记 done，validation 为 `pass@2b1cee5`、review pending；`pass@95f612b` 与其后只读复评的 P2 保存在 a0968a3，旧通过不得用于后续批准。`fail@5c52bf8` 保存在 53179e6。Ship 未执行。
+- Task 返修已登记 done，validation 为 `pass@2b1cee5`，独立 review 为 `approved`；`pass@95f612b` 与其后只读复评的 P2 保存在 a0968a3，旧通过未用于后续批准。`fail@5c52bf8` 保存在 53179e6。Ship 未执行。
 - 候选 `fba6705` 的独立 Validate 曾通过标准检查 233 项、Python 3.9 场景 59 项、Node 组件 131 项及受限浏览器点验；其后独立复评发现三个边界问题并已退回。该通过只适用于原候选。
 - 原 14 次试次及 43 run 结果保留。B01 后续补充试次经历评审退回、局部修复、独立重验和 Review，机械 oracle 通过；仅规划样本与桌面候选补充样本的定向检查通过。桌面补充样本明确增加 T3 路线提示，原失败不被覆盖。真人样本仍无指定观察者的实际答复。
 - SCN-07 联合反馈及处理、SCN-08 明确答复后续接、SCN-09 变化后的定向重验均已取得同机合成机制证据并经独立 Validate 判定符合；模拟输入不得冒充该用户真人答复。
@@ -25,14 +25,14 @@
 - SCN-08 独立续接已找回原授权与答复并请求重开 B；主 Agent 实际将 B 从 done 重开，A 投影未变。B 返修候选 C1 为 `f79a684569486865e8eaae5f8f962f9df4ab0009`，仅删除一行业务配置；Build 的 B1 已经主 Agent 使用固定 argv 复核，Task done。
 - SCN-09 独立上下文请求仅重验 B1；主 Agent 对 C1 实际运行并得到 exit 1、stdout/stderr 空，A1 的旧输入 blob 与判据未变。夹具 A、B 均按 I 缺证登记 fail@C1，证据与状态交接提交为 `15781e0ed499fd0fe85685bbc16f3da88f8fb5b3`，业务与 C1 等价；原真人答复仍缺失。
 - 联合候选独立综合 Validate 任务 `b1db88c0-d68c-4eab-aab6-1026323c9cf7` 已完成，宿主实际模型 `gpt-6.2-sol`；权威 validation 已登记 pass@f62b6fe，登记期间暂置的候选外文件原 inode、内容、属性及 diff 均已恢复并读回。
-- 正式独立 Review 已完成，`gpt-6.2-sol` 的 changes_requested 已由权威 CLI 登记：四项 P2 分别涉及检查点清理、面板场景列表、观察失败导致动作重复和桌面筛选身份；另有两项 P3。发现已保存至 `.sdlc-v1/evidence/FEAT-human-validation.review.md`，主 Agent 在隔离容器复现了三项运行后果。
+- 对 `f62b6fe` 的正式独立 Review 已完成，`gpt-6.2-sol` 的 changes_requested 已由权威 CLI 登记：四项 P2 分别涉及检查点清理、面板场景列表、观察失败导致动作重复和桌面筛选身份；另有两项 P3。发现已保存至 `.sdlc-v1/evidence/FEAT-human-validation.review.md`，主 Agent 在隔离容器复现了三项运行后果。
 - 目标工作树的 `skills/sdlc-validate/SKILL.md` 有归属未核实的未提交变更，用户选择保留在冻结候选之外；原 diff 与工作区副本一致。后续验证登记仍须满足非 SDLC 工作树干净的前提。
 - 仓库提交约定要求同步 CHANGELOG；用户明确批准的本地候选仅限既定 40 路径，且方案将 CHANGELOG 排除于本地迭代。该候选按用户范围保留；后续获授权的提交或发布准备应检查并采用适用草稿。真实跨机授权取证、真人答复、完整盲测及真实发布未覆盖。
 
 ## 下一步
 
 - `60240a9` 的独立复评发现拒绝证据重复读取、动作结果 getter 抛错及空诊断；退回已保存。返修 `5c52bf8` 的独立 Validate 为 `IMPLEMENTATION_FAILED`：普通推进和回看均会二次读取原生 `Error.message`，且诊断转换的副作用可能使拒绝后的状态检查误通过；Node 148 项、历史边界 22 项及 Chromium 面板和桌面检查通过。fail 已登记、读回并保存于 53179e6，重开 Task 清除了当前投影中的失败；候选外文件已原样恢复。
-- 候选 `2b1cee5` 的独立 Validate 通过并已登记：152 项组件、37 项旧探针及真实 Chromium 面板通过；旧探针另有 3 项要求对象转换，原文件保留，相关拒绝判据由无副作用回归覆盖。报告与登记回执：`../../workspace/20261120-sdlc-combined-acceptance/continuation/repair-validation-2b1cee5/`。正式 Review 须满足业务工作树洁净前提，候选外未提交文件继续保留；跨项目隔离子任务此前被宿主拒绝，可核对现有线程的只读子任务路径。
+- 候选 `2b1cee5` 的独立 Validate 通过并已登记：152 项组件、37 项旧探针及真实 Chromium 面板通过；旧探针另有 3 项要求对象转换，原文件保留，相关拒绝判据由无副作用回归覆盖。只读子线程独立 Review 为 `approved`，已登记并读回，四处验收指纹均为 `match`。记录见 `.sdlc-v1/evidence/FEAT-human-validation.review.md`；候选外文件已原样恢复。下一阶段 Ship 仍需单独授权。
 - 回填工程验证记录前核对 Plan 内容漂移、批准来源、写者独占及必要的批准型重记；不得以干净副本直接代替权威主仓状态。新增续验按用户新预算单独记录，不重复催问已有真人观察。
 
 ## 必要引用
