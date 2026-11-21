@@ -187,9 +187,9 @@
       "engineering_context_ref": ".sdlc-v1/context/FEAT-human-validation.engineering.md",
       "id": "FEAT-human-validation",
       "release": {
-        "at": null,
-        "commit": null,
-        "status": "pending"
+        "at": "2026-11-21T03:29:50Z",
+        "commit": "4869345cd7feec0a9730a72635afc78b51d63d51",
+        "status": "released"
       },
       "requirement_id": "REQ-human-validation",
       "review": {
@@ -197,7 +197,7 @@
         "by": "Codex gpt-6.2-sol (independent Review)",
         "decision": "approved"
       },
-      "status": "reviewed",
+      "status": "released",
       "tasks": {
         "TASK-human-validation": {
           "depends_on": [],
@@ -207,7 +207,7 @@
           "updated_at": "2026-11-20T17:42:29Z"
         }
       },
-      "updated_at": "2026-11-21T03:20:01Z",
+      "updated_at": "2026-11-21T03:29:50Z",
       "validation": {
         "at": "2026-11-21T03:05:50Z",
         "command": "PYTHONDONTWRITEBYTECODE=1 bash scripts/validate-skills",
@@ -477,9 +477,9 @@
       "id": "REQ-human-validation",
       "priority": "P1",
       "product_context_ref": ".sdlc-v1/context/REQ-human-validation.product.md",
-      "status": "validated",
+      "status": "released",
       "title": "按需人工验收与自主推进",
-      "updated_at": "2026-11-21T03:20:01Z"
+      "updated_at": "2026-11-21T03:29:50Z"
     },
     "REQ-security-scan": {
       "acceptance": {

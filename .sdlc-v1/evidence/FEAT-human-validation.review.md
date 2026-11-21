@@ -81,3 +81,9 @@
 - 用户已授权发布新版。操作标识 `FEAT-human-validation-v8.0.0-20261121`；目标为公开仓库 `arnow117/sdlc-pilot` 的默认分支和 GitHub Release。发布候选、验证 commit、拟创建标签 `v8.0.0` 的目标均为 `4869345cd7feec0a9730a72635afc78b51d63d51`。
 - 外部动作前读回：远端 `main` 为 `e587eb1a2abf6ca40b3f0b790f902f3c64e349c6`；上一正式 Release 为 `v7.3.0`，标签所指 commit 为 `3d8c7903b7fa23bc9743d930f194b4fb114f97fc`；远端尚无 `v8.0.0` 标签或 Release。发布说明 SHA-256 为 `6cfa4cb7a145ca3af999a438e02d77b0ef3369c4978faa73f98e6974f1ba8048`。
 - 预期依次为更新 `main` 和创建指向验证候选的标签、创建公开 Release、从该 Release 下载源码进行版本及行为 smoke、核对默认分支安装入口，再登记实际发布。中断时先查询 `https://api.github.com/repos/arnow117/sdlc-pilot/git/ref/heads/main`、`https://api.github.com/repos/arnow117/sdlc-pilot/git/ref/tags/v8.0.0` 和 `https://api.github.com/repos/arnow117/sdlc-pilot/releases/tags/v8.0.0`，核对回执与目标，不盲目重发。若需恢复，保留现场并以 `v7.3.0` 为 last-good；使用正常的前向修复或经授权的回退，不强推或重写历史。
+
+## v8.0.0 实际发布与 smoke
+
+- 操作 `FEAT-human-validation-v8.0.0-20261121` 的 `main` 和标签已原子推送；远端 `main` 为 `5d1fa631572cf340b93c7e46eb005e9805d12dec`，注释标签 `v8.0.0` 解引用为已验证的 `4869345cd7feec0a9730a72635afc78b51d63d51`。公开 [GitHub Release](https://github.com/arnow117/sdlc-pilot/releases/tag/v8.0.0) 于 2026-11-21T03:25:36Z 发布，非 draft、非 prerelease，发布后查询为 latest；默认分支两份插件清单的 blob 与该验证候选一致。
+- 从上述公开 Release 下载并新解包源码，归档 SHA-256 为 `ed30358974cb4f2ced07c13d34814810783ac0d1df837c1e2d820e494228dd9f`；256 个文件和模式均与验证 commit 的 Git blob 一致。三处版本均为 `8.0.0`，Claude 插件清单校验通过，`bash scripts/validate-skills` 退出 0、233 项通过，Node 组件检查退出 0、152 项通过。临时源码已清理；原始结果位于任务工作区的 `continuation/release-8.0.0-published-smoke/`。
+- 本次交付为公开源码分发，没有常驻生产进程或可直接采集的运行时指标。真人观察、共同夹具 I 和跨机器交接仍未覆盖，不据此宣称效率或质量改善；按产品观察计划在首个可复核的实际 SDLC 使用案例收集反馈，下一次技术检查目标为 2026-11-22T03:30:00Z。
