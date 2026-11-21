@@ -2,7 +2,7 @@
 
 ## 定位
 
-- 仓库：/Users/mac/hansen_agent_team/external/sdlc-pilot；branch：main；HEAD：2b1cee55edff4b763e3c3c3088edef47b42fdd59（本地返修候选）。
+- 仓库：/Users/mac/hansen_agent_team/external/sdlc-pilot；branch：main；状态交接提交 3160001d9caf3344b89f241b7629db8808e6cde0；验证实现候选为 2b1cee55edff4b763e3c3c3088edef47b42fdd59。
 - Requirement：REQ-human-validation；Task：TASK-human-validation
 
 ## 已确认
@@ -32,7 +32,7 @@
 ## 下一步
 
 - `60240a9` 的独立复评发现拒绝证据重复读取、动作结果 getter 抛错及空诊断；退回已保存。返修 `5c52bf8` 的独立 Validate 为 `IMPLEMENTATION_FAILED`：普通推进和回看均会二次读取原生 `Error.message`，且诊断转换的副作用可能使拒绝后的状态检查误通过；Node 148 项、历史边界 22 项及 Chromium 面板和桌面检查通过。fail 已登记、读回并保存于 53179e6，重开 Task 清除了当前投影中的失败；候选外文件已原样恢复。
-- 候选 `2b1cee5` 的独立 Validate 通过并已登记：152 项组件、37 项旧探针及真实 Chromium 面板通过；旧探针另有 3 项要求对象转换，原文件保留，相关拒绝判据由无副作用回归覆盖。报告与登记回执：`../../workspace/20261120-sdlc-combined-acceptance/continuation/repair-validation-2b1cee5/`。正式 Review 仍需满足业务工作树洁净前提；候选外未提交文件继续保留。
+- 候选 `2b1cee5` 的独立 Validate 通过并已登记：152 项组件、37 项旧探针及真实 Chromium 面板通过；旧探针另有 3 项要求对象转换，原文件保留，相关拒绝判据由无副作用回归覆盖。报告与登记回执：`../../workspace/20261120-sdlc-combined-acceptance/continuation/repair-validation-2b1cee5/`。正式 Review 须满足业务工作树洁净前提，候选外未提交文件继续保留；跨项目隔离子任务此前被宿主拒绝，可核对现有线程的只读子任务路径。
 - 回填工程验证记录前核对 Plan 内容漂移、批准来源、写者独占及必要的批准型重记；不得以干净副本直接代替权威主仓状态。新增续验按用户新预算单独记录，不重复催问已有真人观察。
 
 ## 必要引用
