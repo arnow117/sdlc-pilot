@@ -6,8 +6,7 @@
 
 ## 0. 当前规范入口
 
-轻量状态模型继续有效。本文保留基础设计，阶段行为与工具细节以当前技能及参考为准；插件版本和未发布能力见
-[CHANGELOG](../../CHANGELOG.md)；开发分支登记迁移从 2.1.0 起发布，未包含在 2.0.0 tag 中。
+本文解释状态、文档和 Git 的分工。执行当前阶段时使用下表中的技能和操作指南；查找某个版本引入的变化，见[版本记录](../../CHANGELOG.md)。
 
 | 主题 | 权威入口 |
 |---|---|
@@ -37,7 +36,7 @@
 4. **方法论按需加载**：阶段 skill 决定流程，角色卡提供专业视角。
 5. **不把语义伪装成校验值**：产品判断和评审结论由人/agent 明确记录，不用内容哈希代替理解。
 6. **只保留高收益一致性检查**：状态 schema、合法转换、依赖、当前 Git HEAD 与验证/发布记录的一致性。
-7. **阶段协作不新增状态。** 默认由主 Agent 选择一个阶段 Agent，验证其 artifact/evidence 后执行其有序 lifecycle 请求；阶段 Agent 不写 state，无法创建子 Agent 时保持相同的串行流程。
+7. **阶段协作不新增状态。** 主 Agent 核对阶段产物和证据，再按顺序登记状态变化。执行方式及独立性条件见[阶段协议](../../skills/sdlc/references/stage-agent-protocol.md#runtime-selection)。
 8. **长期上下文与当前迭代分层**：可选的 repository context 只提供当前 commit 已验证的路径索引；当前 Requirement/Feature 的决策、证据和发布后效果只写 lifecycle context。
 
 ## 3. 存储模型
@@ -47,9 +46,8 @@
 ├── state.json               # sdlc-lightweight-state-v1, state_version=3
 ├── project.md               # 项目入口、测试准备与长期文档索引
 └── context/                 # Requirement/Feature 必填引用只能落在这里
-    ├── product.md
-    ├── engineering.md
-    └── decisions.md
+    ├── <requirement-id>.product.md
+    └── <feature-id>.engineering.md
 ```
 
 ### 3.1 state.json
@@ -65,24 +63,20 @@
 
 ### 3.2 Markdown 上下文
 
-上下文文件没有固定正文模板，但路径和引用有强约束：
+创建或实质更新文档时，按[产品模板](../../skills/sdlc/references/templates/PRODUCT.md)和[工程模板](../../skills/sdlc/references/templates/ENGINEERING.md)填写核心章节，按项目需要补充可选章节。已有文档可继续使用。CLI 校验以下路径与引用条件：
 
 - `product_context_ref` / `engineering_context_ref` 必须是规范化的仓库相对路径；
 - 路径必须以 `.sdlc-v1/context/` 开头、以 `.md` 结尾；
 - 文件必须已经存在，是普通文件且路径中没有符号链接；
 - 项目其他文档可以继续存在，但不能直接充当 lifecycle context ref。
 
-正文建议按问题拆文件：
-
-- 产品：用户问题、行为场景、范围、验收标准、领域语言；
-- 工程：架构方案、接口、数据迁移、测试策略、可靠性与安全判断；
-- 决策：仍有效的取舍、原因和后续约束。
+产品上下文记录用户问题、场景、范围与验收标准。工程上下文记录实现方案、任务和验证。产品决定和工程取舍各自随对应文档维护。
 
 ### 3.3 长期工程上下文（可选）
 
 仓库可以同时维护 `AGENTS.md`、目标/产品/架构/开发文档，以及由 `repo-context-creator` 生成的
 `.repo-context/evidence.json` 和 `manifest.yaml`。SDLC 不依赖其脚本、格式或写入能力：`sdlc-onboard` 只有在
-manifest/evidence 的 `analyzedCommit`、`evidenceDigest` 彼此一致且等于当前 `HEAD` 时，才把其中的 canonical 路径索引到
+两份文件的 `evidenceDigest` 一致、`analyzedCommit` 均指向当前 `HEAD` 时，才把其中的 canonical 路径索引到
 `project.md`。其他情况记录 `stale` 或 `none` 并回退到源码扫描。
 
 两类内容的所有权固定如下：
@@ -142,16 +136,15 @@ Feature”，不限制整个项目同时追踪的需求数量。
 
 普通阶段技能仍可直接调用。生命周期入口是编排层，不复制 spec、plan、build 等阶段的正文。
 
-角色路由仍以 `references/role-routing.md` 为单一事实源。改前端加载 client-dev/design；改 API 加载
-server-dev；跨多个面加载 architect；验证阶段按 correctness/e2e/eval-bench 选择 playbook。
+按[角色与验证模式路由](../../skills/sdlc/references/role-routing.md)选择专业视角。例如，前端改动参考 client-dev/design，API 改动参考 server-dev。[Validate 阶段](../../skills/sdlc-validate/SKILL.md)按改动面和验收要求选择验证方式。
 
 ### 5.1 查询与只读投影
 
 `lifecycle_state.py next` 是公开恢复查询：
 
 - 没有 Requirement 时返回 `intake`；
-- 只有一个活动候选时按状态返回 `spec/plan/build/validate/review/ship`；
-- 多个活动 Feature 或同状态 Requirement 并存时返回 `needs_selection` 和稳定排序的 candidates；
+- 依次查找活动 Feature、待交付的 ready Requirement、待澄清的 captured Requirement。第一个非空集合决定当前候选；
+- 该集合中只有一项时按状态返回下一阶段；有多项时返回 `needs_selection` 和排序后的候选；
 - 全部 Requirement 终态时返回 `done`。
 
 ### 5.2 阶段 Agent 编排
@@ -160,7 +153,7 @@ server-dev；跨多个面加载 architect；验证阶段按 correctness/e2e/eval
 验证该阶段返回的 changed files、命令证据、上下文候选和有序 `requested_transitions`，再使用现有
 `lifecycle_state.py` 更新状态并继续。阶段 Agent 不编辑 `state.json`、不执行 lifecycle mutation；只有独立且不处于主 Agent
 编排中的直接调用才是 standalone，已开始的编排内直接调用阶段 skill 仍继承 orchestrated mode。
-review 优先由与实现者不同的新 Agent 执行，无法提供时按相同规则串行评审并披露 fallback。
+Review 的执行者、独立性要求和运行时能力不足时可继续的工作，以[阶段协议](../../skills/sdlc/references/stage-agent-protocol.md#runtime-selection)及项目路由为准。
 
 产品行为进入 Requirement context，Feature 实现与验证进入 engineering context；跨 Feature 的目标项目规则作为
 `project_candidates` 提议写入长期项目文档。只有明确跨项目且可复用的 SDLC 改进才提议 `/sdlc evolve`。本约定不新增
@@ -237,18 +230,7 @@ bash scripts/validate-skills
 git diff --check
 ```
 
-`validate-skills` 包含：
-
-1. 关键运行时、阶段、角色和验证模式存在性；
-2. SKILL frontmatter；
-3. role/mode/language 路由登记；
-4. 本地 Markdown 引用；
-5. 可移植性文本检查；
-6. lifecycle state、backlog/board、contrast 三组测试。
-
-产品内 AI 功能的 `eval-bench` 与本地 Web Review Live 仍是有效方法论/体验。
-结构检查不替代规则的行为审查、命令验证或外部框架的实际运行；按修改范围补充必要检查，并如实标明证据范围。
-工具维护及发布检查统一遵循 [evolve](../../skills/sdlc/references/evolve-loop.md)。
+结构、引用和确定性回归由 [validate-skills](../../scripts/validate-skills) 执行。组件测试、场景选择和证据复用见[测试指南](../testing.md)。插件发布检查见[维护与发布流程](../../skills/sdlc/references/evolve-loop.md)。
 
 ## 10. 验收标准
 
@@ -257,7 +239,7 @@ git diff --check
 - A 在机器 1 提交 ready Requirement，B 在机器 2 pull 后可直接 start Feature；
 - state 可同时追踪多条产品需求和研发任务；
 - `next` 对单候选确定路由、对多候选明确请求选择；
-- 默认阶段 Agent 只返回 artifact、命令证据、上下文候选和有序状态请求；主 Agent 验证并写 state，运行时不支持时串行 fallback；
+- 默认阶段 Agent 只返回 artifact、命令证据、上下文候选和有序状态请求；主 Agent 验证并写 state，执行方式服从阶段协议和项目路由；
 - backlog/board 五个命令只生成 projection；
 - validation 前 state 已 tracked、无 unmerged entry 且未 staged，当前 context 已 tracked 且无冲突；
 - validation 后只提交 `.sdlc-v1/**` 可继续 review/release，业务代码变化则要求重新验证；
@@ -265,4 +247,4 @@ git diff --check
 - 产品/工程上下文分别记录方向来源和发布后效果观察，且不重复长期文档正文；
 - 遗留 copied hooks 未清理时 `init` 明确停止且不改写 hook；
 - 所有 stage skill、role card、validate mode 和上下文 Markdown 能继续独立使用；
-- 仓库结构检查与三组核心测试在本地快速完成。
+- 仓库结构检查与核心回归可在本地运行。

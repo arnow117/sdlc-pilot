@@ -1,15 +1,8 @@
 # Offline vibe-test workflow
 
-The tools use only the Python standard library and make no model, MCP, network,
-service or lifecycle calls. The default example and all test receipts are
-**synthetic**: model runs are zero. `plan`, `prepare`, `collect`, `report`,
-`judge-prepare`, `judge-collect`, `inspect-tree`, `control-handoff` and `compare`
-provide an offline handoff and replay mechanism; they do not authenticate a
-receipt, user approval, model routing, tool access, permissions or isolation.
-CLI live preparation and live judge preparation return `ENV_BLOCKED` without an
-in-process host callback. The controlled Python API can process host-attested
-evidence; the caller must authenticate that evidence. Live AC01/04 and actual
-host control remain NOT_RUN. Do not execute untrusted model code on this host.
+Use the [offline example](#offline-example) to reproduce a report with the bundled synthetic results. It needs Python 3 and the standard library. Run the commands from the repository root. The example makes zero model, network, MCP or lifecycle calls.
+
+For a real comparison, start with [plan and handoff](#plan-and-handoff), then the [controlled host API](#controlled-host-api). Live preparation returns `ENV_BLOCKED` without an in-process callback. The caller must authenticate evidence of approval, model routing, tool access and isolation. Live AC01/04 and actual host control remain NOT_RUN. Keep untrusted submissions outside the host execution environment.
 
 ## Offline example
 
@@ -130,9 +123,7 @@ The frozen battery manifest hashes all original asset bytes except the manifest
 and provenance themselves, which are hashed externally. Public and private trees
 are separate. B02's public schema defines byte-change booleans and aliases,
 ordered ID observations and location fields; no standard findings are included in
-its public tree. Provenance records source G and its crop mapping. The example
-target documents are raw snapshots of published E, with separate source and hash
-records in `examples/vibe-documents-v1/provenance.json`.
+its public tree. Provenance records source G and its crop mapping. The [example documents](../examples/vibe-documents-v1/provenance.json) are frozen inputs whose hashes cover the original bytes, including relative links from the source layout. For current instructions use the [Build](../skills/sdlc-build/SKILL.md) and [Review](../skills/sdlc-review/SKILL.md) skills.
 
 
 ## Controlled host API

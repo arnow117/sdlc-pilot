@@ -22,7 +22,7 @@ distilled-from:
 - 当前 Feature 的 `.sdlc-v1/context/<FEAT>.engineering.md`。
 - 当前 Git diff，以及本轮测试将绑定的实现 commit。
 
-详细结果追加到当前研发上下文的 `## Validation` / `### Correctness`。不要创建 correctness report、baseline 状态文件或其他进度文件。所有验证方式完成后，由 `sdlc-validate` 统一调用一次 `lifecycle_state.py record-validation`。
+详细结果追加到当前研发上下文的 `## Validation` / `### Correctness`。不要创建 correctness report、baseline 状态文件或其他进度文件。各方式的证据由 [Validate 阶段](../../../sdlc-validate/SKILL.md#orchestrated-mode)汇总。
 
 ## 核心原则
 
@@ -36,7 +36,9 @@ distilled-from:
 
 ### 1. 发现现有命令
 
-优先使用 `project.md` 已记录命令，再根据语言卡和仓库配置核对。若发现项目实际命令与 `project.md` 不一致，先实际运行确认，再更新 `project.md`。
+优先使用 `project.md` 已记录命令，再根据语言卡和仓库配置核对。若发现项目实际命令与 `project.md` 不一致，先实际运行确认，
+再把不一致事实作为候选交主 Agent，由主 Agent 按既有 onboard 刷新流程交给 `sdlc-onboard` 的指定写者处理；
+correctness 自身不直接改写 `project.md`，也不登记 lifecycle 状态。
 
 优先取得主流程的实际运行证据，按依赖安排构建和前置检查，再在同版候选上完成必要边界与项目要求的完整回归。典型检查包括：
 
@@ -144,7 +146,7 @@ Unverified: <none or limitation>
 ## 状态更新
 
 - 必要检查未通过时，由 `sdlc-validate` 按统一归因规则记录未通过并决定下一动作；环境阻塞或证据不足不自动触发实现修复。
-- 所有选定验证方式通过：`sdlc-validate` 统一调用 `record-validation --result pass`。
+- 汇总各验证方式后，按阶段规则判断能否登记。编排模式下，验证者交回证据和状态请求，由主 Agent 核对后执行 `record-validation`。独立调用时按 Validate 的 standalone 规则登记。
 - correctness 自身不直接编辑 `state.json`，也不记录 review 或 release。
 
 ## 常见错误

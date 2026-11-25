@@ -1,481 +1,90 @@
 # sdlc-pilot
 
-> 一套轻量、可移植、纯文件的 SDLC 技能族：用阶段技能推进工作，用角色卡补充专业视角，用 Git 共享状态与上下文。
-
-## 核心模型
-
-1. **产品上下文**用 Markdown 记录问题、范围、行为场景、领域判断、当前绑定决定的来源和验收标准。
-2. **工程上下文**用 Markdown 在一个当前有效方案中记录设计、Task 拆分和计划验证；实际验证、评审和发布证据使用既有独立章节或引用。
-3. **共享进度**只写目标仓库的 `.sdlc-v1/state.json`。
-4. **协作与历史**使用普通 Git branch、commit、push、pull/merge；不再维护第二套版本历史。
-5. **长期工程上下文**可由仓库自己的 `AGENTS.md`、架构/产品文档及可选的 repo-context 索引提供；SDLC 只在 `project.md` 记录已验证路径，不复制它们的正文或状态。
-
-进入生命周期后，主 Agent 使用 `next` 选择阶段、界定完整工作合同、派发一个实际执行的子 Agent、验收其文件与命令证据，
-再更新 state 并继续。子 Agent 不编辑 `state.json` 或调用 lifecycle mutation；它只能返回“待验收 / 未完成 / 受阻”。
-运行时没有子 Agent 能力时，主 Agent 按相同顺序串行执行并披露 fallback；这只说明派工拓扑，不能取代项目要求的 Terra 职责或称为独立评审。
-所需 Terra 或独立 Sol 不可用时如实报告限制，只继续已授权的只读或简单文档工作。完整约定只见
-[`stage-agent-protocol.md`](skills/sdlc/references/stage-agent-protocol.md)，它不引入新的 runtime、事件记录、行为 Eval 或自动 retrospective。
-对已授权、单仓单模块且产品与交付边界均已明确的小项目，主 Agent 默认优先在该协议的资格范围内一次派给同一准备执行者
-Backlog → Spec → Plan 的连续候选；主 Agent 仍逐块接受并按原 CLI 顺序执行。已有 ready Requirement 只准备 Plan，已有
-Feature 继续其真实下一阶段。未决选择、原型确认、外部授权或复杂接口、迁移、并发与恢复风险继续走普通阶段，不能借批次跳过。
-
-产品与研发是同一个生命周期的两个视角，不是两套相互同步的存储系统：
-
-```text
-Requirement: captured → ready → in_delivery → validated → released
-                              │
-                              └─ Feature: planned → in_progress → validated → reviewed → released
-                                             └─ Task: todo ↔ in_progress → done
-```
-
-一条 Requirement 关联一个 Feature；Feature 下可以有多个 Task。仓库可以同时保存多条 Requirement 和 Feature，
-因此并不限制为“同时只能追踪一个需求”。
-
-## 何时进入生命周期
-
-| 请求 | 执行方式 |
-|---|---|
-| 仅查询进度 | 只读已有状态及其引用；状态不存在就如实报告，不初始化、不自动开始执行 |
-| 未纳入已有 Requirement/Feature/Task 的小型、局部、可逆修改 | 可直接实现并做必要验证，无需创建完整生命周期记录 |
-| 明确要求完整流程、修改已有跟踪任务，或涉及跨客户端/服务端协同、公共协议兼容性、持久化及并发/恢复风险 | 进入对应 SDLC 阶段，不通过拆小任务绕过这些条件 |
-
-确定进入生命周期后，才在状态缺失时初始化；已有源码但缺少 `project.md` 时先运行 onboard。
-完整入口规则见 [`sdlc`](skills/sdlc/SKILL.md#2-入口)。
-
-### 阶段运行时：SCN-t3-stage-dispatch
-
-主 Agent 按[共享协议的运行时选择](skills/sdlc/references/stage-agent-protocol.md#runtime-selection)，
-基于实际宿主合同、当前授权及项目模型路由选择路径。选中 app-owned T3 child 时使用
-[T3 child 适配说明](skills/sdlc/references/runtime-adapters/t3-code.md)；获准的 native 宿主可用
-[Codex 原生说明](skills/sdlc/references/runtime-adapters/codex.md)。进一步派工遵循
-[T3 适用边界](skills/sdlc/references/stage-agent-protocol.md#t3-layer-boundary)；
-顶层 thread 只在用户明确要求新会话时创建。三个产品故事分别说明
-[独立阶段](.sdlc-v1/context/REQ-t3-stage-dispatch.product.md#用户故事-1--获授权的主-agent-派发独立阶段p1)、
-[模型证据](.sdlc-v1/context/REQ-t3-stage-dispatch.product.md#用户故事-2--看清模型证据与接受边界p1)和
-[等待与恢复](.sdlc-v1/context/REQ-t3-stage-dispatch.product.md#用户故事-3--正确等待恢复和继续目标p1)。
-
-当前故事 **SCN-t3-nested-delegation** 在上述默认路径上说明按任务明确要求进行有界 T3 进一步派工、逐层汇总和 Desktop 兼容；完整场景及验收见[产品规格](.sdlc-v1/context/REQ-t3-nested-delegation.product.md)。
-
-工具参数与可用能力以当前宿主工具合同为准；provider/model/options 来自目标项目生效路由，工作区、写范围和验收来自
-当前阶段 brief。缺工具、权限、必需路由或独立执行上下文时报告缺口，不静默换路径。主 Agent 核对实际文件、检查、
-版本、配置证据与独立性后接受结果并独占状态写入；请求值、宿主生效配置和实际后端分别报告，未知不推断。
-
-按宿主返回的 `next` 等待或结束当前轮次；结束轮次不表示 Goal 完成。恢复时核对原句柄、结果和写者，取消回执不证明
-任务及专属资源已终止。必要证据缺失阻止依赖它的接受与后续阶段；满足依赖、写入互斥和授权的独立工作可继续，
-但 fail 记录被拒时仍停止该 Feature 派发，用户停止与非收敛限制继续生效。
-
-阶段 Agent 在约定范围内自主完成实现与必要验证，集中返回证据和反馈。已有连续执行授权在原范围内延续，
-不新增逐阶段审批；缺少用户决策或外部授权时仍需暂停。默认主 Agent 到子 Agent 只有一层；主 Agent 只有在接口、
-写范围、依赖和验证独立时才允许额外有界分析或并行工作，并负责汇总和集成验收。同阶段修正复用原实现者；评审只有
-由实际不同的执行者完成时才称独立。
-
-小型 tracked Feature 可以用紧凑上下文和短交接减少重复：仍保留 PRODUCT / ENGINEERING 的核心与原顺序、当前验收条件到
-设计/Task/计划验证的关联，以及必要阶段和证据。产品阶段只尽早询问会改变产品行为或验收的选择；明确委托的选择记录委托来源和
-实际采用项，普通继续执行授权不会确认未知决定。完整规则和从已有 state、上下文、Git 与实际证据生成的进展说明见
-[`stage-agent-protocol.md`](skills/sdlc/references/stage-agent-protocol.md)；紧凑填写例子见
-[`examples/small-project-context.md`](examples/small-project-context.md)。
-小项目优先由同一实现者完成一个完整 Task；真实早期增量可以在 Task 未完成时展示，但不请求 done 或替代独立 Validate、Review。
-`project.md` 只随稳定入口、命令、配置、环境、资源、surface 或长期来源的实际变化刷新；修复、测试数、覆盖率、commit、HEAD 和
-Feature 阶段变化本身不触发 Onboard。
-
-仅当相关代码、配置与环境一致，且有实际执行的命令、结果及被测版本时，才可复用验证证据；
-输入变化、失败、证据缺失或阶段另有要求时执行相应检查。详见
-[`阶段协作协议`](skills/sdlc/references/stage-agent-protocol.md#5-evidence-git-and-mandatory-stop)。
-完整 coverage 若实际运行同一相关 unit suite，可以记录一次满足两个目的；提交身份变化本身不要求重跑。独立 Validate 仍须对当前候选实际执行。
-验收以实际主流程、必要边界和项目要求的完整回归为依据。覆盖率默认用于发现漏测，项目或当次交付明确约定时才按数值判定对应环节。
-适用范围、证据复用和发布前检查见[覆盖率规则](skills/sdlc/references/validate-modes/correctness.md#5-覆盖率阈值)。
-生命周期 CLI 不会因 `.sdlc-v1` 上下文文字的语义变化自动失效既有验证；主 Agent 必须按
-[evidence applicability 规则](skills/sdlc/references/stage-agent-protocol.md#context-prose-and-evidence-applicability)
-重新判断当前要求是否仍被覆盖。
-
-## 文件放在哪里
-
-```text
-<target-repo>/
-├── .sdlc-v1/
-│   ├── state.json          # sdlc-lightweight-state-v1，state_version=3；必须纳入 Git
-│   ├── project.md          # onboard 维护的技术栈、入口、测试命令与长期上下文索引
-│   └── context/            # state 引用的产品/工程上下文；必须放在这里
-│       ├── product.md
-│       ├── engineering.md
-│       └── decisions.md
-└── <source code>
-```
-
-暂停、跨对话恢复或换执行环境时，可按协议临时增加唯一的
-`.sdlc-v1/checkpoints/<feature-id>.md`。它不替代 state、当前有效方案或 Git，完成 Feature 后删除。
-
-`state.json` 只保存 Requirement、Feature、Task、上下文引用及验证/评审/发布摘要，不复制长篇需求和设计文档。
-每条 Requirement 的 `product_context_ref` 和每个 Feature 的 `engineering_context_ref` 都是必填项，只接受
-`.sdlc-v1/context/*.md` 下已存在的仓库相对 Markdown 文件；不能引用仓库外路径、符号链接或项目 `docs/`。
-项目原有文档仍可保留，但需把当前生命周期直接引用的上下文整理进 `.sdlc-v1/context/`。
-
-## 与长期工程上下文协作
-
-`sdlc-onboard` 总会读取仓库 `AGENTS.md`；若同时发现当前 commit 对齐的 `.repo-context/evidence.json` 和
-`.repo-context/manifest.yaml`，会将其中的 canonical 文档路径写入 `project.md` 的索引。两份 repo-context
-文件缺失、过期或无法读取时，onboard 继续从源码和配置建立项目上下文，不产生运行时依赖。
-
-职责保持分离：长期目标、产品、架构与开发说明由仓库文档维护；`.sdlc-v1/context/*.product.md` 维护当前
-Requirement 的产品行为、结果观察计划和 Requirement 回流；`*.engineering.md` 维护当前 Feature 的实现、验证、技术发布准备、
-实际发布/观测结果、反馈证据和缺口。工程上下文引用产品观察计划，不复制产品指标、基线、目标、观察窗口或负责人。
-
-repo-context 的 `sync`/`refine` 若会改动业务路径或长期文档，应在当前 Feature 的 validation 前完成；若在 validation
-之后进行，则建立单独的维护 Requirement，或在评审/发布前重新验证。SDLC 的 state 校验规则不为这些路径提供例外。
-
-### 项目级架构约束：建立、检查与修订
-
-**全局场景 ID：`SCN-project-architecture`。** 跨 Feature 长期有效的架构规范由项目负责人判断定稿；发现、确认、引用、
-检查与修订的唯一共享方法见
-[软件交付生命周期 §2 项目级架构约束](skills/sdlc/references/lifecycles/software-delivery.md#项目级架构约束)。
-产品规则与验收参数以当前 Requirement 的 `product_context_ref`（`.sdlc-v1/context/<requirement-id>.product.md`）为准，
-不在本节复制。
-
-- **建立或复用**：负责人在 canonical 正文（既有架构文档或现有规范的适当章节）提出或复用条目；`project.md` 只索引路径。
-  候选保留理由、范围与验证方式，现状未知、建议与已确认分开；确认指向人、具体内容/版本和适用范围。已有获确认规范时
-  复用同一正文与决定，不因新会话或新 Feature 重复要求批准。入口：`sdlc-onboard` 索引导航，`sdlc-plan` 关联设计与检查。
-- **阶段检查**：Plan 把适用条目与确认来源关联到设计/Task/计划验证；Build 在首次写入与实质变更时核对偏离；Review 读
-  原始规范与实际 diff 并沿用 disposition。确定性检查给实际命令结果，职责与抽象判断保留人工观察证据；未运行或缺失的
-  人工判断如实保留为缺口，不汇总成全部满足。
-- **例外与修订**：不合规实现先合规修复；有界例外记录理由、范围、批准与重访条件，不自动放宽全项目，也不改正文。
-  长期规则修订展示具体差异、理由与影响并由人确认；Feature 局部决定不自动升级为全项目规范。规范变更时按
-  [阶段协议证据适用性](skills/sdlc/references/stage-agent-protocol.md#context-prose-and-evidence-applicability)
-  复用或补验。
-
-恢复与边界：导航索引缺失或过期不跳过已知相关正文，直接核对当前范围内已知规范及确认来源；正文写者由主 Agent 在写入前
-指定，onboard 不编写或批准长期正文。同范围已确认来源相互矛盾、或与产品要求冲突时，列出具体 claim 与来源交负责人决定，
-依赖冲突的工作暂停，独立授权工作继续。存量项目缺规范时按当前改动涉及的模块边界补齐并确认必要约束；局部小改动无新
-架构决定时说明适用性即可。
-
-### 按需人工验收与自主推进：SCN-human-validation
-
-**全局场景 ID：`SCN-human-validation`。** 已对齐并获授权的工作由 Agent 自行推进；可可靠自验证的
-修复、功能和客观 UI 改动不要求用户试用；确需真人判断时才交接可操作的候选、步骤和待确认事项。
-已确认的故事、场景和验收条件以当前 Requirement 的产品上下文为准，本节只作入口，不复制规格：
-[产品规格](.sdlc-v1/context/REQ-human-validation.product.md)。
-
-- **仅规划**：只授权规划时，Agent 交付计划，Build 与实现写入不开始。缺少实质决定、外部授权或
-  必要前提时，说明具体缺口及受影响动作，继续独立且已授权的工作。单独查询状态时生命周期没有写入。
-- **授权交付**：实施获授权后，Agent 在已登记 Task 内连续推进并完成适用验证。阶段切换、普通实现
-  选择和常规等待不产生额外的继续授权请求。
-- **真人交接**：确需真人时，对话给出旅程与 Feature、可打开入口、可核对候选、操作步骤与预期、
-  已检查项与缺口、负责观察的人和具体问题。首次验收只等待约定真人时保持 `pending`；沉默、
-  普通等待超时、泛化“继续”和模拟结果都不能充当必要的人类观察。
-- **状态说明**：当前阶段、候选、已检查内容、待项和下一步按所选 Feature 的实际状态、已有工程记录
-  和可用 checkpoint 说明。`待体验`、`反馈待处理`是说明性表述，不是新的状态。
-- **恢复**：跨会话按实际状态、候选、环境、判据、原授权和已有答复恢复，复用仍然适用的证据，
-  变化时只重验受影响项。已暂停或无法续跑时如实说明，不假定会自动唤醒。
-
-所选 Feature、验收条件及观察者来源取自当前上下文和已授权角色；候选、分支和 HEAD 取自状态投影
-和 Git；命令参数由原 CLI 和[轻量运行时](skills/sdlc/references/lightweight-runtime.md)负责。
-结果缺失或不明时给出现有恢复路径。共享规则见
-[阶段协议 §5](skills/sdlc/references/stage-agent-protocol.md#5-evidence-git-and-mandatory-stop)。
-
-## 技能体系
-
-| 层 | 内容 | 作用 |
-|---|---|---|
-| Driver | `sdlc` | 根据当前状态和用户意图恢复、路由、编排与推进 |
-| 生命周期 | `sdlc-product-design`、`sdlc-software-delivery` | 分别组织产品澄清和研发交付 |
-| 阶段技能 | onboard、backlog、spec、plan、build、validate、review、ship | 在需要时只加载当前阶段 |
-| 原型方法 | `sdlc-prototype` | 可独立制作交互原型，也可由产品/规格阶段按需加载；不是新阶段 |
-| 角色卡 | product-owner、domain-expert、architect、client-dev、server-dev、qa、design、security 等 | 按改动面补充检查视角 |
-| 验证模式 | correctness、e2e、eval-bench、security-scan | 由 validate 阶段按项目类型及安全义务选用 |
-
-方法论仍然保留 BDD、战略 DDD、SDD、TDD、可靠性检查、多角色评审和发布纪律；它们是阶段内按需加载的
-工作方式，不要求为每一步生成额外的机器记录。
-
-review 每次还会检查本次 diff 中的重复实现、不必要抽象和冗余配置或依赖，帮助预防可避免的工程债。
-删除或替换建议需要具体证据并保持当前行为和工程约束；普通简化建议不阻塞发布。完整检查与处理规则见
-[`sdlc-review`](skills/sdlc-review/SKILL.md)。
-
-## 安全扫描与依赖
-
-**全局场景 ID：`SCN-security-scan`。** 依赖提示、扫描选择、证据处理和评审复用的
-[用户场景 1–5](.sdlc-v1/context/REQ-security-scan.product.md#用户场景与测试)及
-[成功标准](.sdlc-v1/context/REQ-security-scan.product.md#成功标准)见产品上下文；执行范围、工具与预算等参数由下列验证方式和适配说明确定。
-
-认证、授权、敏感数据、外部输入或供应链等变化时，SDLC 按当前安全义务评估
-[`security-scan`](skills/sdlc/references/validate-modes/security-scan.md)。validate 可以使用项目已有的合适扫描工具或
-[Codex Security](skills/sdlc/references/integrations/codex-security.md)；review 复核同一版本的发现和覆盖缺口，
-不默认重复调用模型。未运行或证据不足不能写成扫描通过。
-
-当前阶段需要使用 Codex Security 时，`/sdlc` 在执行机器上做只读依赖检查；缺少工具或配置时说明安装选项。
-普通工作不会因未选用它而检查或提醒。检查不会自动下载、登录或扫描；选中的必要安全检查仍须完成。探针只发现 PATH 候选，不验证插件、
-版本或凭据；具体限制、官方安装入口、调用方式与费用边界见 Codex Security 适配说明。
-
-## 原型：首次设计、迭代与独立使用
-
-`/sdlc` 仍只选择一个主阶段。产品或规格阶段按[包内原型适配](skills/sdlc/references/integrations/product-prototype.md)
-决定是否加载 [`sdlc-prototype`](skills/sdlc-prototype/SKILL.md)：首次 UI/交互设计没有充分 confirmed baseline 时默认使用；
-信息架构、导航、核心旅程、角色、状态反馈或跨端联动发生实质变化时，只更新受影响原型。明确跳过、可复用的充分 baseline、
-后端或普通实现、文案和小样式改动不强制原型。
-
-产品故事导航：首次设计、迭代、跳过和复用见 [用户故事 1](.sdlc-v1/context/REQ-bundled-prototype.product.md#用户故事-1---从-sdlc-完成首次设计与迭代优先级p1)，
-单包和独立使用见
-[用户故事 2](.sdlc-v1/context/REQ-bundled-prototype.product.md#用户故事-2---安装一个包并直接使用原型优先级p1)。
-
-**全局场景 ID：`SCN-sdlc-prototype`。** 原型 helper 的工作模式、产品端、终端形态、参考继承、演示目标和交付方式以
-[`sdlc-prototype` 的识别任务表](skills/sdlc-prototype/SKILL.md#识别任务)为权威参数来源；当它属于 tracked 工作时，
-由[包内原型适配](skills/sdlc/references/integrations/product-prototype.md)定义阶段、写入和证据边界，不增加 CLI 参数或状态模型。
-
-```text
-/sdlc 为一个没有已确认设计的新交互项目完成首次设计
-/sdlc 迭代现有产品：调整导航和角色完成后的跨端状态反馈
-/sdlc-prototype 把这份 PRD 做成可点击的客户端与管理平台原型
-```
-
-插件安装后，宿主以 `sdlc-pilot:sdlc-prototype` 识别该包内技能；本地 `/sdlc-prototype` 只有在宿主已发现
-`skills/sdlc-prototype/` 后才可用。新目录刚加入或本地以软链加载时，按宿主的索引刷新或新会话规则重载；本仓不声称
-当前运行时已经加载该前缀。独立原型不初始化 state；已跟踪工作仍受当前 stage、brief 和原型产物目录约束。
-
-## Skill / Context 对照测量
-
-**全局场景 ID：`SCN-vibe-test`。** 维护者可以先用内置 battery 离线验证判定器和合成报告，
-再由主 Agent 在核实真实宿主能力并取得本批授权后，组织独立的对照实验。详细操作、受控 host API、
-比较与恢复见 [vibe test 指南](docs/vibe-tests.md)，[验收覆盖与未执行项](docs/vibe-tests.md#acceptance-coverage)
-说明各项证据边界。参数以 [示例配置](examples/vibe-plan-v1.json)、battery 清单及脚本校验为准。
-
-从仓库根目录选择一个尚不存在的输出目录，运行离线示例：
-
-```bash
-OUTPUT_ROOT="$(python3 -c 'import tempfile; from pathlib import Path; print(Path(tempfile.mkdtemp(prefix="sdlc-vibe-")).resolve())')"
-python3 -B scripts/vibe_test.py oracle --battery examples/vibe-battery-v1/battery.json --out "$OUTPUT_ROOT/oracle"
-python3 -B scripts/vibe_test.py plan --config examples/vibe-plan-v1.json --out "$OUTPUT_ROOT/plan"
-python3 -B scripts/vibe_test.py collect --results examples/vibe-battery-v1/private/report-cases/complete.json --out "$OUTPUT_ROOT/collection"
-python3 -B scripts/vibe_test.py report --results "$OUTPUT_ROOT/collection/results.json" --out "$OUTPUT_ROOT/report"
-python3 -B scripts/vibe_test.py report --results "$OUTPUT_ROOT/collection/results.json" --out "$OUTPUT_ROOT/report-strict" --strict
-```
-
-上述数据均为合成／参考数据，真实模型 run 为 0；最后一条 strict 因缺少真实证据预期退出 1。
-oracle 未通过时停止实验并查看各维度；输入快照变化时重新冻结计划；缺少可比 before 时报告“基线缺失”，
-不得归因文档。改动前后比较须分别使用准确快照和各自批次授权。真实试次启动前，主 Agent 必须核实批准、
-原生路由、隐藏材料及网络访问限制、全工作区和独立 scorer 的执行隔离。当前 delegate 的 full-access 不证明
-这些条件；受控 host API 的存在也不构成证明。完整 live AC01/AC04 尚未执行。
-
-## Web / App 验证与 2.0 升级
-
-受影响的 Web 用户旅程使用 tester-army/e2e CLI 与 Web engine，App 用户旅程使用 Maestro CLI Flow。
-已有测试套件可补充检查；规划阶段（`plan`）/ Build 准备对应资产和环境，Validate 独立运行并记录必要业务断言与当前构建证据。
-工具、环境或证据不足时保持未通过。具体资产、模型 / 缓存、归档与归因要求统一见
-[`e2e` 验证约束](skills/sdlc/references/validate-modes/e2e.md)。
-
-2.0 改变了必要验证条件；升级既有工程时在 Build 补齐框架 / Flow、fixture 与实际测试入口，再进行 Validate。
-插件更新不会自动安装测试框架或调用模型，lifecycle CLI、`state_version=3` 和 `.sdlc-v1/` 结构无需迁移。
-用户可见改动的指南与实际使用验证遵循
-[`usage contract`](skills/sdlc/references/lifecycles/software-delivery.md#11-global-usage-document-story-and-parameter-contract)。
-完整版本与升级说明见 [CHANGELOG](CHANGELOG.md)。
-
-## 状态命令
-
-状态工具只有一个入口：
-
-```bash
-python3 scripts/lifecycle_state.py --repo <target-repo> init
-python3 scripts/lifecycle_state.py --repo <target-repo> status
-```
-
-`init` 会检查目标仓库 Git hooks。若发现 0.x 安装时复制进去的 sdlc-pilot hook/guard，会返回具体 hooks 目录并停止；
-先人工检查该目录，只删除旧 SDLC 代码（混有团队逻辑的 hook 应编辑而不是整文件误删），再重新执行 `init`。
-初始化后先建立 `.sdlc-v1/context/*.md`，再捕获需求；进入 validation 前必须把 state 和上下文纳入 Git。
-
-产品侧：
-
-```bash
-python3 scripts/lifecycle_state.py --repo <target-repo> capture-requirement \
-  --id REQ-001 --title "导出财务数据" --priority P1 \
-  --product-context-ref .sdlc-v1/context/product.md
-python3 scripts/lifecycle_state.py --repo <target-repo> revise-requirement \
-  --requirement-id REQ-001 --priority P0 --depends-on ""
-python3 scripts/lifecycle_state.py --repo <target-repo> mark-requirement-ready \
-  --requirement-id REQ-001
-```
-
-未绑定 Feature 的 `captured` Requirement 可以用 `revise-requirement` 修订；
-不再交付的 `captured`/`ready` Requirement 使用 `cancel-requirement --reason <why>`
-保留历史。取消前必须先处理活动依赖方。
-
-研发侧：
-
-```bash
-python3 scripts/lifecycle_state.py --repo <target-repo> start-feature \
-  --requirement-id REQ-001 --feature-id FEAT-001 --branch feature/export-data \
-  --engineering-context-ref .sdlc-v1/context/engineering.md
-python3 scripts/lifecycle_state.py --repo <target-repo> add-task \
-  --feature-id FEAT-001 --task-id TASK-001 --title "实现导出接口"
-python3 scripts/lifecycle_state.py --repo <target-repo> set-task-status \
-  --feature-id FEAT-001 --task-id TASK-001 --status in_progress
-python3 scripts/lifecycle_state.py --repo <target-repo> set-task-status \
-  --feature-id FEAT-001 --task-id TASK-001 --status done
-python3 scripts/lifecycle_state.py --repo <target-repo> record-validation \
-  --feature-id FEAT-001 --result pass --test-command "pytest"
-python3 scripts/lifecycle_state.py --repo <target-repo> record-review \
-  --feature-id FEAT-001 --decision approved --by reviewer
-python3 scripts/lifecycle_state.py --repo <target-repo> record-release \
-  --feature-id FEAT-001 --commit <validation-commit>
-```
-
-Task 状态转换必须遵循允许的下一状态；失败时的 stderr 详情、恢复查询和重开 Task 对交付检查的影响见
-[轻量运行时的 Task 状态错误输出与恢复](skills/sdlc/references/lightweight-runtime.md#task-状态错误输出与恢复)。
-
-`released` 只表示声明的发布目标及该目标要求的 smoke、观测已经完成；
-发布目标可以是明确约定的源码分发，也可以是环境部署。它不表示代码仅仅
-合入了主分支。若历史记录误把合并或发布准备当成发布，先在工程上下文或其中已有的稳定
-证据引用记录原因，再纠正机器状态；正文改动引起的 stale 按既有指纹规则处理：
-
-```bash
-python3 scripts/lifecycle_state.py --repo <target-repo> retract-release \
-  --feature-id FEAT-001 --reason "recorded after merge without deployment smoke"
-```
-
-### 修正 Feature 开发分支登记
-
-**全局场景 ID：`SCN-branch-registration`。** 此入口依次导航到既有产品场景：[SCN-1](.sdlc-v1/context/REQ-branch-registration.product.md#scn-1确认身份后登记当前开发分支)、[SCN-2](.sdlc-v1/context/REQ-branch-registration.product.md#scn-2写入前身份不成立)、[SCN-3](.sdlc-v1/context/REQ-branch-registration.product.md#scn-3两个维护者使用同一个旧登记)、[SCN-4](.sdlc-v1/context/REQ-branch-registration.product.md#scn-4同一-feature-的-active-writer-交接)、[SCN-5](.sdlc-v1/context/REQ-branch-registration.product.md#scn-5状态替换后的结果不确定)、[SCN-6](.sdlc-v1/context/REQ-branch-registration.product.md#scn-6非开发-checkout-的只读恢复)和[验收条件](.sdlc-v1/context/REQ-branch-registration.product.md#验收条件)；参数、执行规则和恢复流程以[运行时操作指南](skills/sdlc/references/lightweight-runtime.md#51-开发分支登记迁移)为准。
-
-当未关闭 Feature 的登记 branch 与实际开发 worktree 不一致时，主 Agent 或独立维护者先让同一 Feature 的写入者完成
-交接，并在该 Feature 工程上下文预先记录决定、完整参数、原因和预期 HEAD。随后在实际 worktree 执行：
-
-```bash
-python3 scripts/lifecycle_state.py --repo <target-repo> migrate-feature-branch \
-  --feature-id FEAT-001 \
-  --expected-branch feature/old-name \
-  --branch feature/current-name \
-  --expected-head <full-current-commit-id> \
-  --reason "recorded migration decision"
-```
-
-`--expected-branch` 是 state 中必须精确匹配的旧值；`--branch` 必须是当前已检出的显式本地分支；`--expected-head`
-必须是当前 worktree 的完整 commit ID。该命令只更新目标 Feature 的 branch 登记和时间，不 checkout 代码、不接受 Task、
-不改 Markdown，也不重置 validation/review/release。成功后将 CLI 返回的实际 branch、HEAD、根目录和时间追加到同一工程
-上下文。写入前的拒绝不会修改 state；若原子替换后的 fsync 或输出失败，结果可能已经写入，先只读查询 state 与 Git，
-不要按旧参数自动重试。完整安全与恢复规则见
-[`lightweight-runtime.md`](skills/sdlc/references/lightweight-runtime.md#51-开发分支登记迁移)。
-
-公开查询命令为 `status`、`next`、`readyqueue`、`product-projection` 和 `feature-projection`。`next` 在只有一个
-候选时返回下一阶段；存在多个活动 Feature/Requirement 时返回 `needs_selection` 和候选列表，不替用户猜测。
-
-引用已验收结论前，先只读核对验收时绑定的 context 内容是否仍与快照一致：
-
-```bash
-python3 scripts/lifecycle_state.py --repo <target-repo> verify-acceptance --requirement-id REQ-001
-python3 scripts/lifecycle_state.py --repo <target-repo> verify-acceptance --feature-id FEAT-001 --point plan
-```
-
-结果为 `match`/`stale`/`missing`：`stale` 退出码 1，表示绑定内容已漂移，先暂停引用，按原批准与可证明的委托核对有权责任人，再显式重记或补验；
-`missing` 表示该点未绑定内容、未验证当前适用性，不报错也不当作已核验。`mark-requirement-ready` 与
-`start-feature` 的 `--refresh-acceptance` 用于有权责任人按原批准或可证明的委托显式重记既有快照。JSON 形状、错误
-处理与恢复流程见
-[轻量运行时的验收内容指纹核对](skills/sdlc/references/lightweight-runtime.md#71-验收内容指纹核对)。
-
-backlog/board 是 `.sdlc-v1/state.json` 的只读投影，不维护第二份需求状态：
-
-```bash
-python3 scripts/backlog.py readyqueue --root <target-repo>
-python3 scripts/backlog.py coverage --root <target-repo>
-python3 scripts/backlog.py lint --root <target-repo>
-python3 scripts/backlog.py tree --root <target-repo>
-python3 scripts/backlog.py board --root <target-repo> --out ./_board.html
-```
-
-`board` 只写可重新生成、静态只读的 HTML；其余命令不写文件。它没有搜索、实时刷新、聊天或状态回写能力。`lint` 会检查 state 和所有 context ref 是否存在且已被 Git
-追踪。validation 保存测试时的 Git HEAD 作为实现版本；在 validation 前，state 必须已被 Git 追踪、没有
-unmerged index entry 且未 staged（先 commit 或 unstage），当前产品/研发上下文也必须已追踪且无冲突，业务代码
-工作树必须干净。之后可以单独提交 `.sdlc-v1/**` 来同步状态和证据；如果其他路径相对 validation commit 有变化，
-review/release 会要求重新验证。
-
-验证前，先定向查找项目文档、配置示例、fixture 和已有记录，再询问仍缺少的环境信息。
-验证结果在现有工程上下文中区分 `PASS`、`IMPLEMENTATION_FAILED`、`ENV_BLOCKED` 和 `INCONCLUSIVE`，
-分别对应通过、实现/验收失败、已确认的环境阻塞及证据不足；不增加 state 字段。
-
-任何必要检查失败、受阻或证据不足，都需按正常 CLI 前置条件记录 validation 为 `fail`，使旧通过记录失效。
-这里的 `fail` 表示必要验证未通过，不自动证明实现有错；下一步按归因修复实现、解决环境或补充证据。
-若记录失败，应先解决前置条件，不得沿用旧通过记录继续 review/ship。只有所有必要检查通过才可记录 `pass`。
-证据格式和完整流程见 [`sdlc-validate`](skills/sdlc-validate/SKILL.md#验证归因)。
-
-## 多人、多机器协作
-
-把 `.sdlc-v1/state.json`、相关上下文 Markdown 和代码当作同一批普通 Git 变更：
-
-1. A 捕获需求、补产品上下文并将 Requirement 标记为 `ready`。
-2. A commit/push；B 在另一台机器 pull。
-3. B 创建 Feature/Task、实现并提交业务代码，在该 commit 上运行验证。
-4. B 记录 validation，把 state、研发上下文和证据 commit/push。
-5. 评审者 pull 后记录 review，再提交 `.sdlc-v1/**`；发布者 pull 后发布 validation commit 并记录 release。
-
-两个人同时修改状态时，处理方式与同时修改普通 JSON 文件相同：先同步分支，解决冲突，确认 state 已追踪且无
-unmerged entry，再运行状态测试。
-不使用本机串行文件或隐藏服务协调多个 clone。
+sdlc-pilot 是一组供 Claude Code 和 Codex 使用的技能。你可以让 Agent 把需求整理成验收标准，按任务实现，在具体的 Git 提交上验证、评审并记录发布结果。进度和设计都保存在项目仓库里，换人或换机器后也能接着做。
 
 ## 安装
 
-作为 Claude Code 插件：
+**Claude Code**　在会话中从插件市场安装：
 
 ```text
 /plugin marketplace add arnow117/sdlc-pilot
-/plugin install sdlc-pilot
+/plugin install sdlc-pilot@sdlc-pilot
 ```
 
-本地开发或 Codex 使用可以克隆后软链全部技能：
+**Codex**　在终端克隆仓库，将技能链接到本地技能目录，然后打开新的项目会话：
 
 ```bash
-git clone git@github.com:arnow117/sdlc-pilot.git
+git clone https://github.com/arnow117/sdlc-pilot.git
 cd sdlc-pilot
-SDLC_SKILLS="$PWD/skills"
-
-mkdir -p "$HOME/.claude/skills" "$HOME/.codex/skills"
-for d in "$SDLC_SKILLS"/*/; do
-  ln -sfn "$d" "$HOME/.claude/skills/$(basename "$d")"
-  ln -sfn "$d" "$HOME/.codex/skills/$(basename "$d")"
+mkdir -p "$HOME/.agents/skills"
+for skill in "$PWD"/skills/*/; do
+  ln -sfn "$skill" "$HOME/.agents/skills/$(basename "$skill")"
 done
-
-bash scripts/validate-skills
 ```
 
-## 测试
+## 第一次使用
 
-测试入口、覆盖边界和首批共享场景见 [测试与场景索引](docs/testing.md)。
+在**要开发的项目**里打开会话，按你的安装方式输入一条请求。
+
+**Claude Code**
+
+```text
+/sdlc-pilot:sdlc 为订单列表增加 CSV 导出。先和我确认导出的字段、权限和验收标准。
+```
+
+**Codex**
+
+```text
+$sdlc 为订单列表增加 CSV 导出。先和我确认导出的字段、权限和验收标准。
+```
+
+第一轮先确认规则。例如，列表按月份筛选后，CSV 应包含当月订单还是全部订单？确认后，Agent 会把约定写进产品上下文，作为实现和验收的依据。想看一份填写好的样例，可以参考[本地待办 CLI 的需求与交付计划](examples/small-project-context.md)。
+
+| 你想做什么 | 可以这样说 |
+|---|---|
+| 查看进度 | “看看订单导出做到哪一步了。” 查询只读取已有记录。 |
+| 继续已有需求 | “继续订单导出，从上次停下的地方做。” Agent 根据仓库里的进度和上下文恢复。 |
+| 先看交互效果 | “用 sdlc-prototype 把这份需求做成可点击的原型。” [原型技能](skills/sdlc-prototype/SKILL.md)可独立使用。 |
+
+## 工作流程
+
+一条需求（Requirement）描述要解决的问题和验收标准。进入交付时，为它建立一个交付项（Feature），再拆成实现任务（Task）。同一仓库可以并行跟踪多条需求。
+
+```text
+产品设计    收集需求 → 明确范围和验收标准
+                              ↓
+软件交付                    制定计划 → 实现任务 → 验证 → 评审 → 发布
+```
+
+尚未纳入跟踪的小型、局部、可逆修改，可以直接实现并验证。已有跟踪项、明确要求完整交付的工作，以及涉及跨端协作、公共协议、持久化或并发恢复的变更，按对应阶段推进。[阶段选择规则](skills/sdlc/SKILL.md#2-入口)
+
+需要你判断的产品选择、真实体验或外部授权，会在相应步骤交给你确认。Agent 可以自行验证的部分，会按已确认的范围继续推进。[产品设计](skills/sdlc-product-design/SKILL.md) · [软件交付](skills/sdlc-software-delivery/SKILL.md)
+
+## 进度与交接
+
+| 目标项目中的文件 | 记录内容 |
+|---|---|
+| `.sdlc-v1/project.md` | 项目入口、技术栈、测试命令和已有架构文档的位置 |
+| `.sdlc-v1/context/*.product.md` | 当前需求的场景、范围、业务规则和验收标准 |
+| `.sdlc-v1/context/*.engineering.md` | 当前交付项的设计、任务、验证和发布证据 |
+| `.sdlc-v1/state.json` | 需求、交付项和任务的进度，以及对应文档的引用 |
+
+将状态和上下文随代码一起纳入 Git。交接前提交并推送，接手者拉取同一分支即可查询进度。
+
+### 状态命令
+
+从 sdlc-pilot 源码目录执行，将路径替换为目标项目的实际位置：
 
 ```bash
-bash scripts/validate-skills
-git diff --check
+python3 scripts/lifecycle_state.py --repo /path/to/project status
+python3 scripts/lifecycle_state.py --repo /path/to/project next
 ```
 
-`validate-skills` 做快速结构/frontmatter/引用检查，并运行以下本地测试：
+`status` 查看共享进度，`next` 查询下一步。有多个候选项时，先选择要推进的工作。[状态与恢复指南](skills/sdlc/references/lightweight-runtime.md) · [修正开发分支登记](skills/sdlc/references/lightweight-runtime.md#51-开发分支登记迁移)
 
-- `test_lifecycle_state.py`：Requirement → Feature → Task → validation/review/release；
-- `test_backlog.py`：需求树与看板；
-- `test_scenarios.py`：六个共享场景的初始仓库、参考操作、结果断言与反例；
-- `test_contrast_check.py`：设计对比度检查。
-- `test_hallmark_catalog.py`：随包 Hallmark 风格目录的召回、来源完整性和原子增量同步。
-- `test_vibe_test.py`：离线 battery、oracle、合成报告与路径保护。
-- `test_vibe_host.py`：受控宿主回调的 stub 合同；不启动模型。
-- `test_security_dependency.py`：隔离 PATH 中的依赖发现、重名候选与凭据不输出；探针不执行 PATH 候选，正反控制会执行自建临时候选脚本，不调用模型。
+## 进一步阅读
 
-它还检查阶段协议、brief/result 模板、检查点模板和已知冲突文案的机械形状；主 Agent 的语义判断仍不能由字符串检查替代。
-
-`eval-bench` 用于验证产品内 AI 功能效果；Web Review Live 用于本地文档批注。两者都是保留的普通能力。
-
-## 从 0.x 升级
-
-1.0.0 是一次有意的主版本断代，不执行 0.x 协议，也不做自动迁移。历史文件不会被自动读取、转换或删除；
-人工把仍有效的产品/工程内容整理到 `.sdlc-v1/context/*.md`，清理 `init` 报出的旧 sdlc-pilot copied hooks，
-再初始化 state 并重新建立当前 Requirement → Feature 关联。移除项详见 `CHANGELOG.md`。
-
-## 设计与维护
-
-- 当前基础模型及规范索引：[`docs/specs/2026-08-10-lightweight-sdlc.md`](docs/specs/2026-08-10-lightweight-sdlc.md)
-- Web / App 验证与工程资产：[`e2e`](skills/sdlc/references/validate-modes/e2e.md)
-- 工具自身维护与发布：[`evolve`](skills/sdlc/references/evolve-loop.md)
-- 五份可审阅模板：[PROJECT.md](skills/sdlc/references/templates/PROJECT.md)、[PRODUCT.md](skills/sdlc/references/templates/PRODUCT.md)、[ENGINEERING.md](skills/sdlc/references/templates/ENGINEERING.md)、[TASK.md](skills/sdlc/references/templates/TASK.md)、[CHECKPOINT.md](skills/sdlc/references/templates/CHECKPOINT.md)；PRODUCT/ENGINEERING 分别保留其源模板的核心与条件可选区分。
-- 小项目紧凑上下文与产品选择/候选原型/进展示例：[`examples/small-project-context.md`](examples/small-project-context.md)
-- 按需图示与场景对齐：[图示辅助对齐](skills/sdlc/references/lifecycles/software-delivery.md#图示辅助对齐)，在原有章节解释复杂关系，并在实现和评审时检查一致性。
-- Onboard 产出示例：[`examples/onboard-output-sample.md`](examples/onboard-output-sample.md)
-- 看板当前实现与历史视觉设计：[`DESIGN.md`](DESIGN.md)
-- 跨模块编排演练：[`docs/agent-orchestration-rehearsal.md`](docs/agent-orchestration-rehearsal.md)
-- 当前适配与历史蒸馏来源：[`docs/distillation-source-map.md`](docs/distillation-source-map.md)
-- 初期方法论吸收审计（历史）：[`docs/absorption-completeness.md`](docs/absorption-completeness.md)
-- 维护契约：[`CLAUDE.md`](CLAUDE.md)
-
-`docs/specs/2026-06-*.md` 全部是 0.x 历史设计，只用于理解演进背景；其中的状态路径、hook、命令和完成条件
-已被轻量基础模型及当前 stage / reference 取代，不能作为当前实现依据。已发布能力与本地新增能力的范围见
-[CHANGELOG](CHANGELOG.md)：4.0.0 支持执行中继续交流、在既有授权内连续推进，并在最小可检验结果稳定后展示真实增量；3.1.0 内置 `sdlc-prototype`；3.0.0 对齐 CodexSpec 原始模板并加入按需图示对齐。新建或实质更新 PRODUCT/ENGINEERING 时遵循固定核心章节；旧文档无需批量迁移，状态、路径和 CLI 保持兼容。
+- 验证交付结果：[Web / App 端到端验证](skills/sdlc/references/validate-modes/e2e.md) · [安全扫描](skills/sdlc/references/validate-modes/security-scan.md)
+- 团队共用的工程规范由项目负责人确认，规划、实现和评审时引用原文。[项目级架构约束](skills/sdlc/references/lifecycles/software-delivery.md#项目级架构约束)
+- 配置阶段协作：[阶段执行协议](skills/sdlc/references/stage-agent-protocol.md) · [T3 派工边界](skills/sdlc/references/stage-agent-protocol.md#t3-layer-boundary)
+- 升级或维护插件：[版本与升级记录](CHANGELOG.md) · [文档导航](docs/README.md)

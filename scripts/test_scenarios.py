@@ -1216,6 +1216,7 @@ T3_CONTRACT_PATHS = {
     "protocol": HERE.parent / "skills/sdlc/references/stage-agent-protocol.md",
     "template": HERE.parent / "skills/sdlc/references/templates/TASK.md",
     "readme": HERE.parent / "README.md",
+    "testing_guide": HERE.parent / "docs/testing.md",
     "router": HERE.parent / "skills/sdlc/SKILL.md",
     "codex": HERE.parent / "skills/sdlc/references/runtime-adapters/codex.md",
 }
@@ -1223,7 +1224,10 @@ T3_REQUIRED_TOKENS = {
     "adapter": ("delegate_task", "task_cancel", "host `next`"),
     "protocol": ("runtime-adapters/t3-code.md", "host `next`"),
     "template": (),
-    "readme": ("SCN-t3-stage-dispatch", "SCN-t3-nested-delegation"),
+    "testing_guide": (
+        "[SCN-t3-stage-dispatch](../.sdlc-v1/context/REQ-t3-stage-dispatch.product.md)",
+        "[SCN-t3-nested-delegation](../.sdlc-v1/context/REQ-t3-nested-delegation.product.md)",
+    ),
     "router": (),
     "codex": (),
 }
@@ -1247,7 +1251,8 @@ T3_OBSOLETE_BANS = {
 
 
 def t3_child_contract_errors(
-    adapter: Path, protocol: Path, template: Path, readme: Path, router: Path, codex: Path
+    adapter: Path, protocol: Path, template: Path, readme: Path, router: Path, codex: Path,
+    testing_guide: Path,
 ) -> list:
     """Check document contract shape; this does not establish live host behavior."""
     paths = {
@@ -1255,6 +1260,7 @@ def t3_child_contract_errors(
         "protocol": protocol,
         "template": template,
         "readme": readme,
+        "testing_guide": testing_guide,
         "router": router,
         "codex": codex,
     }

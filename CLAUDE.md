@@ -1,6 +1,6 @@
 # sdlc-pilot — 维护契约
 
-> 本文件被 Claude Code 自动加载；`AGENTS.md` 指向本文件，供其他 coding agent 使用。用户向导见 `README.md`。
+本约定适用于维护 sdlc-pilot 插件的 Agent。Claude Code 自动读取本文件，其他 Agent 通过 `AGENTS.md` 读取同一份约定。在业务项目中使用插件，请从[用户指南](README.md)开始。
 
 ## 这是什么
 
@@ -22,38 +22,19 @@
 6. **Skill 写约束和原则。** 环境特定命令放语言包或部署目标卡，不把流程 skill 写成 shell cookbook。
 7. **阶段执行集中编排。** 默认主 Agent 使用 `next` 派发一个阶段 Agent，验证 artifact/evidence 后才执行其有序 transition 请求；协议只定义在 `references/stage-agent-protocol.md`，阶段 skill 不复制 schema。
 
-## 结构
-
-```text
-skills/
-├── sdlc/                         # driver + 共享 references
-├── sdlc-product-design/          # 产品生命周期入口
-├── sdlc-software-delivery/       # 研发交付入口
-└── sdlc-{onboard,backlog,spec,plan,build,validate,review,ship}/
-
-scripts/
-├── lifecycle_state.py            # 唯一状态实现
-├── backlog.py / board.py         # state 的只读投影（readyqueue/coverage/lint/tree/board）
-├── contrast_check.py             # 设计对比度检查
-├── test_*.py                     # 三组小测试
-└── validate-skills               # 快速结构检查 + 小测试
-```
-
-共享 role、routing、validate mode、language、deploy target 和 playbook 只放在
-`skills/sdlc/references/`，阶段技能引用它们，不复制一份。
-
 ## 常见改动要同步什么
 
-| 改动 | 同步项 |
-|---|---|
-| 加角色卡 | `references/roles/<role>.md` → `role-routing.md` 登记 → `validate-skills` |
-| 加 validate 模式 | `references/validate-modes/<mode>.md` → `role-routing.md` → `sdlc-validate/SKILL.md` |
-| 改路由规则 | 只改 `role-routing.md`；driver 不内联同一张映射 |
-| 改生命周期状态 | `lifecycle_state.py` → `test_lifecycle_state.py` → 生命周期/阶段 skill → README/设计 spec |
-| 改 backlog/board | 保持只读 projection；`backlog.py`/`board.py` → `test_backlog.py` → `sdlc-backlog/SKILL.md` |
-| 改阶段行为 | 对应 `sdlc-<stage>/SKILL.md`；确认引用存在并保持可移植 |
-| 改阶段子 Agent 编排 | `references/stage-agent-protocol.md` → driver/runtime adapter/TASK template → 各阶段引用 → `validate-skills` |
-| 改工具自身 | `skill-maintainer` 角色 + `evolve-loop.md`；结构性改动走完整 SDLC |
+先定位要改的行为，再检查受它影响的入口。目标项目里运行 SDLC 从[阶段路由](skills/sdlc/SKILL.md)进入；本仓库的维护任务按下表定位。
+
+| 改动 | 权威文件或入口 | 同步与验证 |
+|---|---|---|
+| 角色卡、语言或验证模式 | [角色与模式路由](skills/sdlc/references/role-routing.md)及其引用的共享卡片 | 新增角色或模式时登记路由。验证模式另核对 [Validate](skills/sdlc-validate/SKILL.md)，运行结构和引用检查。 |
+| 产品设计或软件交付阶段 | [产品设计](skills/sdlc-product-design/SKILL.md)、[软件交付](skills/sdlc-software-delivery/SKILL.md)引用的阶段技能 | 在对应阶段修改行为，核对其他阶段的交接与可移植性。共享规则只在 `skills/sdlc/references/` 维护。 |
+| 独立原型或阶段内原型 | [原型技能](skills/sdlc-prototype/SKILL.md)、[产品阶段适配](skills/sdlc/references/integrations/product-prototype.md) | 核对独立调用与阶段内使用各自的输入、产物。资产改动按[测试指南](docs/testing.md)选择组件测试。 |
+| 生命周期状态和查询 | [状态 CLI](scripts/lifecycle_state.py) | 核对[状态测试](scripts/test_lifecycle_state.py)、受影响阶段、[用户指南](README.md)和[基础设计](docs/specs/2026-08-10-lightweight-sdlc.md)。 |
+| Backlog 投影或看板 | [投影](scripts/backlog.py)、[HTML 看板](scripts/board.py) | 保持状态只读，核对 [Backlog 技能](skills/sdlc-backlog/SKILL.md)，运行[投影测试](scripts/test_backlog.py)。 |
+| 阶段派工、执行权限或恢复 | [阶段协议](skills/sdlc/references/stage-agent-protocol.md) | 核对 driver、运行时适配、[任务模板](skills/sdlc/references/templates/TASK.md)和各阶段引用。 |
+| 插件维护与发布 | [维护角色](skills/sdlc/references/roles/skill-maintainer.md)、[维护与发布流程](skills/sdlc/references/evolve-loop.md) | 按[改动范围判定](skills/sdlc/references/evolve-loop.md#2-判断改动范围)选择局部维护或完整 SDLC。 |
 
 ## 提交前
 
@@ -62,7 +43,7 @@ bash scripts/validate-skills
 git diff --check
 ```
 
-同时更新 `CHANGELOG.md`；发布行为变化时按语义化版本同步
+测试范围和按需检查见[测试指南](docs/testing.md)。同时更新 `CHANGELOG.md`；发布行为变化时按语义化版本同步
 `.claude-plugin/plugin.json` 和 `.claude-plugin/marketplace.json`。
 
 ## 状态与上下文约定

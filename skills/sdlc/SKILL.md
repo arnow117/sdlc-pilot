@@ -55,18 +55,18 @@ Git 保存历史并负责跨 clone 同步。状态变化可以与相关文档或
 
 ## 2.1 编排执行
 
-默认以 orchestrated mode 执行。恢复已选 Feature 先遵循[阶段协议 §6](references/stage-agent-protocol.md#6-context-and-checkpoints)；其他启动由主 Agent 先读取 `next`。随后按唯一的
-[`stage-agent-protocol.md`](references/stage-agent-protocol.md) 形成完整 brief、串行派发一个子 Agent、验收其证据、
-执行已有 lifecycle CLI，并重新读取 `next`。执行期间的用户交流、早期产品选择、原授权内连续推进、用户可见进展和最早真实增量
-展示均遵循该协议；本 router 不重复 brief、结果、检查点、并行资格、纠偏或这些行为规则。
+默认以 orchestrated mode 执行：
 
-协议判定为合格的小项目时，默认优先将 Backlog、Spec、Plan 的准备工作一次派给同一执行者，并逐块接受其原有 canonical 结果和 CLI 请求；
-只有协议列出的具体不适用条件才展开为普通阶段。这只合并派工，不改变本表阶段、状态写入或下游候选的生效条件。资格、恢复和 Task
-登记完整性唯一见协议。
-
-`onboard` 需要 `init` 时由主 Agent 先完成。`needs_selection`、缺少用户决策或外部授权、未通过验收、或证据不足时，
-按 protocol 停止依赖缺失证据的状态流转，并在授权和依赖允许时继续独立工作；fail 记录被拒的 Feature 停止派发例外仍适用。只有未处于主 Agent 编排中的独立直接调用才是 standalone mode；已开始的
-编排中，即使直接调用阶段 skill 也继承 orchestrated mode。
+- **主循环**：恢复已选 Feature 先遵循[阶段协议 §6](references/stage-agent-protocol.md#6-context-and-checkpoints)；其他启动由主 Agent 先读取 `next`，随后按唯一的
+  [`stage-agent-protocol.md`](references/stage-agent-protocol.md) 形成完整 brief、串行派发一个子 Agent、验收其证据、
+  执行已有 lifecycle CLI，并重新读取 `next`。执行期间的用户交流、早期产品选择、原授权内连续推进、用户可见进展和最早真实增量
+  展示均遵循该协议；本 router 不重复 brief、结果、检查点、并行资格、纠偏或这些行为规则。
+- **合格小项目的准备批次**：协议判定合格时，默认优先将 Backlog、Spec、Plan 的准备工作一次派给同一执行者，并逐块接受其原有 canonical 结果和 CLI 请求；
+  只有协议列出的具体不适用条件才展开为普通阶段。这只合并派工，不改变本表阶段、状态写入或下游候选的生效条件。资格、恢复和 Task
+  登记完整性唯一见协议。
+- **停止与模式归属**：`onboard` 需要 `init` 时由主 Agent 先完成。`needs_selection`、缺少用户决策或外部授权、未通过验收、或证据不足时，
+  按 protocol 停止依赖缺失证据的状态流转，并在授权和依赖允许时继续独立工作；fail 记录被拒的 Feature 停止派发例外仍适用。只有未处于主 Agent 编排中的独立直接调用才是 standalone mode；已开始的
+  编排中，即使直接调用阶段 skill 也继承 orchestrated mode。
 
 ## 3. 路由
 

@@ -1,12 +1,26 @@
 # Stage agent protocol
 
-> updated: 2026-10-22
+> updated: 2026-11-25
 
 This is the sole authority for SDLC stage orchestration. It adds an execution
 convention only: lifecycle state remains `state_version=3`; it creates no event
 runtime, message service, task inbox, local result store, or behavioral-evaluation
 loop. `lifecycle_state.py`, ordinary Git history, and the existing Markdown
 contexts retain their current roles.
+
+## Reading map
+
+| 需要确定 | 权威小节 |
+|---|---|
+| 谁拥有状态与决定；orchestrated / standalone；能否再派一层；加载哪个运行时适配 | [§1](#1-authority-modes-and-layer-boundary)；层级边界 [T3 layer boundary](#t3-layer-boundary)；模型职责 [Model responsibilities](#model-responsibilities-and-specialist-lenses)；适配选择 [Runtime selection](#runtime-selection) |
+| 本次的交付单位与验收范围；brief 必带字段；何时改派需完整 `supersedes` | [§2 Dispatch contract](#2-dispatch-contract)；单位与范围 [Dispatch unit and acceptance scope](#dispatch-unit-and-acceptance-scope)；小项目合并派工 [Bounded preparation batch](#bounded-preparation-batch-for-small-projects) |
+| 首次写入前核对什么；什么情况必须停下而不是继续改 | [规划基线与 STOP conditions](#规划基线与-stop-conditions)；强制停止与诊断额度 [§5](#5-evidence-git-and-mandatory-stop)；须由人决定的 [Judgment boundary](#judgment-boundary) |
+| 每份 brief 必带的材料与安全限制 | [敏感材料与被审计内容](#敏感材料与被审计内容) |
+| 等待、恢复、资源收尾、执行中的交流与继续授权 | [Waiting and recovery](#waiting-and-recovery)；[Verification resource lifecycle](#verification-resource-lifecycle)；[Interaction while work is active](#interaction-while-work-is-active)；[Continuation within existing authorization](#continuation-within-existing-authorization) |
+| 子 Agent 返回什么；主 Agent 如何验收与执行状态变化 | [§4 Results, transitions, and correction](#4-results-transitions-and-correction) |
+| 规划、并行实现、集成与评审的分工 | [§3](#3-planning-implementation-integration-and-review) |
+| 证据何时可复用；上下文改动后是否仍适用；真人验收与多 Feature | [§5](#5-evidence-git-and-mandatory-stop)；[Context prose and evidence applicability](#context-prose-and-evidence-applicability)；[按需人工验收与验证历史](#按需人工验收与验证历史)；[同一候选上的多个 Feature](#同一候选上的多个-feature) |
+| 暂停、恢复与检查点 | [§6 Context and checkpoints](#6-context-and-checkpoints) |
 
 ## 1. Authority, modes, and layer boundary
 

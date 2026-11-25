@@ -190,11 +190,9 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(r.returncode, 0)
         json.loads(r.stdout)
 
-    def test_real_design_md(self):
-        real = os.path.normpath(os.path.join(HERE, "..", "DESIGN.md"))
-        if not os.path.exists(real):
-            self.skipTest("no repo-root DESIGN.md")
-        r = run_cli(real)
+    def test_archived_board_design_palette(self):
+        design = os.path.join(HERE, "..", "docs", "specs", "board-0.16.0.md")
+        r = run_cli(design)
         self.assertEqual(r.returncode, 0)
         rep = json.loads(r.stdout)
         self.assertIn("summary", rep)

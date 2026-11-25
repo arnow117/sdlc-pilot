@@ -1,5 +1,7 @@
 # Project Profile: sdlc-pilot
 
+> **0.x 历史记录。** 当前仓库事实见[项目上下文](../.sdlc-v1/project.md)，插件使用方式见[用户指南](../README.md)。
+
 tech-stack: [python3-stdlib, markdown-skills, html-css-js-inline]
 test-commands: { unit: "python3 scripts/test_backlog.py", coverage: "none — 纯 stdlib 脚本无覆盖率门控;靠 test_backlog.py 全绿 + 用例随 op 增长", e2e: "none — 无独立前端;看板 Live mode 由 web-review/test_live.py 覆盖", typecheck: "none — 无类型注解工具链", build: "bash scripts/validate-skills" }
 

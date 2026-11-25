@@ -1,6 +1,9 @@
 # 小项目上下文与产品对齐示例
 
-> 这是填写粒度示例，不是新模板。`REQ-EXAMPLE-CLI`、路径、版本、命令和进展均为假设且 **NOT_RUN**；没有代码、用户确认、工作树、命令结果或性能/UI 反馈可由本文推出。小项目仍使用 [PRODUCT](../skills/sdlc/references/templates/PRODUCT.md) 与 [ENGINEERING](../skills/sdlc/references/templates/ENGINEERING.md) 的核心和顺序，只省略注释、占位符和不适用的条件设计。
+这个虚构的待办 CLI 展示了怎样从一份需求写到实现计划。所有 ID、命令和进展均为填写示例，执行状态为 `NOT_RUN`。实际编写时使用[产品模板](../skills/sdlc/references/templates/PRODUCT.md)和[工程模板](../skills/sdlc/references/templates/ENGINEERING.md)。
+
+- 看产品与工程如何衔接：[需求与验收标准](#产品上下文req-example-cli-本地待办-cli) → [设计与任务](#工程上下文feat-example-cli-本地待办-cli)。
+- 遇到待确认的界面选择，参考[提问、候选和反馈](#有实质-ui-选择提问候选和反馈)。向用户报告当前状态，参考[进展快照](#基于事实的进展快照)。
 
 ## 固定 CLI：无需产品问题或原型
 

@@ -27,7 +27,8 @@ Decision = resolve(
 
 1. 产品澄清阶段先读取原始请求和产品上下文。请求包含页面、组件、表单、导航、空态、loading/error 反馈、响应式、
    无障碍或视觉方向时加入 `design`，即使还没有代码 diff；纯后端且不影响用户可见交互时不加入。
-2. 取得改动文件：工作区使用 `git diff --name-only HEAD`；已提交分支使用 `git diff --name-only <base>...HEAD`。
+2. 取得改动文件：工作区使用 `git diff --name-only HEAD`，并入 `git ls-files --others --exclude-standard`
+   的未跟踪新文件；已提交分支使用 `git diff --name-only <base>...HEAD`。
 3. 每个路径先匹配 `project.md` surface map，收集 roles 与 modes，并识别项目明确要求的验证。
 4. 未匹配的路径使用下表；一条路径可命中多条规则，合并相关角色与候选模式。按真实影响确认候选专项。例如，服务端 Kotlin 本身由服务端和接口要求决定验证。
 5. 任意代码 diff 至少加入 `qa + correctness`，执行项目约定的适用回归。
@@ -67,28 +68,28 @@ Decision = resolve(
 
 | 角色 | 文件 | 关注点 |
 |---|---|---|
-| `product-owner` | `roles/product-owner.md` | 问题、用户、结果、范围和取舍 |
-| `domain-expert` | `roles/domain-expert.md` | 术语、规则、不变量、业务归属 |
-| `qa` | `roles/qa.md` | 验收追溯、回归、失败路径和测试真实性 |
-| `client-dev` | `roles/client-dev.md` | Web、移动端、状态、性能和无障碍 |
-| `server-dev` | `roles/server-dev.md` | 服务端、API、性能和输入边界 |
-| `design` | `roles/design.md` | 视觉、交互、状态和用户旅程 |
-| `big-data` | `roles/big-data.md` | 管道、数仓、幂等、分区和 lineage |
-| `architect` | `roles/architect.md` | 跨区域结构、依赖方向、契约和影响范围 |
-| `security` | `roles/security.md` | 认证、授权、数据保护、供应链和滥用风险 |
-| `ai-readiness` | `roles/ai-readiness.md` | 项目对 AI 执行者的可理解性和可验证性 |
-| `skill-maintainer` | `roles/skill-maintainer.md` | 技能结构、重复规则、可移植性和发布质量 |
+| `product-owner` | [`roles/product-owner.md`](roles/product-owner.md) | 问题、用户、结果、范围和取舍 |
+| `domain-expert` | [`roles/domain-expert.md`](roles/domain-expert.md) | 术语、规则、不变量、业务归属 |
+| `qa` | [`roles/qa.md`](roles/qa.md) | 验收追溯、回归、失败路径和测试真实性 |
+| `client-dev` | [`roles/client-dev.md`](roles/client-dev.md) | Web、移动端、状态、性能和无障碍 |
+| `server-dev` | [`roles/server-dev.md`](roles/server-dev.md) | 服务端、API、性能和输入边界 |
+| `design` | [`roles/design.md`](roles/design.md) | 视觉、交互、状态和用户旅程 |
+| `big-data` | [`roles/big-data.md`](roles/big-data.md) | 管道、数仓、幂等、分区和 lineage |
+| `architect` | [`roles/architect.md`](roles/architect.md) | 跨区域结构、依赖方向、契约和影响范围 |
+| `security` | [`roles/security.md`](roles/security.md) | 认证、授权、数据保护、供应链和滥用风险 |
+| `ai-readiness` | [`roles/ai-readiness.md`](roles/ai-readiness.md) | 项目对 AI 执行者的可理解性和可验证性 |
+| `skill-maintainer` | [`roles/skill-maintainer.md`](roles/skill-maintainer.md) | 技能结构、重复规则、可移植性和发布质量 |
 
 ## 5. validate mode 字典
 
 | 模式 | 参考 | 适用范围 |
 |---|---|---|
-| `correctness` | `validate-modes/correctness.md` | 每次代码变更 |
-| `e2e:Web` | `validate-modes/e2e.md` | Web 用户旅程 |
-| `e2e:OpenAPI` | `validate-modes/e2e.md` | API 行为 |
-| `e2e:App` | `validate-modes/e2e.md` | 移动端用户旅程 |
-| `eval-bench` | `validate-modes/eval-bench.md` | 模型、策略、提示或数据质量评估 |
-| `security-scan` | `validate-modes/security-scan.md` | 依安全义务选择的代码、配置和供应链扫描 |
+| `correctness` | [`validate-modes/correctness.md`](validate-modes/correctness.md) | 每次代码变更 |
+| `e2e:Web` | [`validate-modes/e2e.md`](validate-modes/e2e.md#web) | Web 用户旅程 |
+| `e2e:OpenAPI` | [`validate-modes/e2e.md`](validate-modes/e2e.md#openapi) | API 行为 |
+| `e2e:App` | [`validate-modes/e2e.md`](validate-modes/e2e.md#app) | 移动端用户旅程 |
+| `eval-bench` | [`validate-modes/eval-bench.md`](validate-modes/eval-bench.md) | 模型、策略、提示或数据质量评估 |
+| `security-scan` | [`validate-modes/security-scan.md`](validate-modes/security-scan.md) | 依安全义务选择的代码、配置和供应链扫描 |
 
 ## 6. 语言参考
 
@@ -96,12 +97,12 @@ Decision = resolve(
 
 | 扩展名 | 参考 |
 |---|---|
-| `*.py` | `languages/python.md` |
-| `*.ts`, `*.tsx`, `*.js`, `*.jsx` | `languages/typescript.md` |
-| `*.go` | `languages/go.md` |
-| `*.rs` | `languages/rust.md` |
-| `*.kt` | `languages/kotlin.md` |
-| `*.swift` | `languages/swift.md` |
-| `*.java` | `languages/java-spring.md` |
+| `*.py` | [`languages/python.md`](languages/python.md) |
+| `*.ts`, `*.tsx`, `*.js`, `*.jsx` | [`languages/typescript.md`](languages/typescript.md) |
+| `*.go` | [`languages/go.md`](languages/go.md) |
+| `*.rs` | [`languages/rust.md`](languages/rust.md) |
+| `*.kt` | [`languages/kotlin.md`](languages/kotlin.md) |
+| `*.swift` | [`languages/swift.md`](languages/swift.md) |
+| `*.java` | [`languages/java-spring.md`](languages/java-spring.md) |
 
 新增角色、验证方式或语言参考时，先更新本文件字典，再更新使用它的 onboard、validate 与 review 技能，避免多处定义不同取值。

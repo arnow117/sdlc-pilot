@@ -4,15 +4,15 @@
     "name": "arnow117"
   },
   "metadata": {
-    "description": "sdlc-pilot —— 自洽/可移植/时用时新的 SDLC 技能族",
-    "version": "8.0.0"
+    "description": "从需求澄清到软件发布的 Agent 技能集合",
+    "version": "8.0.1"
   },
   "plugins": [
     {
       "name": "sdlc-pilot",
       "source": "./",
-      "description": "轻量产品设计/软件交付生命周期：阶段与角色按需加载，使用 Git-tracked 单一状态与 context Markdown。",
-      "version": "8.0.0",
+      "description": "用 Agent 澄清需求、拆分任务、验证和发布软件。通过 Git 共享项目进度与设计记录。",
+      "version": "8.0.1",
       "author": {
         "name": "arnow117"
       },

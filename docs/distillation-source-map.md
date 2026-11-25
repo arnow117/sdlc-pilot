@@ -17,7 +17,7 @@
 | 失败恢复 | [验证归因](../skills/sdlc-validate/SKILL.md#验证归因)：区分实现失败、环境受阻与证据不足；需要修改实现或测试资产时才返回 Build |
 | 设计方法 | [Impeccable 可选适配](../skills/sdlc/references/integrations/impeccable.md)：1.9.0 起按需使用，缺失时继续既有设计与必要验证 |
 | 维护与发布 | [evolve](../skills/sdlc/references/evolve-loop.md)：局部维护、结构改动、版本与远端发布检查分别按现行约束执行 |
-| 分支登记迁移 | [运行时操作指南](../skills/sdlc/references/lightweight-runtime.md#51-开发分支登记迁移)：当前 Unreleased 能力，保留已交付证据，未自动发布到 2.0.0 tag |
+| 分支登记迁移 | [运行时操作指南](../skills/sdlc/references/lightweight-runtime.md#51-开发分支登记迁移)：自 2.1.0 提供；修正开放 Feature 的登记分支时保留既有交付证据 |
 
 ## 0. 初期跨切面结论（历史研究）
 

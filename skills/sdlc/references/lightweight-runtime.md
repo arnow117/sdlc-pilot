@@ -37,7 +37,9 @@ python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> init
 python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> status
 ```
 
-已有源码的项目随后运行 `sdlc-onboard` 创建 `project.md`。若 `init` 报告旧版 sdlc-pilot Git hook，先按错误给出的 hooks 目录手动删除对应文件，再重新初始化。
+已有源码的项目随后运行 `sdlc-onboard` 创建 `project.md`。若 `init` 报告旧版 sdlc-pilot Git hook（错误已列出 hook 名与
+hooks 目录），只有确认对应文件是旧 sdlc-pilot 运行时的拷贝时，才人工删除并重新初始化；文件含团队自有逻辑或无法确认
+归属时保持现状并停止，人工检查并保留团队逻辑后再处理，不自动覆盖或删除团队 hooks。
 
 ## 4. 产品侧
 
@@ -71,13 +73,13 @@ python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> \
 建立与推进 Task：
 
 ```bash
-lifecycle_state.py --repo <repo> add-task \
+python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> add-task \
   --feature-id <FEAT-id> --task-id <TASK-id> --title <title>
 
-lifecycle_state.py --repo <repo> set-task-status \
+python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> set-task-status \
   --feature-id <FEAT-id> --task-id <TASK-id> --status in_progress
 
-lifecycle_state.py --repo <repo> set-task-status \
+python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> set-task-status \
   --feature-id <FEAT-id> --task-id <TASK-id> --status done
 ```
 
@@ -144,13 +146,18 @@ Task、validation、review 或 release。写入前的拒绝保持 state 不变�
 ## 6. 验证、评审与发布
 
 ```bash
-lifecycle_state.py --repo <repo> record-validation \
+python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> record-validation \
   --feature-id <FEAT-id> --result pass --test-command <command>
 
-lifecycle_state.py --repo <repo> record-review \
+python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> record-review \
   --feature-id <FEAT-id> --decision approved --by <reviewer>
+```
 
-lifecycle_state.py --repo <repo> record-release --feature-id <FEAT-id>
+完成[实际交付及目标要求的 smoke 和观测](../../sdlc-ship/SKILL.md)后，由获授权的主 Agent 登记实际交付的 validation commit：
+
+```bash
+python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> \
+  record-release --feature-id <FEAT-id> --commit <validation-commit>
 ```
 
 - 验证前，`state.json`、产品上下文和研发上下文必须已经纳入 Git，且 state 没有合并冲突。
@@ -183,14 +190,17 @@ lifecycle_state.py --repo <repo> record-release --feature-id <FEAT-id>
 ## 7. 查询与恢复
 
 ```bash
-lifecycle_state.py --repo <repo> status
-lifecycle_state.py --repo <repo> next
-lifecycle_state.py --repo <repo> readyqueue
-lifecycle_state.py --repo <repo> product-projection --requirement-id <REQ-id>
-lifecycle_state.py --repo <repo> feature-projection --feature-id <FEAT-id>
+python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> status
+python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> next
+python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> readyqueue
+python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> \
+  product-projection --requirement-id <REQ-id>
+python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> \
+  feature-projection --feature-id <FEAT-id>
 ```
 
-`next` 在只有一个明确目标时返回下一阶段；并行工作超过一个时返回 `needs_selection` 和候选项，不替用户猜选。恢复加载顺序遵循[阶段协议 §6](stage-agent-protocol.md#6-context-and-checkpoints)；上述查询仍可用于普通只读定位。
+`next` 依次查找活动 Feature、未关联 Feature 的 ready Requirement、未关联 Feature 的 captured Requirement，只考虑第一个非空集合。该集合只有一项时直接返回其下一阶段；有多项时返回 `needs_selection`，并按需求优先级、需求 ID 和适用的 Feature ID 排列候选。比如，一个活动 Feature 与几条 ready 需求并存时，继续该 Feature。
+恢复加载顺序遵循[阶段协议 §6](stage-agent-protocol.md#6-context-and-checkpoints)；上述查询仍可用于普通只读定位。
 
 ### 7.1 验收内容指纹核对
 
@@ -203,8 +213,8 @@ context。归一化只排除指定生命周期元数据位置（frontmatter 顶�
 引用已验收结论前先做只读核对：
 
 ```bash
-lifecycle_state.py --repo <repo> verify-acceptance --requirement-id <REQ-id>
-lifecycle_state.py --repo <repo> verify-acceptance --feature-id <FEAT-id> --point plan
+python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> verify-acceptance --requirement-id <REQ-id>
+python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> verify-acceptance --feature-id <FEAT-id> --point plan
 ```
 
 `--requirement-id` 与 `--feature-id` 互斥且必须给一个；requirement 目标只查 `spec_ready`，feature
@@ -228,9 +238,9 @@ JSON，不靠退出码 0 推断 `match`。
 如实说明未绑定 → 有权责任人按适用批准或可证明的委托显式重记或补验。显式重记只对已有快照的同一验收点生效：
 
 ```bash
-lifecycle_state.py --repo <repo> mark-requirement-ready --requirement-id <REQ-id> --refresh-acceptance
+python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> mark-requirement-ready --requirement-id <REQ-id> --refresh-acceptance
 
-lifecycle_state.py --repo <repo> start-feature --requirement-id <REQ-id> --feature-id <FEAT-id> \
+python3 <sdlc-pilot-root>/scripts/lifecycle_state.py --repo <repo> start-feature --requirement-id <REQ-id> --feature-id <FEAT-id> \
   --branch <branch> --engineering-context-ref .sdlc-v1/context/<FEAT-id>.engineering.md \
   --refresh-acceptance
 ```

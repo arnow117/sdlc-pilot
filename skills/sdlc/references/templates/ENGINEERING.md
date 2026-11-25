@@ -256,7 +256,7 @@ SDLC 起草提示：按[图示辅助对齐](../lifecycles/software-delivery.md#�
 
 #### 格式：`[ID] [P?] [Story] 描述`
 
-- **[P]**：候选并行任务；实际并行资格由[阶段代理协议](https://github.com/arnow117/sdlc-pilot/blob/71b0da74ff06d771db23203d13174939aef30f19/skills/sdlc/references/stage-agent-protocol.md)判断，而非仅由不同文件或无依赖决定
+- **[P]**：候选并行任务。派工时按当前安装的 `sdlc` 技能中的 `references/stage-agent-protocol.md` 核对资格，包括文件边界、依赖和集成条件。
 - **[Story]**：任务所属用户故事（例如 US1、US2、US3）
 - 在描述中包含确切文件路径
 - 每项任务必须产生单一可验证结果。当拆分会使结果不可验证或制造人为协调时，一项任务可触及多个紧密关联文件。
